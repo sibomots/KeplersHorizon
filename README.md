@@ -1,6 +1,6 @@
 # Kepler’s Horizon
 
-[Kepler's Horizon Logo](docs/img/keplerhorizon-logo-crop.png)
+![Kepler's Horizon Logo](docs/img/keplerhorizon-logo-crop.png)
 
 
 **Kepler’s Horizon** is a turn-based, abstract strategy game set in deep space.  
