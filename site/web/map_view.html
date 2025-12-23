@@ -1,0 +1,343 @@
+<!--
+BSD 3-Clause License
+
+This file is part of Kepler's Horizon
+
+Copyright (c) 2025, sibomots
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kepler's Horizon Map View</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { background: #ffffff; overflow: hidden; }
+  svg { width: 100%; height: 100%; display: block; background: #ffffff; user-select: none; touch-action: none; }
+
+  .hex-id { font-size: 8pt; fill: indigo; font-family: ui-monospace, Menlo, Consolas, monospace; pointer-events: none; }
+  .warpline { stroke: indigo; stroke-width: 2; }
+  .star-icon { fill: #111; }
+  .star-name { font-size: 14pt; fill: indigo; font-family: ui-sans-serif, system-ui, Arial; font-weight: 700; text-anchor: middle; pointer-events: none; }
+  .base-ring { fill: none; stroke: indigo; stroke-width: 2; opacity: .7; }
+</style>
+</head>
+<body>
+
+<svg id="map"
+     xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1180 1560">
+
+  <defs>
+    <polygon id="hex" points="
+      20,0
+      60,0
+      80,34.6410161514
+      60,69.2820323028
+      20,69.2820323028
+      0,34.6410161514
+    "
+    fill="none"
+    stroke="black"
+    stroke-width="1"
+    stroke-linejoin="miter"/>
+  </defs>
+
+  <g id="layer-warplines"></g>
+  <g id="layer-grid"></g>
+  <g id="layer-stars"></g>
+</svg>
+
+<script>
+(function () {
+  const svg = document.getElementById("map");
+  const NS = "http://www.w3.org/2000/svg";
+
+  const STAR_HEXES = [
+    { hex: "0307", type: "base", name: "SONAL" },
+    { hex: "0606", type: "base", name: "UR" },
+    { hex: "0804", type: "base", name: "LARSU" },
+
+    { hex: "0611", type: "star", name: "SIPPUR" },
+    { hex: "0710", type: "star", name: "ERECH" },
+    { hex: "0908", type: "star", name: "CALAH" },
+
+    { hex: "0813", type: "star", name: "BYBLOS" },
+    { hex: "1011", type: "star", name: "ADAB" },
+    { hex: "1207", type: "star", name: "SUSA" },
+
+    { hex: "1014", type: "star", name: "UBAID" },
+    { hex: "1310", type: "star", name: "NIPPUR" },
+
+    { hex: "1313", type: "star", name: "KHAFA" },
+
+    { hex: "1415", type: "star", name: "MARI" },
+    { hex: "1614", type: "star", name: "LAGASH" },
+    { hex: "1712", type: "star", name: "ASSUR" },
+
+    { hex: "1419", type: "star", name: "SUMARRA" },
+    { hex: "1616", type: "star", name: "ELAM" },
+    { hex: "1814", type: "star", name: "JARMO" },
+
+    { hex: "1719", type: "star", name: "UMMA" },
+    { hex: "1817", type: "star", name: "GIRSU" },
+
+    { hex: "1622", type: "star", name: "ISIN" },
+    { hex: "1922", type: "star", name: "SUMER" },
+    { hex: "2020", type: "star", name: "AKKAD" },
+    { hex: "2118", type: "star", name: "KISH" },
+
+    { hex: "2318", type: "star", name: "ERIDU" },
+
+    { hex: "2125", type: "base", name: "NINEVEH" },
+    { hex: "2223", type: "base", name: "BABYLON" },
+    { hex: "2622", type: "base", name: "UGARIT" },
+  ];
+
+  const WARPLINES = [
+    ["0307", "0611"],
+    ["0710", "0606"],
+    ["0710", "1011"],
+    ["1011", "0813"],
+    ["1011", "1313"],
+    ["0804", "1207"],
+    ["0908", "1310"],
+    ["1207", "1310"],
+    ["1310", "1712"],
+    ["1310", "1614"],
+    ["1614", "1616"],
+    ["1614", "1712"],
+    ["1814", "2118"],
+    ["2118", "2318"],
+    ["2318", "2622"],
+    ["2118", "2020"],
+    ["1014", "1415"],
+    ["1415", "1719"],
+    ["1014", "1419"],
+    ["1419", "1719"],
+    ["1719", "1817"],
+    ["1719", "1922"],
+    ["2223", "1922"],
+    ["1622", "2125"],
+  ];
+
+  const ROW_STEP_Y = 34.6410161514;
+  const BASE_Y     = 20;
+  const X_ODD      = 100;
+  const X_EVEN     = 40;
+  const X_STEP     = 120;
+  const TOTAL_ROWS = 43;
+
+  const HEX_CX_LOCAL = 40;
+  const HEX_CY_LOCAL = 34.6410161514;
+  const HEX_ID_Y_LOCAL = 63;
+  const STAR_NAME_DY = -18;
+
+  const STAR_OUTER_BASE = 12;
+  const STAR_INNER_BASE = 5;
+  const STAR_OUTER_STAR = 8;
+  const STAR_INNER_STAR = 3.5;
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  const layerWarplines = document.getElementById("layer-warplines");
+  const layerGrid      = document.getElementById("layer-grid");
+  const layerStars     = document.getElementById("layer-stars");
+
+  const hexCenters = new Map();
+
+  function star8Points(cx, cy, R, r) {
+    const pts = [];
+    const start = -Math.PI / 2;
+    for (let i = 0; i < 16; i++) {
+      const ang = start + i * (Math.PI / 8);
+      const rad = (i % 2 === 0) ? R : r;
+      const x = cx + rad * Math.cos(ang);
+      const y = cy + rad * Math.sin(ang);
+      pts.push(`${x},${y}`);
+    }
+    return pts.join(" ");
+  }
+
+  // grid
+  for (let r = 1; r <= TOTAL_ROWS; r++) {
+    const isOdd = (r % 2) === 1;
+    const hexCount = isOdd ? 7 : 8;
+
+    const rowX = isOdd ? X_ODD : X_EVEN;
+    const rowY = BASE_Y + (r - 1) * ROW_STEP_Y;
+
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("transform", `translate(${rowX},${rowY})`);
+
+    const S = r + 7;
+    const XX_start = Math.floor((r + 1) / 2);
+
+    for (let c = 0; c < hexCount; c++) {
+      const XX = XX_start + c;
+      const YY = S - XX;
+      const label = pad2(XX) + pad2(YY);
+
+      const u = document.createElementNS(NS, "use");
+      u.setAttribute("href", "#hex");
+      u.setAttribute("x", c * X_STEP);
+      u.setAttribute("id", `h${label}`);
+      u.setAttribute("data-hex", label);
+      g.appendChild(u);
+
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("class", "hex-id");
+      t.setAttribute("x", c * X_STEP + HEX_CX_LOCAL);
+      t.setAttribute("y", HEX_ID_Y_LOCAL);
+      t.textContent = label;
+      g.appendChild(t);
+
+      const cx = rowX + c * X_STEP + HEX_CX_LOCAL;
+      const cy = rowY + HEX_CY_LOCAL;
+      hexCenters.set(label, { cx, cy });
+    }
+
+    layerGrid.appendChild(g);
+  }
+
+  // warplines
+  for (const [a, b] of WARPLINES) {
+    const A = hexCenters.get(a);
+    const B = hexCenters.get(b);
+    if (!A || !B) continue;
+
+    const line = document.createElementNS(NS, "line");
+    line.setAttribute("class", "warpline");
+    line.setAttribute("x1", A.cx);
+    line.setAttribute("y1", A.cy);
+    line.setAttribute("x2", B.cx);
+    line.setAttribute("y2", B.cy);
+    layerWarplines.appendChild(line);
+  }
+
+  // stars
+  for (const star of STAR_HEXES) {
+    const P = hexCenters.get(star.hex);
+    if (!P) continue;
+
+    const isBase = (star.type === "base");
+    const R = isBase ? STAR_OUTER_BASE : STAR_OUTER_STAR;
+    const r = isBase ? STAR_INNER_BASE : STAR_INNER_STAR;
+
+    const poly = document.createElementNS(NS, "polygon");
+    poly.setAttribute("class", "star-icon");
+    poly.setAttribute("points", star8Points(P.cx, P.cy, R, r));
+    layerStars.appendChild(poly);
+
+    if (isBase) {
+      const ring = document.createElementNS(NS, "circle");
+      ring.setAttribute("class", "base-ring");
+      ring.setAttribute("cx", P.cx);
+      ring.setAttribute("cy", P.cy);
+      ring.setAttribute("r", 18);
+      layerStars.appendChild(ring);
+    }
+
+    const name = document.createElementNS(NS, "text");
+    name.setAttribute("class", "star-name");
+    name.setAttribute("x", P.cx);
+    name.setAttribute("y", P.cy + STAR_NAME_DY);
+    name.textContent = star.name;
+    layerStars.appendChild(name);
+  }
+
+  // initial viewBox: ~10x10 hex region centered on KHAFA (1313)
+  const focus = hexCenters.get("1313");
+  if (focus) {
+    const W = 1200; // ~10 columns * 120 step
+    const H = 450;  // ~10 rows span
+    svg.viewBox.baseVal.x = focus.cx - W / 2;
+    svg.viewBox.baseVal.y = focus.cy - H / 2;
+    svg.viewBox.baseVal.width = W;
+    svg.viewBox.baseVal.height = H;
+  }
+
+  // pan/zoom
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+
+  function onDown(e) {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    svg.setPointerCapture(e.pointerId);
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+
+    const vb = svg.viewBox.baseVal;
+    // convert screen delta to viewBox delta
+    const scaleX = vb.width / svg.clientWidth;
+    const scaleY = vb.height / svg.clientHeight;
+    vb.x -= dx * scaleX;
+    vb.y -= dy * scaleY;
+  }
+  function onUp(e) {
+    dragging = false;
+    try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+  function onWheel(e) {
+    e.preventDefault();
+    const vb = svg.viewBox.baseVal;
+    const zoom = (e.deltaY < 0) ? 0.9 : 1.1;
+
+    const mx = e.offsetX / svg.clientWidth;
+    const my = e.offsetY / svg.clientHeight;
+
+    const nx = vb.x + vb.width * mx;
+    const ny = vb.y + vb.height * my;
+
+    const newW = vb.width * zoom;
+    const newH = vb.height * zoom;
+
+    vb.x = nx - newW * mx;
+    vb.y = ny - newH * my;
+    vb.width = newW;
+    vb.height = newH;
+  }
+
+  svg.addEventListener("pointerdown", onDown);
+  svg.addEventListener("pointermove", onMove);
+  svg.addEventListener("pointerup", onUp);
+  svg.addEventListener("pointercancel", onUp);
+  svg.addEventListener("wheel", onWheel, { passive: false });
+
+})();
+</script>
+</body>
+</html>

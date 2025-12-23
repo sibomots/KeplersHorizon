@@ -1,0 +1,267 @@
+<!-- 
+BSD 3-Clause License
+
+This file is part of Kepler's Horizon
+
+Copyright (c) 2025, sibomots
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kepler's Horizon Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="/kh/">
+<style>
+  :root {
+    --bg: #0b0b0f;
+    --panel: #11111a;
+    --text: #e7e7f2;
+    --muted: #a8a8c2;
+    --accent: #7a5cff;
+    --border: #23233a;
+    --good: #6ee7b7;
+    --bad: #fb7185;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  }
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(122,92,255,.12), rgba(0,0,0,0));
+  }
+
+  header .title {
+    font-weight: 700;
+    letter-spacing: .4px;
+  }
+
+  header .right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  button {
+    background: rgba(122,92,255,.15);
+    color: var(--text);
+    border: 1px solid rgba(122,92,255,.35);
+    border-radius: 10px;
+    padding: 7px 10px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:hover { background: rgba(122,92,255,.22); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 12px;
+    padding: 12px;
+    min-height: 0;
+  }
+
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(17,17,26,.9);
+    box-shadow: 0 12px 28px rgba(0,0,0,.35);
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .panel h2 {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .viewport {
+    min-height: 0;
+    position: relative;
+  }
+
+  /* LOG VIEW: scrollable */
+  #consoleLog {
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+  }
+
+  .line-muted { color: var(--muted); }
+  .line-good { color: var(--good); }
+  .line-bad { color: var(--bad); }
+
+  /* MAP VIEW */
+  #mapView {
+    height: 100%;
+    width: 100%;
+    display: none;
+  }
+  #mapFrame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+  }
+
+  .inputRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,.35);
+    color: var(--text);
+    outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13px;
+  }
+
+  .statusBody {
+    padding: 10px 12px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; }
+  .k { color: var(--muted); }
+  .v { color: var(--text); }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(122,92,255,.35);
+    background: rgba(122,92,255,.12);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 12px;
+  }
+</style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Kepler's Horizon (Console + Status)</div>
+      <div class="right">
+        <span id="loginBadge" class="pill">logged out</span>
+        <button id="btnMap">Map</button>
+        <button id="btnLogin">Login</button>
+        <button id="btnLogout">Logout</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <section class="panel">
+        <h2>
+          <span>Console</span>
+          <span class="line-muted">commands: start, next, status, reset, list</span>
+        </h2>
+
+        <div class="viewport">
+          <div id="consoleLog"></div>
+
+          <div id="mapView">
+            <iframe id="mapFrame" src="map_view.html" title="Kepler's Horizon Map"></iframe>
+          </div>
+        </div>
+
+        <div class="inputRow">
+          <input id="commandInput" type="text" placeholder="Type command and press Enter..." autocomplete="off" spellcheck="false">
+          <button id="btnSend">Send</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Status</h2>
+        <div class="statusBody">
+          <div class="kv">
+            <div class="k">User</div><div class="v" id="stUser">-</div>
+            <div class="k">GameId</div><div class="v" id="stGameId">-</div>
+            <div class="k">Scenario</div><div class="v" id="stScenario">-</div>
+            <div class="k">Round</div><div class="v" id="stRound">-</div>
+            <div class="k">Player</div><div class="v" id="stPlayer">-</div>
+            <div class="k">Phase</div><div class="v" id="stPhase">-</div>
+            <div class="k">VP</div><div class="v" id="stVP">-</div>
+            <div class="k">BP</div><div class="v" id="stBP">-</div>
+            <div class="k">Notes</div><div class="v line-muted" id="stNotes">-</div>
+          </div>
+        </div>
+        <div style="padding:10px 12px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;">
+          Tip: use <span class="pill">start learning</span> then <span class="pill">next</span> repeatedly.
+        </div>
+      </section>
+    </div>
+  </div>
+
+<script src="constraints.js"></script>
+<script src="slate.js"></script>
+<script src="behavior.js"></script>
+<script src="interface.js"></script>
+</body>
+</html>

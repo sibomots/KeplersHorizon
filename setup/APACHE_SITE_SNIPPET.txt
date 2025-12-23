@@ -1,0 +1,7 @@
+ProxyPreserveHost On
+ProxyPass        /kh/api/  http://127.0.0.1:8080/api/
+ProxyPassReverse /kh/api/  http://127.0.0.1:8080/api/
+
+# Optional (requires: a2enmod headers)
+RequestHeader set X-Forwarded-Proto "https"
+RequestHeader set X-Forwarded-Host  "example.com"
