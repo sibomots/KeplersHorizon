@@ -58,38 +58,6 @@ At a minimum, the following modes are expected to exist or be stubbed:
 
 Refer to implementation-specific documentation under `docs/` as it evolves.
 
-### Current console commands (web UI)
-
-Game control:
-- `status`
-- `start learning|basic|advanced`
-- `next`
-- `reset`
-
-Fleet listing:
-- `list`
-- `list all`
-- `list system <SYSTEM>`
-- `bases`
-
-Build:
-- `build new W <name...>`
-- `build new S <name...>`
-- `build show`
-- `build cost`
-- `build set <PD|B|S|T|M|SR> <n>`
-- `build add <PD|B|S|T|M|SR> <n>`
-- `build clear <PD|B|S|T|M|SR|all>`
-- `build validate`
-- `build commit`
-- `build cancel`
-- `build drafts`
-
-Deployment / racking (Build phase):
-- `deploy <W#|S##> <SYSTEM>`
-- `pickup <W#> <S##>`
-- `drop <W#> <S##>`
-
 ---
 
 ## Philosophy

@@ -82,40 +82,17 @@ static void seed_map_if_needed(Db *db, int game_id)
         int is_base;
         const char *owner; // "A","B", or ""
     };
-    // Source of truth: site/web/map_view.html (STAR_HEXES / WARPLINES).
-    // hex_id is stored with a leading 'h' (e.g. "h0307").
     StarDef stars[] = {
-        {"h0307", "SONAL", 1, "A"},
-        {"h0606", "UR", 1, "A"},
-        {"h0804", "LARSU", 1, "A"},
-
-        {"h0611", "SIPPUR", 0, ""},
-        {"h0710", "ERECH", 0, ""},
-        {"h0908", "CALAH", 0, ""},
-        {"h0813", "BYBLOS", 0, ""},
-        {"h1011", "ADAB", 0, ""},
-        {"h1207", "SUSA", 0, ""},
-        {"h1014", "UBAID", 0, ""},
-        {"h1310", "NIPPUR", 0, ""},
-        {"h1313", "KHAFA", 0, ""},
-        {"h1415", "MARI", 0, ""},
-        {"h1614", "LAGASH", 0, ""},
-        {"h1712", "ASSUR", 0, ""},
-        {"h1419", "SUMARRA", 0, ""},
-        {"h1616", "ELAM", 0, ""},
-        {"h1814", "JARMO", 0, ""},
-        {"h1719", "UMMA", 0, ""},
-        {"h1817", "GIRSU", 0, ""},
-        {"h1622", "ISIN", 0, ""},
-        {"h1922", "SUMER", 0, ""},
-        {"h2020", "AKKAD", 0, ""},
-        {"h2118", "KISH", 0, ""},
-        {"h2318", "ERIDU", 0, ""},
-
-        {"h2125", "NINEVEH", 1, "B"},
-        {"h2223", "BABYLON", 1, "B"},
-        {"h2622", "UGARIT", 1, "B"},
-    };
+        {"h0107", "SONAL", 1, "A"}, {"h0206", "UMMA", 0, ""},
+        {"h0204", "GIRSU", 0, ""},  {"h0211", "KHORS", 0, ""},
+        {"h0305", "KISH", 0, ""},   {"h0312", "KHEPRA", 0, ""},
+        {"h0404", "AKKAD", 0, ""},  {"h0413", "KHAFA", 0, ""},
+        {"h0503", "LAGASH", 0, ""}, {"h0514", "LIPIT", 0, ""},
+        {"h0602", "LARSA", 1, "A"}, {"h0615", "NINEVEH", 1, "B"},
+        {"h0701", "UR", 1, "A"},    {"h0716", "URUK", 0, ""},
+        {"h0817", "BABYLON", 1, "B"}, {"h0918", "UGARIT", 1, "B"},
+        {"h1019", "URR", 0, ""},    {"h1221", "HARRAN", 0, ""},
+        {"h1423", "HIT", 0, ""},    {"h1625", "KARGA", 0, ""}};
 
     for (size_t i = 0; i < sizeof(stars) / sizeof(stars[0]); i++)
     {
@@ -134,32 +111,11 @@ static void seed_map_if_needed(Db *db, int game_id)
         const char *a;
         const char *b;
     };
-    WL wls[] = {
-        {"h0307", "h0611"},
-        {"h0710", "h0606"},
-        {"h0710", "h1011"},
-        {"h1011", "h0813"},
-        {"h1011", "h1313"},
-        {"h0804", "h1207"},
-        {"h0908", "h1310"},
-        {"h1207", "h1310"},
-        {"h1310", "h1712"},
-        {"h1310", "h1614"},
-        {"h1614", "h1616"},
-        {"h1614", "h1712"},
-        {"h1814", "h2118"},
-        {"h2118", "h2318"},
-        {"h2318", "h2622"},
-        {"h2118", "h2020"},
-        {"h1014", "h1415"},
-        {"h1415", "h1719"},
-        {"h1014", "h1419"},
-        {"h1419", "h1719"},
-        {"h1719", "h1817"},
-        {"h1719", "h1922"},
-        {"h2223", "h1922"},
-        {"h1622", "h2125"},
-    };
+    WL wls[] = {{"h0206", "h0204"}, {"h0206", "h0413"}, {"h0204", "h0503"},
+                {"h0305", "h0413"}, {"h0404", "h0503"}, {"h0312", "h0413"},
+                {"h0413", "h0514"}, {"h0514", "h1019"}, {"h0716", "h0615"},
+                {"h0716", "h1221"}, {"h0817", "h1221"}, {"h0918", "h1019"},
+                {"h0918", "h1423"}, {"h1019", "h1625"}, {"h1423", "h1625"}};
 
     for (size_t i = 0; i < sizeof(wls) / sizeof(wls[0]); i++)
     {
@@ -269,10 +225,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             if (!sh.racked_in.empty())
                 o << " [RACKED in " << sh.racked_in << "]";
             else if (!sh.at_system.empty())
-            {
-                // Always render the canonical system name.
-                o << " @ " << resolve_system_name(db, a.game_id, sh.at_system);
-            }
+                o << " @ " << sh.at_system;
             else
                 o << " @ (undeployed)";
             if (sh.attr.type == 'W' && sh.attr.SR > 0)
@@ -305,32 +258,12 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     else if (cmd == "bases")
     {
-        auto bases = db->query(
-            "SELECT name,base_owner FROM star_systems WHERE game_id=" +
-            std::to_string(a.game_id) + " AND is_base=1 ORDER BY base_owner,name");
+        // Map/base-star configuration will move server-side later; for now
+        // allow free-form system names.
         std::ostringstream o;
-        o << "Base systems:\n";
-        if (bases.empty())
-        {
-            o << "  (none seeded)\n";
-        }
-        else
-        {
-            for (auto &r : bases)
-            {
-                std::string nm = r[0];
-                std::string bo = r[1];
-                if (bo.empty())
-                    o << "  " << nm << " (unowned)\n";
-                else
-                    o << "  " << nm << " (owner " << bo << ")\n";
-            }
-        }
-        if (s.scenario == "learning" || s.scenario == "basic")
-        {
-            o << "Note: In " << s.scenario
-              << ", only the middle base at each end may be used for building.";
-        }
+        o << "Base systems are not yet configured server-side.\n"
+          << "Use 'deploy <W#|S##> <SYSTEM>' with a system name (e.g., UR) for "
+             "now.";
         eventText = o.str();
     }
     else if (cmd == "reset")
@@ -445,14 +378,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 std::ostringstream o;
                 char me = owner;
                 char enemy = (owner == 'A') ? 'B' : 'A';
-                o << "Game: "
-                  << (s.scenario.empty() ? "(no game in progress)" : s.scenario)
-                  << "\n";
-                o << "Round: " << s.round << "\n";
-                o << "Active player: " << s.active_player << "\n";
-                o << "Phase: " << s.phase_name() << "\n";
-                o << "VP: A=" << s.vpA << " B=" << s.vpB << "\n";
-                o << "BP: A=" << s.bpA << " B=" << s.bpB << "\n\n";
                 o << list_fleet_text(me) << "\n" << list_fleet_text(enemy);
                 eventText = o.str();
             }
@@ -482,38 +407,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         else
         {
             std::string sub = to_lower(tok[1]);
-
-            if (sub == "drafts")
-            {
-                if (!require_build_phase())
-                {
-                    // fallthrough: eventText already set
-                }
-                else
-                {
-                    std::vector<DraftRow> drafts = load_drafts(db, a.game_id, owner);
-                    std::ostringstream o;
-                    o << "Drafts for " << (owner == 'A' ? "Blue" : "Red")
-                      << "-force:\n";
-                    if (drafts.empty())
-                    {
-                        o << "  (none)";
-                    }
-                    else
-                    {
-                        for (size_t i = 0; i < drafts.size(); ++i)
-                        {
-                            const DraftRow &d = drafts[i];
-                            int cost = ship_cost_bp(d.attr.type, d);
-                            o << "  " << d.code << " " << d.name << " ["
-                              << fmt_attrs(d.attr.PD, d.attr.B, d.attr.S, d.attr.T,
-                                          d.attr.M, d.attr.SR)
-                              << "] cost=" << cost << " BP\n";
-                        }
-                    }
-                    eventText = o.str();
-                }
-            }
 
             if (sub == "new")
             {
@@ -735,7 +628,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         o << "Draft: " << d.name << " - " << d.code << " ["
                           << fmt_attrs(d.attr.PD, d.attr.B, d.attr.S, d.attr.T,
                                        d.attr.M, d.attr.SR)
-                          << "] cost=" << cost << " BP";
+                          << "] cost=" << cost;
                         eventText = o.str();
                         set_current_draft(db, a.game_id, owner, d.code);
                     }
@@ -745,19 +638,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         if (!validate_draft(err))
                             eventText = "Draft invalid: " + err;
                         else
-                        {
-                            int cost = ship_cost_bp(d.attr.type, d);
-                            std::ostringstream o;
-                            o << "Draft valid: " << d.name << " - " << d.code
-                              << " (cost " << cost << " BP).";
-                            if (d.attr.type == 'W')
-                                o << " Warpship includes Warp Generator.";
-                            else
-                                o << " Systemship (no Warp Generator).";
-                            if (d.attr.M % 3 != 0)
-                                o << " WARNING: missiles should be in multiples of 3.";
-                            eventText = o.str();
-                        }
+                            eventText =
+                                "Draft valid: " + d.name + " - " + d.code;
                     }
                     else if (sub == "cost")
                     {
@@ -804,12 +686,11 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 goto build_done;
                             }
                             update_draft_attrs(db, a.game_id, owner, d.code, d);
-                            int cost = ship_cost_bp(d.attr.type, d);
                             eventText =
                                 "Draft updated: " + d.code + " [" +
                                 fmt_attrs(d.attr.PD, d.attr.B, d.attr.S,
                                           d.attr.T, d.attr.M, d.attr.SR) +
-                                "] cost=" + std::to_string(cost) + " BP";
+                                "]";
                         }
                     }
                     else if (sub == "set" || sub == "add")
@@ -847,12 +728,11 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 goto build_done;
                             }
                             update_draft_attrs(db, a.game_id, owner, d.code, d);
-                            int cost = ship_cost_bp(d.attr.type, d);
                             eventText =
                                 "Draft updated: " + d.code + " [" +
                                 fmt_attrs(d.attr.PD, d.attr.B, d.attr.S,
                                           d.attr.T, d.attr.M, d.attr.SR) +
-                                "] cost=" + std::to_string(cost) + " BP";
+                                "]";
                         }
                     }
                     else if (sub == "cancel")
@@ -941,46 +821,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         {
             std::string code = tok[1];
             std::string sys = resolve_system_name(db, a.game_id, tok[2]);
-            if (sys.empty())
-            {
-                eventText = "Unknown system: " + tok[2];
-                goto deploy_done;
-            }
-
-            // Newly-built ships may only be placed on a controlled base star.
-            // (Learning/Basic use only the middle base star at each map end.)
-            {
-                std::string q =
-                    "SELECT is_base, base_owner FROM star_systems WHERE "
-                    "game_id=" + std::to_string(a.game_id) +
-                    " AND name='" + db->esc(sys) + "'";
-                std::vector<std::vector<std::string> > rows = db->query(q);
-                if (rows.empty() || rows[0].size() < 2)
-                {
-                    eventText = "Unknown system: " + sys;
-                    goto deploy_done;
-                }
-                int is_base = std::atoi(rows[0][0].c_str());
-                std::string base_owner = rows[0][1];
-                if (!is_base || base_owner.size() != 1 || base_owner[0] != owner)
-                {
-                    eventText =
-                        "Deploy is only allowed to your controlled base stars.";
-                    goto deploy_done;
-                }
-                if (s.scenario == "learning" || s.scenario == "basic")
-                {
-                    std::string mid = (owner == 'A') ? "UR" : "BABYLON";
-                    if (sys != mid)
-                    {
-                        eventText =
-                            "In " + s.scenario + " scenario, deploy only to " +
-                            mid + ".";
-                        goto deploy_done;
-                    }
-                }
-            }
-
             if (!ship_exists(db, a.game_id, owner, code))
                 eventText = "Ship not found: " + code;
             else
@@ -999,9 +839,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 }
             }
         }
-
-    deploy_done:
-        ;
     }
     else if (cmd == "pickup" || cmd == "drop")
     {

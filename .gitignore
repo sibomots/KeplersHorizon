@@ -1,2 +1,3 @@
 upload/**
 site/server/build
+site/server/_build

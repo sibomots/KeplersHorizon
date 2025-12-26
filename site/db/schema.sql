@@ -166,3 +166,65 @@ CREATE TABLE IF NOT EXISTS warplines (
 );
 
 -- ships.at_system should match star_systems.name when on a system.
+
+-- Seed map data (game_id=1) for Kepler baseline.
+-- The DB is the source of truth for star systems + warplines.
+DELETE FROM warplines WHERE game_id=1;
+DELETE FROM star_systems WHERE game_id=1;
+
+INSERT IGNORE INTO star_systems(game_id,hex_id,name,is_base,base_owner) VALUES
+  (1,'0307','SONAL',1,NULL),
+  (1,'0606','UR',1,NULL),
+  (1,'0804','LARSU',1,NULL),
+  (1,'0611','SIPPUR',0,NULL),
+  (1,'0710','ERECH',0,NULL),
+  (1,'0908','CALAH',0,NULL),
+  (1,'0813','BYBLOS',0,NULL),
+  (1,'1011','ADAB',0,NULL),
+  (1,'1207','SUSA',0,NULL),
+  (1,'1014','UBAID',0,NULL),
+  (1,'1310','NIPPUR',0,NULL),
+  (1,'1313','KHAFA',0,NULL),
+  (1,'1415','MARI',0,NULL),
+  (1,'1614','LAGASH',0,NULL),
+  (1,'1712','ASSUR',0,NULL),
+  (1,'1419','SUMARRA',0,NULL),
+  (1,'1616','ELAM',0,NULL),
+  (1,'1814','JARMO',0,NULL),
+  (1,'1719','UMMA',0,NULL),
+  (1,'1817','GIRSU',0,NULL),
+  (1,'1622','ISIN',0,NULL),
+  (1,'1922','SUMER',0,NULL),
+  (1,'2020','AKKAD',0,NULL),
+  (1,'2118','KISH',0,NULL),
+  (1,'2318','ERIDU',0,NULL),
+  (1,'2125','NINEVEH',1,NULL),
+  (1,'2223','BABYLON',1,NULL),
+  (1,'2622','UGARIT',1,NULL);
+
+INSERT INTO warplines(game_id,a_hex,b_hex) VALUES
+  (1,'0307','0611'),
+  (1,'0710','0606'),
+  (1,'0710','1011'),
+  (1,'1011','0813'),
+  (1,'1011','1313'),
+  (1,'0804','1207'),
+  (1,'0908','1310'),
+  (1,'1207','1310'),
+  (1,'1310','1313'),
+  (1,'1313','1415'),
+  (1,'1415','1614'),
+  (1,'1614','1712'),
+  (1,'1712','1814'),
+  (1,'1313','1616'),
+  (1,'1616','1817'),
+  (1,'1817','2318'),
+  (1,'1616','1622'),
+  (1,'1622','1922'),
+  (1,'1922','2020'),
+  (1,'2020','2118'),
+  (1,'1419','1719'),
+  (1,'1719','1817'),
+  (1,'1719','1922'),
+  (1,'2223','1922'),
+  (1,'1622','2125');
