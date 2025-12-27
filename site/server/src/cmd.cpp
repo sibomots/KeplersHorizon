@@ -68,65 +68,6 @@ static bool system_exists(Db *db, int game_id, const std::string &user_supplied)
     return !r.empty();
 }
 
-static void seed_map_if_needed(Db *db, int game_id)
-{
-    auto r = db->query("SELECT COUNT(*) FROM star_systems WHERE game_id=" +
-                       std::to_string(game_id));
-    if (!r.empty() && !r[0].empty() && std::atoi(r[0][0].c_str()) > 0)
-        return;
-
-    struct StarDef
-    {
-        const char *hex;
-        const char *name;
-        int is_base;
-        const char *owner; // "A","B", or ""
-    };
-    StarDef stars[] = {
-        {"h0107", "SONAL", 1, "A"}, {"h0206", "UMMA", 0, ""},
-        {"h0204", "GIRSU", 0, ""},  {"h0211", "KHORS", 0, ""},
-        {"h0305", "KISH", 0, ""},   {"h0312", "KHEPRA", 0, ""},
-        {"h0404", "AKKAD", 0, ""},  {"h0413", "KHAFA", 0, ""},
-        {"h0503", "LAGASH", 0, ""}, {"h0514", "LIPIT", 0, ""},
-        {"h0602", "LARSA", 1, "A"}, {"h0615", "NINEVEH", 1, "B"},
-        {"h0701", "UR", 1, "A"},    {"h0716", "URUK", 0, ""},
-        {"h0817", "BABYLON", 1, "B"}, {"h0918", "UGARIT", 1, "B"},
-        {"h1019", "URR", 0, ""},    {"h1221", "HARRAN", 0, ""},
-        {"h1423", "HIT", 0, ""},    {"h1625", "KARGA", 0, ""}};
-
-    for (size_t i = 0; i < sizeof(stars) / sizeof(stars[0]); i++)
-    {
-        std::string owner = stars[i].owner;
-        std::string q =
-            "INSERT INTO star_systems(game_id, hex_id, name, is_base, "
-            "base_owner) VALUES(" +
-            std::to_string(game_id) + ",'" + stars[i].hex + "','" +
-            stars[i].name + "'," + std::to_string(stars[i].is_base) + "," +
-            (owner.empty() ? "NULL" : ("'" + owner + "'")) + ")";
-        db->exec(q);
-    }
-
-    struct WL
-    {
-        const char *a;
-        const char *b;
-    };
-    WL wls[] = {{"h0206", "h0204"}, {"h0206", "h0413"}, {"h0204", "h0503"},
-                {"h0305", "h0413"}, {"h0404", "h0503"}, {"h0312", "h0413"},
-                {"h0413", "h0514"}, {"h0514", "h1019"}, {"h0716", "h0615"},
-                {"h0716", "h1221"}, {"h0817", "h1221"}, {"h0918", "h1019"},
-                {"h0918", "h1423"}, {"h1019", "h1625"}, {"h1423", "h1625"}};
-
-    for (size_t i = 0; i < sizeof(wls) / sizeof(wls[0]); i++)
-    {
-        std::string q =
-            "INSERT INTO warplines(game_id, a_hex, b_hex) VALUES(" +
-            std::to_string(game_id) + ",'" + wls[i].a + "','" + wls[i].b +
-            "')";
-        db->exec(q);
-    }
-}
-
 #include <iostream>
 
 void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
@@ -160,8 +101,12 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
 
     std::string eventText;
 
-    auto owner = s.active_player.empty() ? 'A' : s.active_player[0];
-    auto turnToken = std::string("R") + std::to_string(s.round) + owner;
+    // NOTE: 'me' is derived from the authenticated token, not from game state.
+    char me = (a.player ? a.player : 'A');
+    char owner = me;
+    char enemy = (owner == 'A') ? 'B' : 'A';
+    char active = (s.active_player.empty() ? 'A' : s.active_player[0]);
+    auto turnToken = std::string("R") + std::to_string(s.round) + active;
 
     auto require_build_phase = [&]() -> bool {
         if (s.scenario.empty())
@@ -178,6 +123,17 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         }
         return true;
     };
+
+    auto require_my_turn = [&]() -> bool {
+        if (active != me) {
+            std::ostringstream o;
+            o << "Not your turn. Active player is " << active << ".";
+            eventText = o.str();
+            return false;
+        }
+        return true;
+    };
+
 
     auto ship_cost_bp = [&](char ship_type, const DraftRow &d) -> int {
         int cost = 0;
@@ -209,7 +165,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     auto list_fleet_text = [&](char whichOwner) -> std::string {
         auto ships = load_ships(db, a.game_id, whichOwner);
         std::ostringstream o;
-        o << (whichOwner == owner ? "Blue-force fleet:" : "Red-force fleet:")
+        o << (whichOwner == me ? "Blue-force fleet:" : "Red-force fleet:")
           << "\n";
         if (ships.empty())
         {
@@ -311,6 +267,13 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     else if (cmd == "next")
     {
+        if (!require_my_turn()) {
+            // eventText set by require_my_turn
+            save_game(db, s);
+            append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
+            resp->body = json_ok_with_state_and_event(s, eventText);
+            return;
+        }
         std::string before = s.phase_name();
         std::string beforeP = s.active_player;
         int beforeRound = s.round;
@@ -328,7 +291,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     {
         if (tok.size() == 1)
         {
-            char enemy = (owner == 'A') ? 'B' : 'A';
             eventText = list_fleet_text(owner) + "\n" + list_fleet_text(enemy);
         }
         else
@@ -376,8 +338,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             else if (sub == "all")
             {
                 std::ostringstream o;
-                char me = owner;
-                char enemy = (owner == 'A') ? 'B' : 'A';
+                char me = me;
+                char enemy = (me == 'A') ? 'B' : 'A';
                 o << list_fleet_text(me) << "\n" << list_fleet_text(enemy);
                 eventText = o.str();
             }
@@ -417,7 +379,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     resp->body = json_error("No Build Points available.");
                     return;
                 }
-                if (!require_build_phase())
+                if (!require_my_turn() || !require_build_phase())
                 {
                     // fallthrough: eventText already set
                 }
@@ -743,7 +705,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     }
                     else if (sub == "commit")
                     {
-                        if (!require_build_phase())
+                        if (!require_my_turn() || !require_build_phase())
                         {
                             // eventText already set
                         }
@@ -809,7 +771,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     else if (cmd == "deploy")
     {
-        if (!require_build_phase())
+        if (!require_my_turn() || !require_build_phase())
         {
             // eventText already set
         }
@@ -842,7 +804,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     else if (cmd == "pickup" || cmd == "drop")
     {
-        if (!require_build_phase())
+        if (!require_my_turn() || !require_build_phase())
         {
             // eventText already set
         }

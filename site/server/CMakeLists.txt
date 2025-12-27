@@ -35,10 +35,6 @@ cmake_minimum_required(VERSION 3.10)
 
 project(kh LANGUAGES CXX)
 
-# Optional: generate the static SVG map HTML from DB contents at build time.
-# (Option 1: DB is the sole source of truth for star systems + warplines.)
-option(KH_GENERATE_MAP_HTML "Generate site/web/map_view.html from DB at build time" ON)
-
 # Match original Makefile intent
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -84,29 +80,6 @@ add_executable(kh
     ${SRCS}
     ${HDRS}
 )
-
-if(KH_GENERATE_MAP_HTML)
-    find_program(PERL_EXECUTABLE perl)
-    if(NOT PERL_EXECUTABLE)
-        message(FATAL_ERROR "perl not found, but KH_GENERATE_MAP_HTML is ON")
-    endif()
-
-    set(MAP_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/../web/map_view.template.html")
-    set(MAP_OUTPUT   "${CMAKE_CURRENT_SOURCE_DIR}/../web/map_view.html")
-    set(MAP_GEN      "${CMAKE_CURRENT_SOURCE_DIR}/../tools/gen_map_view.pl")
-
-    add_custom_command(
-        OUTPUT "${MAP_OUTPUT}"
-        COMMAND "${PERL_EXECUTABLE}" "${MAP_GEN}"
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../.."
-        DEPENDS "${MAP_GEN}" "${MAP_TEMPLATE}"
-        COMMENT "Generating map_view.html from DB (set KH_DB_* env vars as needed)"
-        VERBATIM
-    )
-
-    add_custom_target(generate_map_html ALL DEPENDS "${MAP_OUTPUT}")
-    add_dependencies(kh generate_map_html)
-endif()
 
 # Make headers visible to all source files
 target_include_directories(kh

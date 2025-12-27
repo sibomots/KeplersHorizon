@@ -232,6 +232,7 @@ AuthContext require_auth(Db *db, const HttpRequest *req, HttpResponse *resp)
     a.user_id = std::atoi(rows[0][0].c_str());
     a.username = rows[0][1];
     a.token = tok;
+    a.player = owner_for_username(a.username);
 
     // heartbeat
     db->exec("UPDATE sessions SET last_seen=NOW() WHERE token='" +

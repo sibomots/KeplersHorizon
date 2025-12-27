@@ -229,6 +229,7 @@ typedef struct
     std::string username;
     std::string token;
     int game_id = 0;
+    char player = 0; // 'A' or 'B'
 } AuthContext;
 
 class ShipAttributes
