@@ -47,6 +47,19 @@ static std::string upper_ascii(const std::string &s)
     return r;
 }
 
+
+static std::string resolve_system_hex(Db *db, int game_id, const std::string &canon_name)
+{
+    std::ostringstream q;
+    q << "SELECT hex_id FROM star_systems WHERE game_id=" << game_id
+      << " AND name='" << db->esc(canon_name) << "' LIMIT 1";
+    auto r = db->query(q.str());
+    if (r.empty()) {
+        return "";
+    }
+    return r[0][0];
+}
+
 static std::string resolve_system_name(Db *db, int game_id,
                                        const std::string &user_supplied)
 {
@@ -69,6 +82,8 @@ static bool system_exists(Db *db, int game_id, const std::string &user_supplied)
 }
 
 #include <iostream>
+#include <unordered_map>
+#include <queue>
 
 void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
 {
@@ -338,7 +353,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             else if (sub == "all")
             {
                 std::ostringstream o;
-                char me = me;
+                char me = a.player;
                 char enemy = (me == 'A') ? 'B' : 'A';
                 o << list_fleet_text(me) << "\n" << list_fleet_text(enemy);
                 eventText = o.str();
@@ -795,7 +810,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 }
                 else
                 {
-                    update_ship_location(db, a.game_id, owner, code, sys, "");
+                    std::string hex = resolve_system_hex(db, a.game_id, sys);
+                    update_ship_location(db, a.game_id, owner, code, sys, hex, "");
                     eventText =
                         "Deployed " + sh.name + " - " + sh.code + " to " + sys;
                 }
@@ -876,7 +892,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         else
                         {
                             update_ship_location(db, a.game_id, owner, scode,
-                                                 "", wcode);
+                                                 "", w.at_hex, wcode);
                             eventText = "Picked up " + sship.name + " - " +
                                         sship.code + " into " + w.name + " - " +
                                         w.code;
@@ -899,7 +915,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         else
                         {
                             update_ship_location(db, a.game_id, owner, scode,
-                                                 w.at_system, "");
+                                                 w.at_system, w.at_hex, "");
                             eventText = "Dropped " + sship.name + " - " +
                                         sship.code + " at " + w.at_system;
                         }

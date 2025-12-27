@@ -62,5 +62,6 @@ std::vector<ShipRow> load_ships(Db *db, int game_id, char owner);
 ShipRow load_ship(Db *db, int game_id, char owner, const std::string &code);
 void update_ship_location(Db *db, int game_id, char owner,
                           const std::string &code, const std::string &at_system,
+                          const std::string &at_hex,
                           const std::string &racked_in);
 #endif

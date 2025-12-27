@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS ships (
   missiles INT NOT NULL DEFAULT 0,
   sr INT NOT NULL DEFAULT 0,
   at_system VARCHAR(16) DEFAULT NULL,
+  at_hex VARCHAR(8) DEFAULT NULL,
   racked_in VARCHAR(4) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_ship (game_id, owner, ship_code),
@@ -165,6 +166,27 @@ CREATE TABLE IF NOT EXISTS warplines (
   INDEX (game_id, a_hex),
   INDEX (game_id, b_hex)
 );
+
+
+CREATE TABLE IF NOT EXISTS hexes (
+  game_id INT NOT NULL,
+  hex_id VARCHAR(8) NOT NULL,
+  q INT NOT NULL,
+  r INT NOT NULL,
+  PRIMARY KEY (game_id, hex_id),
+  INDEX (game_id, q),
+  INDEX (game_id, r)
+);
+
+CREATE TABLE IF NOT EXISTS warpline_hexes (
+  game_id INT NOT NULL,
+  warpline_id INT NOT NULL,
+  hex_id VARCHAR(8) NOT NULL,
+  PRIMARY KEY (game_id, warpline_id, hex_id),
+  INDEX (game_id, hex_id),
+  INDEX (game_id, warpline_id)
+);
+
 
 -- ships.at_system should match star_systems.name when on a system.
 

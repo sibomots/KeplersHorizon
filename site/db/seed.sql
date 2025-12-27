@@ -21,4 +21,20 @@ FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 (game_id, a_hex, b_hex);
 
+
+LOAD DATA LOCAL INFILE 'hexes.csv'
+INTO TABLE hexes
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '
+'
+(game_id, hex_id, q, r);
+
+LOAD DATA LOCAL INFILE 'warpline_hexes.csv'
+INTO TABLE warpline_hexes
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '
+'
+(game_id, warpline_id, hex_id);
+
+
 COMMIT;

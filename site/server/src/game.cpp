@@ -331,7 +331,7 @@ std::vector<ShipRow> load_ships(Db *db, int game_id, char owner)
     auto rows =
         db->query("SELECT "
                   "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
-                  "beam,screen,tube,missiles,sr,at_system,racked_in "
+                  "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in "
                   "FROM ships WHERE game_id=" +
                   std::to_string(game_id) + " AND owner='" +
                   std::string(1, owner) + "' ORDER BY ship_code");
@@ -350,7 +350,8 @@ std::vector<ShipRow> load_ships(Db *db, int game_id, char owner)
         s.attr.M = std::atoi(r[9].c_str());
         s.attr.SR = std::atoi(r[10].c_str());
         s.at_system = r[11];
-        s.racked_in = r[12];
+        s.at_hex = r[12];
+        s.racked_in = r[13];
         out.push_back(s);
     }
     return out;
@@ -361,7 +362,7 @@ ShipRow load_ship(Db *db, int game_id, char owner, const std::string &code)
     auto rows = db->query(
         "SELECT "
         "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
-        "beam,screen,tube,missiles,sr,at_system,racked_in "
+        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in "
         "FROM ships WHERE game_id=" +
         std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
         "' AND ship_code='" + db->esc(code) + "' LIMIT 1");
@@ -403,7 +404,7 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
         "INSERT INTO "
         "ships(game_id,owner,ship_code,ship_name,ship_type,tech_level,built_"
         "turn,"
-        "pd,beam,screen,tube,missiles,sr,at_system,racked_in) VALUES(" +
+        "pd,beam,screen,tube,missiles,sr,at_system,at_hex,racked_in) VALUES(" +
         std::to_string(game_id) + ",'" + std::string(1, owner) + "','" +
         db->esc(s.code) + "','" + db->esc(s.name) + "','" +
         std::string(1, s.attr.type) + "'," + std::to_string(s.attr.tech) +
@@ -413,6 +414,8 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
         std::to_string(s.attr.SR) + "," +
         (s.at_system.empty() ? "NULL" : ("'" + db->esc(s.at_system) + "'")) +
         "," +
+        (s.at_hex.empty() ? "NULL" : ("'" + db->esc(s.at_hex) + "'")) +
+        "," +
         (s.racked_in.empty() ? "NULL" : ("'" + db->esc(s.racked_in) + "'")) +
         ")";
     db->exec(q);
@@ -420,11 +423,14 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
 
 void update_ship_location(Db *db, int game_id, char owner,
                           const std::string &code, const std::string &at_system,
+                          const std::string &at_hex,
                           const std::string &racked_in)
 {
     std::string q =
         "UPDATE ships SET at_system=" +
         (at_system.empty() ? "NULL" : ("'" + db->esc(at_system) + "'")) +
+        ",at_hex=" +
+        (at_hex.empty() ? "NULL" : ("'" + db->esc(at_hex) + "'")) +
         ",racked_in=" +
         (racked_in.empty() ? "NULL" : ("'" + db->esc(racked_in) + "'")) +
         " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +

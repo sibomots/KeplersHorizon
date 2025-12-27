@@ -277,6 +277,7 @@ class ShipRow
     std::string name;
     std::string built_turn;
     std::string at_system;
+    std::string at_hex;
     std::string racked_in;
     ShipAttributes attr;
 
