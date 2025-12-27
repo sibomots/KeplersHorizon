@@ -382,7 +382,8 @@ ShipRow load_ship(Db *db, int game_id, char owner, const std::string &code)
     s.attr.M = std::atoi(r[9].c_str());
     s.attr.SR = std::atoi(r[10].c_str());
     s.at_system = r[11];
-    s.racked_in = r[12];
+    s.at_hex = r[12];
+    s.racked_in = r[13];
     return s;
 }
 

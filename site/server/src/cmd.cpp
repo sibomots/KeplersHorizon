@@ -139,8 +139,25 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         return true;
     };
 
+    auto require_movement_phase = [&]() -> bool {
+        if (s.scenario.empty())
+        {
+            eventText = "No scenario. Type: start learning|basic|advanced";
+            return false;
+        }
+        if (s.phase_index != PH_MOVEMENT)
+        {
+            std::ostringstream o;
+            o << "Not in Movement phase. Current: " << s.phase_name();
+            eventText = o.str();
+            return false;
+        }
+        return true;
+    };
+
     auto require_my_turn = [&]() -> bool {
-        if (active != me) {
+        if (active != me)
+        {
             std::ostringstream o;
             o << "Not your turn. Active player is " << active << ".";
             eventText = o.str();
@@ -918,6 +935,239 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                                  w.at_system, w.at_hex, "");
                             eventText = "Dropped " + sship.name + " - " +
                                         sship.code + " at " + w.at_system;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if (cmd == "move")
+    {
+        if (!require_my_turn() || !require_movement_phase())
+        {
+            // eventText already set
+        }
+        else if (tok.size() < 3)
+        {
+            eventText = "Usage: move <W#> <DEST>";
+        }
+        else
+        {
+            std::string code = tok[1];
+            std::string destTok = tok[2];
+
+            if (!ship_exists(db, a.game_id, owner, code))
+            {
+                eventText = "Ship not found: " + code;
+            }
+            else
+            {
+                ShipRow sh = load_ship(db, a.game_id, owner, code);
+                if (sh.attr.type != 'W')
+                {
+                    eventText = "Only Warpships can move.";
+                }
+                else if (sh.attr.PD <= 0)
+                {
+                    eventText = "Ship has PD=0 and cannot move.";
+                }
+                else if (!sh.racked_in.empty())
+                {
+                    eventText = "Ship is racked and cannot move: " + sh.racked_in;
+                }
+                else
+                {
+                    std::string startHex = sh.at_hex;
+                    if (startHex.empty() && !sh.at_system.empty())
+                    {
+                        startHex = resolve_system_hex(db, a.game_id, sh.at_system);
+                    }
+                    if (startHex.empty())
+                    {
+                        eventText = "Ship is not deployed.";
+                    }
+                    else
+                    {
+                        auto upper = [](std::string s) -> std::string {
+                            for (size_t i = 0; i < s.size(); i++)
+                            {
+                                s[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(s[i])));
+                            }
+                            return s;
+                        };
+
+                        std::string destHex;
+                        std::string destSystem;
+                        if (destTok.size() >= 1 && (destTok[0] == 'h' || destTok[0] == 'H'))
+                        {
+                            destHex = "h" + destTok.substr(1);
+                        }
+                        else
+                        {
+                            bool allDigits = true;
+                            for (size_t i = 0; i < destTok.size(); i++)
+                            {
+                                if (!std::isdigit(static_cast<unsigned char>(destTok[i])))
+                                {
+                                    allDigits = false;
+                                }
+                            }
+                            if (allDigits && destTok.size() == 4)
+                            {
+                                destHex = "h" + destTok;
+                            }
+                        }
+
+                        if (!destHex.empty())
+                        {
+                            std::vector<std::vector<std::string> > chk = db->query(
+                                "SELECT hex_id FROM hexes WHERE game_id=" +
+                                std::to_string(a.game_id) +
+                                " AND hex_id='" + destHex + "'");
+                            if (chk.empty())
+                            {
+                                eventText = "Unknown destination hex: " + destHex;
+                                destHex.clear();
+                            }
+                            else
+                            {
+                                std::vector<std::vector<std::string> > sysr = db->query(
+                                    "SELECT name FROM star_systems WHERE game_id=" +
+                                    std::to_string(a.game_id) +
+                                    " AND hex_id='" + destHex + "'");
+                                if (!sysr.empty())
+                                {
+                                    destSystem = sysr[0][0];
+                                }
+                            }
+                        }
+                        else
+                        {
+                            std::string sys = upper(destTok);
+                            destHex = resolve_system_hex(db, a.game_id, sys);
+                            if (destHex.empty())
+                            {
+                                eventText = "Unknown system: " + sys;
+                            }
+                            else
+                            {
+                                destSystem = sys;
+                            }
+                        }
+
+                        if (!destHex.empty() && eventText.empty())
+                        {
+                            std::vector<std::vector<std::string> > allHex = db->query(
+                                "SELECT hex_id,q,r FROM hexes WHERE game_id=" +
+                                std::to_string(a.game_id));
+
+                            std::unordered_map<std::string, std::pair<int, int>> qr;
+                            std::unordered_map<long long, std::string> byQr;
+                            for (size_t i = 0; i < allHex.size(); i++)
+                            {
+                                const std::string &hid = allHex[i][0];
+                                int q = std::atoi(allHex[i][1].c_str());
+                                int r = std::atoi(allHex[i][2].c_str());
+                                qr[hid] = std::make_pair(q, r);
+                                long long key = (static_cast<long long>(q) << 32) ^
+                                                static_cast<unsigned int>(r);
+                                byQr[key] = hid;
+                            }
+
+                            std::vector<std::vector<std::string> > wh = db->query(
+                                "SELECT wh.hex_id,w.a_hex,w.b_hex "
+                                "FROM warpline_hexes wh "
+                                "JOIN warplines w ON w.id=wh.warpline_id AND w.game_id=wh.game_id "
+                                "WHERE wh.game_id=" + std::to_string(a.game_id));
+                            std::unordered_map<std::string, std::vector<std::string>> warpJumps;
+                            for (size_t i = 0; i < wh.size(); i++)
+                            {
+                                std::string h = wh[i][0];
+                                std::string ahex = wh[i][1];
+                                std::string bhex = wh[i][2];
+                                warpJumps[h].push_back(ahex);
+                                warpJumps[h].push_back(bhex);
+                            }
+
+                            std::unordered_map<std::string, int> dist;
+                            std::unordered_map<std::string, std::string> prev;
+                            std::queue<std::string> qn;
+                            dist[startHex] = 0;
+                            qn.push(startHex);
+
+                            auto push_neighbor = [&](const std::string &from, const std::string &to) {
+                                if (dist.find(to) == dist.end())
+                                {
+                                    dist[to] = dist[from] + 1;
+                                    prev[to] = from;
+                                    qn.push(to);
+                                }
+                            };
+
+                            while (!qn.empty())
+                            {
+                                std::string cur = qn.front();
+                                qn.pop();
+                                if (cur == destHex)
+                                {
+                                    break;
+                                }
+                                if (dist[cur] >= sh.attr.PD)
+                                {
+                                    continue;
+                                }
+
+                                std::unordered_map<std::string, std::pair<int, int>>::iterator it = qr.find(cur);
+                                if (it == qr.end())
+                                {
+                                    continue;
+                                }
+                                int cq = it->second.first;
+                                int cr = it->second.second;
+                                const int dq[6] = {1, 1, 0, -1, -1, 0};
+                                const int dr[6] = {0, -1, -1, 0, 1, 1};
+                                for (int i = 0; i < 6; i++)
+                                {
+                                    int nq = cq + dq[i];
+                                    int nr = cr + dr[i];
+                                    long long key = (static_cast<long long>(nq) << 32) ^
+                                                    static_cast<unsigned int>(nr);
+                                    std::unordered_map<long long, std::string>::iterator jt = byQr.find(key);
+                                    if (jt != byQr.end())
+                                    {
+                                        push_neighbor(cur, jt->second);
+                                    }
+                                }
+
+                                std::unordered_map<std::string, std::vector<std::string>>::iterator wt =
+                                    warpJumps.find(cur);
+                                if (wt != warpJumps.end())
+                                {
+                                    for (size_t i = 0; i < wt->second.size(); i++)
+                                    {
+                                        push_neighbor(cur, wt->second[i]);
+                                    }
+                                }
+                            }
+
+                            if (dist.find(destHex) == dist.end() || dist[destHex] > sh.attr.PD)
+                            {
+                                eventText = "Destination out of range. PD=" + std::to_string(sh.attr.PD);
+                            }
+                            else
+                            {
+                                int cost = dist[destHex];
+                                std::string outSys = destSystem;
+                                if (outSys.empty())
+                                {
+                                    outSys = destHex;
+                                }
+                                update_ship_location(db, a.game_id, owner, sh.code, destSystem, destHex, "");
+                                std::ostringstream o;
+                                o << "Moved " << sh.name << " - " << sh.code << " to " << outSys
+                                  << " (" << destHex << ") cost " << cost << " PD";
+                                eventText = o.str();
+                            }
                         }
                     }
                 }
