@@ -1060,6 +1060,9 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
 
     else if (cmd == "combat") {
+        std::istringstream iss(cmdline);
+        std::string cmdName; iss >> cmdName; // "combat"
+
         std::string action;
         iss >> action;
         if (action == "order") {
