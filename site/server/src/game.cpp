@@ -149,6 +149,15 @@ void advance_next(Db *db, GameState &s)
 
     if (s.phase_index < PH_END_TURN)
     {
+
+        // --- Prevent skipping active combat ---
+        if (s.phase_index == PH_RESOLVE_COMBAT) {
+            CombatEngine ce(db, s.game_id);
+            if (!ce.get_active_combats().empty()) {
+                return; // Cannot advance until all combats resolved
+            }
+        }
+
         s.phase_index++;
         
         // --- Combat Trigger Logic ---

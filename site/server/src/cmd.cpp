@@ -1124,6 +1124,31 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             CombatEngine ce(db, a.game_id);
             eventText = ce.resolve_round(hex);
         }
+        else if (action == "apply") {
+            // combat apply <ship> <attr=val>...
+            std::string ship_code;
+            if (!(iss >> ship_code)) {
+                resp->status = 400;
+                resp->body = json_error("missing ship code");
+                return;
+            }
+            std::map<std::string, int> assignments;
+            std::string token;
+            while(iss >> token) {
+                size_t eq = token.find('=');
+                if (eq == std::string::npos) continue;
+                std::string k = to_lower(token.substr(0, eq));
+                int v = std::atoi(token.substr(eq+1).c_str());
+                if (k == "beam" || k == "b") k = "beam";
+                else if (k == "d" || k == "drive" || k == "pd") k = "pd";
+                else if (k == "screen" || k == "s") k = "screen";
+                else if (k == "tube" || k == "t") k = "tube";
+                else if (k == "missiles" || k == "m") k = "missiles";
+                assignments[k] = v;
+            }
+            CombatEngine ce(db, a.game_id);
+            eventText = ce.apply_damage(owner, ship_code, assignments);
+        }
         else if (action == "list") {
              CombatEngine ce(db, a.game_id);
              auto list = ce.get_active_combats();
