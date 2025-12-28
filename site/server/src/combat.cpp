@@ -51,7 +51,7 @@ void CombatEngine::create_combat(const std::string& hex_id) {
 std::vector<CombatState> CombatEngine::get_active_combats() {
     std::vector<CombatState> result;
     auto rows = db->query(
-        "SELECT hex_id, round, stage, attacker_remains, stalemate_counter, pending_damage_json "
+        "SELECT hex_id, round, stage, attacker_remains, stalemate_counter, pending_damage_json, last_log "
         "FROM combat_state WHERE game_id=" + std::to_string(game_id)
     );
     
@@ -64,6 +64,18 @@ std::vector<CombatState> CombatEngine::get_active_combats() {
         cs.attacker_remains = (r[3] == "1");
         cs.stalemate_counter = std::atoi(r[4].c_str());
         cs.pending_damage_json = r[5];
+        cs.last_log = r[6];
+        result.push_back(cs);
+    }
+    return result;
+}
+        cs.hex_id = r[0];
+        cs.round = std::atoi(r[1].c_str());
+        cs.stage = std::atoi(r[2].c_str());
+        cs.attacker_remains = (r[3] == "1");
+        cs.stalemate_counter = std::atoi(r[4].c_str());
+        cs.pending_damage_json = r[5];
+        cs.last_log = r[6];
         result.push_back(cs);
     }
     return result;
@@ -71,10 +83,10 @@ std::vector<CombatState> CombatEngine::get_active_combats() {
 
 CombatState CombatEngine::get_combat_state(const std::string& hex_id) {
     auto rows = db->query(
-        "SELECT round, stage, attacker_remains, stalemate_counter, pending_damage_json "
+        "SELECT round, stage, attacker_remains, stalemate_counter, pending_damage_json, last_log "
         "FROM combat_state WHERE game_id=" + std::to_string(game_id) + " AND hex_id='" + hex_id + "'"
     );
-    if(rows.empty()) return {0, "", 0, 0, false, 0, ""};
+    if(rows.empty()) return {0, "", 0, 0, false, 0, "", ""};
     
     CombatState cs;
     cs.game_id = game_id;
@@ -83,7 +95,9 @@ CombatState CombatEngine::get_combat_state(const std::string& hex_id) {
     cs.stage = std::atoi(rows[0][1].c_str());
     cs.attacker_remains = (rows[0][2] == "1");
     cs.stalemate_counter = std::atoi(rows[0][3].c_str());
+    cs.stalemate_counter = std::atoi(rows[0][3].c_str());
     cs.pending_damage_json = rows[0][4];
+    cs.last_log = rows[0][5];
     return cs;
 }
 
@@ -150,7 +164,7 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) 
     if (all_orders_submitted(hex_id, order.round)) {
         // Auto-Resolve!
         std::string res = resolve_round(hex_id);
-        return "Orders Saved. Invoking Auto-Resolve...\\n" + res;
+        return "Orders Saved. Invoking Auto-Resolve...\n" + res;
     }
 
     return "Order Saved";
@@ -414,6 +428,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
                       ", stage=" + std::to_string(next_stage) +
                       ", stalemate_counter=" + std::to_string(next_stalemate) + 
                       ", pending_damage_json='" + dmgJson.str() + "'" +
+                      ", last_log='" + db->esc(log.str()) + "'" +
                       " WHERE game_id=" + std::to_string(game_id) + " AND hex_id='" + hex_id + "'";
     db->exec(sql);
     

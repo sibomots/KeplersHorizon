@@ -183,6 +183,23 @@
     S.self = j.self || null;
     S.peer = j.peer || null;
     renderStatus();
+
+    // Poll Combat Log (Feedback Loop)
+    if (j.state && j.state.combat && j.state.combat.combats) {
+      S.lastCombatLogs = S.lastCombatLogs || {};
+      const list = j.state.combat.combats;
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i];
+        if (c.log && c.log !== S.lastCombatLogs[c.hex]) {
+          if (S.lastCombatLogs[c.hex] && c.log.length > 0) {
+            appendLine("--- Combat Update (" + c.hex + ") ---", "line-bad");
+            appendLine(c.log);
+          }
+          S.lastCombatLogs[c.hex] = c.log;
+        }
+      }
+    }
+
     return j;
   }
 

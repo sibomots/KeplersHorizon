@@ -181,6 +181,15 @@ GameState load_game(Db *db, int game_id)
                 c << "\"" << combats[i].hex_id << "\"";
             }
             c << "],";
+            c << "\"combats\":[";
+            for(size_t i=0; i<combats.size(); ++i) {
+                if (i>0) c << ",";
+                c << "{\"hex\":\"" << combats[i].hex_id << "\",";
+                c << "\"log\":\"" << escape_json(combats[i].last_log) << "\",";
+                c << "\"stage\":" << combats[i].stage; // useful for UI
+                c << "}";
+            }
+            c << "],";
             c << "\"count\":" << combats.size();
             c << "}";
             s.combat_summary_json = c.str();

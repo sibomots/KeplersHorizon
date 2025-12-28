@@ -193,3 +193,33 @@ CREATE TABLE IF NOT EXISTS warpline_hexes (
 
 -- NOTE: Seed data (star systems + warplines) is intentionally not embedded in
 -- this schema file. See seed.sql + CSV files in this directory.
+
+-- Combat Phase
+CREATE TABLE IF NOT EXISTS combat_state (
+  game_id INT NOT NULL,
+  hex_id VARCHAR(8) NOT NULL, -- e.g. "h1616"
+  round INT NOT NULL DEFAULT 1,
+  stage INT NOT NULL DEFAULT 0, -- 0=Order, 1=Resolve, 2=Done
+  attacker_remains BOOLEAN NOT NULL DEFAULT 0,
+  stalemate_counter INT NOT NULL DEFAULT 0,
+  pending_damage_json TEXT DEFAULT NULL,
+  last_log TEXT DEFAULT NULL,
+  PRIMARY KEY (game_id, hex_id),
+  FOREIGN KEY (game_id) REFERENCES games(id)
+);
+
+CREATE TABLE IF NOT EXISTS combat_orders (
+  game_id INT NOT NULL,
+  ship_code VARCHAR(4) NOT NULL,
+  round INT NOT NULL,
+  tactic CHAR(1) NOT NULL DEFAULT 'A', -- A, D, R
+  target_id VARCHAR(4) DEFAULT NULL,
+  power_d INT NOT NULL DEFAULT 0,
+  power_b INT NOT NULL DEFAULT 0,
+  power_s INT NOT NULL DEFAULT 0,
+  power_t INT NOT NULL DEFAULT 0,
+  missiles_json TEXT DEFAULT NULL, -- JSON array of missile IDs launched
+  PRIMARY KEY (game_id, ship_code, round),
+  FOREIGN KEY (game_id) REFERENCES games(id),
+  FOREIGN KEY (game_id, ship_code) REFERENCES ships(game_id, ship_code)
+);
