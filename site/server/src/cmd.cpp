@@ -1126,8 +1126,11 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                          char c = std::toupper(token[0]);
                          if (c == 'A' || c == 'D' || c == 'R') {
                              ord.tactic = c;
+                             continue;
                          }
                     }
+                    // Implicit target ID (e.g. "W1" in "combat order W2 D W1")
+                    ord.target_id = token;
                     continue; 
                 }
 
