@@ -1149,6 +1149,9 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             
             // No strict syntax check needed, defaults apply.
 
+			std::string candidate_target( ord.target_id );
+			Logger::instance().info(candidate_target);
+
             // Validation
             if (ord.tactic == 'D' && ord.target_id.empty()) {
                 eventText = "Combat order to dodge requires a target opponent ship";
