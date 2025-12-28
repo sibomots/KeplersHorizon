@@ -319,7 +319,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
     }
 
     std::ostringstream log;
-    log << "Round " << cs.round << " Resolution:\\n";
+    log << "\\n========================================\\n";
+    log << "       COMBAT ROUND " << cs.round << " RESOLUTION\\n";
+    log << "========================================\\n";
 
     // 3. Resolve Fire
     // Beams
@@ -558,6 +560,15 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
     
     if (!updateSql.empty()) {
         db->exec("UPDATE ships SET " + updateSql + " WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(ship_code) + "'");
+    }
+
+    // Check Destruction
+    if (cur_pd == 0 && cur_b == 0 && cur_s == 0 && cur_t == 0) {
+        // Ship Destroyed
+        db->exec("DELETE FROM ships WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(ship_code) + "' AND owner='" + std::string(1, owner) + "'");
+        // Clean orders
+        db->exec("DELETE FROM combat_orders WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(ship_code) + "' AND owner='" + std::string(1, owner) + "'");
+        // Remove pending (already done below)
     }
 
     // 4. Update Pending

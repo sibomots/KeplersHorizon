@@ -35,6 +35,7 @@
 #include "comms.h"
 #include "db.h"
 #include "util.h"
+#include "logger.h"
 #include <iostream>
 
 int main(int argc, char **argv)
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
                      now_iso().c_str(), args.listen.c_str(), args.port);
         
         #ifdef GIT_SHA
-        std::cout << "Server starting. Build SHA: " << GIT_SHA << std::endl;
+        Logger::instance().info(std::string("Server starting. Build SHA: ") + GIT_SHA);
         #endif
 
         while (true)
