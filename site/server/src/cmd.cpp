@@ -1112,10 +1112,10 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             ord.missiles_json = "[]";
 
             if (!(iss >> ord.ship_code)) {
-                resp->status = 400;
                 resp->body = json_error("missing ship code");
                 return;
             }
+            ord.ship_code = upper_ascii(ord.ship_code);
 
             std::string token;
             while(iss >> token) {
@@ -1180,11 +1180,11 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             // combat apply <ship> <attr=val>...
             std::string ship_code;
             if (!(iss >> ship_code)) {
-                resp->status = 400;
                 resp->body = json_error("missing ship code");
                 Logger::instance().error("Trying combat subcommand apply, ship code is missing");
                 return;
             }
+            ship_code = upper_ascii(ship_code);
             std::map<std::string, int> assignments;
             std::string token;
             while(iss >> token) {
@@ -1192,11 +1192,11 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 if (eq == std::string::npos) continue;
                 std::string k = to_lower(token.substr(0, eq));
                 int v = std::atoi(token.substr(eq+1).c_str());
-                if (k == "beam" || k == "b") k = "beam";
-                else if (k == "d" || k == "drive" || k == "pd") k = "pd";
-                else if (k == "screen" || k == "s") k = "screen";
-                else if (k == "tube" || k == "t") k = "tube";
-                else if (k == "missiles" || k == "m") k = "missiles";
+                if (k == "beam" || k == "b") k = "B";
+                else if (k == "d" || k == "drive" || k == "pd") k = "D";
+                else if (k == "screen" || k == "s") k = "S";
+                else if (k == "tube" || k == "t") k = "T";
+                else if (k == "missiles" || k == "m") k = "M";
                 assignments[k] = v;
             }
             CombatEngine ce(db, a.game_id);
