@@ -37,6 +37,7 @@
 #include "typs.h"
 
 void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp);
+
 void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp);
 void handle_logout(const HttpRequest *req, Db *db, HttpResponse *resp);
 

@@ -65,8 +65,7 @@ src/comms.cpp
 src/cmd.cpp
 src/db.cpp
 src/state.cpp
-src/login.cpp
-src/logout.cpp
+src/account.cpp
 src/main.cpp
 src/json.cpp
 src/map.cpp
