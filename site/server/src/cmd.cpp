@@ -1089,7 +1089,16 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::string token;
             while(iss >> token) {
                 size_t eq = token.find('=');
-                if (eq == std::string::npos) continue; 
+                if (eq == std::string::npos) {
+                    // check for implicit tactic (A, D, R)
+                    if (token.size() == 1) {
+                         char c = std::toupper(token[0]);
+                         if (c == 'A' || c == 'D' || c == 'R') {
+                             ord.tactic = c;
+                         }
+                    }
+                    continue; 
+                }
 
                 std::string key = to_lower(token.substr(0, eq));
                 std::string val = token.substr(eq+1);

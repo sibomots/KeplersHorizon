@@ -157,7 +157,7 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) 
 
 bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round) {
     // Count ships in hex
-    auto sr = db->query("SELECT COUNT(*) FROM ships WHERE game_id=" + std::to_string(game_id) + " AND at_hex='" + hex_id + "' AND racks_ship IS NULL");
+    auto sr = db->query("SELECT COUNT(*) FROM ships WHERE game_id=" + std::to_string(game_id) + " AND at_hex='" + hex_id + "' AND racked_in IS NULL");
     int shipCount = std::atoi(sr[0][0].c_str());
 
     // Count orders
