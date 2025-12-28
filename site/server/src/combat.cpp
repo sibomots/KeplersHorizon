@@ -154,8 +154,8 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round) {
     int shipCount = std::atoi(sr[0][0].c_str());
 
     // Count orders
-    auto or_ = db->query("SELECT COUNT(DISTINCT co.ship_code) FROM combat_orders co "
-        "JOIN ships s ON s.ship_code = co.ship_code "
+    auto or_ = db->query("SELECT COUNT(*) FROM combat_orders co "
+        "JOIN ships s ON s.game_id = co.game_id AND s.ship_code = co.ship_code AND s.owner = co.owner "
         "WHERE co.game_id=" + std::to_string(game_id) + " AND co.round=" + std::to_string(round) + 
         " AND s.at_hex='" + hex_id + "'");
     int orderCount = std::atoi(or_[0][0].c_str());
