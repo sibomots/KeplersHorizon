@@ -12,7 +12,7 @@ void CombatEngine::check_for_combat_triggers() {
     auto rows = db->query(
         "SELECT at_hex, owner FROM ships "
         "WHERE game_id=" + std::to_string(game_id) + " "
-        "AND at_hex IS NOT NULL AND racks_ship IS NULL" // Only active ships in space
+        "AND at_hex IS NOT NULL AND racked_in IS NULL" // Only active ships in space
     );
 
     std::map<std::string, std::set<char>> hexOccupants;
