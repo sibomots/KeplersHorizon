@@ -16,6 +16,11 @@ struct CombatState {
     int stalemate_counter;
     std::string pending_damage_json;
     std::string last_log;
+
+    CombatState() : game_id(0), round(0), stage(0), attacker_remains(false), stalemate_counter(0) {}
+
+    CombatState(int gid, std::string hex, int rnd, int stg, bool att, int stale, std::string pend, std::string log)
+        : game_id(gid), hex_id(hex), round(rnd), stage(stg), attacker_remains(att), stalemate_counter(stale), pending_damage_json(pend), last_log(log) {}
 };
 
 // Represents a single ship's secret order for a round

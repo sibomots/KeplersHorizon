@@ -56,27 +56,10 @@ std::vector<CombatState> CombatEngine::get_active_combats() {
     );
     
     for(const auto& r : rows) {
-        CombatState cs;
-        cs.game_id = game_id;
-        cs.hex_id = r[0];
-        cs.round = std::atoi(r[1].c_str());
-        cs.stage = std::atoi(r[2].c_str());
-        cs.attacker_remains = (r[3] == "1");
-        cs.stalemate_counter = std::atoi(r[4].c_str());
-        cs.pending_damage_json = r[5];
-        cs.last_log = r[6];
-        result.push_back(cs);
-    }
-    return result;
-}
-        cs.hex_id = r[0];
-        cs.round = std::atoi(r[1].c_str());
-        cs.stage = std::atoi(r[2].c_str());
-        cs.attacker_remains = (r[3] == "1");
-        cs.stalemate_counter = std::atoi(r[4].c_str());
-        cs.pending_damage_json = r[5];
-        cs.last_log = r[6];
-        result.push_back(cs);
+        result.emplace_back(
+            game_id, r[0], std::atoi(r[1].c_str()), std::atoi(r[2].c_str()), (r[3] == "1"),
+            std::atoi(r[4].c_str()), r[5], r[6]
+        );
     }
     return result;
 }
@@ -88,17 +71,10 @@ CombatState CombatEngine::get_combat_state(const std::string& hex_id) {
     );
     if(rows.empty()) return {0, "", 0, 0, false, 0, "", ""};
     
-    CombatState cs;
-    cs.game_id = game_id;
-    cs.hex_id = hex_id;
-    cs.round = std::atoi(rows[0][0].c_str());
-    cs.stage = std::atoi(rows[0][1].c_str());
-    cs.attacker_remains = (rows[0][2] == "1");
-    cs.stalemate_counter = std::atoi(rows[0][3].c_str());
-    cs.stalemate_counter = std::atoi(rows[0][3].c_str());
-    cs.pending_damage_json = rows[0][4];
-    cs.last_log = rows[0][5];
-    return cs;
+    return CombatState(
+        game_id, hex_id, std::atoi(rows[0][0].c_str()), std::atoi(rows[0][1].c_str()), (rows[0][2] == "1"),
+        std::atoi(rows[0][3].c_str()), rows[0][4], rows[0][5]
+    );
 }
 
 std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) {
