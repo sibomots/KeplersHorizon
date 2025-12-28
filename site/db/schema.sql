@@ -211,6 +211,7 @@ CREATE TABLE IF NOT EXISTS combat_state (
 CREATE TABLE IF NOT EXISTS combat_orders (
   game_id INT NOT NULL,
   ship_code VARCHAR(4) NOT NULL,
+  owner CHAR(1) NOT NULL,
   round INT NOT NULL,
   tactic CHAR(1) NOT NULL DEFAULT 'A', -- A, D, R
   target_id VARCHAR(4) DEFAULT NULL,
@@ -219,7 +220,7 @@ CREATE TABLE IF NOT EXISTS combat_orders (
   power_s INT NOT NULL DEFAULT 0,
   power_t INT NOT NULL DEFAULT 0,
   missiles_json TEXT DEFAULT NULL, -- JSON array of missile IDs launched
-  PRIMARY KEY (game_id, ship_code, round),
+  PRIMARY KEY (game_id, owner, ship_code, round),
   FOREIGN KEY (game_id) REFERENCES games(id),
-  FOREIGN KEY (game_id, ship_code) REFERENCES ships(game_id, ship_code)
+  FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code)
 );

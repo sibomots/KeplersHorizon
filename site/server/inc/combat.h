@@ -26,6 +26,7 @@ struct CombatState {
 // Represents a single ship's secret order for a round
 struct CombatOrder {
     int game_id;
+    char owner; // 'A' or 'B'
     std::string ship_code;
     int round;
     char tactic; // 'A', 'D', 'R'

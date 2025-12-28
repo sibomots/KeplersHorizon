@@ -116,8 +116,9 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) 
     order.round = cs.round;
 
     // 3. Insert/Update
-    db->exec("INSERT INTO combat_orders (game_id, ship_code, round, tactic, target_id, power_d, power_b, power_s, power_t, missiles_json) VALUES (" +
+    db->exec("INSERT INTO combat_orders (game_id, owner, ship_code, round, tactic, target_id, power_d, power_b, power_s, power_t, missiles_json) VALUES (" +
         std::to_string(game_id) + ", '" +
+        std::string(1, owner) + "', '" +
         order.ship_code + "', " +
         std::to_string(order.round) + ", '" +
         std::string(1, order.tactic) + "', '" +
@@ -128,6 +129,13 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) 
         std::to_string(order.power_t) + ", '" +
         order.missiles_json + "') "
         "ON DUPLICATE KEY UPDATE "
+        "tactic='" + std::string(1, order.tactic) + "', "
+        "target_id='" + order.target_id + "', "
+        "power_d=" + std::to_string(order.power_d) + ", "
+        "power_b=" + std::to_string(order.power_b) + ", "
+        "power_s=" + std::to_string(order.power_s) + ", "
+        "power_t=" + std::to_string(order.power_t) + ", "
+        "missiles_json='" + order.missiles_json + "'";
         "tactic='" + std::string(1, order.tactic) + "', "
         "power_d=" + std::to_string(order.power_d) + ","
         "power_b=" + std::to_string(order.power_b) + ","
@@ -293,23 +301,26 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
         s.code = row[0];
         s.owner = row[1][0];
         s.tech = std::atoi(row[2].c_str());
-        ships[s.code] = s;
+        std::string key = std::string(1, s.owner) + "_" + s.code;
+        ships[key] = s;
     }
 
     // Load orders
-    auto ro = db->query("SELECT ship_code, tactic, target_id, power_d, power_b, power_s, power_t, missiles_json FROM combat_orders WHERE game_id=" + 
+    auto ro = db->query("SELECT ship_code, owner, tactic, target_id, power_d, power_b, power_s, power_t, missiles_json FROM combat_orders WHERE game_id=" + 
         std::to_string(game_id) + " AND round=" + std::to_string(cs.round));
     
     for(const auto& row : ro) {
         std::string c = row[0];
-        if (ships.count(c)) {
-            ships[c].ord.tactic = row[1][0];
-            ships[c].ord.target_id = row[2];
-            ships[c].ord.power_d = std::atoi(row[3].c_str());
-            ships[c].ord.power_b = std::atoi(row[4].c_str());
-            ships[c].ord.power_s = std::atoi(row[5].c_str());
-            ships[c].ord.power_t = std::atoi(row[6].c_str());
-            ships[c].ord.missiles_json = row[7];
+        char o = row[1][0];
+        std::string key = std::string(1, o) + "_" + c;
+        if (ships.count(key)) {
+            ships[key].ord.tactic = row[2][0];
+            ships[key].ord.target_id = row[3];
+            ships[key].ord.power_d = std::atoi(row[4].c_str());
+            ships[key].ord.power_b = std::atoi(row[5].c_str());
+            ships[key].ord.power_s = std::atoi(row[6].c_str());
+            ships[key].ord.power_t = std::atoi(row[7].c_str());
+            ships[key].ord.missiles_json = row[8];
         }
     }
 
@@ -318,26 +329,40 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
 
     // 3. Resolve Fire
     // Beams
-    for(auto& [code, ship] : ships) {
-        if (ship.ord.power_b > 0 && !ship.ord.target_id.empty() && ships.count(ship.ord.target_id)) {
-            auto& target = ships[ship.ord.target_id];
-            target.escape_attempts++; // Being fired upon challenges escape
+    for(auto& [key, ship] : ships) {
+        if (ship.ord.power_b > 0 && !ship.ord.target_id.empty()) {
+            std::string tid = ship.ord.target_id;
+            // Find target (simple scan for enemy with this code)
+            // Assumes 1 enemy with this code.
+            ShipCtx* target = nullptr;
+            for(auto& [tkey, tship] : ships) {
+                if (tship.owner != ship.owner && tship.code == tid) {
+                    target = &tship;
+                    break;
+                }
+            }
 
-            int drive_diff = ship.ord.power_d - target.ord.power_d;
-            bool escaped = false;
-            int mod = get_crt_mod(drive_diff, ship.ord.tactic, target.ord.tactic, escaped);
-            
-            if (escaped) target.escape_successes++;
-            
-            if (mod != -999) {
-                int dmg = ship.ord.power_b + ship.tech + mod;
-                if (dmg > 0) {
-                    target.damage_received += dmg;
-                    log << ship.code << " beams " << target.code << " for " << dmg << " dmg!\\n";
+            if (target) {
+                target->escape_attempts++; // Being fired upon challenges escape
+    
+                int drive_diff = ship.ord.power_d - target->ord.power_d;
+                bool escaped = false;
+                int mod = get_crt_mod(drive_diff, ship.ord.tactic, target->ord.tactic, escaped);
+                
+                if (escaped) target->escape_successes++;
+                
+                if (mod != -999) {
+                    int dmg = ship.ord.power_b + ship.tech + mod;
+                    if (dmg > 0) {
+                        target->damage_received += dmg;
+                        log << ship.code << " beams " << target->code << " for " << dmg << " dmg!\\n";
+                    }
+                } else {
+                     if (escaped) log << target->code << " outruns " << ship.code << "'s beams.\\n";
+                     else log << ship.code << " misses " << target->code << ".\\n";
                 }
             } else {
-                 if (escaped) log << target.code << " outruns " << ship.code << "'s beams.\\n";
-                 else log << ship.code << " misses " << target.code << ".\\n";
+                log << ship.code << " has no target '" << tid << "'\\n";
             }
         }
         else if (ship.ord.tactic == 'R') {
@@ -356,14 +381,14 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
     dmgJson << "{";
     bool first = true;
     
-    for(auto& [code, ship] : ships) {
+    for(auto& [key, ship] : ships) {
         int absorb = 0;
         if (ship.ord.power_s > 0) absorb = ship.ord.power_s + ship.tech; // Tech adds to shields? Rules: "Screen Power + Tech Level (if powered)"
         
         int net = std::max(0, ship.damage_received - absorb);
         if (net > 0) {
              if (!first) dmgJson << ",";
-             dmgJson << "\\\"" << code << "\\\":" << net;
+             dmgJson << "\\\"" << key << "\\\":" << net; // Uses owner_code key
              total_net_damage += net;
              first = false;
              log << ship.code << " takes " << net << " net damage (Absorbed " << absorb << ").\\n";
@@ -416,7 +441,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
 std::string CombatEngine::apply_damage(char owner, const std::string& ship_code, const std::map<std::string, int>& assignments) {
     // 1. Verify State
     // Find hex for ship
-    auto r = db->query("SELECT at_hex, owner, pd, beam, screen, tube, missiles FROM ships WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(ship_code) + "'");
+    auto r = db->query("SELECT at_hex, owner, pd, beam, screen, tube, missiles FROM ships WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(ship_code) + "' AND owner='" + std::string(1, owner) + "'");
     if(r.empty()) return "Ship not found";
     
     std::string hex = r[0][0];
@@ -427,7 +452,7 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
     if (cs.stage != 2) return "No pending damage for this hex"; // 2=DAMAGE_PENDING
 
     // 2. Parse Pending Damage
-    // JSON: {"S20": 4, "W1": 2} ... simple parse
+    // JSON: {"A_S20": 4, "B_W1": 2} ... simple parse
     std::map<std::string, int> pending;
     std::string json = cs.pending_damage_json;
     // Remove braces
@@ -447,9 +472,10 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
         }
     }
 
-    if (pending.find(ship_code) == pending.end()) return "No damage pending for this ship";
+    std::string key = std::string(1, owner) + "_" + ship_code;
+    if (pending.find(key) == pending.end()) return "No damage pending for this ship";
     
-    int needed = pending[ship_code];
+    int needed = pending[key];
     int assigned = 0;
     for(auto const& [k,v] : assignments) assigned += v;
     
@@ -504,7 +530,9 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
     // Let's assume FULL assignment required for that single ship.
     if (remaining > 0) return "Must assign all " + std::to_string(needed) + " hits";
 
-    pending.erase(ship_code);
+    if (remaining > 0) return "Must assign all " + std::to_string(needed) + " hits";
+
+    pending.erase(key);
     
     // Reconstruct JSON
     std::ostringstream newJson;
