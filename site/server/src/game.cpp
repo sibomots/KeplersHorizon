@@ -375,27 +375,7 @@ std::vector<ShipRow> load_ships(Db *db, int game_id, char owner)
         s.pd_spent = std::atoi(r[14].c_str());
         out.push_back(s);
     }
-    s.vpB = std::atoi(r[0][9].c_str());
-
-    // Load Combat Summary
-    {
-        CombatEngine ce(db, game_id);
-        auto combats = ce.get_active_combats();
-        if (!combats.empty()) {
-            std::ostringstream c;
-            c << "{";
-            c << "\"active_hexes\":[";
-            for(size_t i=0; i<combats.size(); ++i) {
-                if (i>0) c << ",";
-                c << "\"" << combats[i].hex_id << "\"";
-            }
-            c << "],";
-            c << "\"count\":" << combats.size();
-            c << "}";
-            s.combat_summary_json = c.str();
-        }
-    }
-    return s;
+    return out;
 }
 
 ShipRow load_ship(Db *db, int game_id, char owner, const std::string &code)
