@@ -43,5 +43,6 @@ bool starts_with(const std::string &s, const std::string &p);
 std::string to_lower(std::string s);
 std::string rand_hex_64();
 std::vector<std::string> split_ws(const std::string &s);
+std::vector<std::string> split(const std::string &s, char delim);
 
 #endif
