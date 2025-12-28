@@ -1027,9 +1027,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                     }
                                     break;
                                 }
-                            }
-                            return -1; // Not reachable
-                        };
+
 
                                 totalCost += stepCost;
                                 if (totalCost > allowance) {
