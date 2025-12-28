@@ -160,8 +160,6 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round) {
         " AND s.at_hex='" + hex_id + "'");
     int orderCount = std::atoi(or_[0][0].c_str());
 
-    int orderCount = std::atoi(or_[0][0].c_str());
-
     Logger::instance().info("[DEBUG] Hex " + hex_id + " Round " + std::to_string(round) + ": Ships=" + std::to_string(shipCount) + " Orders=" + std::to_string(orderCount));
 
     return orderCount >= shipCount;
