@@ -1135,9 +1135,14 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             
             // No strict syntax check needed, defaults apply.
 
-
-            CombatEngine ce(db, a.game_id);
-            eventText = ce.submit_order(owner, ord);
+            // Validation
+            if (ord.tactic == 'D' && ord.target_id.empty()) {
+                eventText = "Combat order to dodge requires a target opponent ship";
+                // Don't submit
+            } else {
+                CombatEngine ce(db, a.game_id);
+                eventText = ce.submit_order(owner, ord);
+            }
         }
         else if (action == "resolve") {
             std::string hex;

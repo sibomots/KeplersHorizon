@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS game_events (
   seq INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   command_text VARCHAR(256) NOT NULL,
-  result_text VARCHAR(256) NOT NULL,
+  result_text MEDIUMTEXT NOT NULL,
   state_json MEDIUMTEXT NOT NULL,
   FOREIGN KEY (game_id) REFERENCES games(id),
   FOREIGN KEY (user_id) REFERENCES users(id),
