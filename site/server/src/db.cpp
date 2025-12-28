@@ -35,6 +35,7 @@
 #include "app.h"
 #include "typs.h"
 #include "combat.h"
+#include "util.h"
 
 GameState load_game(Db *db, int game_id)
 {
