@@ -1058,7 +1058,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             }
         }
     }
-    }
+
     else if (cmd == "combat") {
         std::string action;
         iss >> action;
