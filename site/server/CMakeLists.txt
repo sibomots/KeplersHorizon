@@ -57,6 +57,7 @@ src/login.cpp
 src/logout.cpp
 src/main.cpp
 src/json.cpp
+src/map.cpp
 )
 
 # Header files (not required for build, but useful for IDEs)
@@ -72,6 +73,7 @@ inc/events.h
 inc/cmd.h
 inc/app.h
 inc/comms.h
+inc/map.h
 
 
 )

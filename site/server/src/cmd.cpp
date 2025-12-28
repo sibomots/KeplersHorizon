@@ -37,6 +37,8 @@
 #include "game.h"
 #include "state.h"
 #include "typs.h"
+#include "map.h"
+#include "map.h"
 #include "util.h"
 
 static std::string upper_ascii(const std::string &s)
@@ -988,93 +990,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     }
                     else
                     {
-                        std::vector<std::vector<std::string> > allHex = db->query(
-                            "SELECT hex_id,q,r FROM hexes WHERE game_id=" +
-                            std::to_string(a.game_id));
-
-                        std::unordered_map<std::string, std::pair<int, int>> qr;
-                        std::unordered_map<long long, std::string> byQr;
-                        for (size_t i = 0; i < allHex.size(); i++)
-                        {
-                            const std::string &hid = allHex[i][0];
-                            int q = std::atoi(allHex[i][1].c_str());
-                            int r = std::atoi(allHex[i][2].c_str());
-                            qr[hid] = std::make_pair(q, r);
-                            long long key = (static_cast<long long>(q) << 32) ^
-                                            static_cast<unsigned int>(r);
-                            byQr[key] = hid;
-                        }
-
-                        std::vector<std::vector<std::string> > wh = db->query(
-                            "SELECT wh.hex_id,w.a_hex,w.b_hex "
-                            "FROM warpline_hexes wh "
-                            "JOIN warplines w ON w.id=wh.warpline_id AND w.game_id=wh.game_id "
-                            "WHERE wh.game_id=" + std::to_string(a.game_id));
-                        std::vector<std::vector<std::string> > wlines = db->query(
-                            "SELECT a_hex,b_hex FROM warplines WHERE game_id=" + std::to_string(a.game_id));
-
-                        std::unordered_map<std::string, std::vector<std::string>> warpJumps;
-                        for (size_t i = 0; i < wh.size(); i++)
-                        {
-                            std::string h = wh[i][0];
-                            std::string ahex = wh[i][1];
-                            std::string bhex = wh[i][2];
-                            warpJumps[h].push_back(ahex);
-                            warpJumps[h].push_back(bhex);
-                        }
-                        for (size_t i = 0; i < wlines.size(); i++)
-                        {
-                            std::string ahex = wlines[i][0];
-                            std::string bhex = wlines[i][1];
-                            warpJumps[ahex].push_back(bhex);
-                            warpJumps[bhex].push_back(ahex);
-                        }
-
-                        // Helper to find shortest path cost between two hexes
-                        auto get_path_cost = [&](const std::string &from, const std::string &to, int limit) -> int {
-                            if (from == to) return 0;
-                            std::unordered_map<std::string, int> dist;
-                            std::queue<std::string> qn;
-                            dist[from] = 0;
-                            qn.push(from);
-
-                            while (!qn.empty())
-                            {
-                                std::string cur = qn.front();
-                                qn.pop();
-                                int d = dist[cur];
-                                if (cur == to) return d;
-                                if (d >= limit) continue;
-
-                                std::vector<std::string> neighbors;
-                                // Hex neighbors
-                                auto qt = qr.find(cur);
-                                if (qt != qr.end()) {
-                                    int cq = qt->second.first;
-                                    int cr = qt->second.second;
-                                    const int dq[6] = {1, 1, 0, -1, -1, 0};
-                                    const int dr[6] = {0, -1, -1, 0, 1, 1};
-                                    for(int k=0; k<6; ++k) {
-                                        long long key = (static_cast<long long>(cq + dq[k]) << 32) ^ static_cast<unsigned int>(cr + dr[k]);
-                                        auto bit = byQr.find(key);
-                                        if (bit != byQr.end()) neighbors.push_back(bit->second);
-                                    }
-                                }
-                                // Warp neighbors
-                                auto wit = warpJumps.find(cur);
-                                if (wit != warpJumps.end()) {
-                                    neighbors.insert(neighbors.end(), wit->second.begin(), wit->second.end());
-                                }
-
-                                for(const auto &n : neighbors) {
-                                    if (dist.find(n) == dist.end()) {
-                                        dist[n] = d + 1;
-                                        qn.push(n);
-                                    }
-                                }
-                            }
-                            return -1; // Not reachable
-                        };
+                        MapGraph graph(db, a.game_id);
+                        graph.load_state(owner);
 
                         // Process multi-step path
                         std::string currentHex = startHex;
@@ -1088,42 +1005,31 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         } else {
                             for (size_t i = 2; i < tok.size(); ++i) {
                                 std::string destTok = tok[i];
-                                std::string stepHex;
+                                std::string stepHex = graph.resolve_hex(destTok);
                                 std::string stepSys;
 
-                                // Resolve token
-                                if (destTok.size() >= 1 && (destTok[0] == 'h' || destTok[0] == 'H')) {
-                                    stepHex = destTok.substr(1);
-                                } else {
-                                    bool allDigits = true;
-                                    for (char c : destTok) if (!std::isdigit((unsigned char)c)) allDigits = false;
-                                    if (allDigits && destTok.size() == 4) stepHex = destTok;
-                                }
-
                                 if (!stepHex.empty()) {
-                                    // Validate hex exists
-                                    if (qr.find(stepHex) == qr.end()) {
-                                        eventText = "Unknown hex: " + destTok;
-                                        break;
-                                    }
-                                    // Resolve system if present
+                                    // See if it matches a system name (reverse lookup for display/logic)
                                     auto sysr = db->query("SELECT name FROM star_systems WHERE game_id=" + std::to_string(a.game_id) + " AND hex_id='" + stepHex + "' LIMIT 1");
                                     if (!sysr.empty()) stepSys = sysr[0][0];
                                 } else {
-                                    // Must be system name
-                                    stepSys = upper_ascii(destTok);
-                                    stepHex = resolve_system_hex(db, a.game_id, stepSys);
-                                    if (stepHex.empty()) {
-                                        eventText = "Unknown system: " + destTok;
-                                        break;
-                                    }
-                                }
-
-                                int stepCost = get_path_cost(currentHex, stepHex, allowance - totalCost);
-                                if (stepCost == -1) {
-                                    eventText = "Cannot reach " + destTok + " from " + currentHex + " within remaining PD.";
+                                    eventText = "Unknown destination: " + destTok;
                                     break;
                                 }
+
+                                int stepCost = graph.get_path_cost(currentHex, stepHex, allowance - totalCost);
+                                if (stepCost == -1) {
+                                    int needed = graph.get_path_cost(currentHex, stepHex, 999);
+                                    if (needed != -1) {
+                                        eventText = "Cannot reach " + destTok + " from " + currentHex + ". Needed " + std::to_string(needed) + " PD, but limit is " + std::to_string(allowance - totalCost) + ".";
+                                    } else {
+                                        eventText = "Cannot reach " + destTok + " from " + currentHex + " (No path or Blocked).";
+                                    }
+                                    break;
+                                }
+                            }
+                            return -1; // Not reachable
+                        };
 
                                 totalCost += stepCost;
                                 if (totalCost > allowance) {
@@ -1133,12 +1039,12 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
 
                                 currentHex = stepHex;
                                 finalHex = stepHex;
-                                finalSystem = stepSys; // can be empty
+                                finalSystem = stepSys;
                             }
                         }
 
                         if (eventText.empty()) {
-                             if (finalSystem.empty()) finalSystem = ""; // explicit empty string
+                             if (finalSystem.empty()) finalSystem = "";
                              update_ship_location(db, a.game_id, owner, sh.code, finalSystem, finalHex, "");
                              db->exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) + 
                                       " WHERE game_id=" + std::to_string(a.game_id) + " AND owner='" + std::string(1, owner) + "'" +

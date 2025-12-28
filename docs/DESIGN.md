@@ -1,6 +1,6 @@
-# Borealis / Kepler – Software Design Document (v45 lineage)
+# Borealis / Kepler – Software Design Document (v47 lineage)
 
-This document describes the software architecture and data model for the Borealis (Kepler) implementation as it exists around the v45 lineage: a **web UI** (static HTML/JS) talking to a **C++11 REST server** backed by a **MySQL** database.
+This document describes the software architecture and data model for the Borealis (Kepler) implementation as it exists around the v47 lineage: a **web UI** (static HTML/JS) talking to a **C++11 REST server** backed by a **MySQL** database.
 
 The project goal is a faithful implementation of Borealis rules (deterministic, no dice). The system is engineered so that:
 
@@ -160,6 +160,7 @@ Authoritative inventory of all committed ships.
   - `at_system` (nullable, star system name if currently at a star hex)
   - `at_hex` (nullable, hex id if in free space or on star; hex is canonical for movement)
   - `racked_in` (nullable, code of warpship carrying it)
+  - `pd_spent` (integer, persistent tracker of movement usage this turn)
 
 **Purpose**
 - Stores everything needed for build, deploy, move, combat, and repair/resupply.
@@ -363,7 +364,9 @@ Typical server file roles (names may differ slightly by refactor, but concepts h
 - `state.cpp`
   - builds JSON state payload.
 - `cmd.cpp`
-  - command parsing and dispatch, calls game logic.
+  - command parsing and dispatch.
+- `map.cpp` / `map.h`
+  - `MapGraph` class: map topology loading, BFS pathfinding, system name resolution.
 - `game.cpp`, `events.cpp`
   - turn/phase transitions, event logging utilities.
 - `util.cpp`, `json.cpp`
@@ -450,38 +453,35 @@ The `notes` string is not authoritative state; it is an operator prompt.
 
 ---
 
-### 3.6 Movement Implementation (Mode 1)
+### 3.6 Movement Implementation (Mode 1 / v47)
 
-Mode 1 is the chosen approach: movement validation performed in C++ using DB topology, without geometry.
+Mode 1 is the chosen approach: movement validation performed in C++ using DB topology.
 
-Key rules implemented/targeted:
+**Persistent vs Transient**
+- Movement points are finite. Standard Borealis rules reset PD at start of turn.
+- To prevent infinite movement via repeated commands, the database tracks `pd_spent` for each ship.
+- Allowable move = `Ship.PD - Ship.pd_spent`.
 
-- A Warpship has movement points equal to current PD (after damage; damage not implemented yet).
-- Each adjacent-hex move costs 1.
-- If a ship is on a hex that is part of a warpline trajectory, it may spend +1 to jump to an endpoint star hex.
-- Movement does not require stopping on star hexes (unless enemy ship present; combat not implemented yet).
+**Key Rules Implemented**:
+- **Adjacent Cost**: 1 PD.
+- **Warp Trajectory**: If on a warpline hex, cost 1 PD to jump to endpoint.
+- **Blockades (Combat Rule)**: Movement cannot pass *through* a Star Hex occupied by an enemy ship. You may move *to* such a hex (to initiate combat, phase pending), but the pathfinding graph treats it as a dead-end for transit.
 
-**Current v45 “move” command**
-- `move W1 <DEST>` where DEST is either:
-  - a system name (resolved via `star_systems`), or
-  - a hex id (validated via `hexes`)
+**Command Syntax**:
+- `move W1 <A> <B> <C> ...`
+- The command supports **Multi-Step Paths**.
+- The server validates the entire chain atomically. If any step is invalid, blocked, or too expensive, the whole move fails.
 
-Implementation strategy:
-
-1. Determine source hex (`ships.at_hex`).
-2. Resolve destination hex:
-   - if token matches a known star system name: use its `hex_id`
-   - else interpret as hex id
-3. Build neighbor relationships from `hexes` table:
-   - each hex has up to 6 neighbors in axial coords
-4. Add warp edges:
-   - if `hex_id` ∈ `warpline_trajectory` for some warpline, connect to each endpoint hex of that warpline with cost 1
-5. Run BFS/Dijkstra to compute minimal cost from source → destination.
-6. Validate cost <= ship PD.
-7. Update `ships.at_hex` and `ships.at_system` appropriately.
-8. Emit event text with cost.
-
-This design cleanly separates movement legality from UI map rendering.
+**Implementation Strategy (MapGraph)**:
+1. `cmd.cpp` parses tokens.
+2. `MapGraph` loads topology and enemy positions (blockades).
+3. `MapGraph::get_path_cost()` runs BFS for each leg of the journey:
+   - treats enemy-occupied star systems as blocked nodes (unless it is the final destination).
+4. Server sums total cost.
+5. If `totalCost <= allowance`:
+   - Update `ships.at_hex`, `ships.at_system`.
+   - Update `ships.pd_spent += totalCost`.
+   - Emit event.
 
 ---
 
@@ -600,24 +600,23 @@ This is purely a visualization toggle; game state remains textual.
 
 ## 5. Rule Coverage and Roadmap
 
-### 5.1 Currently implemented (typical v45 scope)
+### 5.1 Currently implemented (v47 scope)
 
 - Login / Logout
 - Start scenario (`start basic|learning|advanced`)
 - Reset game state
-- Build draft workflow (`build new`, `build set/add/clear`, `build validate`, `build commit`)
-- Deploy ships to base systems (scenario rules enforced)
+- Build draft workflow
+- Deploy ships
 - List ships
-- Move warpships in Movement phase using DB-driven topology
+- **Multi-Step Movement** with persistent PD tracking (`pd_spent`)
+- **Combat Movement Rules** (Blockades enforced)
 
 ### 5.2 Next steps (planned)
 
-- Enforce “must stop movement on star hex occupied by enemy” (requires ship positions visible to both seats and collision checks)
 - Combat phase implementation:
-  - order writing
+  - Order writing
   - CRT lookup
-  - screen absorption
-  - damage allocation
+  - Damage allocation
   - retreat resolution
 - Repair/resupply (Advanced)
 - Full event log summarization / replay
