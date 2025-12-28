@@ -84,6 +84,7 @@ class GameState
 
     // ship lists (future)
     // right now: none
+    std::string combat_summary_json; // JSON object for combat state
 
   public:
     GameState()
@@ -163,6 +164,9 @@ class GameState
         o << "\"phase\":\"" << json_escape(phase_name()) << "\",";
         o << "\"vp\":{\"A\":" << vpA << ",\"B\":" << vpB << "},";
         o << "\"bp\":{\"A\":" << bpA << ",\"B\":" << bpB << "},";
+        if (!combat_summary_json.empty()) {
+            o << "\"combat\":" << combat_summary_json << ",";
+        }
         o << "\"notes\":\"" << json_escape(notes()) << "\"";
         o << "}";
         return o.str();

@@ -34,6 +34,7 @@
 
 #include "app.h"
 #include "typs.h"
+#include "combat.h"
 
 GameState load_game(Db *db, int game_id)
 {
@@ -164,5 +165,27 @@ GameState load_game(Db *db, int game_id)
         s.bpA = getv("A");
         s.bpB = getv("B");
     }
+
+
+
+    // Load Combat Summary
+    {
+        CombatEngine ce(db, game_id);
+        auto combats = ce.get_active_combats();
+        if (!combats.empty()) {
+            std::ostringstream c;
+            c << "{";
+            c << "\"active_hexes\":[";
+            for(size_t i=0; i<combats.size(); ++i) {
+                if (i>0) c << ",";
+                c << "\"" << combats[i].hex_id << "\"";
+            }
+            c << "],";
+            c << "\"count\":" << combats.size();
+            c << "}";
+            s.combat_summary_json = c.str();
+        }
+    }
+
     return s;
 }

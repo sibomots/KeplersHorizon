@@ -39,6 +39,7 @@
 #include "typs.h"
 #include "map.h"
 #include "map.h"
+#include "combat.h"
 #include "util.h"
 
 static std::string upper_ascii(const std::string &s)
@@ -1055,6 +1056,56 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     }
                 }
             }
+        }
+    }
+    }
+    else if (cmd == "combat") {
+        std::string action;
+        iss >> action;
+        if (action == "order") {
+            // combat order <ship> <round> <tactic> <target|-> <d> <b> <s> <t> <missilesJSON>
+            CombatOrder ord;
+            ord.game_id = a.game_id;
+            std::string starget;
+            if (!(iss >> ord.ship_code >> ord.round >> ord.tactic >> starget >> ord.power_d >> ord.power_b >> ord.power_s >> ord.power_t)) {
+                resp->status = 400;
+                resp->body = json_error("invalid combat order syntax");
+                return;
+            }
+            if (starget != "-") ord.target_id = starget;
+            
+            // Allow missiles json to be optional or rest of line?
+            // Usually JSON might have spaces, so we read rest of line.
+            std::string rest;
+            std::getline(iss, rest);
+            // Trim leading spaces
+            size_t first = rest.find_first_not_of(' ');
+            if (first != std::string::npos) ord.missiles_json = rest.substr(first);
+            if (ord.missiles_json.empty()) ord.missiles_json = "[]";
+
+            CombatEngine ce(db, a.game_id);
+            eventText = ce.submit_order(owner, ord);
+        }
+        else if (action == "resolve") {
+            std::string hex;
+            iss >> hex;
+            if (hex.empty()) {
+                resp->status = 400;
+                resp->body = json_error("missing hex");
+                return;
+            }
+            CombatEngine ce(db, a.game_id);
+            eventText = ce.resolve_round(hex);
+        }
+        else if (action == "list") {
+             CombatEngine ce(db, a.game_id);
+             auto list = ce.get_active_combats();
+             eventText = "Active Combats: " + std::to_string(list.size());
+        }
+        else {
+             resp->status = 400;
+             resp->body = json_error("unknown combat action");
+             return;
         }
     }
     else
