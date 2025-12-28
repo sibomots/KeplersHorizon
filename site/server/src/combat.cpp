@@ -450,8 +450,14 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
     if (total_net_damage > 0) {
         next_stage = 2; // DAMAGE_PENDING
         next_stalemate = 0; // Reset
+        log << "----------------------------------------\\n";
+        log << "RESULT: Critical Damage! Assign Damage now.\\n";
     } else {
-        log << "Stalemate. No net damage.\\n";
+        log << "----------------------------------------\\n";
+        log << "RESULT: Stalemate (No Hull Damage).\\n";
+        log << "STATUS: Beginning Round " << (next_round + 1) << "\\n";
+        log << "ACTION: Submit Orders for Round " << (next_round + 1) << "\\n";
+        log << "========================================\\n";
         next_round++;
         next_stalemate++;
     }
