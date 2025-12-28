@@ -789,6 +789,9 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                       << ") cost=" << cost
                                       << " BP. Remaining BP=" << bp;
                                     eventText = o.str();
+                                    if (sh.attr.type == 'W' && sh.attr.PD <= 0) {
+                                        eventText += " WARNING: Ship has 0 PD.";
+                                    }
                                 }
                             }
                         }
@@ -1059,6 +1062,21 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         }
     }
 
+    else if (cmd == "done") {
+        if (!require_my_turn()) {
+             // error already set
+        } else {
+             char me = owner;
+             // Auto-advance until active player changes or game over
+             int safety = 0;
+             while(s.active_player == std::string(1, me) && !s.game_over && safety < 50) {
+                 advance_next(db, s);
+                 safety++;
+             }
+             if (s.game_over) eventText = "Game Over during turn end.";
+             else eventText = "Turn ended. Passed to " + s.active_player;
+        }
+    }
     else if (cmd == "combat") {
         std::istringstream iss(cmdline);
         std::string cmdName; iss >> cmdName; // "combat"

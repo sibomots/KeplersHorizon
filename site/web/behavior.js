@@ -76,7 +76,7 @@
   function appendLine(text, cls) {
     const log = $("consoleLog");
     if (!log) {
-       return;
+      return;
     }
     const div = document.createElement("div");
     div.className = cls || "";
@@ -129,23 +129,49 @@
     setText("stNotes", note + (peerSummary ? (" | " + peerSummary) : ""));
 
     const stCmb = $("statusCombat");
-    const alCmb = $("combatAlert");
+    const elSensor = $("sensorStatus");
+
+    // 1. Status Panel Combat Row
     if (st && st.combat && st.combat.count > 0) {
-        if (stCmb) {
-            stCmb.style.display = "grid";
-            setText("stCmbCount", st.combat.count + " Active");
-            // active_hexes is array
-            const hexes = (st.combat.active_hexes || []).join(", ");
-            setText("stCmbHexes", hexes);
-        }
-        if (alCmb) {
-            alCmb.style.display = "block";
-            // Optional: check 'needs_input' if we implemented it in JSON?
-            // For now, always alert.
-        }
+      if (stCmb) {
+        stCmb.style.display = "grid";
+        setText("stCmbCount", st.combat.count + " Active");
+        const hexes = (st.combat.active_hexes || []).join(", ");
+        setText("stCmbHexes", hexes);
+      }
     } else {
-        if (stCmb) stCmb.style.display = "none";
-        if (alCmb) alCmb.style.display = "none";
+      if (stCmb) stCmb.style.display = "none";
+    }
+
+    // 2. Sensor Strip
+    if (elSensor) {
+      let text = "✓ SENSORS CLEAR";
+      let color = "var(--good)";
+      let bg = "rgba(110, 231, 183, 0.15)";
+
+      // Combat Priority
+      if (st && st.combat && st.combat.count > 0) {
+        text = "⚠️ COMBAT ACTIVE";
+        color = "var(--bad)";
+        bg = "rgba(251, 113, 133, 0.15)";
+      } else {
+        // Enemy Check
+        const selfOwner = (S.self && S.self.owner) ? S.self.owner : "?";
+        // Basic check: if 'ships' array exists in state and contains other owner
+        if (st.ships && Array.isArray(st.ships)) {
+          for (let i = 0; i < st.ships.length; i++) {
+            if (st.ships[i].owner !== selfOwner) {
+              text = "⚠️ ENEMY DETECTED";
+              color = "#facc15";
+              bg = "rgba(250, 204, 21, 0.15)";
+              break;
+            }
+          }
+        }
+      }
+      elSensor.innerText = text;
+      elSensor.style.color = color;
+      elSensor.style.backgroundColor = bg;
     }
 
     setLoginBadge();
@@ -185,13 +211,13 @@
     const j = await apiJson("command", "POST", { command: cmd }, true);
 
     if (j && typeof j.event === "string" && j.event.length > 0) {
-       const parts = j.event.split("\n");
-       for (let i = 0; i < parts.length; i++) {
-          const line = parts[i];
-          if (line.length) {
-              appendLine(line);
-          }
-       }
+      const parts = j.event.split("\n");
+      for (let i = 0; i < parts.length; i++) {
+        const line = parts[i];
+        if (line.length) {
+          appendLine(line);
+        }
+      }
     }
 
     await apiFetchState();

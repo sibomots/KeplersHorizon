@@ -148,8 +148,9 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) 
     
     // 4. Check completion
     if (all_orders_submitted(hex_id, order.round)) {
-        db->exec("UPDATE combat_state SET stage=1 WHERE game_id=" + std::to_string(game_id) + " AND hex_id='" + hex_id + "'");
-        return "Orders Saved. Combat Ready to Resolve.";
+        // Auto-Resolve!
+        std::string res = resolve_round(hex_id);
+        return "Orders Saved. Invoking Auto-Resolve...\\n" + res;
     }
 
     return "Order Saved";
@@ -296,7 +297,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
     std::map<std::string, ShipCtx> ships;
     
     // Load active ships in hex
-    auto r = db->query("SELECT ship_code, owner, tech_level FROM ships WHERE game_id=" + std::to_string(game_id) + " AND at_hex='" + hex_id + "' AND racks_ship IS NULL");
+    auto r = db->query("SELECT ship_code, owner, tech_level FROM ships WHERE game_id=" + std::to_string(game_id) + " AND at_hex='" + hex_id + "' AND racked_in IS NULL");
     for(const auto& row : r) {
         ShipCtx s;
         s.code = row[0];

@@ -33,175 +33,202 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<title>Kepler's Horizon Console</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<base href="/kh/">
-<style>
-  :root {
-    --bg: #0b0b0f;
-    --panel: #11111a;
-    --text: #e7e7f2;
-    --muted: #a8a8c2;
-    --accent: #7a5cff;
-    --border: #23233a;
-    --good: #6ee7b7;
-    --bad: #fb7185;
-  }
+  <meta charset="utf-8">
+  <title>Kepler's Horizon Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="/kh/">
+  <style>
+    :root {
+      --bg: #0b0b0f;
+      --panel: #11111a;
+      --text: #e7e7f2;
+      --muted: #a8a8c2;
+      --accent: #7a5cff;
+      --border: #23233a;
+      --good: #6ee7b7;
+      --bad: #fb7185;
+    }
 
-  html, body { height: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
-  }
+    html,
+    body {
+      height: 100%;
+    }
 
-  .app {
-    height: 100%;
-    display: grid;
-    grid-template-rows: auto 1fr;
-  }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
 
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, rgba(122,92,255,.12), rgba(0,0,0,0));
-  }
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
 
-  header .title {
-    font-weight: 700;
-    letter-spacing: .4px;
-  }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(122, 92, 255, .12), rgba(0, 0, 0, 0));
+    }
 
-  header .right {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
+    header .title {
+      font-weight: 700;
+      letter-spacing: .4px;
+    }
 
-  button {
-    background: rgba(122,92,255,.15);
-    color: var(--text);
-    border: 1px solid rgba(122,92,255,.35);
-    border-radius: 10px;
-    padding: 7px 10px;
-    cursor: pointer;
-    font-weight: 600;
-  }
-  button:hover { background: rgba(122,92,255,.22); }
+    header .right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
 
-  .main {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 12px;
-    padding: 12px;
-    min-height: 0;
-  }
+    button {
+      background: rgba(122, 92, 255, .15);
+      color: var(--text);
+      border: 1px solid rgba(122, 92, 255, .35);
+      border-radius: 10px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
 
-  .panel {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: rgba(17,17,26,.9);
-    box-shadow: 0 12px 28px rgba(0,0,0,.35);
-    min-height: 0;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-  }
+    button:hover {
+      background: rgba(122, 92, 255, .22);
+    }
 
-  .panel h2 {
-    margin: 0;
-    padding: 10px 12px;
-    font-size: 14px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+    .main {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      padding: 12px;
+      min-height: 0;
+    }
 
-  .viewport {
-    min-height: 0;
-    position: relative;
-  }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(17, 17, 26, .9);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .35);
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
 
-  /* LOG VIEW: scrollable */
-  #consoleLog {
-    height: 100%;
-    overflow-y: auto;
-    padding: 10px 12px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 13px;
-    line-height: 1.35;
-    white-space: pre-wrap;
-  }
+    .panel h2 {
+      margin: 0;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-  .line-muted { color: var(--muted); }
-  .line-good { color: var(--good); }
-  .line-bad { color: var(--bad); }
+    .viewport {
+      min-height: 0;
+      position: relative;
+    }
 
-  /* MAP VIEW */
-  #mapView {
-    height: 100%;
-    width: 100%;
-    display: none;
-  }
-  #mapFrame {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: #fff;
-    border-bottom-left-radius: 14px;
-    border-bottom-right-radius: 14px;
-  }
+    /* LOG VIEW: scrollable */
+    #consoleLog {
+      height: 100%;
+      overflow-y: auto;
+      padding: 10px 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
 
-  .inputRow {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    padding: 10px 12px;
-    border-top: 1px solid var(--border);
-  }
+    .line-muted {
+      color: var(--muted);
+    }
 
-  input[type="text"] {
-    width: 100%;
-    padding: 10px 10px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(0,0,0,.35);
-    color: var(--text);
-    outline: none;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 13px;
-  }
+    .line-good {
+      color: var(--good);
+    }
 
-  .statusBody {
-    padding: 10px 12px;
-    overflow: auto;
-    font-size: 13px;
-    line-height: 1.35;
-  }
+    .line-bad {
+      color: var(--bad);
+    }
 
-  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; }
-  .k { color: var(--muted); }
-  .v { color: var(--text); }
+    /* MAP VIEW */
+    #mapView {
+      height: 100%;
+      width: 100%;
+      display: none;
+    }
 
-  .pill {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(122,92,255,.35);
-    background: rgba(122,92,255,.12);
-    color: var(--text);
-    font-weight: 700;
-    font-size: 12px;
-  }
-</style>
+    #mapFrame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+    }
+
+    .inputRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, .35);
+      color: var(--text);
+      outline: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    .statusBody {
+      padding: 10px 12px;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 6px 10px;
+    }
+
+    .k {
+      color: var(--muted);
+    }
+
+    .v {
+      color: var(--text);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(122, 92, 255, .35);
+      background: rgba(122, 92, 255, .12);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 12px;
+    }
+  </style>
 </head>
 
 <body>
@@ -224,9 +251,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </h2>
 
         <div class="viewport">
-          <div id="combatAlert" style="display:none; position:absolute; top:10px; left:10px; right:10px; background:var(--bad); color:#330000; padding:8px 12px; font-weight:700; border-radius:8px; text-align:center; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
-             ⚠️ COMBAT ACTIVE - CHECK STATUS
-          </div>
           <div id="consoleLog"></div>
 
           <div id="mapView">
@@ -235,7 +259,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </div>
 
         <div class="inputRow">
-          <input id="commandInput" type="text" placeholder="Type command and press Enter..." autocomplete="off" spellcheck="false">
+          <input id="commandInput" type="text" placeholder="Type command and press Enter..." autocomplete="off"
+            spellcheck="false">
           <button id="btnSend">Send</button>
         </div>
       </section>
@@ -244,21 +269,37 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <h2>Status</h2>
         <div class="statusBody">
           <div class="kv">
-            <div class="k">User</div><div class="v" id="stUser">-</div>
-            <div class="k">GameId</div><div class="v" id="stGameId">-</div>
-            <div class="k">Scenario</div><div class="v" id="stScenario">-</div>
-            <div class="k">Round</div><div class="v" id="stRound">-</div>
-            <div class="k">Player</div><div class="v" id="stPlayer">-</div>
-            <div class="k">Phase</div><div class="v" id="stPhase">-</div>
-            <div class="k">VP</div><div class="v" id="stVP">-</div>
-            <div class="k">BP</div><div class="v" id="stBP">-</div>
-            <div class="k">Notes</div><div class="v line-muted" id="stNotes">-</div>
+            <div class="k">User</div>
+            <div class="v" id="stUser">-</div>
+            <div class="k">GameId</div>
+            <div class="v" id="stGameId">-</div>
+            <div class="k">Scenario</div>
+            <div class="v" id="stScenario">-</div>
+            <div class="k">Round</div>
+            <div class="v" id="stRound">-</div>
+            <div class="k">Player</div>
+            <div class="v" id="stPlayer">-</div>
+            <div class="k">Phase</div>
+            <div class="v" id="stPhase">-</div>
+            <div class="k">VP</div>
+            <div class="v" id="stVP">-</div>
+            <div class="k">BP</div>
+            <div class="v" id="stBP">-</div>
+            <div class="k">Notes</div>
+            <div class="v line-muted" id="stNotes">-</div>
           </div>
 
-          <div id="statusCombat" class="kv" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-             <div class="k" style="color:var(--bad);">COMBAT</div><div class="v" id="stCmbCount" style="color:var(--bad); font-weight:bold;">-</div>
-             <div class="k">Hexes</div><div class="v" id="stCmbHexes">-</div>
+          <div id="statusCombat" class="kv"
+            style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+            <div class="k" style="color:var(--bad);">COMBAT</div>
+            <div class="v" id="stCmbCount" style="color:var(--bad); font-weight:bold;">-</div>
+            <div class="k">Hexes</div>
+            <div class="v" id="stCmbHexes">-</div>
           </div>
+        </div>
+        <div id="sensorStatus"
+          style="padding:8px 12px; border-top:1px solid var(--border); font-size:13px; font-weight:700; text-align:center;">
+          <!-- Content populated by behavior.js -->
         </div>
         <div style="padding:10px 12px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;">
           Tip: use <span class="pill">start learning</span> then <span class="pill">next</span> repeatedly.
@@ -267,9 +308,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </div>
   </div>
 
-<script src="constraints.js"></script>
-<script src="slate.js"></script>
-<script src="behavior.js"></script>
-<script src="interface.js"></script>
+  <script src="constraints.js"></script>
+  <script src="slate.js"></script>
+  <script src="behavior.js"></script>
+  <script src="interface.js"></script>
 </body>
+
 </html>
