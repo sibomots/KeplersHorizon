@@ -1,5 +1,6 @@
 #include "combat.h"
 #include "util.h"
+#include "logger.h"
 #include <iostream>
 #include <set>
 #include <algorithm>

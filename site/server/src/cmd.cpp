@@ -104,7 +104,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     std::string cmdline = trim(json_get_string(req->body, "command"));
 
-    //debug std::cout << "Command: " << cmdline.c_str() << std::endl;
+	Logger::instance().info(cmdline.c_str());
 
     if (cmdline.empty())
     {
@@ -131,6 +131,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         if (s.scenario.empty())
         {
             eventText = "No scenario. Type: start learning|basic|advanced";
+			Logger::instance().error(eventText);
             return false;
         }
         if (s.phase_index != PH_BUILD_SHIPS)
@@ -138,6 +139,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::ostringstream o;
             o << "Not in Build Ships phase. Current: " << s.phase_name();
             eventText = o.str();
+			Logger::instance().error(eventText);
             return false;
         }
         return true;
@@ -154,6 +156,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::ostringstream o;
             o << "Not in Movement phase. Current: " << s.phase_name();
             eventText = o.str();
+			Logger::instance().error(eventText);
             return false;
         }
         return true;
@@ -165,6 +168,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::ostringstream o;
             o << "Not your turn. Active player is " << active << ".";
             eventText = o.str();
+			Logger::instance().error(eventText);
             return false;
         }
         return true;
@@ -257,6 +261,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
           << "Use 'deploy <W#|S##> <SYSTEM>' with a system name (e.g., UR) for "
              "now.";
         eventText = o.str();
+		Logger::instance().error(eventText);
     }
     else if (cmd == "reset")
     {
@@ -391,7 +396,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     "Usage: list | list drafts | list system <SYS> | list "
                     "all | list scan";
             }
-            //debug std::cout << "event-text: " << eventText.c_str() << std::endl;
+		    Logger::instance().info(eventText);
         }
     }
     else if (cmd == "build")
@@ -601,17 +606,20 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                             return false;
                         }
                         if (d.attr.type == 'S')
-                        { /* no WG cost; ok */
+                        {
+						   	// no WG cost is ok
                         }
                         if (d.attr.M % 3 != 0)
                         {
                             err = "Missiles must be a multiple of 3";
+							Logger::instance().error(err);
                             return false;
                         }
                         if (d.attr.PD < 0 || d.attr.B < 0 || d.attr.S < 0 ||
                             d.attr.T < 0 || d.attr.M < 0 || d.attr.SR < 0)
                         {
                             err = "Negative attribute";
+							Logger::instance().error(err);
                             return false;
                         }
                         return true;
@@ -631,17 +639,22 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     else if (sub == "validate")
                     {
                         std::string err;
-                        if (!validate_draft(err))
+                        if (!validate_draft(err)) {
                             eventText = "Draft invalid: " + err;
-                        else
+							Logger::instance().error(err);
+						}
+                        else {
                             eventText =
                                 "Draft valid: " + d.name + " - " + d.code;
+						}
                     }
                     else if (sub == "cost")
                     {
                         std::string err;
-                        if (!validate_draft(err))
+                        if (!validate_draft(err)) {
                             eventText = "Draft invalid: " + err;
+							Logger::instance().error(err);
+					    }
                         else
                         {
                             int cost = ship_cost_bp(d.attr.type, d);
@@ -749,6 +762,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                             if (!validate_draft(err))
                             {
                                 eventText = "Draft invalid: " + err;
+							    Logger::instance().error(eventText);
                             }
                             else
                             {
@@ -1150,6 +1164,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             if (hex.empty()) {
                 resp->status = 400;
                 resp->body = json_error("missing hex");
+                Logger::instance().error("Trying to resolve combat, hex ID is missing");
                 return;
             }
             CombatEngine ce(db, a.game_id);
@@ -1161,6 +1176,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             if (!(iss >> ship_code)) {
                 resp->status = 400;
                 resp->body = json_error("missing ship code");
+                Logger::instance().error("Trying combat subcommand apply, ship code is missing");
                 return;
             }
             std::map<std::string, int> assignments;
@@ -1188,6 +1204,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         else {
              resp->status = 400;
              resp->body = json_error("unknown combat action");
+             Logger::instance().error("Unknown combat action attempted");
              return;
         }
     }
@@ -1195,6 +1212,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     {
         resp->status = 400;
         resp->body = json_error("unknown command");
+        Logger::instance().error("Unknown command attempted");
         return;
     }
 

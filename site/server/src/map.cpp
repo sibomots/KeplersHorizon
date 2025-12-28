@@ -154,14 +154,17 @@ std::string MapGraph::resolve_system(const std::string& token)
     auto r = db->query("SELECT hex_id FROM star_systems WHERE game_id=" +
                        std::to_string(game_id) + " AND UPPER(name)='" +
                        db->esc(u) + "' LIMIT 1");
-    if (!r.empty() && !r[0].empty())
+    if (!r.empty() && !r[0].empty()) {
         return r[0][0];
+	}
     return "";
 }
 
 int MapGraph::get_path_cost(const std::string &from, const std::string &to, int limit)
 {
-    if (from == to) return 0;
+    if (from == to) {
+		return 0;
+	}
     
     std::unordered_map<std::string, int> dist;
     std::queue<std::string> qn;
