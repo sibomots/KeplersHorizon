@@ -279,6 +279,7 @@ class ShipRow
     std::string at_system;
     std::string at_hex;
     std::string racked_in;
+    int pd_spent = 0;
     ShipAttributes attr;
 
   public:

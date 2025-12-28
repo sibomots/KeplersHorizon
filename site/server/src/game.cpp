@@ -134,6 +134,11 @@ void apply_start_of_turn(Db *db, GameState &s)
                 s.bpB += 10;
         }
     }
+
+    // Reset movement points for active player's ships
+    db->exec("UPDATE ships SET pd_spent=0 WHERE game_id=" +
+             std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
+             "'");
 }
 
 void advance_next(Db *db, GameState &s)
@@ -331,7 +336,7 @@ std::vector<ShipRow> load_ships(Db *db, int game_id, char owner)
     auto rows =
         db->query("SELECT "
                   "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
-                  "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in "
+                  "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
                   "FROM ships WHERE game_id=" +
                   std::to_string(game_id) + " AND owner='" +
                   std::string(1, owner) + "' ORDER BY ship_code");
@@ -352,6 +357,7 @@ std::vector<ShipRow> load_ships(Db *db, int game_id, char owner)
         s.at_system = r[11];
         s.at_hex = r[12];
         s.racked_in = r[13];
+        s.pd_spent = std::atoi(r[14].c_str());
         out.push_back(s);
     }
     return out;
@@ -362,7 +368,7 @@ ShipRow load_ship(Db *db, int game_id, char owner, const std::string &code)
     auto rows = db->query(
         "SELECT "
         "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
-        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in "
+        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
         "FROM ships WHERE game_id=" +
         std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
         "' AND ship_code='" + db->esc(code) + "' LIMIT 1");
@@ -384,6 +390,7 @@ ShipRow load_ship(Db *db, int game_id, char owner, const std::string &code)
     s.at_system = r[11];
     s.at_hex = r[12];
     s.racked_in = r[13];
+    s.pd_spent = std::atoi(r[14].c_str());
     return s;
 }
 
@@ -405,7 +412,7 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
         "INSERT INTO "
         "ships(game_id,owner,ship_code,ship_name,ship_type,tech_level,built_"
         "turn,"
-        "pd,beam,screen,tube,missiles,sr,at_system,at_hex,racked_in) VALUES(" +
+        "pd,beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent) VALUES(" +
         std::to_string(game_id) + ",'" + std::string(1, owner) + "','" +
         db->esc(s.code) + "','" + db->esc(s.name) + "','" +
         std::string(1, s.attr.type) + "'," + std::to_string(s.attr.tech) +
@@ -418,7 +425,7 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
         (s.at_hex.empty() ? "NULL" : ("'" + db->esc(s.at_hex) + "'")) +
         "," +
         (s.racked_in.empty() ? "NULL" : ("'" + db->esc(s.racked_in) + "'")) +
-        ")";
+        ",0)"; // pd_spent=0 on insert
     db->exec(q);
 }
 
