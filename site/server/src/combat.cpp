@@ -135,12 +135,6 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) 
         "power_b=" + std::to_string(order.power_b) + ", "
         "power_s=" + std::to_string(order.power_s) + ", "
         "power_t=" + std::to_string(order.power_t) + ", "
-        "missiles_json='" + order.missiles_json + "', "
-        "tactic='" + std::string(1, order.tactic) + "', "
-        "power_d=" + std::to_string(order.power_d) + ","
-        "power_b=" + std::to_string(order.power_b) + ","
-        "power_s=" + std::to_string(order.power_s) + ","
-        "power_t=" + std::to_string(order.power_t) + ","
         "missiles_json='" + order.missiles_json + "'"
     );
     

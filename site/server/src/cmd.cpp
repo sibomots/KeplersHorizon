@@ -455,14 +455,12 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                             int n = parse_num(codeTok);
                             if (n == -1)
                             {
-                                // auto-assign next < 100 based on ships+drafts
+                                // auto-assign next < 100 based on ships+drafts (GLOBAL checking)
                                 int maxn = 0;
                                 auto rows = db->query(
                                     "SELECT ship_code FROM ships WHERE "
                                     "game_id=" +
-                                    std::to_string(a.game_id) + " AND owner='" +
-                                    std::string(1, owner) +
-                                    "' AND ship_type='" +
+                                    std::to_string(a.game_id) + " AND ship_type='" +
                                     std::string(1, stype) + "'");
                                 for (auto &r : rows)
                                 {
@@ -473,9 +471,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 auto rows2 = db->query(
                                     "SELECT ship_code FROM drafts WHERE "
                                     "game_id=" +
-                                    std::to_string(a.game_id) + " AND owner='" +
-                                    std::string(1, owner) +
-                                    "' AND ship_type='" +
+                                    std::to_string(a.game_id) + " AND ship_type='" +
                                     std::string(1, stype) + "'");
                                 for (auto &r : rows2)
                                 {
@@ -495,8 +491,10 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 c << stype << n;
                                 std::string code = c.str();
 
-                                if (draft_exists(db, a.game_id, owner, code) ||
-                                    ship_exists(db, a.game_id, owner, code))
+                                auto r_check = db->query("SELECT 1 FROM ships WHERE game_id=" + std::to_string(a.game_id) + " AND ship_code='" + db->esc(code) + "'");
+                                auto d_check = db->query("SELECT 1 FROM drafts WHERE game_id=" + std::to_string(a.game_id) + " AND ship_code='" + db->esc(code) + "'");
+
+                                if (!r_check.empty() || !d_check.empty())
                                 {
                                     eventText =
                                         "Ship code already in use: " + code;
