@@ -43,7 +43,8 @@ Power is allocated from **PD** (Power/Drives) to:
 - **Tubes (T)**
 
 **Constraints:**
-- Allocated power may not exceed remaining PD.
+- Allocated power may not exceed the ship's current `PD` capacity (stats).
+- Power spent on movement does **NOT** reduce combat power allotment.
 - No attribute may be powered beyond its undamaged capacity.
 - Warp generator does not require power.
 

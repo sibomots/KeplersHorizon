@@ -87,7 +87,8 @@ CombatState CombatEngine::get_combat_state(const std::string& hex_id) {
     return cs;
 }
 
-std::string CombatEngine::submit_order(char owner, const CombatOrder& order) {
+std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in) {
+    CombatOrder order = order_in;
     // 1. Validate ownership
     {
         auto r = db->query("SELECT owner FROM ships WHERE game_id=" + std::to_string(game_id) + 
@@ -98,16 +99,31 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order) {
         if (shipOwner != owner) return "You do not own this ship";
     }
 
-    // 2. Validate Combat State
-    // Find the hex this ship is in.
-    auto r = db->query("SELECT at_hex FROM ships WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(order.ship_code) + "'");
+    // 2. Validate Combat State & Stats
+    // Find the hex this ship is in and its stats
+    auto r = db->query("SELECT at_hex, pd, beam, screen, tube FROM ships WHERE game_id=" + std::to_string(game_id) + " AND ship_code='" + db->esc(order.ship_code) + "'");
     if(r.empty() || r[0][0].empty()) return "Ship not in space";
     std::string hex_id = r[0][0];
+    int max_pd = std::atoi(r[0][1].c_str());
+    int max_b = std::atoi(r[0][2].c_str());
+    int max_s = std::atoi(r[0][3].c_str());
+    int max_t = std::atoi(r[0][4].c_str());
+
+    // Validate Power Limits
+    if (order.power_b > max_b) return "Beam power exceeds rating (" + std::to_string(max_b) + ")";
+    if (order.power_s > max_s) return "Screen power exceeds rating (" + std::to_string(max_s) + ")";
+    if (order.power_t > max_t) return "Tube power exceeds rating (" + std::to_string(max_t) + ")";
+    
+    int total = order.power_d + order.power_b + order.power_s + order.power_t;
+    if (total > max_pd) return "Total power (" + std::to_string(total) + ") exceeds PD (" + std::to_string(max_pd) + ")";
 
     auto cs = get_combat_state(hex_id);
     if (cs.game_id == 0) return "No combat in this hex";
     if (cs.stage != 0) return "Not accepting orders (Stage " + std::to_string(cs.stage) + ")";
-    if (cs.round != order.round) return "Wrong round";
+
+    
+    // Auto-set the round to match the current combat state
+    order.round = cs.round;
 
     // 3. Insert/Update
     db->exec("INSERT INTO combat_orders (game_id, ship_code, round, tactic, target_id, power_d, power_b, power_s, power_t, missiles_json) VALUES (" +

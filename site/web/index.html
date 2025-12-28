@@ -224,6 +224,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </h2>
 
         <div class="viewport">
+          <div id="combatAlert" style="display:none; position:absolute; top:10px; left:10px; right:10px; background:var(--bad); color:#330000; padding:8px 12px; font-weight:700; border-radius:8px; text-align:center; z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+             ⚠️ COMBAT ACTIVE - CHECK STATUS
+          </div>
           <div id="consoleLog"></div>
 
           <div id="mapView">
@@ -250,6 +253,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <div class="k">VP</div><div class="v" id="stVP">-</div>
             <div class="k">BP</div><div class="v" id="stBP">-</div>
             <div class="k">Notes</div><div class="v line-muted" id="stNotes">-</div>
+          </div>
+
+          <div id="statusCombat" class="kv" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+             <div class="k" style="color:var(--bad);">COMBAT</div><div class="v" id="stCmbCount" style="color:var(--bad); font-weight:bold;">-</div>
+             <div class="k">Hexes</div><div class="v" id="stCmbHexes">-</div>
           </div>
         </div>
         <div style="padding:10px 12px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;">

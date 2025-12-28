@@ -1066,25 +1066,49 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         std::string action;
         iss >> action;
         if (action == "order") {
-            // combat order <ship> <round> <tactic> <target|-> <d> <b> <s> <t> <missilesJSON>
+            // combat order <ship> [tactic=A|D|R] [target=ID] [d=N] [b=N] [s=N] [t=N] [m=JSON]
             CombatOrder ord;
             ord.game_id = a.game_id;
-            std::string starget;
-            if (!(iss >> ord.ship_code >> ord.round >> ord.tactic >> starget >> ord.power_d >> ord.power_b >> ord.power_s >> ord.power_t)) {
+            ord.round = 0; // Set by engine
+            
+            // Defaults
+            ord.tactic = 'A'; // Default to Attack
+            ord.target_id = "";
+            ord.power_d = 0;
+            ord.power_b = 0;
+            ord.power_s = 0;
+            ord.power_t = 0;
+            ord.missiles_json = "[]";
+
+            if (!(iss >> ord.ship_code)) {
                 resp->status = 400;
-                resp->body = json_error("invalid combat order syntax");
+                resp->body = json_error("missing ship code");
                 return;
             }
-            if (starget != "-") ord.target_id = starget;
+
+            std::string token;
+            while(iss >> token) {
+                size_t eq = token.find('=');
+                if (eq == std::string::npos) continue; 
+
+                std::string key = to_lower(token.substr(0, eq));
+                std::string val = token.substr(eq+1);
+
+                if (key == "tactic" || key == "mode" || key == "opt") {
+                    if (!val.empty()) ord.tactic = std::toupper(val[0]);
+                }
+                else if (key == "target" || key == "tgt") {
+                    ord.target_id = val;
+                }
+                else if (key == "d" || key == "drive") ord.power_d = std::atoi(val.c_str());
+                else if (key == "b" || key == "beam") ord.power_b = std::atoi(val.c_str());
+                else if (key == "s" || key == "screen") ord.power_s = std::atoi(val.c_str());
+                else if (key == "t" || key == "tube") ord.power_t = std::atoi(val.c_str());
+                else if (key == "m" || key == "missiles") ord.missiles_json = val;
+            }
             
-            // Allow missiles json to be optional or rest of line?
-            // Usually JSON might have spaces, so we read rest of line.
-            std::string rest;
-            std::getline(iss, rest);
-            // Trim leading spaces
-            size_t first = rest.find_first_not_of(' ');
-            if (first != std::string::npos) ord.missiles_json = rest.substr(first);
-            if (ord.missiles_json.empty()) ord.missiles_json = "[]";
+            // No strict syntax check needed, defaults apply.
+
 
             CombatEngine ce(db, a.game_id);
             eventText = ce.submit_order(owner, ord);

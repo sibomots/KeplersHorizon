@@ -128,6 +128,26 @@
         (peer.last_seen ? ("offline (last " + peer.last_seen + ")") : "offline"))) : "";
     setText("stNotes", note + (peerSummary ? (" | " + peerSummary) : ""));
 
+    const stCmb = $("statusCombat");
+    const alCmb = $("combatAlert");
+    if (st && st.combat && st.combat.count > 0) {
+        if (stCmb) {
+            stCmb.style.display = "grid";
+            setText("stCmbCount", st.combat.count + " Active");
+            // active_hexes is array
+            const hexes = (st.combat.active_hexes || []).join(", ");
+            setText("stCmbHexes", hexes);
+        }
+        if (alCmb) {
+            alCmb.style.display = "block";
+            // Optional: check 'needs_input' if we implemented it in JSON?
+            // For now, always alert.
+        }
+    } else {
+        if (stCmb) stCmb.style.display = "none";
+        if (alCmb) alCmb.style.display = "none";
+    }
+
     setLoginBadge();
   }
 
