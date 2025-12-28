@@ -81,6 +81,10 @@ int main(int argc, char **argv)
 
         std::fprintf(stderr, "[%s] Kepler's Horizon_server listening on %s:%d\n",
                      now_iso().c_str(), args.listen.c_str(), args.port);
+        
+        #ifdef GIT_SHA
+        std::cout << "Server starting. Build SHA: " << GIT_SHA << std::endl;
+        #endif
 
         while (true)
         {

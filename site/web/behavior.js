@@ -209,6 +209,7 @@
     S.token = j.token;
     setLoginBadge();
     appendLine("Login OK.", "line-good");
+    if (j.git_sha) appendLine("SHA: " + j.git_sha, "line-muted");
     await apiFetchState();
     return j;
   }

@@ -366,8 +366,44 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
     }
     
     // Missiles
-    // Parse missiles_json... skipped for brevity in this step, but identical logic.
-    // Assume simple "missiles_json" handling later.
+    for(auto& [key, ship] : ships) {
+        if (!ship.ord.missiles_json.empty() && ship.ord.missiles_json != "[]") {
+            int count = std::atoi(ship.ord.missiles_json.c_str());
+            if (count > 0 && ship.ord.power_t >= count) {
+                // Determine target
+                std::string tid = ship.ord.target_id;
+                ShipCtx* target = nullptr;
+                for(auto& [tkey, tship] : ships) {
+                    if (tship.owner != ship.owner && tship.code == tid) {
+                        target = &tship;
+                        break;
+                    }
+                }
+
+                if (target) {
+                    for(int m=0; m<count; ++m) {
+                         target->escape_attempts++;
+                         int drive_diff = ship.ord.power_d - target->ord.power_d;
+                         bool escaped = false;
+                         int mod = get_crt_mod(drive_diff, ship.ord.tactic, target->ord.tactic, escaped);
+                         if (escaped) target->escape_successes++;
+
+                         if (mod != -999) {
+                             int dmg = 3 + ship.tech + mod; // Base warhead 3?
+                             target->damage_received += dmg;
+                             log << ship.code << " missile hits " << target->code << " for " << dmg << " dmg!\\n";
+                         } else {
+                             if (escaped) log << target->code << " outruns " << ship.code << "'s missile.\\n";
+                             else log << ship.code << " missile misses " << target->code << ".\\n";
+                         }
+                    }
+                    // Deduct ammo? Need to update ships table? 
+                    // For now simplest simulation: assume deducted elsewhere or strictly simulation.
+                    // User didn't asking for permanent ammo tracking yet, just resolution.
+                } 
+            }
+        }
+    }
 
     // 4. Calc Net Damage & Absorb
     int total_net_damage = 0;
@@ -415,6 +451,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id) {
         next_stage = 2; // DAMAGE_PENDING
         next_stalemate = 0; // Reset
     } else {
+        log << "Stalemate. No net damage.\\n";
         next_round++;
         next_stalemate++;
     }

@@ -43,6 +43,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Equivalent to: CXX_FLAGS = -O2 -pedantic
 add_compile_options(-O2 -pedantic)
 
+# Get Git SHA
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if(NOT GIT_SHA)
+    set(GIT_SHA "unknown")
+endif()
+add_definitions(-DGIT_SHA="${GIT_SHA}")
+
 # Source files
 set(SRCS
 src/args.cpp

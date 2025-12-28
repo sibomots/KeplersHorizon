@@ -69,6 +69,10 @@ void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp)
              "'," + std::to_string(user_id) + ")");
 
     resp->body = std::string("{\"ok\":true,\"token\":\"") + token +
-                 "\",\"username\":\"" + json_escape(u) + "\"}";
+                 "\",\"username\":\"" + json_escape(u) + "\"" +
+#ifdef GIT_SHA
+                 ",\"git_sha\":\"" GIT_SHA "\""
+#endif
+                 "}";
     return;
 }

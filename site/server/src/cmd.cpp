@@ -1195,6 +1195,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     save_game(db, s);
     append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
 
+    std::cout << "[" << std::string(1, owner) << "] " << cmdline << " -> " << eventText << std::endl;
+
     resp->body = json_ok_with_state_and_event(s, eventText);
     return;
 }
