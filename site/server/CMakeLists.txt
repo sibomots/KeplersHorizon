@@ -90,6 +90,10 @@ src/build_show_draft_command.cpp
 src/build_set_attribute_command.cpp
 src/repair_command.cpp
 src/resupply_command.cpp
+src/next_command.cpp
+src/done_command.cpp
+src/deploy_command.cpp
+src/move_command.cpp
 ${BISON_Parser_OUTPUTS}
 ${FLEX_Scanner_OUTPUTS}
 )
@@ -124,6 +128,10 @@ inc/build_show_draft_command.h
 inc/build_set_attribute_command.h
 inc/repair_command.h
 inc/resupply_command.h
+inc/next_command.h
+inc/done_command.h
+inc/deploy_command.h
+inc/move_command.h
 )
 
 add_executable(kh

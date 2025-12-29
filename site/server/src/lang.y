@@ -50,6 +50,10 @@
 #include "build_list_drafts_command.h"
 #include "build_show_draft_command.h"
 #include "build_set_attribute_command.h"
+#include "next_command.h"
+#include "done_command.h"
+#include "deploy_command.h"
+#include "move_command.h"
 #include "statemachine.h"
 #include "game.h"
 #include "db.h"
@@ -287,12 +291,17 @@ looking_cmd:
 
 turn_cmd:
   TOK_NEXT {
-      Logger::instance().info("Advance active player to next  phase");
+      Logger::instance().info("Advance active player to next phase");
+      ICmd* pCmd = NextCommand::Builder(g_db, g_game_id).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
   | TOK_DONE {
       Logger::instance().info("Advance active player to first phase "
-                      "of opponent, if possible. (do not ignore "
-                      "required combat)");
+                      "of opponent, if possible");
+      ICmd* pCmd = DoneCommand::Builder(g_db, g_game_id).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
   ;
 
@@ -683,6 +692,14 @@ deploy_cmd:
                                ">" + ship + "<" 
                                " at destination: "
                                ">" + destination + "<");
+       ICmd* pCmd = DeployCommand::Builder(g_db, g_game_id)
+           .ship_code(ship)
+           .system_name(destination)
+           .build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+       delete $2;
+       delete $3;
    }
   ;
 
@@ -717,10 +734,25 @@ move_cmd:
        Logger::instance().info("Show move status");
   }
   | TOK_MOVE moveable_ship TOK_STRING chain_move_location {
+       std::string ship(*$2);
        std::string destination(*$3);
        Logger::instance().info("Moving a ship to a hex or star hex, "
               "or base star hex, through other hexes. "
               "Starting at >" + destination + "<");
+       
+       // Build move command with first destination
+       MoveCommand::Builder builder(g_db, g_game_id);
+       builder.ship_code(ship);
+       builder.add_destination(destination);
+       
+       // Add any chained destinations from $4
+       // Note: chain_move_location is a list that accumulates destinations
+       
+       ICmd* pCmd = builder.build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+       delete $2;
+       delete $3;
   }
   ;
 
