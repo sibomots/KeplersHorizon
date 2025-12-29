@@ -152,8 +152,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
 
     // Try parser first (handles migrated commands)
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
-    Telemetry::clear();
-    Telemetry::set_current_player(a.player);
 
     int parse_result = yyparse();
     yy_delete_buffer(buffer);
