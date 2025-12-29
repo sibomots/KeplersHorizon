@@ -76,12 +76,14 @@ BuildSetAttributeCommand::Builder g_build_set_builder;
 %union {
    int ival;
    std::string* sval;
+   std::vector<std::string>* vec_sval;
 }
 
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
 %type  <sval> deployable_ship
 %type  <sval> building_draft_ship
+%type  <vec_sval> chain_move_location
 
 %token TOK_ADVANCED
 %token TOK_APPLY
@@ -714,45 +716,47 @@ target_systemship:
 // Movement
 // "move" { return TOK_MOVE; }
 chain_move_location:
-   // or no more location
-   | TOK_STRING {
-       std::string destination(*$1);
-       Logger::instance().info("An additional hex on chain for move "
-                     " to destination >" + destination + "<");
+   /* empty - no more waypoints */ {
+       $$ = new std::vector<std::string>();
+   }
+   | TOK_STRING chain_move_location {
+       std::string waypoint(*$1);
+       Logger::instance().info("Additional waypoint on chain: >" + waypoint + "<");
+       $$ = $2;  // Take the vector from the recursive call
+       $$->insert($$->begin(), waypoint);  // Prepend this waypoint
+       delete $1;
    }
    ;
-moveable_ship:
-  TOK_STRING {
-      std::string ship_id(*$1);
-      Logger::instance().info("Moveable ship: "
-                              ">" + ship_id + "<");
-  }
-  ;
+
 
 move_cmd:
   TOK_MOVE {
        Logger::instance().info("Show move status");
   }
-  | TOK_MOVE moveable_ship TOK_STRING chain_move_location {
+  | TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
        std::string ship(*$2);
-       std::string destination(*$3);
-       Logger::instance().info("Moving a ship to a hex or star hex, "
-              "or base star hex, through other hexes. "
-              "Starting at >" + destination + "<");
+       std::string first_dest(*$3);
+       std::vector<std::string>* waypoints = $4;
        
-       // Build move command with first destination
+       Logger::instance().info("Moving ship >" + ship + "< to >" + first_dest + "<");
+       
+       // Build move command with all destinations
        MoveCommand::Builder builder(g_db, g_game_id);
        builder.ship_code(ship);
-       builder.add_destination(destination);
+       builder.add_destination(first_dest);
        
-       // Add any chained destinations from $4
-       // Note: chain_move_location is a list that accumulates destinations
+       // Add chained waypoints
+       for (const auto& wp : *waypoints) {
+           builder.add_destination(wp);
+       }
        
        ICmd* pCmd = builder.build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
+       
        delete $2;
        delete $3;
+       delete waypoints;
   }
   ;
 
