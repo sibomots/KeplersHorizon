@@ -1,7 +1,7 @@
 #ifndef __BUILD_SET_ATTRIBUTE_COMMAND_H__
 #define __BUILD_SET_ATTRIBUTE_COMMAND_H__
 
-#include <memory>
+
 
 #include "db.h"
 #include "icmd.h"
@@ -64,10 +64,9 @@ class BuildSetAttributeCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<BuildSetAttributeCommand>(
-                new BuildSetAttributeCommand(_db, _game_id, _attributes));
+            return new BuildSetAttributeCommand(_db, _game_id, _attributes);
         }
     };
 

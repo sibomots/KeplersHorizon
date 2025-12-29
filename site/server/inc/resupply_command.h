@@ -1,7 +1,7 @@
 #ifndef __RESUPPLY_COMMAND_H__
 #define __RESUPPLY_COMMAND_H__
 
-#include <memory>
+
 #include <string>
 
 #include "icmd.h"
@@ -28,10 +28,9 @@ class ResupplyCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<ResupplyCommand>(
-                new ResupplyCommand(_ship_code, _missiles));
+            return new ResupplyCommand(_ship_code, _missiles);
         }
     };
 

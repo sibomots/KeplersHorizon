@@ -1,7 +1,7 @@
 #ifndef __BUILD_COMMIT_COMMAND_H__
 #define __BUILD_COMMIT_COMMAND_H__
 
-#include <memory>
+
 
 #include "db.h"
 #include "icmd.h"
@@ -26,10 +26,9 @@ class BuildCommitCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<BuildCommitCommand>(
-                new BuildCommitCommand(_db, _game_id));
+            return new BuildCommitCommand(_db, _game_id);
         }
     };
 

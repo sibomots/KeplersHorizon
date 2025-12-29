@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <memory>
+#include "typedefs.h"
 
 #include "logger.h"
 #include "start_command.h"
@@ -126,28 +126,37 @@ session_cmd:
    TOK_START_GAME TOK_LEARNING
    {
         Logger::instance().info("Start a learning game scenario");
-        std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+        ICmd *pCmd = StartCommand::Builder()
+                      .set_db(g_db)
+                      .set_game_id(g_game_id)
                       .set_scenario(ScenarioType::LEARNING)
                       .build();
-        StateMachine::getInstance().active_player_execute(pCmd.get());
+        pCmd->invoke();
+        SafeDelete(pCmd);
    }
    |
    TOK_START_GAME TOK_BASIC
    {
         Logger::instance().info("Start a basic game scenario");
-        std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+        ICmd *pCmd = StartCommand::Builder()
+                      .set_db(g_db)
+                      .set_game_id(g_game_id)
                       .set_scenario(ScenarioType::BASIC)
                       .build();
-        StateMachine::getInstance().active_player_execute(pCmd.get());
+        pCmd->invoke();
+        SafeDelete(pCmd);
    }
    |
    TOK_START_GAME TOK_ADVANCED
    {
         Logger::instance().info("Start an advanced game scenario");
-         std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+        ICmd *pCmd = StartCommand::Builder()
+                      .set_db(g_db)
+                      .set_game_id(g_game_id)
                       .set_scenario(ScenarioType::ADVANCED)
                       .build();
-        StateMachine::getInstance().active_player_execute(pCmd.get());
+        pCmd->invoke();
+        SafeDelete(pCmd);
    }
    |
    TOK_RESET
@@ -515,56 +524,62 @@ build_cmd:
       std::string code(*$3);
       std::string name(*$4);
       Logger::instance().info("Create new draft: " + code + " '" + name + "'");
-      std::unique_ptr<ICmd> pCmd = BuildNewCommand::Builder()
+      ICmd *pCmd = BuildNewCommand::Builder()
                   .set_db(g_db)
                   .set_game_id(g_game_id)
                   .set_ship_code(code)
                   .set_ship_name(name)
                   .build();
       pCmd->invoke();
+      SafeDelete(pCmd);
   }
   | TOK_BUILD TOK_DRAFTS {
       Logger::instance().info("List all pending build drafts");
-      std::unique_ptr<ICmd> pCmd = BuildListDraftsCommand::Builder()
+      ICmd *pCmd = BuildListDraftsCommand::Builder()
                   .set_db(g_db)
                   .set_game_id(g_game_id)
                   .build();
       pCmd->invoke();
+      SafeDelete(pCmd);
   }
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
       std::string ship_code = *$3;
       Logger::instance().info("Show draft details: " + ship_code);
-      std::unique_ptr<ICmd> pCmd = BuildShowDraftCommand::Builder()
+      ICmd *pCmd = BuildShowDraftCommand::Builder()
                   .set_db(g_db)
                   .set_game_id(g_game_id)
                   .set_draft_code(ship_code)
                   .build();
       pCmd->invoke();
+      SafeDelete(pCmd);
   }
   | TOK_BUILD TOK_SET_ATTR build_attr_spec {
       Logger::instance().info("Set attributes on current draft");
-      std::unique_ptr<ICmd> pCmd = g_build_set_builder
+      ICmd *pCmd = g_build_set_builder
                   .set_db(g_db)
                   .set_game_id(g_game_id)
                   .build();
       pCmd->invoke();
+      SafeDelete(pCmd);
       g_build_set_builder = BuildSetAttributeCommand::Builder(); // Reset
   }
   | TOK_BUILD TOK_COMMIT {
       Logger::instance().info("Build commit - committing current draft");
-      std::unique_ptr<ICmd> pCmd = BuildCommitCommand::Builder()
+      ICmd *pCmd = BuildCommitCommand::Builder()
                   .set_db(g_db)
                   .set_game_id(g_game_id)
                   .build();
       pCmd->invoke();
+      SafeDelete(pCmd);
   }
   | TOK_BUILD TOK_CANCEL {
       Logger::instance().info("Build cancel - canceling current draft");
-      std::unique_ptr<ICmd> pCmd = BuildCancelCommand::Builder()
+      ICmd *pCmd = BuildCancelCommand::Builder()
                   .set_db(g_db)
                   .set_game_id(g_game_id)
                   .build();
       pCmd->invoke();
+      SafeDelete(pCmd);
   }
   ;
 

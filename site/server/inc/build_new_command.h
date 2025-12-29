@@ -1,7 +1,6 @@
 #ifndef __BUILD_NEW_COMMAND_H__
 #define __BUILD_NEW_COMMAND_H__
 
-#include <memory>
 #include <string>
 
 #include "db.h"
@@ -39,18 +38,17 @@ class BuildNewCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd *build()
         {
-            return std::unique_ptr<BuildNewCommand>(
-                new BuildNewCommand(_db, _game_id, _ship_code, _ship_name));
+            return new BuildNewCommand(*this);
         }
     };
 
   private:
-    BuildNewCommand(Db *db, int game_id, const std::string &ship_code,
-                    const std::string &ship_name)
-        : m_db(db), m_game_id(game_id), m_ship_code(ship_code),
-          m_ship_name(ship_name)
+    BuildNewCommand(Builder &builder)
+        : m_db(builder._db), m_game_id(builder._game_id),
+          m_ship_code(std::move(builder._ship_code)),
+          m_ship_name(std::move(builder._ship_name))
     {
     }
 

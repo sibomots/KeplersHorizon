@@ -1,7 +1,7 @@
 #ifndef __BUILD_SHOW_DRAFT_COMMAND_H__
 #define __BUILD_SHOW_DRAFT_COMMAND_H__
 
-#include <memory>
+
 #include <string>
 
 #include "db.h"
@@ -33,10 +33,9 @@ class BuildShowDraftCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<BuildShowDraftCommand>(
-                new BuildShowDraftCommand(_db, _game_id, _draft_code));
+            return new BuildShowDraftCommand(_db, _game_id, _draft_code);
         }
     };
 

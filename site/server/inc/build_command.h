@@ -1,7 +1,7 @@
 #ifndef __BUILD_COMMAND_H__
 #define __BUILD_COMMAND_H__
 
-#include <memory>
+
 #include <string>
 
 #include "icmd.h"
@@ -21,9 +21,9 @@ class BuildCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<BuildCommand>(new BuildCommand(_draft_code));
+            return new BuildCommand(_draft_code);
         }
     };
 

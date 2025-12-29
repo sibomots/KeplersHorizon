@@ -1,7 +1,7 @@
 #ifndef __REPAIR_COMMAND_H__
 #define __REPAIR_COMMAND_H__
 
-#include <memory>
+
 #include <string>
 
 #include "icmd.h"
@@ -35,10 +35,9 @@ class RepairCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<RepairCommand>(
-                new RepairCommand(_ship_code, _attribute, _amount));
+            return new RepairCommand(_ship_code, _attribute, _amount);
         }
     };
 

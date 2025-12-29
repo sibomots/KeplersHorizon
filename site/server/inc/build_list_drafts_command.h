@@ -1,7 +1,7 @@
 #ifndef __BUILD_LIST_DRAFTS_COMMAND_H__
 #define __BUILD_LIST_DRAFTS_COMMAND_H__
 
-#include <memory>
+
 
 #include "db.h"
 #include "icmd.h"
@@ -26,10 +26,9 @@ class BuildListDraftsCommand : public ICmd
             return *this;
         }
 
-        std::unique_ptr<ICmd> build()
+        ICmd* build()
         {
-            return std::unique_ptr<BuildListDraftsCommand>(
-                new BuildListDraftsCommand(_db, _game_id));
+            return new BuildListDraftsCommand(_db, _game_id);
         }
     };
 
