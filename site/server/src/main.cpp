@@ -111,12 +111,7 @@ int main(int argc, char **argv)
             }
 
             std::string out = http_serialize(resp);
-
-            // debug
-            // std::cout << "serialized output from dispatch result: " << std::endl
-            //          << out.c_str()
-            //          << std::endl;
-
+            // Logger::instance().debug(out.c_str());
             ::send(fd, out.c_str(), out.size(), 0);
             ::close(fd);
         }

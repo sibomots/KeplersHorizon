@@ -1,0 +1,91 @@
+%{
+#include <string>
+
+// from yacc
+#include "lang.hpp"
+
+#define YY_DECL extern "C" int yylex()
+%}
+
+%option noyywrap
+%option case-insensitive
+
+%%
+
+[ \t\n]	; 
+
+"help"     { return TOK_HELP; }
+"?"        { return TOK_HELP; }
+
+"start"    { return TOK_START_GAME; }
+"reset"    { return TOK_RESET; }
+"save"     { return TOK_SAVE; }
+"load"     { return TOK_LOAD; }
+"delete"   { return TOK_DELETE; }
+"quit"     { return TOK_QUIT; }
+"basic"    { return TOK_BASIC; }
+"learning" { return TOK_LEARNING; }
+"advanced" { return TOK_ADVANCED; }
+
+"crt"      { return TOK_CRT; }
+"status"   { return TOK_STATUS; }
+"drafts"   { return TOK_DRAFTS; }
+"list"     { return TOK_LIST; }
+
+"online"   { return TOK_ONLINE; }
+"stats"    { return TOK_STATS; }
+"fleet"    { return TOK_FLEET; }
+"hex"      { return TOK_HEX; }
+"system"   { return TOK_SYSTEM; }
+"galaxy"   { return TOK_GALAXY; }
+
+"next"     { return TOK_NEXT; }
+"n"        { return TOK_NEXT; }
+"done"     { return TOK_DONE; }
+
+"cancel"   { return TOK_CANCEL; }
+"commit"   { return TOK_COMMIT; }
+
+"combat"   { return TOK_COMBAT; }
+"order"    { return TOK_ORDER; }
+"apply"    { return TOK_APPLY; }
+"attack"   { return TOK_ATTACK;}
+"dodge"    { return TOK_DODGE; }
+"escape"   { return TOK_ESCAPE; }
+
+"build"    { return TOK_BUILD; }
+"new"      { return TOK_NEW; }
+"set"      { return TOK_SET_ATTR; }
+
+"deploy"   { return TOK_DEPLOY; }
+
+"move"     { return TOK_MOVE; }
+"pick"     { return TOK_PICK; }
+"drop"     { return TOK_DROP; }
+
+"pd"       { return TOK_POWER_DRIVE; }
+"d"        { return TOK_POWER_DRIVE; }
+"beam"     { return TOK_BEAM; }
+"b"        { return TOK_BEAM; }
+"screen"   { return TOK_SCREEN; }
+"s"        { return TOK_SCREEN; }
+"tube"     { return TOK_TUBE; }
+"t"        { return TOK_TUBE; }
+"missile"  { return TOK_MISSILE; }
+"m"        { return TOK_MISSILE; }
+
+[a-zA-Z][a-zA-Z0-9]+ {
+        yylval.sval = new std::string(yytext);
+        return TOK_STRING;
+}
+
+[0-9]+ {
+        yylval.ival = std::atoi(yytext);
+        return TOK_INT;
+}
+
+"="   { return TOK_EQUAL; }
+
+.  { return TOK_UNKNOWN; }
+
+%%

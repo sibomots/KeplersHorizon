@@ -40,8 +40,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Equivalent to: CXX_FLAGS = -O2 -pedantic
-add_compile_options(-O2 -pedantic)
+add_compile_options(-O0 -pedantic)
 
 # Get Git SHA
 execute_process(
@@ -54,6 +53,14 @@ if(NOT GIT_SHA)
     set(GIT_SHA "unknown")
 endif()
 add_definitions(-DGIT_SHA="${GIT_SHA}")
+
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
+BISON_TARGET(Parser src/lang.y ${CMAKE_CURRENT_BINARY_DIR}/lang.cpp COMPILE_FLAGS "-d -v")
+FLEX_TARGET(Scanner src/scan.lex ${CMAKE_CURRENT_BINARY_DIR}/scan.cpp)
+ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
+
 
 # Source files
 set(SRCS
@@ -71,6 +78,8 @@ src/json.cpp
 src/map.cpp
 src/combat.cpp
 src/logger.cpp
+${BISON_Parser_OUTPUTS}
+${FLEX_Scanner_OUTPUTS}
 )
 
 # Header files (not required for build, but useful for IDEs)

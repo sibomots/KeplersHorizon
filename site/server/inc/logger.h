@@ -1,4 +1,6 @@
-#pragma once
+#ifndef __LOGGER_H__
+#define __LOGGER_H__
+
 #include <string>
 #include <iostream>
 #include <mutex>
@@ -9,6 +11,7 @@ public:
 
     void info(const std::string& msg);
     void error(const std::string& msg);
+    void debug(const std::string& msg);
     
     // Helper to format "[TAG] msg"
     void log(const std::string& level, const std::string& msg);
@@ -21,3 +24,6 @@ private:
 
     std::mutex m_mutex;
 };
+
+#endif
+

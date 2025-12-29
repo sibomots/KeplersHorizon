@@ -14,12 +14,14 @@ void Logger::error(const std::string& msg) {
     log("ERROR", msg);
 }
 
+void Logger::debug(const std::string& msg) {
+    log("DEBUG", msg);
+}
+
 void Logger::log(const std::string& level, const std::string& msg) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    // [TIMESTAMP] [LEVEL] Message
-    std::cout << "[" << now_iso() << "] ";
-    if (level != "INFO" && !level.empty()) {
-        std::cout << "[" << level << "] ";
-    }
-    std::cout << msg << std::endl;
+    std::cout << "[" << now_iso() << "] "
+              << "[" << level << "] "
+              << msg 
+              << std::endl;
 }

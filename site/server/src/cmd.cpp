@@ -43,6 +43,26 @@
 #include "util.h"
 #include "logger.h"
 
+// lex/yacc declarations
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+
+// C++ Linkage (scan.cpp)
+extern YY_BUFFER_STATE yy_scan_string(const char* str);
+
+// C++ Linkage (scan.cpp)
+extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
+
+// yacc generated header usually declares yyparse,
+// but we can declare it here too.
+// Note: verify if it is extern "C" or not based on generated parser.cpp.
+// Standard bison (yacc) generates C-compatible functions.
+// If compiled as C++, it matches C++ linkage unless 
+// 'extern "C"' is inside the generated file.
+// C Linkage (parse.cpp appears to use it)
+extern "C" int yyparse();
+
+
+
 static std::string upper_ascii(const std::string &s)
 {
     std::string r = s;
@@ -104,7 +124,10 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     std::string cmdline = trim(json_get_string(req->body, "command"));
 
-	Logger::instance().info(cmdline.c_str());
+    std::string debug_cmd = "Raw command from user >";
+    debug_cmd.append(cmdline);
+    debug_cmd.append("<");
+	Logger::instance().debug(debug_cmd);
 
     if (cmdline.empty())
     {
@@ -112,6 +135,21 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         resp->body = json_error("empty command");
         return;
     }
+
+
+    // trial through the parser
+    YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
+    if (!yyparse())
+    {
+        Logger::instance().error("Parse error with: >" + cmdline + "<");
+    }
+    else 
+    {
+        Logger::instance().info("Parse OK with: >" + cmdline + "<");
+    }
+    yy_delete_buffer(buffer);
+    // end trial
+
  
     GameState s = load_game(db, a.game_id);
 
