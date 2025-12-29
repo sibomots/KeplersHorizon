@@ -4,6 +4,7 @@
 class ICmd 
 {
 public:
+   virtual ~ICmd() = default;
    virtual bool invoke() = 0;
 
 };

@@ -9,6 +9,14 @@ typedef enum : int {
     ADVANCED,
 } ScenarioType;
 
+#ifndef SafeDelete
+#define SafeDelete(x) do { if ((x) != NULL) { delete (x); (x) = NULL; }} while(0)
+#endif
+
+#ifndef SafeDeleteA
+#define SafeDeleteA(x) do { if ((x) != NULL) { delete [] (x); (x) = NULL; }} while(0)
+#endif
+
 #endif
 
 

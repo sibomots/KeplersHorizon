@@ -61,6 +61,10 @@ extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 // C Linkage (parse.cpp appears to use it)
 extern "C" int yyparse();
 
+// Parser globals defined here for linking
+Db* g_db = nullptr;
+int g_game_id = 0;
+
 
 
 static std::string upper_ascii(const std::string &s)
@@ -137,7 +141,19 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
 
 
+
+    // Inject context for the parser
+    GameEngine::instance().set_db(db); // Legacy support
+    GameEngine::instance().load_state(a.game_id);
+    
+    // Configure StateMachine with DB context
+    // This allows the StateMachine to handle PreInit/Init phases independently
+    StateMachine::getInstance().set_db(db);
+    StateMachine::getInstance().set_game_id(a.game_id);
+
     // trial through the parser
+    g_db = db;
+    g_game_id = a.game_id;
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
     if (!yyparse())
     {

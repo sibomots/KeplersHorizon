@@ -1,6 +1,7 @@
 #ifndef __START_COMMAND_H__
 #define __START_COMMAND_H__
 
+#include <memory>
 #include "icmd.h"
 #include "typedefs.h"
 
@@ -8,23 +9,31 @@ class StartCommand : public ICmd
 {
 private:
     ScenarioType m_scenario;
+
 public:
 
     class Builder {
          public:
            ScenarioType _scenario = ScenarioType::UNDEFINED;
+
            Builder& set_scenario(ScenarioType typ) {
                 _scenario = std::move(typ);
                 return *this;
            }
-           StartCommand build() {
-                return StartCommand(*this);
+
+           // Returns unique_ptr to base interface ICmd
+           std::unique_ptr<ICmd> build() {
+                // Accessing private constructor of StartCommand
+                // Cannot use make_unique with private constructor easily without friend
+                // specialized handling, so sticking to new wrapped in unique_ptr
+                // or just define builder inside class (which it is).
+                return std::unique_ptr<StartCommand>(new StartCommand(_scenario));
            }
     };
    
 private:
-    StartCommand(Builder& builder) :
-          m_scenario(std::move(builder._scenario))
+    StartCommand(ScenarioType scenario) :
+          m_scenario(scenario)
     {}
 
 public:
@@ -63,25 +72,18 @@ public:
     // Then when the Verb + Noun(s) are detected by parsing
     // the command is built:
     //
-    // ICmd* pICommand = 
-    //    new StartCommand::Builder().set_scenario(ScenarioType::BASIC)
-    //                               .build();
+    // std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+    //                                  .set_scenario(ScenarioType::BASIC)
+    //                                  .build();
     //
-    // Then the command (the interface to the command is pICommand)
+    // Then the command (the interface to the command is pCmd)
     // is given to something that invokes it: 
     //
-    //    pICommand->invoke(); 
+    //    pCmd->invoke(); 
+    //    // or passed to StateMachine:
+    //    StateMachine::getInstance().active_player_execute(pCmd.get());
     //
-    // Then the command can be safely destroyed:
-    //
-    //   SafeDelete(pICommand);
-    //
-    // Where:
-    //
-    //   #define SafeDelete(x) do { if ((x) != NULL) { \
-    //        delete (x); \
-    //        (x) = NULL; \
-    //     }} while(0);
+    // The unique_ptr automatically handles cleanup when it goes out of scope.
     //
 
     // (NOTE: Let the Telemetry figure out how to escape or not escape

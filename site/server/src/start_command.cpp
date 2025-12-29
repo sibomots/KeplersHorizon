@@ -17,13 +17,15 @@
 /// @param[out] none
 /// @return true if successful
 
+#include "db.h"
+#include "game.h"
 bool StartCommand::invoke(void)
 {
-    bool res = true;
-
-    // TBD
-    
-    return res;
+    // Delegate to StateMachine to handle game initialization specific to this command.
+    // The Command's job is simply to trigger the State Change with the necessary data.
+    StateMachine& sm = StateMachine::getInstance();
+    sm.set_scenario(m_scenario);
+    return sm.transition();
 }
 
 

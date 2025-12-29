@@ -84,6 +84,8 @@ public:
     typedef struct {
        PlayerState  state; 
        Player initiative;
+       int game_id;
+       ScenarioType scenario; // The "Noun" for the Start Verb
     } Data;
 
 public:       
@@ -101,25 +103,38 @@ public:
     bool preinitialize();
     bool initialize();
 
+#include <memory>
+#include "icmd.h"
+
     // user-facing invokables
     bool active_player_execute(ICmd* pICmd);
     bool nonactive_player_execute(ICmd* pICmd);
 
+    // Basic setup
+    void set_db(Db* db) { m_db = db; }
+    Db* get_db() const { return m_db; }
 
-private:
-    Data  data;
- 
-    StateMachine() {
-       data.state = PlayerState::INVALID;
-       data.initiative = Player::NOPLAYER;
-    }
+    void set_game_id(int id) { data.game_id = id; }
+    int get_game_id() const { return data.game_id; }
+
+    // Setters for pending state properties (used by Commands to set up Transitions)
+    void set_scenario(ScenarioType s) { data.scenario = s; }
 
     // inward facing utilities
     bool start_game_for_random_player();
     
-  
-    ~StateMachine() {
-        // Cleanup code here
+    // Core state transition logic
+    bool transition();
+
+private:
+    Data  data;
+    Db* m_db = nullptr;
+ 
+    StateMachine() {
+       data.state = PlayerState::INVALID;
+       data.initiative = Player::NOPLAYER;
+       data.game_id = 0;
+       data.scenario = ScenarioType::UNDEFINED;
     }
 };
 

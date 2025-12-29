@@ -8,12 +8,19 @@
 #include <memory>
 
 #include "logger.h"
+#include "start_command.h"
+#include "statemachine.h"
+#include "db.h"
 
 extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
 
 void yyerror(const char *s);
+
+// Globals to inject context into the parser actions
+extern Db* g_db;
+extern int g_game_id;
 %}
 
 %union {
@@ -100,16 +107,28 @@ session_cmd:
    TOK_START_GAME TOK_LEARNING
    {
         Logger::instance().info("Start a learning game scenario");
+        std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+                      .set_scenario(ScenarioType::LEARNING)
+                      .build();
+        StateMachine::getInstance().active_player_execute(pCmd.get());
    }
    |
    TOK_START_GAME TOK_BASIC
    {
         Logger::instance().info("Start a basic game scenario");
+        std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+                      .set_scenario(ScenarioType::BASIC)
+                      .build();
+        StateMachine::getInstance().active_player_execute(pCmd.get());
    }
    |
    TOK_START_GAME TOK_ADVANCED
    {
         Logger::instance().info("Start an advanced game scenario");
+         std::unique_ptr<ICmd> pCmd = StartCommand::Builder()
+                      .set_scenario(ScenarioType::ADVANCED)
+                      .build();
+        StateMachine::getInstance().active_player_execute(pCmd.get());
    }
    |
    TOK_RESET
