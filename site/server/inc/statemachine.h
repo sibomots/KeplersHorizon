@@ -85,7 +85,21 @@ public:
        PlayerState  state; 
        Player initiative;
        int game_id;
-       ScenarioType scenario; // The "Noun" for the Start Verb
+       int turn_number;  // For tech level calculation
+       ScenarioType scenario;
+       
+       // Build Phase properties
+       bool pending_build_commit;
+       bool pending_build_cancel;
+       bool pending_build_list_drafts;
+       std::string pending_build_show_draft;
+       AttributeMap pending_build_attributes;  // For build set command
+       std::string pending_build_draft;  // For old BuildCommand
+       std::string pending_repair_ship;
+       std::string pending_repair_attribute;
+       int pending_repair_amount;
+       std::string pending_resupply_ship;
+       int pending_resupply_missiles;
     } Data;
 
 public:       
@@ -117,8 +131,29 @@ public:
     void set_game_id(int id) { data.game_id = id; }
     int get_game_id() const { return data.game_id; }
 
-    // Setters for pending state properties (used by Commands to set up Transitions)
+    void set_turn_number(int turn) { data.turn_number = turn; }
+    int get_turn_number() const { return data.turn_number; }
+
+    // Setters for state properties (used by Commands to set up Transitions)
     void set_scenario(ScenarioType s) { data.scenario = s; }
+    
+    void set_pending_build_commit(bool val) { data.pending_build_commit = val; }
+    void set_pending_build_cancel(bool val) { data.pending_build_cancel = val; }
+    void set_pending_build_list_drafts(bool val) { data.pending_build_list_drafts = val; }
+    void set_pending_build_show_draft(const std::string& code) { data.pending_build_show_draft = code; }
+    void set_pending_build_attributes(const AttributeMap& attrs) { data.pending_build_attributes = attrs; }
+    void set_pending_build_draft(const std::string& code) { data.pending_build_draft = code; }
+    
+    void set_pending_repair(const std::string& ship, const std::string& attr, int amount) {
+        data.pending_repair_ship = ship;
+        data.pending_repair_attribute = attr;
+        data.pending_repair_amount = amount;
+    }
+    
+    void set_pending_resupply(const std::string& ship, int missiles) {
+        data.pending_resupply_ship = ship;
+        data.pending_resupply_missiles = missiles;
+    }
 
     // inward facing utilities
     bool start_game_for_random_player();
@@ -134,7 +169,19 @@ private:
        data.state = PlayerState::INVALID;
        data.initiative = Player::NOPLAYER;
        data.game_id = 0;
+       data.turn_number = 0;
        data.scenario = ScenarioType::UNDEFINED;
+       data.pending_build_commit = false;
+       data.pending_build_cancel = false;
+       data.pending_build_list_drafts = false;
+       data.pending_build_show_draft.clear();
+       data.pending_build_attributes.clear();
+       data.pending_build_draft.clear();
+       data.pending_repair_ship.clear();
+       data.pending_repair_attribute.clear();
+       data.pending_repair_amount = 0;
+       data.pending_resupply_ship.clear();
+       data.pending_resupply_missiles = 0;
     }
 };
 

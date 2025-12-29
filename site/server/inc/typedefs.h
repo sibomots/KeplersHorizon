@@ -1,6 +1,8 @@
 #ifndef __TYPEDEFS_H__
 #define __TYPEDEFS_H__
 
+#include <map>
+
 // Belongs in the typedefs collection
 typedef enum : int {
     UNDEFINED,
@@ -8,6 +10,22 @@ typedef enum : int {
     BASIC,
     ADVANCED,
 } ScenarioType;
+
+// Ship attribute identifiers
+enum class AttributeID {
+    POWER_DRIVE,
+    BEAM,
+    SCREEN,
+    TUBE,
+    MISSILE,
+    SYSTEM_RACK
+};
+
+// Attribute value type (all attributes are currently int)
+typedef int AttributeValue;
+
+// Map of attributes for commands
+typedef std::map<AttributeID, AttributeValue> AttributeMap;
 
 #ifndef SafeDelete
 #define SafeDelete(x) do { if ((x) != NULL) { delete (x); (x) = NULL; }} while(0)

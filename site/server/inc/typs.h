@@ -287,8 +287,27 @@ class ShipRow
     ShipAttributes attr;
 
   public:
+    // Default constructor
     ShipRow()
     {
+    }
+    
+    // Constructor from DraftRow with tech level and turn info
+    ShipRow(const DraftRow& draft, int tech_level, const std::string& turn_built)
+        : code(draft.code),
+          name(draft.name),
+          built_turn(turn_built),
+          pd_spent(0)
+    {
+        attr = draft.attr;
+        attr.tech = tech_level;
+    }
+    
+    // Factory method for creating from draft
+    static ShipRow from_draft(const DraftRow& draft, int tech_level, int round, const std::string& active_player)
+    {
+        std::string turn_built = "R" + std::to_string(round) + active_player;
+        return ShipRow(draft, tech_level, turn_built);
     }
 };
 

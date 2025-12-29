@@ -756,6 +756,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 "]";
                         }
                     }
+#if 0
+                    // Legacy build set/add logic - replaced by BuildSetAttributeCommand
                     else if (sub == "set" || sub == "add")
                     {
                         if (argi + 1 >= tok.size())
@@ -798,6 +800,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 "]";
                         }
                     }
+#endif
                     else if (sub == "cancel")
                     {
                         delete_draft(db, a.game_id, owner, d.code);

@@ -66,6 +66,65 @@
 "repair"   { return TOK_REPAIR; }
 "resupply" { return TOK_RESUPPLY; }
 
+/* Attribute assignments - MUST come BEFORE individual attribute tokens */
+/* These match patterns like "PD=5" or "PD = 5" (with optional whitespace) */
+"pd"[ \t]*"="[ \t]*[0-9]+   { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_PD_ASSIGN; 
+}
+"d"[ \t]*"="[ \t]*[0-9]+    { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_PD_ASSIGN; 
+}
+"beam"[ \t]*"="[ \t]*[0-9]+ { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_B_ASSIGN; 
+}
+"b"[ \t]*"="[ \t]*[0-9]+    { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_B_ASSIGN; 
+}
+"screen"[ \t]*"="[ \t]*[0-9]+ { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_S_ASSIGN; 
+}
+"s"[ \t]*"="[ \t]*[0-9]+    { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_S_ASSIGN; 
+}
+"tube"[ \t]*"="[ \t]*[0-9]+ { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_T_ASSIGN; 
+}
+"t"[ \t]*"="[ \t]*[0-9]+    { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_T_ASSIGN; 
+}
+"missile"[ \t]*"="[ \t]*[0-9]+ { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_M_ASSIGN; 
+}
+"m"[ \t]*"="[ \t]*[0-9]+    { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_M_ASSIGN; 
+}
+"sr"[ \t]*"="[ \t]*[0-9]+   { 
+    char* eq = strchr(yytext, '=');
+    yylval.ival = std::atoi(eq + 1);
+    return TOK_SR_ASSIGN; 
+}
+
+/* Individual attribute tokens (fallback when no = follows) */
 "pd"       { return TOK_POWER_DRIVE; }
 "d"        { return TOK_POWER_DRIVE; }
 "beam"     { return TOK_BEAM; }
@@ -77,6 +136,7 @@
 "missile"  { return TOK_MISSILE; }
 "m"        { return TOK_MISSILE; }
 
+
 [a-zA-Z][a-zA-Z0-9]+ {
         yylval.sval = new std::string(yytext);
         return TOK_STRING;
@@ -86,8 +146,6 @@
         yylval.ival = std::atoi(yytext);
         return TOK_INT;
 }
-
-"="   { return TOK_EQUAL; }
 
 .  { return TOK_UNKNOWN; }
 

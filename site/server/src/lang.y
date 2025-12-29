@@ -9,7 +9,14 @@
 
 #include "logger.h"
 #include "start_command.h"
+#include "build_command.h"
+#include "build_commit_command.h"
+#include "build_cancel_command.h"
+#include "build_list_drafts_command.h"
+#include "build_show_draft_command.h"
+#include "build_set_attribute_command.h"
 #include "statemachine.h"
+#include "game.h"
 #include "db.h"
 
 extern "C" int yylex();
@@ -21,6 +28,10 @@ void yyerror(const char *s);
 // Globals to inject context into the parser actions
 extern Db* g_db;
 extern int g_game_id;
+
+// Global builder for accumulating build set attributes
+BuildSetAttributeCommand::Builder g_build_set_builder;
+
 %}
 
 %union {
@@ -31,6 +42,7 @@ extern int g_game_id;
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
 %type  <sval> deployable_ship
+%type  <sval> building_draft_ship
 
 %token TOK_ADVANCED
 %token TOK_APPLY
@@ -48,7 +60,6 @@ extern int g_game_id;
 %token TOK_DONE
 %token TOK_DRAFTS
 %token TOK_DROP
-%token TOK_EQUAL
 %token TOK_ESCAPE
 %token TOK_FLEET
 %token TOK_GALAXY
@@ -79,6 +90,14 @@ extern int g_game_id;
 %token TOK_SYSTEM
 %token TOK_TUBE
 
+/* Attribute assignment tokens - value in yylval.ival */
+%token <ival> TOK_PD_ASSIGN
+%token <ival> TOK_B_ASSIGN
+%token <ival> TOK_S_ASSIGN
+%token <ival> TOK_T_ASSIGN
+%token <ival> TOK_M_ASSIGN
+%token <ival> TOK_SR_ASSIGN
+
 %token TOK_UNKNOWN
 
 %%
@@ -94,7 +113,6 @@ command:
   | info_cmd
   | looking_cmd
   | turn_cmd
-  | commitment_cmd
   | combat_cmd
   | build_cmd
   | deploy_cmd
@@ -234,10 +252,37 @@ turn_cmd:
   }
   ;
 
-// Phase evolution
-// "cancel" { return TOK_CANCEL; }
-// "commit" { return TOK_COMMIT; }
-commitment_cmd:
+build_commitment_cmd:
+   TOK_CANCEL {
+      Logger::instance().info("Cancel whatever the current operation "
+                "of the current operation in progress. Example:  "
+                "build cancel, combat cancel. Doesn't advance the phase, "
+                " just undo everything that was proposed IN THE PHASE.");
+   }
+   | TOK_COMMIT {
+      Logger::instance().info("Commit whatever the current operation "
+                "of the current operation in progress. Example: "
+                "build commit, combat commit. The operation is "
+                "effective upon the commit. REMAIN IN PHASE. ");
+   }
+   ;
+
+combat_order_commitment_cmd:
+   TOK_CANCEL {
+      Logger::instance().info("Cancel whatever the current operation "
+                "of the current operation in progress. Example:  "
+                "build cancel, combat cancel. Doesn't advance the phase, "
+                " just undo everything that was proposed IN THE PHASE.");
+   }
+   | TOK_COMMIT {
+      Logger::instance().info("Commit whatever the current operation "
+                "of the current operation in progress. Example: "
+                "build commit, combat commit. The operation is "
+                "effective upon the commit. REMAIN IN PHASE. ");
+   }
+   ;
+
+damage_allotment_commitment_cmd:
    TOK_CANCEL {
       Logger::instance().info("Cancel whatever the current operation "
                 "of the current operation in progress. Example:  "
@@ -265,7 +310,14 @@ combat_cmd:
       Logger::instance().info("Combat order spec: ");
    }
    | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_application_spec {
+      // TODO (used by the non-active player)
       Logger::instance().info("Combat application spec: ");
+   }
+   | TOK_COMBAT TOK_ORDER combat_order_commitment_cmd {
+      // TODO
+   }
+   | TOK_COMBAT TOK_APPLY damage_allotment_commitment_cmd {
+      // TODO (used by the non-active player)
    }
   ;
 
@@ -275,6 +327,7 @@ building_draft_ship:
       std::string ship_id(*$1);
       Logger::instance().info("Drafting ship: "
                               ">" + ship_id + "<" );
+      $$ = $1;  // Pass the string up
   }
   ;
 
@@ -315,68 +368,68 @@ combat_target_ship:
   ;
 
 combat_order_spec:
-  TOK_POWER_DRIVE TOK_EQUAL TOK_INT additional_combat_order_spec {
+  TOK_PD_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Combat Order update spec PD ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_BEAM TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_B_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Combat Order update spec BEAM ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_SCREEN TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_S_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Combat Order update spec SCREEN ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_TUBE TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_T_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Combat Order update spec TUBE ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_MISSILE TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_M_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Combat Order update spec MISSILE ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
   ;
 
 additional_combat_order_spec:
   // no spec
-  | TOK_POWER_DRIVE TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_PD_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Additional Combat Order update spec PD ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_BEAM TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_B_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Additional Combat Order update spec BEAM ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_SCREEN TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_S_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Additional Combat Order update spec SCREEN ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_TUBE TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_T_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Additional Combat Order update spec TUBE ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
-  | TOK_MISSILE TOK_EQUAL TOK_INT additional_combat_order_spec {
+  | TOK_M_ASSIGN additional_combat_order_spec {
       std::stringstream ss;
       ss << "Additional Combat Order update spec MISSILE ";
-      ss << (int) ($3);
+      ss << $1;
       Logger::instance().info(ss.str());
   }
   ;
@@ -483,51 +536,90 @@ build_cmd:
                               "current build state");
   }
   | TOK_BUILD TOK_DRAFTS {
-      Logger::instance().info("List of all pending build drafts by self");
+      Logger::instance().info("List all pending build drafts");
+      std::unique_ptr<ICmd> pCmd = BuildListDraftsCommand::Builder()
+                  .set_db(g_db)
+                  .set_game_id(g_game_id)
+                  .build();
+      pCmd->invoke();
   }
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
-      Logger::instance().info("Detail about this particular ship "
-                              "build draft: ");
+      std::string ship_code = *$3;
+      Logger::instance().info("Show draft details: " + ship_code);
+      std::unique_ptr<ICmd> pCmd = BuildShowDraftCommand::Builder()
+                  .set_db(g_db)
+                  .set_game_id(g_game_id)
+                  .set_draft_code(ship_code)
+                  .build();
+      pCmd->invoke();
   }
   | TOK_BUILD TOK_SET_ATTR build_attr_spec {
-      Logger::instance().info("Set (or overwrite) attribute to build draft");
+      Logger::instance().info("Set attributes on current draft");
+      std::unique_ptr<ICmd> pCmd = g_build_set_builder
+                  .set_db(g_db)
+                  .set_game_id(g_game_id)
+                  .build();
+      pCmd->invoke();
+      g_build_set_builder = BuildSetAttributeCommand::Builder(); // Reset
+  }
+  | TOK_BUILD TOK_COMMIT {
+      Logger::instance().info("Build commit - committing current draft");
+      std::unique_ptr<ICmd> pCmd = BuildCommitCommand::Builder()
+                  .set_db(g_db)
+                  .set_game_id(g_game_id)
+                  .build();
+      pCmd->invoke();
+  }
+  | TOK_BUILD TOK_CANCEL {
+      Logger::instance().info("Build cancel - canceling current draft");
+      std::unique_ptr<ICmd> pCmd = BuildCancelCommand::Builder()
+                  .set_db(g_db)
+                  .set_game_id(g_game_id)
+                  .build();
+      pCmd->invoke();
   }
   ;
 
 build_attr_spec:
-  TOK_POWER_DRIVE TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec PD");
+  TOK_PD_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_pd($1);
   }
-  | TOK_BEAM TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec BEAM");
+  | TOK_B_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_b($1);
   }
-  | TOK_SCREEN TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec SCREEN");
+  | TOK_S_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_s($1);
   }
-  | TOK_TUBE TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec TUBE");
+  | TOK_T_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_t($1);
   }
-  | TOK_MISSILE TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec MISSILE");
+  | TOK_M_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_m($1);
+  }
+  | TOK_SR_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_sr($1);
   }
   ;
 
 additional_build_attr_spec:
   // or no more spec
-  | TOK_POWER_DRIVE TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec PD");
+  | TOK_PD_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_pd($1);
   }
-  | TOK_BEAM TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec BEAM");
+  | TOK_B_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_b($1);
   }
-  | TOK_SCREEN TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec SCREEN");
+  | TOK_S_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_s($1);
   }
-  | TOK_TUBE TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec TUBE");
+  | TOK_T_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_t($1);
   }
-  | TOK_MISSILE TOK_EQUAL TOK_INT additional_build_attr_spec {
-      Logger::instance().info("Building, update spec MISSILE");
+  | TOK_M_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_m($1);
+  }
+  | TOK_SR_ASSIGN additional_build_attr_spec {
+      g_build_set_builder.set_sr($1);
   }
   ;
 
