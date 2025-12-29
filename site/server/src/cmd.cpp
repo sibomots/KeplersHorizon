@@ -149,33 +149,29 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     g_db = db;
     g_game_id = a.game_id;
 
-    // Parse and execute command via grammar
+    // Try parser first (handles migrated commands)
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
     int parse_result = yyparse();
     yy_delete_buffer(buffer);
 
-    if (parse_result != 0)
+    // If parser succeeded, return response
+    if (parse_result == 0)
     {
-        Logger::instance().error("Parse error: " + cmdline);
-        resp->status = 400;
-        resp->body = json_error("Invalid command syntax");
+        Logger::instance().info("Command handled by parser: " + cmdline);
+        GameState s = load_game(db, a.game_id);
+        resp->body = json_ok_with_state_and_event(s, "");
         return;
     }
 
-    // Load current game state for response
+    // Parser failed - fall back to legacy handlers for unmigrated commands
+    Logger::instance().info("Falling back to legacy handler: " + cmdline);
+    
     GameState s = load_game(db, a.game_id);
 
-    // Build response with current state
-    // Commands have already executed and logged their results
-    resp->body = json_ok_with_state_and_event(s, "");
-    return;
-}
+    std::vector<std::string> tok = split_ws(cmdline);
+    std::string cmd = to_lower(tok[0]);
 
-#if 0
-// ============================================================================
-// LEGACY COMMAND HANDLERS - All replaced by grammar/Command pattern
-// This code is preserved for reference but should not execute
-// ============================================================================
+    std::string eventText;
 
     // NOTE: 'me' is derived from the authenticated token, not from game state.
     char me = (a.player ? a.player : 'A');
@@ -472,6 +468,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         {
             std::string sub = to_lower(tok[1]);
 
+#if 0
+            // Legacy build new - now handled by BuildNewCommand
             if (sub == "new")
             {
                 int mybp = (owner == 'A') ? s.bpA : s.bpB;
@@ -610,6 +608,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     }
                 }
             }
+#endif
             else if (sub == "drafts")
             {
                 auto ds = load_drafts(db, a.game_id, owner);

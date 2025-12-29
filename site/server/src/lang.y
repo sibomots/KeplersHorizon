@@ -11,6 +11,7 @@
 #include "start_command.h"
 #include "build_command.h"
 #include "build_commit_command.h"
+#include "build_new_command.h"
 #include "build_cancel_command.h"
 #include "build_list_drafts_command.h"
 #include "build_show_draft_command.h"
@@ -316,6 +317,32 @@ building_draft_ship:
   }
   ;
 
+ship_code:
+  TOK_STRING {
+      $$ = $1;  // Pass the ship code string up
+  }
+  ;
+
+ship_name_opt:
+  /* empty */ {
+      $$ = nullptr;
+  }
+  | TOK_STRING {
+      $$ = $1;  // Pass the ship name string up
+  }
+  | TOK_STRING ship_name_opt {
+      // Concatenate multiple words for ship name
+      std::string *combined = new std::string;
+      combined->append(*$1);
+      combined->append(" ");
+      combined->append(*$2);
+      delete $1;
+      delete $2;
+      $$ = combined;
+  }
+  ;
+
+
 combat_initiator_ship:
   TOK_STRING {
       std::string ship_id(*$1);
@@ -509,6 +536,21 @@ build_cmd:
   TOK_BUILD {
       Logger::instance().info("Without arguments, shows "
                               "current build state");
+  }
+  | TOK_BUILD TOK_NEW ship_code ship_name_opt {
+      std::string code(*$3);
+      std::string name;
+      if ($4 != nullptr) {
+          name = std::string(*$4);
+      }
+      Logger::instance().info("Create new draft: " + code + " '" + name + "'");
+      std::unique_ptr<ICmd> pCmd = BuildNewCommand::Builder()
+                  .set_db(g_db)
+                  .set_game_id(g_game_id)
+                  .set_ship_code(code)
+                  .set_ship_name(name)
+                  .build();
+      pCmd->invoke();
   }
   | TOK_BUILD TOK_DRAFTS {
       Logger::instance().info("List all pending build drafts");

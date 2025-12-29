@@ -82,6 +82,7 @@ src/statemachine.cpp
 src/start_command.cpp
 src/build_command.cpp
 src/build_commit_command.cpp
+src/build_new_command.cpp
 src/build_cancel_command.cpp
 src/build_list_drafts_command.cpp
 src/build_show_draft_command.cpp
@@ -114,6 +115,7 @@ inc/typedefs.h
 inc/start_command.h
 inc/build_command.h
 inc/build_commit_command.h
+inc/build_new_command.h
 inc/build_cancel_command.h
 inc/build_list_drafts_command.h
 inc/build_show_draft_command.h
