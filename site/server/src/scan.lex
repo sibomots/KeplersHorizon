@@ -63,6 +63,9 @@
 "pick"     { return TOK_PICK; }
 "drop"     { return TOK_DROP; }
 
+"repair"   { return TOK_REPAIR; }
+"resupply" { return TOK_RESUPPLY; }
+
 "pd"       { return TOK_POWER_DRIVE; }
 "d"        { return TOK_POWER_DRIVE; }
 "beam"     { return TOK_BEAM; }

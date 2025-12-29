@@ -60,7 +60,9 @@ void yyerror(const char *s);
 %token TOK_PICK
 %token TOK_POWER_DRIVE
 %token TOK_QUIT
+%token TOK_REPAIR
 %token TOK_RESET
+%token TOK_RESUPPLY
 %token TOK_SAVE
 %token TOK_SCREEN
 %token TOK_SET_ATTR
@@ -91,6 +93,7 @@ command:
   | deploy_cmd
   | move_cmd
   | pickdrop_cmd
+  | rep_cmd
   ;
 
 session_cmd:
@@ -614,6 +617,37 @@ pickdrop_cmd:
   }
   ;
 
+
+rep_cmd:
+  TOK_REPAIR {
+     // No arguments, always just explains briefly what you can do.
+     Logger::instance().info("List the ships that can be repaired by "
+                "location, type of ship and their current attributes.");
+  }
+  | TOK_REPAIR TOK_STRING {
+     // specify the ship always just explains briefly what you can do.
+     std::string repairable_ship(*$2);
+     Logger::instance().info("Repair ship >" + repairable_ship + "<");
+  }
+  | TOK_RESUPPLY {
+     // No arguments, always just explains briefly what you can do.
+     Logger::instance().info("List/show how many BP you have and what "
+                "kind of support you can provide.  The rules state that "
+                "all that can be 'resupplied' are MISSILES. For later work "
+                "we might revisit this for more interesting gameplay");
+  }
+  | TOK_RESUPPLY TOK_STRING TOK_INT {
+     // specify the ship always just explains briefly what you can do.
+     // and how many MISSILES to resupply from BuildPoints
+     std::string ship(*$2);
+     int qty = (int) $3;
+     std::string tmp = "" + qty;
+     Logger::instance().info("Resupply ship >" + ship + "< "
+                   "with >" + tmp + "< MISSILES");
+  }
+  ; 
+ 
+ 
 // Cellar -- things that are misc
 
 // "help" { return TOK_HELP; }
