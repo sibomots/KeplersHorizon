@@ -63,6 +63,5 @@ class Telemetry
   private:
     Telemetry() = delete;
 };
-};
 
 #endif
