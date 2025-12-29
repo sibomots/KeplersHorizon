@@ -36,169 +36,107 @@
 
 #include <sstream>
 
+#include "game.h"
 #include "json.h"
+#include "statemachine.h"
 
-// Static member initialization
-std::vector<std::string> Telemetry::s_messages_me;
-std::vector<std::string> Telemetry::s_messages_them;
-std::vector<std::string> Telemetry::s_messages_all;
-std::string Telemetry::s_status_json;
-std::mutex Telemetry::s_mutex;
-char Telemetry::s_current_player = 'A';
-
-void Telemetry::write(const std::string &msg)
+std::string Telemetry::write(const std::string &msg)
 {
-    std::lock_guard<std::mutex> lock(s_mutex);
-    s_messages_me.push_back(msg);
-}
-
-void Telemetry::tell(PlayerTarget target, const std::string &msg)
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-    if (target == PlayerTarget::ME)
-    {
-        s_messages_me.push_back(msg);
-    }
-    else // PlayerTarget::THEM
-    {
-        s_messages_them.push_back(msg);
-    }
-}
-
-void Telemetry::broadcast(const std::string &msg)
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-    s_messages_all.push_back(msg);
-}
-
-void Telemetry::status(int game_id, 
-                      const std::string &scenario,
-                      int round,
-                      const std::string &active_player,
-                      const std::string &phase,
-                      int vp_a, int vp_b,
-                      int bp_a, int bp_b,
-                      const std::string &notes,
-                      int combat_count,
-                      const std::string &combat_hexes)
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
+    StateMachine &sm = StateMachine::getInstance();
+    GameState s = sm.get_game_state();
     
-    std::ostringstream json;
-    json << "{";
-    json << "\"gameId\":" << game_id << ",";
-    json << "\"scenario\":\"" << json_escape(scenario) << "\",";
-    json << "\"round\":" << round << ",";
-    json << "\"activePlayer\":\"" << json_escape(active_player) << "\",";
-    json << "\"phase\":\"" << json_escape(phase) << "\",";
-    json << "\"vp\":{\"A\":" << vp_a << ",\"B\":" << vp_b << "},";
-    json << "\"bp\":{\"A\":" << bp_a << ",\"B\":" << bp_b << "},";
-    json << "\"notes\":\"" << json_escape(notes) << "\"";
-    
-    if (combat_count > 0)
-    {
-        json << ",\"combat\":{";
-        json << "\"count\":" << combat_count << ",";
-        json << "\"active_hexes\":\"" << json_escape(combat_hexes) << "\"";
-        json << "}";
-    }
-    
-    json << "}";
-    
-    s_status_json = json.str();
-}
-
-std::string Telemetry::get_messages(PlayerTarget target)
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-
-    const std::vector<std::string> *msgs =
-        (target == PlayerTarget::ME) ? &s_messages_me : &s_messages_them;
-
-    if (msgs->empty())
-    {
-        return "";
-    }
-
-    std::ostringstream out;
-    for (size_t i = 0; i < msgs->size(); ++i)
-    {
-        if (i > 0)
-        {
-            out << "\n";
-        }
-        out << (*msgs)[i];
-    }
-    return out.str();
-}
-
-std::string Telemetry::get_broadcast_messages()
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-
-    if (s_messages_all.empty())
-    {
-        return "";
-    }
-
-    std::ostringstream out;
-    for (size_t i = 0; i < s_messages_all.size(); ++i)
-    {
-        if (i > 0)
-        {
-            out << "\n";
-        }
-        out << s_messages_all[i];
-    }
-    return out.str();
-}
-
-std::string Telemetry::get_status_json()
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-    return s_status_json;
-}
-
-void Telemetry::clear()
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-    s_messages_me.clear();
-    s_messages_them.clear();
-    s_messages_all.clear();
-    s_status_json.clear();
-}
-
-void Telemetry::set_current_player(char player)
-{
-    std::lock_guard<std::mutex> lock(s_mutex);
-    s_current_player = player;
-}
-
-std::string Telemetry::build_response(PlayerTarget target, const GameState &s,
-                                      bool ok)
-{
-    std::string event_text = get_messages(target);
-
     std::ostringstream o;
     o << "{";
-    o << "\"ok\":" << (ok ? "true" : "false") << ",";
-    o << "\"event\":\"" << json_escape(event_text) << "\",";
+    o << "\"ok\":true,";
+    o << "\"event\":\"" << json_escape(msg) << "\",";
     o << "\"state\":" << s.to_json();
     o << "}";
-
+    
     return o.str();
 }
 
-char Telemetry::resolve_player(PlayerTarget target)
+std::string Telemetry::tell(PlayerTarget target, const std::string &msg)
 {
-    std::lock_guard<std::mutex> lock(s_mutex);
+    // Same as write - routing handled by caller
+    return write(msg);
+}
 
-    if (target == PlayerTarget::ME)
+std::string Telemetry::broadcast(const std::string &msg)
+{
+    // Same as write - broadcast to all
+    return write(msg);
+}
+
+void Telemetry::status(HttpResponse *resp)
+{
+    // Access StateMachine singleton - it has the slate of state
+    StateMachine &sm = StateMachine::getInstance();
+    
+    // Get current game state from StateMachine
+    GameState s = sm.get_game_state();
+    
+    // Build status JSON
+    std::ostringstream status_json;
+    status_json << "{";
+    status_json << "\"gameId\":" << s.game_id << ",";
+    status_json << "\"scenario\":\"" << json_escape(s.scenario) << "\",";
+    status_json << "\"round\":" << s.round << ",";
+    status_json << "\"activePlayer\":\"" << json_escape(s.active_player) << "\",";
+    status_json << "\"phaseIndex\":" << s.phase_index << ",";
+    status_json << "\"phase\":\"" << json_escape(s.phase_name()) << "\",";
+    status_json << "\"vp\":{\"A\":" << s.vpA << ",\"B\":" << s.vpB << "},";
+    status_json << "\"bp\":{\"A\":" << s.bpA << ",\"B\":" << s.bpB << "},";
+    
+    if (!s.combat_summary_json.empty())
     {
-        return s_current_player;
+        status_json << "\"combat\":" << s.combat_summary_json << ",";
     }
-    else // PlayerTarget::THEM
+    
+    status_json << "\"notes\":\"" << json_escape(s.notes()) << "\"";
+    status_json << "}";
+    
+    // Determine self/opponent info from current player
+    char selfOwner = s.active_player.empty() ? 'A' : s.active_player[0];
+    char oppOwner = (selfOwner == 'A') ? 'B' : 'A';
+    std::string selfUser = (selfOwner == 'A') ? "alice" : "bob";
+    std::string oppUser = (oppOwner == 'A') ? "alice" : "bob";
+    
+    // Query opponent online status
+    bool oppOnline = false;
+    std::string oppLastSeen = "";
+    
+    Db *db = sm.get_db();
+    auto prow = db->query(
+        "SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
+        "sessions s JOIN users u ON u.id=s.user_id "
+        "WHERE u.username='" + db->esc(oppUser) + 
+        "' ORDER BY s.last_seen DESC LIMIT 1");
+    
+    if (!prow.empty())
     {
-        return (s_current_player == 'A') ? 'B' : 'A';
+        oppLastSeen = prow[0][0];
+        auto prow2 = db->query(
+            "SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
+            "FROM sessions s JOIN users u ON u.id=s.user_id "
+            "WHERE u.username='" + db->esc(oppUser) + 
+            "' ORDER BY s.last_seen DESC LIMIT 1");
+        
+        if (!prow2.empty() && !prow2[0][0].empty() && prow2[0][0] != "0")
+        {
+            oppOnline = true;
+        }
     }
+    
+    // Build complete response and set directly
+    std::ostringstream out;
+    out << "{\"ok\":true,\"state\":" << status_json.str()
+        << ",\"self\":{\"owner\":\"" << selfOwner 
+        << "\",\"username\":\"" << json_escape(selfUser) << "\"}"
+        << ",\"peer\":{\"owner\":\"" << oppOwner 
+        << "\",\"username\":\"" << oppUser
+        << "\",\"online\":" << (oppOnline ? "true" : "false")
+        << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}"
+        << "}";
+    
+    resp->body = out.str();
 }

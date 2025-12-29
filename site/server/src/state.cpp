@@ -37,67 +37,27 @@
 #include "db.h"
 #include "game.h"
 #include "json.h"
+#include "telemetry.h"
 #include "typs.h"
 #include "util.h"
 
 void handle_state(const HttpRequest *req, Db *db, HttpResponse *resp)
 {
-    char selfOwner = 0;
-    char oppOwner = 0;
-    std::string oppUser;
-    bool oppOnline = false;
-    std::string oppLastSeen;
-
     if (req->method != "GET")
     {
         resp->status = 405;
         resp->body = json_error("method");
         return;
     }
+    
     AuthContext a = require_auth(db, (const HttpRequest *)req, resp);
     if (resp->status != 200)
     {
         return;
     }
 
-    GameState s = load_game(db, a.game_id);
-
-    selfOwner = owner_for_username(a.username);
-    oppOwner = (selfOwner == 'A') ? 'B' : 'A';
-    oppUser = (oppOwner == 'A') ? "alice" : "bob";
-
-    oppOnline = false;
-    oppLastSeen = "";
-
-    auto prow =
-        db->query("SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
-                  "sessions s JOIN users u ON u.id=s.user_id "
-                  "WHERE u.username='" +
-                  db->esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
-    if (!prow.empty())
-    {
-        oppLastSeen = prow[0][0];
-        auto prow2 =
-            db->query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
-                      "FROM sessions s JOIN users u ON u.id=s.user_id "
-                      "WHERE u.username='" +
-                      db->esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
-        if (!prow2.empty() && !prow2[0][0].empty() && prow2[0][0] != "0")
-        {
-            oppOnline = true;
-        }
-    }
-
-    std::ostringstream out;
-
-    out << "{\"ok\":true,\"state\":" << s.to_json() << ",\"self\":{\"owner\":\""
-        << selfOwner << "\",\"username\":\"" << json_escape(a.username) << "\"}"
-        << ",\"peer\":{\"owner\":\"" << oppOwner << "\",\"username\":\""
-        << oppUser << "\",\"online\":" << (oppOnline ? "true" : "false")
-        << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}"
-        << "}";
-
-    resp->body = out.str();
+    // Telemetry::status() accesses StateMachine singleton and builds complete JSON
+    Telemetry::status(resp);
     return;
 }
 

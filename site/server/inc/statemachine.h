@@ -189,6 +189,12 @@ class StateMachine
     {
         return data.turn_number;
     }
+    
+    // Get current game state (loads from DB using stored game_id)
+    GameState get_game_state() const
+    {
+        return load_game(m_db, data.game_id);
+    }
 
     // Setters for state properties (used by Commands to set up Transitions)
     void set_scenario(ScenarioType s)
