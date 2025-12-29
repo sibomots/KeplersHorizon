@@ -44,6 +44,8 @@ BuildSetAttributeCommand::Builder g_build_set_builder;
 %token <sval> TOK_STRING
 %type  <sval> deployable_ship
 %type  <sval> building_draft_ship
+%type  <sval> ship_name_opt
+%type  <sval> ship_code
 
 %token TOK_ADVANCED
 %token TOK_APPLY
@@ -324,14 +326,10 @@ ship_code:
   ;
 
 ship_name_opt:
-  /* empty */ {
-      $$ = nullptr;
-  }
-  | TOK_STRING {
-      $$ = $1;  // Pass the ship name string up
+  // empty
+  { $$ = nullptr;
   }
   | TOK_STRING ship_name_opt {
-      // Concatenate multiple words for ship name
       std::string *combined = new std::string;
       combined->append(*$1);
       combined->append(" ");
