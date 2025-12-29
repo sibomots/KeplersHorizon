@@ -57,7 +57,7 @@ bool StartCommand::invoke(void)
         return false;
     }
 
-    const char* sc_str = scenario_names[m_scenario];
+    const std::string sc_str(scenario_names[m_scenario]);
 
     Logger::instance().info("Initializing game scenario: " + sc_str);
 
