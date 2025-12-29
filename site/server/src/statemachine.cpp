@@ -39,6 +39,7 @@
 #include "db.h"
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 
 // Methods doing work do NOT move state.
 bool StateMachine::preinitialize()
@@ -123,6 +124,11 @@ bool StateMachine::transition()
             set_current_draft(m_db, data.game_id, 'A', "");
             set_current_draft(m_db, data.game_id, 'B', "");
             save_game(m_db, s);
+            
+            // Update status panel
+            Telemetry::status(s.game_id, s.scenario, s.round, s.active_player,
+                            s.phase_name(), s.vpA, s.vpB, s.bpA, s.bpB,
+                            "Game started: " + sc_str);
 
             Logger::instance().info(
                 "Transition: Game Initialized. Moving to GAME_START.");
@@ -540,6 +546,11 @@ bool StateMachine::transition()
             // Deduct BP and save
             bp -= cost;
             save_game(m_db, s);
+            
+            // Update status panel
+            Telemetry::status(s.game_id, s.scenario, s.round, s.active_player,
+                            s.phase_name(), s.vpA, s.vpB, s.bpA, s.bpB,
+                            "Ship committed: " + sh.name);
 
             Logger::instance().info("Committed: " + sh.name + " - " + sh.code +
                                     " (L" + std::to_string(sh.attr.tech) +

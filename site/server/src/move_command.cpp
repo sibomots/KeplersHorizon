@@ -254,6 +254,7 @@ bool MoveCommand::invoke(void)
         return false;
     }
 
+
     // Update ship location and PD spent
     if (finalSystem.empty())
         finalSystem = "";
@@ -265,6 +266,9 @@ bool MoveCommand::invoke(void)
         " WHERE game_id=" + std::to_string(m_game_id) +
         " AND owner='" + std::string(1, active_player) + "'" +
         " AND ship_code='" + m_db->esc(sh.code) + "'");
+
+    // Save game state to persist changes
+    save_game(m_db, s);
 
     std::ostringstream o;
     o << "Moved " << sh.name << " - " << sh.code

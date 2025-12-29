@@ -52,14 +52,28 @@ enum class PlayerTarget
 class Telemetry
 {
   public:
-    // Three core methods for command output
+    // Three core methods for command output (console log)
     static void write(const std::string &msg);
     static void tell(PlayerTarget target, const std::string &msg);
     static void broadcast(const std::string &msg);
 
+    // Status panel update - parameterized for UI fields
+    // Sends JSON to update status panel (gameId, scenario, round, player, phase, vp, bp, notes, combat)
+    static void status(int game_id, 
+                      const std::string &scenario,
+                      int round,
+                      const std::string &active_player,
+                      const std::string &phase,
+                      int vp_a, int vp_b,
+                      int bp_a, int bp_b,
+                      const std::string &notes = "",
+                      int combat_count = 0,
+                      const std::string &combat_hexes = "");
+
     // Internal: Get accumulated messages
     static std::string get_messages(PlayerTarget target);
     static std::string get_broadcast_messages();
+    static std::string get_status_json();  // Get status panel JSON
     static void clear();
 
     // Set current player context (called by handler before command execution)
@@ -78,6 +92,7 @@ class Telemetry
     static std::vector<std::string> s_messages_me;
     static std::vector<std::string> s_messages_them;
     static std::vector<std::string> s_messages_all;
+    static std::string s_status_json;  // Current status panel JSON
     static std::mutex s_mutex;
     static char s_current_player;
 };

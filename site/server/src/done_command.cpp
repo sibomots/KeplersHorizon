@@ -84,5 +84,8 @@ bool DoneCommand::invoke(void)
         Telemetry::broadcast("Turn advanced to " + s.active_player);
     }
 
+    // Save game state to persist changes
+    save_game(m_db, s);
+
     return true;
 }

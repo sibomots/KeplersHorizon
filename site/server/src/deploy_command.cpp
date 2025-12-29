@@ -136,6 +136,9 @@ bool DeployCommand::invoke(void)
     update_ship_location(m_db, m_game_id, active_player, m_ship_code, sys, hex,
                          "");
 
+    // Save game state to persist changes
+    save_game(m_db, s);
+
     Logger::instance().info("Deployed " + sh.name + " - " + sh.code + " to " +
                             sys);
     Telemetry::write("Deployed " + sh.name + " - " + sh.code + " to " + sys);

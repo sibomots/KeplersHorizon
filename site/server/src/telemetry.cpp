@@ -42,6 +42,7 @@
 std::vector<std::string> Telemetry::s_messages_me;
 std::vector<std::string> Telemetry::s_messages_them;
 std::vector<std::string> Telemetry::s_messages_all;
+std::string Telemetry::s_status_json;
 std::mutex Telemetry::s_mutex;
 char Telemetry::s_current_player = 'A';
 
@@ -68,6 +69,43 @@ void Telemetry::broadcast(const std::string &msg)
 {
     std::lock_guard<std::mutex> lock(s_mutex);
     s_messages_all.push_back(msg);
+}
+
+void Telemetry::status(int game_id, 
+                      const std::string &scenario,
+                      int round,
+                      const std::string &active_player,
+                      const std::string &phase,
+                      int vp_a, int vp_b,
+                      int bp_a, int bp_b,
+                      const std::string &notes,
+                      int combat_count,
+                      const std::string &combat_hexes)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    
+    std::ostringstream json;
+    json << "{";
+    json << "\"gameId\":" << game_id << ",";
+    json << "\"scenario\":\"" << json_escape(scenario) << "\",";
+    json << "\"round\":" << round << ",";
+    json << "\"activePlayer\":\"" << json_escape(active_player) << "\",";
+    json << "\"phase\":\"" << json_escape(phase) << "\",";
+    json << "\"vp\":{\"A\":" << vp_a << ",\"B\":" << vp_b << "},";
+    json << "\"bp\":{\"A\":" << bp_a << ",\"B\":" << bp_b << "},";
+    json << "\"notes\":\"" << json_escape(notes) << "\"";
+    
+    if (combat_count > 0)
+    {
+        json << ",\"combat\":{";
+        json << "\"count\":" << combat_count << ",";
+        json << "\"active_hexes\":\"" << json_escape(combat_hexes) << "\"";
+        json << "}";
+    }
+    
+    json << "}";
+    
+    s_status_json = json.str();
 }
 
 std::string Telemetry::get_messages(PlayerTarget target)
@@ -115,12 +153,19 @@ std::string Telemetry::get_broadcast_messages()
     return out.str();
 }
 
+std::string Telemetry::get_status_json()
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return s_status_json;
+}
+
 void Telemetry::clear()
 {
     std::lock_guard<std::mutex> lock(s_mutex);
     s_messages_me.clear();
     s_messages_them.clear();
     s_messages_all.clear();
+    s_status_json.clear();
 }
 
 void Telemetry::set_current_player(char player)
