@@ -87,4 +87,3 @@ bool StartCommand::invoke(void)
 
     return true;
 }
-```

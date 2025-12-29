@@ -38,13 +38,6 @@
 #include "combat.h"
 #include "db.h"
 
-/*
-GameState gamestate;
-AuthContext authcontext;
-DraftRow draftrow;
-ShipRow shiprow;
-*/
-
 GameState new_game_state_for_scenario(const std::string &scenario)
 {
     GameState s;

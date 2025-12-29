@@ -1,3 +1,37 @@
+///////////////////////////////////////////////////////////////////////////////////
+// BSD 3-Clause License
+//
+// This file is part of Kepler's Horizon
+//
+// Copyright (c) 2025, sibomots
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+/////////////////////////////////////////////////////////////////////////////////
 #include "build_new_command.h"
 
 #include <cctype>
@@ -18,56 +52,11 @@ bool BuildNewCommand::invoke(void)
     if (bp <= 0)
     {
         Logger::instance().error("No Build Points available");
+        Telemetry::write("Error: No Build Points available");
         return false;
     }
 
     // Validate ship code format
-    if (m_ship_code.empty())
-    {
-        Logger::instance().error("Bad ship code");
-        return false;
-    }
-
-    char stype = std::toupper(m_ship_code[0]);
-    if (stype != 'W' && stype != 'S')
-    {
-        Logger::instance().error("Ship type must start with W or S");
-        return false;
-    }
-
-    // Parse or auto-assign ship number
-    auto parse_num = [](const std::string &s) -> int {
-        if (s.size() <= 1)
-            return -1;
-        int n = 0;
-        for (size_t i = 1; i < s.size(); ++i)
-        {
-            if (!std::isdigit(s[i]))
-                return -1;
-            n = n * 10 + (s[i] - '0');
-        }
-        return n;
-    };
-
-    int n = parse_num(m_ship_code);
-    if (n == -1)
-    {
-        // Auto-assign next available number
-        int maxn = 0;
-        auto rows = m_db->query("SELECT ship_code FROM ships WHERE game_id=" +
-                                std::to_string(m_game_id) +
-                                " AND ship_type='" + std::string(1, stype) +
-                                "'");
-        for (auto &r : rows)
-        {
-            int nn = parse_num(r[0]);
-            if (nn > maxn)
-                maxn = nn;
-        }
-        auto rows2 =
-            m_db->query("SELECT ship_code FROM drafts WHERE game_id=" +
-                        std::to_string(m_game_id) + " AND ship_type='" +
-                        std::string(1, stype) + "'");
     if (m_ship_code.empty() || m_ship_code.length() > 10)
     {
         Logger::instance().error("Invalid ship code format");
