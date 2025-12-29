@@ -66,8 +66,8 @@
 "repair"   { return TOK_REPAIR; }
 "resupply" { return TOK_RESUPPLY; }
 
-/* Attribute assignments - MUST come BEFORE individual attribute tokens */
-/* These match patterns like "PD=5" or "PD = 5" (with optional whitespace) */
+
+
 "pd"[ \t]*"="[ \t]*[0-9]+   { 
     char* eq = strchr(yytext, '=');
     yylval.ival = std::atoi(eq + 1);
@@ -124,7 +124,6 @@
     return TOK_SR_ASSIGN; 
 }
 
-/* Individual attribute tokens (fallback when no = follows) */
 "pd"       { return TOK_POWER_DRIVE; }
 "d"        { return TOK_POWER_DRIVE; }
 "beam"     { return TOK_BEAM; }

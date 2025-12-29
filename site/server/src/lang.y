@@ -252,21 +252,6 @@ turn_cmd:
   }
   ;
 
-build_commitment_cmd:
-   TOK_CANCEL {
-      Logger::instance().info("Cancel whatever the current operation "
-                "of the current operation in progress. Example:  "
-                "build cancel, combat cancel. Doesn't advance the phase, "
-                " just undo everything that was proposed IN THE PHASE.");
-   }
-   | TOK_COMMIT {
-      Logger::instance().info("Commit whatever the current operation "
-                "of the current operation in progress. Example: "
-                "build commit, combat commit. The operation is "
-                "effective upon the commit. REMAIN IN PHASE. ");
-   }
-   ;
-
 combat_order_commitment_cmd:
    TOK_CANCEL {
       Logger::instance().info("Cancel whatever the current operation "
@@ -447,68 +432,58 @@ additional_combat_order_spec:
 // "m" { return TOK_MISSILE; }
 
 combat_application_spec:
-  TOK_POWER_DRIVE TOK_EQUAL TOK_INT additional_combat_application_spec {
+  TOK_PD_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Combat Application update spec PD ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_BEAM TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_B_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Combat Application update spec BEAM ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_SCREEN TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_S_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Combat Application update spec SCREEN ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_TUBE TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_T_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Combat Application update spec TUBE ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_MISSILE TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_M_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Combat Application update spec MISSILE ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
   ;
 
 additional_combat_application_spec:
   // no spec
-  | TOK_POWER_DRIVE TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_PD_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Additional Combat Application update spec PD ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_BEAM TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_B_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Additional Combat Application update spec BEAM ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_SCREEN TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_S_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Additional Combat Application update spec SCREEN ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_TUBE TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_T_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Additional Combat Application update spec TUBE ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
-  | TOK_MISSILE TOK_EQUAL TOK_INT additional_combat_application_spec {
+  | TOK_M_ASSIGN additional_combat_application_spec {
       std::stringstream ss;
       ss << "Additional Combat Application update spec MISSILE ";
-      ss << (int) ($3);
       Logger::instance().info(ss.str());
   }
   ;
@@ -830,10 +805,6 @@ help_command:
     | TOK_HELP TOK_DROP
     {
         Logger::instance().info("Help about TOK_DROP");
-    }
-    | TOK_HELP TOK_EQUAL
-    {
-        Logger::instance().info("Help about TOK_EQUAL");
     }
     | TOK_HELP TOK_FLEET
     {

@@ -1,10 +1,11 @@
-#ifndef __TYPEDEFS_H__
-#define __TYPEDEFS_H__
+#ifndef __KH_TYPEDEFS_H__
+#define __KH_TYPEDEFS_H__
 
 #include <map>
 
 // Belongs in the typedefs collection
-typedef enum : int {
+typedef enum : int
+{
     UNDEFINED,
     LEARNING,
     BASIC,
@@ -12,7 +13,8 @@ typedef enum : int {
 } ScenarioType;
 
 // Ship attribute identifiers
-enum class AttributeID {
+enum class AttributeID : int
+{
     POWER_DRIVE,
     BEAM,
     SCREEN,
@@ -28,13 +30,27 @@ typedef int AttributeValue;
 typedef std::map<AttributeID, AttributeValue> AttributeMap;
 
 #ifndef SafeDelete
-#define SafeDelete(x) do { if ((x) != NULL) { delete (x); (x) = NULL; }} while(0)
+#define SafeDelete(x)                                                          \
+    do                                                                         \
+    {                                                                          \
+        if ((x) != NULL)                                                       \
+        {                                                                      \
+            delete (x);                                                        \
+            (x) = NULL;                                                        \
+        }                                                                      \
+    } while (0)
 #endif
 
 #ifndef SafeDeleteA
-#define SafeDeleteA(x) do { if ((x) != NULL) { delete [] (x); (x) = NULL; }} while(0)
+#define SafeDeleteA(x)                                                         \
+    do                                                                         \
+    {                                                                          \
+        if ((x) != NULL)                                                       \
+        {                                                                      \
+            delete[](x);                                                       \
+            (x) = NULL;                                                        \
+        }                                                                      \
+    } while (0)
 #endif
 
 #endif
-
-

@@ -3,34 +3,38 @@
 
 #include <memory>
 #include <string>
+
 #include "icmd.h"
 #include "typedefs.h"
 
 class BuildCommand : public ICmd
 {
-public:
-    class Builder {
-         public:
-           std::string _draft_code;
+  public:
+    class Builder
+    {
+      public:
+        std::string _draft_code;
 
-           Builder& set_draft_code(const std::string& code) {
-                _draft_code = code;
-                return *this;
-           }
+        Builder &set_draft_code(const std::string &code)
+        {
+            _draft_code = code;
+            return *this;
+        }
 
-           std::unique_ptr<ICmd> build() {
-                return std::unique_ptr<BuildCommand>(new BuildCommand(_draft_code));
-           }
+        std::unique_ptr<ICmd> build()
+        {
+            return std::unique_ptr<BuildCommand>(new BuildCommand(_draft_code));
+        }
     };
-   
-private:
-    BuildCommand(const std::string& draft_code) :
-          m_draft_code(draft_code)
-    {}
+
+  private:
+    BuildCommand(const std::string &draft_code) : m_draft_code(draft_code)
+    {
+    }
 
     std::string m_draft_code;
 
-public:
+  public:
     virtual bool invoke(void);
 };
 

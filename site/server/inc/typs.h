@@ -1,34 +1,36 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // BSD 3-Clause License
-// 
+//
 // This file is part of Kepler's Horizon
 //
 // Copyright (c) 2025, sibomots
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
-// 1. Redistributions of source code must retain the above copyright notice, this
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its
 //    contributors may be used to endorse or promote products derived from
 //    this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #ifndef __TYPS_H__
 #define __TYPS_H__
@@ -122,12 +124,8 @@ class GameState
     }
     std::string phase_name() const
     {
-        static const char *P[] = {
-            "Build Ships",
-            "Movement",
-            "Resolve Combat",
-            "SystemShip Pick/Drop",
-            "End of Turn"};
+        static const char *P[] = {"Build Ships", "Movement", "Resolve Combat",
+                                  "SystemShip Pick/Drop", "End of Turn"};
         if (phase_index < PH_BUILD_SHIPS || phase_index > PH_END_TURN)
             return "Build Ships";
         return P[phase_index];
@@ -140,13 +138,15 @@ class GameState
         if (scenario.empty())
             return "Type: start learning|basic|advanced";
         if (phase_index == PH_BUILD_SHIPS)
-            return "Build/repair/resupply. Use build/deploy/pickup/drop then 'next'.";
+            return "Build/repair/resupply. Use build/deploy/pickup/drop then "
+                   "'next'.";
         if (phase_index == PH_MOVEMENT)
             return "Movement (not implemented). Use 'next' to continue.";
         if (phase_index == PH_RESOLVE_COMBAT)
             return "Combat (not implemented). Use 'next' to continue.";
         if (phase_index == PH_SYSTEM_PICKDROP)
-            return "SystemShip shuffle (not implemented). Use 'next' to continue.";
+            return "SystemShip shuffle (not implemented). Use 'next' to "
+                   "continue.";
         if (phase_index == PH_END_TURN)
             return "End of turn. Use 'next' to pass initiative.";
         return "";
@@ -164,7 +164,8 @@ class GameState
         o << "\"phase\":\"" << json_escape(phase_name()) << "\",";
         o << "\"vp\":{\"A\":" << vpA << ",\"B\":" << vpB << "},";
         o << "\"bp\":{\"A\":" << bpA << ",\"B\":" << bpB << "},";
-        if (!combat_summary_json.empty()) {
+        if (!combat_summary_json.empty())
+        {
             o << "\"combat\":" << combat_summary_json << ",";
         }
         o << "\"notes\":\"" << json_escape(notes()) << "\"";
@@ -291,20 +292,20 @@ class ShipRow
     ShipRow()
     {
     }
-    
+
     // Constructor from DraftRow with tech level and turn info
-    ShipRow(const DraftRow& draft, int tech_level, const std::string& turn_built)
-        : code(draft.code),
-          name(draft.name),
-          built_turn(turn_built),
+    ShipRow(const DraftRow &draft, int tech_level,
+            const std::string &turn_built)
+        : code(draft.code), name(draft.name), built_turn(turn_built),
           pd_spent(0)
     {
         attr = draft.attr;
         attr.tech = tech_level;
     }
-    
+
     // Factory method for creating from draft
-    static ShipRow from_draft(const DraftRow& draft, int tech_level, int round, const std::string& active_player)
+    static ShipRow from_draft(const DraftRow &draft, int tech_level, int round,
+                              const std::string &active_player)
     {
         std::string turn_built = "R" + std::to_string(round) + active_player;
         return ShipRow(draft, tech_level, turn_built);

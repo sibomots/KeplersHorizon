@@ -1,12 +1,11 @@
 #ifndef __ICMD_H__
 #define __ICMD_H__
 
-class ICmd 
+class ICmd
 {
-public:
-   virtual ~ICmd() = default;
-   virtual bool invoke() = 0;
-
+  public:
+    virtual ~ICmd() = default;
+    virtual bool invoke() = 0;
 };
 
 #endif

@@ -1,53 +1,55 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // BSD 3-Clause License
-// 
+//
 // This file is part of Kepler's Horizon
 //
 // Copyright (c) 2025, sibomots
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
-// 1. Redistributions of source code must retain the above copyright notice, this
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its
 //    contributors may be used to endorse or promote products derived from
 //    this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include "app.h"
+#include "combat.h"
 #include "comms.h"
 #include "db.h"
 #include "events.h"
 #include "game.h"
-#include "state.h"
-#include "typs.h"
-#include "map.h"
-#include "map.h"
-#include "combat.h"
-#include "util.h"
 #include "logger.h"
+#include "map.h"
+#include "state.h"
+#include "statemachine.h"
+#include "typs.h"
+#include "util.h"
 
 // lex/yacc declarations
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 
 // C++ Linkage (scan.cpp)
-extern YY_BUFFER_STATE yy_scan_string(const char* str);
+extern YY_BUFFER_STATE yy_scan_string(const char *str);
 
 // C++ Linkage (scan.cpp)
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
@@ -56,16 +58,14 @@ extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 // but we can declare it here too.
 // Note: verify if it is extern "C" or not based on generated parser.cpp.
 // Standard bison (yacc) generates C-compatible functions.
-// If compiled as C++, it matches C++ linkage unless 
+// If compiled as C++, it matches C++ linkage unless
 // 'extern "C"' is inside the generated file.
 // C Linkage (parse.cpp appears to use it)
 extern "C" int yyparse();
 
 // Parser globals defined here for linking
-Db* g_db = nullptr;
+Db *g_db = nullptr;
 int g_game_id = 0;
-
-
 
 static std::string upper_ascii(const std::string &s)
 {
@@ -75,14 +75,15 @@ static std::string upper_ascii(const std::string &s)
     return r;
 }
 
-
-static std::string resolve_system_hex(Db *db, int game_id, const std::string &canon_name)
+static std::string resolve_system_hex(Db *db, int game_id,
+                                      const std::string &canon_name)
 {
     std::ostringstream q;
     q << "SELECT hex_id FROM star_systems WHERE game_id=" << game_id
       << " AND name='" << db->esc(canon_name) << "' LIMIT 1";
     auto r = db->query(q.str());
-    if (r.empty()) {
+    if (r.empty())
+    {
         return "";
     }
     return r[0][0];
@@ -110,8 +111,8 @@ static bool system_exists(Db *db, int game_id, const std::string &user_supplied)
 }
 
 #include <iostream>
-#include <unordered_map>
 #include <queue>
+#include <unordered_map>
 
 void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
 {
@@ -131,7 +132,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     std::string debug_cmd = "Raw command from user >";
     debug_cmd.append(cmdline);
     debug_cmd.append("<");
-	Logger::instance().debug(debug_cmd);
+    Logger::instance().debug(debug_cmd);
 
     if (cmdline.empty())
     {
@@ -140,12 +141,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         return;
     }
 
-
-
-    // Inject context for the parser
-    GameEngine::instance().set_db(db); // Legacy support
-    GameEngine::instance().load_state(a.game_id);
-    
     // Configure StateMachine with DB context
     // This allows the StateMachine to handle PreInit/Init phases independently
     StateMachine::getInstance().set_db(db);
@@ -159,14 +154,13 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     {
         Logger::instance().error("Parse error with: >" + cmdline + "<");
     }
-    else 
+    else
     {
         Logger::instance().info("Parse OK with: >" + cmdline + "<");
     }
     yy_delete_buffer(buffer);
     // end trial
 
- 
     GameState s = load_game(db, a.game_id);
 
     std::vector<std::string> tok = split_ws(cmdline);
@@ -185,7 +179,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         if (s.scenario.empty())
         {
             eventText = "No scenario. Type: start learning|basic|advanced";
-			Logger::instance().error(eventText);
+            Logger::instance().error(eventText);
             return false;
         }
         if (s.phase_index != PH_BUILD_SHIPS)
@@ -193,7 +187,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::ostringstream o;
             o << "Not in Build Ships phase. Current: " << s.phase_name();
             eventText = o.str();
-			Logger::instance().error(eventText);
+            Logger::instance().error(eventText);
             return false;
         }
         return true;
@@ -210,7 +204,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::ostringstream o;
             o << "Not in Movement phase. Current: " << s.phase_name();
             eventText = o.str();
-			Logger::instance().error(eventText);
+            Logger::instance().error(eventText);
             return false;
         }
         return true;
@@ -222,12 +216,11 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             std::ostringstream o;
             o << "Not your turn. Active player is " << active << ".";
             eventText = o.str();
-			Logger::instance().error(eventText);
+            Logger::instance().error(eventText);
             return false;
         }
         return true;
     };
-
 
     auto ship_cost_bp = [&](char ship_type, const DraftRow &d) -> int {
         int cost = 0;
@@ -315,7 +308,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
           << "Use 'deploy <W#|S##> <SYSTEM>' with a system name (e.g., UR) for "
              "now.";
         eventText = o.str();
-		Logger::instance().error(eventText);
+        Logger::instance().error(eventText);
     }
     else if (cmd == "reset")
     {
@@ -362,7 +355,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
     else if (cmd == "next")
     {
-        if (!require_my_turn()) {
+        if (!require_my_turn())
+        {
             // eventText set by require_my_turn
             save_game(db, s);
             append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
@@ -450,7 +444,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     "Usage: list | list drafts | list system <SYS> | list "
                     "all | list scan";
             }
-		    Logger::instance().info(eventText);
+            Logger::instance().info(eventText);
         }
     }
     else if (cmd == "build")
@@ -515,13 +509,15 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                             int n = parse_num(codeTok);
                             if (n == -1)
                             {
-                                // auto-assign next < 100 based on ships+drafts (GLOBAL checking)
+                                // auto-assign next < 100 based on ships+drafts
+                                // (GLOBAL checking)
                                 int maxn = 0;
                                 auto rows = db->query(
                                     "SELECT ship_code FROM ships WHERE "
                                     "game_id=" +
-                                    std::to_string(a.game_id) + " AND ship_type='" +
-                                    std::string(1, stype) + "'");
+                                    std::to_string(a.game_id) +
+                                    " AND ship_type='" + std::string(1, stype) +
+                                    "'");
                                 for (auto &r : rows)
                                 {
                                     int nn = parse_num(r[0]);
@@ -531,8 +527,9 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 auto rows2 = db->query(
                                     "SELECT ship_code FROM drafts WHERE "
                                     "game_id=" +
-                                    std::to_string(a.game_id) + " AND ship_type='" +
-                                    std::string(1, stype) + "'");
+                                    std::to_string(a.game_id) +
+                                    " AND ship_type='" + std::string(1, stype) +
+                                    "'");
                                 for (auto &r : rows2)
                                 {
                                     int nn = parse_num(r[0]);
@@ -551,8 +548,14 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                 c << stype << n;
                                 std::string code = c.str();
 
-                                auto r_check = db->query("SELECT 1 FROM ships WHERE game_id=" + std::to_string(a.game_id) + " AND ship_code='" + db->esc(code) + "'");
-                                auto d_check = db->query("SELECT 1 FROM drafts WHERE game_id=" + std::to_string(a.game_id) + " AND ship_code='" + db->esc(code) + "'");
+                                auto r_check = db->query(
+                                    "SELECT 1 FROM ships WHERE game_id=" +
+                                    std::to_string(a.game_id) +
+                                    " AND ship_code='" + db->esc(code) + "'");
+                                auto d_check = db->query(
+                                    "SELECT 1 FROM drafts WHERE game_id=" +
+                                    std::to_string(a.game_id) +
+                                    " AND ship_code='" + db->esc(code) + "'");
 
                                 if (!r_check.empty() || !d_check.empty())
                                 {
@@ -605,8 +608,10 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 for (auto &d : ds)
                 {
                     int cost = ship_cost_bp(d.attr.type, d);
-                    o << "  " << d.code << " '" << d.name << "' cost=" << cost << " BP";
-                    if (d.code == cur) o << "  [current]";
+                    o << "  " << d.code << " '" << d.name << "' cost=" << cost
+                      << " BP";
+                    if (d.code == cur)
+                        o << "  [current]";
                     o << "\n";
                 }
                 eventText = o.str();
@@ -661,19 +666,19 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         }
                         if (d.attr.type == 'S')
                         {
-						   	// no WG cost is ok
+                            // no WG cost is ok
                         }
                         if (d.attr.M % 3 != 0)
                         {
                             err = "Missiles must be a multiple of 3";
-							Logger::instance().error(err);
+                            Logger::instance().error(err);
                             return false;
                         }
                         if (d.attr.PD < 0 || d.attr.B < 0 || d.attr.S < 0 ||
                             d.attr.T < 0 || d.attr.M < 0 || d.attr.SR < 0)
                         {
                             err = "Negative attribute";
-							Logger::instance().error(err);
+                            Logger::instance().error(err);
                             return false;
                         }
                         return true;
@@ -693,22 +698,25 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     else if (sub == "validate")
                     {
                         std::string err;
-                        if (!validate_draft(err)) {
+                        if (!validate_draft(err))
+                        {
                             eventText = "Draft invalid: " + err;
-							Logger::instance().error(err);
-						}
-                        else {
+                            Logger::instance().error(err);
+                        }
+                        else
+                        {
                             eventText =
                                 "Draft valid: " + d.name + " - " + d.code;
-						}
+                        }
                     }
                     else if (sub == "cost")
                     {
                         std::string err;
-                        if (!validate_draft(err)) {
+                        if (!validate_draft(err))
+                        {
                             eventText = "Draft invalid: " + err;
-							Logger::instance().error(err);
-					    }
+                            Logger::instance().error(err);
+                        }
                         else
                         {
                             int cost = ship_cost_bp(d.attr.type, d);
@@ -819,7 +827,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                             if (!validate_draft(err))
                             {
                                 eventText = "Draft invalid: " + err;
-							    Logger::instance().error(eventText);
+                                Logger::instance().error(eventText);
                             }
                             else
                             {
@@ -859,7 +867,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                                       << ") cost=" << cost
                                       << " BP. Remaining BP=" << bp;
                                     eventText = o.str();
-                                    if (sh.attr.type == 'W' && sh.attr.PD <= 0) {
+                                    if (sh.attr.type == 'W' && sh.attr.PD <= 0)
+                                    {
                                         eventText += " WARNING: Ship has 0 PD.";
                                     }
                                 }
@@ -871,9 +880,9 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             }
             else
             {
-                eventText =
-                    "Usage: build "
-                    "new|drafts|set|add|clear|show|validate|cost|commit|cancel ...";
+                eventText = "Usage: build "
+                            "new|drafts|set|add|clear|show|validate|cost|"
+                            "commit|cancel ...";
             }
         }
     }
@@ -904,7 +913,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 else
                 {
                     std::string hex = resolve_system_hex(db, a.game_id, sys);
-                    update_ship_location(db, a.game_id, owner, code, sys, hex, "");
+                    update_ship_location(db, a.game_id, owner, code, sys, hex,
+                                         "");
                     eventText =
                         "Deployed " + sh.name + " - " + sh.code + " to " + sys;
                 }
@@ -1049,14 +1059,16 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                 }
                 else if (!sh.racked_in.empty())
                 {
-                    eventText = "Ship is racked and cannot move: " + sh.racked_in;
+                    eventText =
+                        "Ship is racked and cannot move: " + sh.racked_in;
                 }
                 else
                 {
                     std::string startHex = sh.at_hex;
                     if (startHex.empty() && !sh.at_system.empty())
                     {
-                        startHex = resolve_system_hex(db, a.game_id, sh.at_system);
+                        startHex =
+                            resolve_system_hex(db, a.game_id, sh.at_system);
                     }
                     if (startHex.empty())
                     {
@@ -1074,38 +1086,74 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                         std::string finalSystem = sh.at_system;
                         std::string finalHex = startHex;
 
-                        if (allowance <= 0) {
-                            eventText = "Ship has no movement remaining (PD spent).";
-                        } else {
-                            for (size_t i = 2; i < tok.size(); ++i) {
+                        if (allowance <= 0)
+                        {
+                            eventText =
+                                "Ship has no movement remaining (PD spent).";
+                        }
+                        else
+                        {
+                            for (size_t i = 2; i < tok.size(); ++i)
+                            {
                                 std::string destTok = tok[i];
-                                std::string stepHex = graph.resolve_hex(destTok);
+                                std::string stepHex =
+                                    graph.resolve_hex(destTok);
                                 std::string stepSys;
 
-                                if (!stepHex.empty()) {
-                                    // See if it matches a system name (reverse lookup for display/logic)
-                                    auto sysr = db->query("SELECT name FROM star_systems WHERE game_id=" + std::to_string(a.game_id) + " AND hex_id='" + stepHex + "' LIMIT 1");
-                                    if (!sysr.empty()) stepSys = sysr[0][0];
-                                } else {
-                                    eventText = "Unknown destination: " + destTok;
+                                if (!stepHex.empty())
+                                {
+                                    // See if it matches a system name (reverse
+                                    // lookup for display/logic)
+                                    auto sysr = db->query(
+                                        "SELECT name FROM star_systems WHERE "
+                                        "game_id=" +
+                                        std::to_string(a.game_id) +
+                                        " AND hex_id='" + stepHex +
+                                        "' LIMIT 1");
+                                    if (!sysr.empty())
+                                        stepSys = sysr[0][0];
+                                }
+                                else
+                                {
+                                    eventText =
+                                        "Unknown destination: " + destTok;
                                     break;
                                 }
 
-                                int stepCost = graph.get_path_cost(currentHex, stepHex, allowance - totalCost);
-                                if (stepCost == -1) {
-                                    int needed = graph.get_path_cost(currentHex, stepHex, 999);
-                                    if (needed != -1) {
-                                        eventText = "Cannot reach " + destTok + " from " + currentHex + ". Needed " + std::to_string(needed) + " PD, but limit is " + std::to_string(allowance - totalCost) + ".";
-                                    } else {
-                                        eventText = "Cannot reach " + destTok + " from " + currentHex + " (No path or Blocked).";
+                                int stepCost = graph.get_path_cost(
+                                    currentHex, stepHex, allowance - totalCost);
+                                if (stepCost == -1)
+                                {
+                                    int needed = graph.get_path_cost(
+                                        currentHex, stepHex, 999);
+                                    if (needed != -1)
+                                    {
+                                        eventText = "Cannot reach " + destTok +
+                                                    " from " + currentHex +
+                                                    ". Needed " +
+                                                    std::to_string(needed) +
+                                                    " PD, but limit is " +
+                                                    std::to_string(allowance -
+                                                                   totalCost) +
+                                                    ".";
+                                    }
+                                    else
+                                    {
+                                        eventText = "Cannot reach " + destTok +
+                                                    " from " + currentHex +
+                                                    " (No path or Blocked).";
                                     }
                                     break;
                                 }
 
-
                                 totalCost += stepCost;
-                                if (totalCost > allowance) {
-                                    eventText = "Path exceeds PD allowance. Total cost would be " + std::to_string(totalCost) + ", remaining=" + std::to_string(allowance);
+                                if (totalCost > allowance)
+                                {
+                                    eventText = "Path exceeds PD allowance. "
+                                                "Total cost would be " +
+                                                std::to_string(totalCost) +
+                                                ", remaining=" +
+                                                std::to_string(allowance);
                                     break;
                                 }
 
@@ -1115,16 +1163,25 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                             }
                         }
 
-                        if (eventText.empty()) {
-                             if (finalSystem.empty()) finalSystem = "";
-                             update_ship_location(db, a.game_id, owner, sh.code, finalSystem, finalHex, "");
-                             db->exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) + 
-                                      " WHERE game_id=" + std::to_string(a.game_id) + " AND owner='" + std::string(1, owner) + "'" +
-                                      " AND ship_code='" + db->esc(sh.code) + "'");
-                             std::ostringstream o;
-                             o << "Moved " << sh.name << " - " << sh.code << " to " << (finalSystem.empty() ? finalHex : finalSystem)
-                               << " (" << finalHex << ") cost " << totalCost << " PD";
-                             eventText = o.str();
+                        if (eventText.empty())
+                        {
+                            if (finalSystem.empty())
+                                finalSystem = "";
+                            update_ship_location(db, a.game_id, owner, sh.code,
+                                                 finalSystem, finalHex, "");
+                            db->exec(
+                                "UPDATE ships SET pd_spent=pd_spent+" +
+                                std::to_string(totalCost) +
+                                " WHERE game_id=" + std::to_string(a.game_id) +
+                                " AND owner='" + std::string(1, owner) + "'" +
+                                " AND ship_code='" + db->esc(sh.code) + "'");
+                            std::ostringstream o;
+                            o << "Moved " << sh.name << " - " << sh.code
+                              << " to "
+                              << (finalSystem.empty() ? finalHex : finalSystem)
+                              << " (" << finalHex << ") cost " << totalCost
+                              << " PD";
+                            eventText = o.str();
                         }
                     }
                 }
@@ -1132,33 +1189,45 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         }
     }
 
-    else if (cmd == "done") {
-        if (!require_my_turn()) {
-             // error already set
-        } else {
-             char me = owner;
-             // Auto-advance until active player changes or game over
-             int safety = 0;
-             while(s.active_player == std::string(1, me) && !s.game_over && safety < 50) {
-                 advance_next(db, s);
-                 safety++;
-             }
-             if (s.game_over) eventText = "Game Over during turn end.";
-             else eventText = "Turn ended. Passed to " + s.active_player;
+    else if (cmd == "done")
+    {
+        if (!require_my_turn())
+        {
+            // error already set
+        }
+        else
+        {
+            char me = owner;
+            // Auto-advance until active player changes or game over
+            int safety = 0;
+            while (s.active_player == std::string(1, me) && !s.game_over &&
+                   safety < 50)
+            {
+                advance_next(db, s);
+                safety++;
+            }
+            if (s.game_over)
+                eventText = "Game Over during turn end.";
+            else
+                eventText = "Turn ended. Passed to " + s.active_player;
         }
     }
-    else if (cmd == "combat") {
+    else if (cmd == "combat")
+    {
         std::istringstream iss(cmdline);
-        std::string cmdName; iss >> cmdName; // "combat"
+        std::string cmdName;
+        iss >> cmdName; // "combat"
 
         std::string action;
         iss >> action;
-        if (action == "order") {
-            // combat order <ship> [tactic=A|D|R] [target=ID] [d=N] [b=N] [s=N] [t=N] [m=JSON]
+        if (action == "order")
+        {
+            // combat order <ship> [tactic=A|D|R] [target=ID] [d=N] [b=N] [s=N]
+            // [t=N] [m=JSON]
             CombatOrder ord;
             ord.game_id = a.game_id;
             ord.round = 0; // Set by engine
-            
+
             // Defaults
             ord.tactic = 'A'; // Default to Attack
             ord.target_id = "";
@@ -1168,107 +1237,139 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             ord.power_t = 0;
             ord.missiles_json = "[]";
 
-            if (!(iss >> ord.ship_code)) {
+            if (!(iss >> ord.ship_code))
+            {
                 resp->body = json_error("missing ship code");
                 return;
             }
             ord.ship_code = upper_ascii(ord.ship_code);
 
             std::string token;
-            while(iss >> token) {
+            while (iss >> token)
+            {
                 size_t eq = token.find('=');
-                if (eq == std::string::npos) {
+                if (eq == std::string::npos)
+                {
                     // check for implicit tactic (A, D, R)
-                    if (token.size() == 1) {
-                         char c = std::toupper(token[0]);
-                         if (c == 'A' || c == 'D' || c == 'R') {
-                             ord.tactic = c;
-                             continue;
-                         }
+                    if (token.size() == 1)
+                    {
+                        char c = std::toupper(token[0]);
+                        if (c == 'A' || c == 'D' || c == 'R')
+                        {
+                            ord.tactic = c;
+                            continue;
+                        }
                     }
                     // Implicit target ID (e.g. "W1" in "combat order W2 D W1")
                     ord.target_id = token;
-                    continue; 
+                    continue;
                 }
 
                 std::string key = to_lower(token.substr(0, eq));
-                std::string val = token.substr(eq+1);
+                std::string val = token.substr(eq + 1);
 
-                if (key == "tactic" || key == "mode" || key == "opt") {
-                    if (!val.empty()) ord.tactic = std::toupper(val[0]);
+                if (key == "tactic" || key == "mode" || key == "opt")
+                {
+                    if (!val.empty())
+                        ord.tactic = std::toupper(val[0]);
                 }
-                else if (key == "target" || key == "tgt") {
+                else if (key == "target" || key == "tgt")
+                {
                     ord.target_id = val;
                 }
-                else if (key == "d" || key == "drive") ord.power_d = std::atoi(val.c_str());
-                else if (key == "b" || key == "beam") ord.power_b = std::atoi(val.c_str());
-                else if (key == "s" || key == "screen") ord.power_s = std::atoi(val.c_str());
-                else if (key == "t" || key == "tube") ord.power_t = std::atoi(val.c_str());
-                else if (key == "m" || key == "missiles") ord.missiles_json = val;
+                else if (key == "d" || key == "drive")
+                    ord.power_d = std::atoi(val.c_str());
+                else if (key == "b" || key == "beam")
+                    ord.power_b = std::atoi(val.c_str());
+                else if (key == "s" || key == "screen")
+                    ord.power_s = std::atoi(val.c_str());
+                else if (key == "t" || key == "tube")
+                    ord.power_t = std::atoi(val.c_str());
+                else if (key == "m" || key == "missiles")
+                    ord.missiles_json = val;
             }
-            
+
             // No strict syntax check needed, defaults apply.
 
-			std::string candidate_target( ord.target_id );
-			Logger::instance().info(candidate_target);
+            std::string candidate_target(ord.target_id);
+            Logger::instance().info(candidate_target);
 
             // Validation
-            if (ord.tactic == 'D' && ord.target_id.empty()) {
-                eventText = "Combat order to dodge requires a target opponent ship";
+            if (ord.tactic == 'D' && ord.target_id.empty())
+            {
+                eventText =
+                    "Combat order to dodge requires a target opponent ship";
                 // Don't submit
-            } else {
+            }
+            else
+            {
                 CombatEngine ce(db, a.game_id);
                 eventText = ce.submit_order(owner, ord);
             }
         }
-        else if (action == "resolve") {
+        else if (action == "resolve")
+        {
             std::string hex;
             iss >> hex;
-            if (hex.empty()) {
+            if (hex.empty())
+            {
                 resp->status = 400;
                 resp->body = json_error("missing hex");
-                Logger::instance().error("Trying to resolve combat, hex ID is missing");
+                Logger::instance().error(
+                    "Trying to resolve combat, hex ID is missing");
                 return;
             }
             CombatEngine ce(db, a.game_id);
             eventText = ce.resolve_round(hex);
         }
-        else if (action == "apply") {
+        else if (action == "apply")
+        {
             // combat apply <ship> <attr=val>...
             std::string ship_code;
-            if (!(iss >> ship_code)) {
+            if (!(iss >> ship_code))
+            {
                 resp->body = json_error("missing ship code");
-                Logger::instance().error("Trying combat subcommand apply, ship code is missing");
+                Logger::instance().error(
+                    "Trying combat subcommand apply, ship code is missing");
                 return;
             }
             ship_code = upper_ascii(ship_code);
             std::map<std::string, int> assignments;
             std::string token;
-            while(iss >> token) {
+            while (iss >> token)
+            {
                 size_t eq = token.find('=');
-                if (eq == std::string::npos) continue;
+                if (eq == std::string::npos)
+                    continue;
                 std::string k = to_lower(token.substr(0, eq));
-                int v = std::atoi(token.substr(eq+1).c_str());
-                if (k == "beam" || k == "b") k = "B";
-                else if (k == "d" || k == "drive" || k == "pd") k = "D";
-                else if (k == "screen" || k == "s") k = "S";
-                else if (k == "tube" || k == "t") k = "T";
-                else if (k == "missiles" || k == "m") k = "M";
+                int v = std::atoi(token.substr(eq + 1).c_str());
+                if (k == "beam" || k == "b")
+                    k = "B";
+                else if (k == "d" || k == "drive" || k == "pd")
+                    k = "D";
+                else if (k == "screen" || k == "s")
+                    k = "S";
+                else if (k == "tube" || k == "t")
+                    k = "T";
+                else if (k == "missiles" || k == "m")
+                    k = "M";
                 assignments[k] = v;
             }
             CombatEngine ce(db, a.game_id);
             eventText = ce.apply_damage(owner, ship_code, assignments);
         }
-        else if (action == "list") {
-             CombatEngine ce(db, a.game_id);
-             auto list = ce.get_active_combats();
-             eventText = "Active Combats: " + std::to_string(list.size());
+        else if (action == "list")
+        {
+            CombatEngine ce(db, a.game_id);
+            auto list = ce.get_active_combats();
+            eventText = "Active Combats: " + std::to_string(list.size());
         }
-        else {
-             resp->status = 400;
-             resp->body = json_error("unknown combat action");
-             Logger::instance().error("Unknown combat action attempted");
-             return;
+        else
+        {
+            resp->status = 400;
+            resp->body = json_error("unknown combat action");
+            Logger::instance().error("Unknown combat action attempted");
+            return;
         }
     }
     else
@@ -1282,7 +1383,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     save_game(db, s);
     append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
 
-    Logger::instance().info("[" + std::string(1, owner) + "] " + cmdline + " -> " + eventText);
+    Logger::instance().info("[" + std::string(1, owner) + "] " + cmdline +
+                            " -> " + eventText);
 
     resp->body = json_ok_with_state_and_event(s, eventText);
     return;

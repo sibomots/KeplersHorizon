@@ -1,20 +1,23 @@
 #include "util.h"
-#include <sstream>
+
+#include <algorithm>
+#include <cctype>
 #include <ctime>
 #include <iomanip>
 #include <random>
-#include <algorithm>
-#include <cctype>
+#include <sstream>
 
 std::string trim(const std::string &s)
 {
     auto start = s.begin();
-    while (start != s.end() && std::isspace(*start)) {
+    while (start != s.end() && std::isspace(*start))
+    {
         start++;
     }
 
     auto end = s.end();
-    do {
+    do
+    {
         end--;
     } while (std::distance(start, end) > 0 && std::isspace(*end));
 
@@ -23,8 +26,10 @@ std::string trim(const std::string &s)
 
 char owner_for_username(const std::string &u)
 {
-    if (u == "alice") return 'A';
-    if (u == "bob") return 'B';
+    if (u == "alice")
+        return 'A';
+    if (u == "bob")
+        return 'B';
     return 0;
 }
 
@@ -44,7 +49,7 @@ bool starts_with(const std::string &s, const std::string &p)
 std::string to_lower(std::string s)
 {
     std::transform(s.begin(), s.end(), s.begin(),
-        [](unsigned char c){ return std::tolower(c); });
+                   [](unsigned char c) { return std::tolower(c); });
     return s;
 }
 
@@ -56,7 +61,8 @@ std::string rand_hex_64()
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 15);
-    for (int i = 0; i < 64; ++i) {
+    for (int i = 0; i < 64; ++i)
+    {
         s += hex[dis(gen)];
     }
     return s;
@@ -67,7 +73,8 @@ std::vector<std::string> split_ws(const std::string &s)
     std::stringstream ss(s);
     std::string item;
     std::vector<std::string> elems;
-    while (ss >> item) {
+    while (ss >> item)
+    {
         elems.push_back(item);
     }
     return elems;
@@ -78,27 +85,49 @@ std::vector<std::string> split(const std::string &s, char delim)
     std::stringstream ss(s);
     std::string item;
     std::vector<std::string> elems;
-    while (std::getline(ss, item, delim)) {
+    while (std::getline(ss, item, delim))
+    {
         elems.push_back(item);
     }
     return elems;
 }
 
-std::string escape_json(const std::string &s) {
+std::string escape_json(const std::string &s)
+{
     std::ostringstream o;
-    for (auto c : s) {
-        switch (c) {
-        case '"': o << "\\\""; break;
-        case '\\': o << "\\\\"; break;
-        case '\b': o << "\\b"; break;
-        case '\f': o << "\\f"; break;
-        case '\n': o << "\\n"; break;
-        case '\r': o << "\\r"; break;
-        case '\t': o << "\\t"; break;
+    for (auto c : s)
+    {
+        switch (c)
+        {
+        case '"':
+            o << "\\\"";
+            break;
+        case '\\':
+            o << "\\\\";
+            break;
+        case '\b':
+            o << "\\b";
+            break;
+        case '\f':
+            o << "\\f";
+            break;
+        case '\n':
+            o << "\\n";
+            break;
+        case '\r':
+            o << "\\r";
+            break;
+        case '\t':
+            o << "\\t";
+            break;
         default:
-            if ('\x00' <= c && c <= '\x1f') {
-                o << "\\u" << std::hex << std::setw(4) << std::setfill('0') << (int)c;
-            } else {
+            if ('\x00' <= c && c <= '\x1f')
+            {
+                o << "\\u" << std::hex << std::setw(4) << std::setfill('0')
+                  << (int)c;
+            }
+            else
+            {
                 o << c;
             }
         }

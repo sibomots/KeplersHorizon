@@ -1,40 +1,42 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // BSD 3-Clause License
-// 
+//
 // This file is part of Kepler's Horizon
 //
 // Copyright (c) 2025, sibomots
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
-// 1. Redistributions of source code must retain the above copyright notice, this
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its
 //    contributors may be used to endorse or promote products derived from
 //    this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include "db.h"
 
 #include "app.h"
-#include "typs.h"
 #include "combat.h"
+#include "typs.h"
 #include "util.h"
 
 GameState load_game(Db *db, int game_id)
@@ -167,24 +169,27 @@ GameState load_game(Db *db, int game_id)
         s.bpB = getv("B");
     }
 
-
-
     // Load Combat Summary
     {
         CombatEngine ce(db, game_id);
         auto combats = ce.get_active_combats();
-        if (!combats.empty()) {
+        if (!combats.empty())
+        {
             std::ostringstream c;
             c << "{";
             c << "\"active_hexes\":[";
-            for(size_t i=0; i<combats.size(); ++i) {
-                if (i>0) c << ",";
+            for (size_t i = 0; i < combats.size(); ++i)
+            {
+                if (i > 0)
+                    c << ",";
                 c << "\"" << combats[i].hex_id << "\"";
             }
             c << "],";
             c << "\"combats\":[";
-            for(size_t i=0; i<combats.size(); ++i) {
-                if (i>0) c << ",";
+            for (size_t i = 0; i < combats.size(); ++i)
+            {
+                if (i > 0)
+                    c << ",";
                 c << "{\"hex\":\"" << combats[i].hex_id << "\",";
                 c << "\"log\":\"" << escape_json(combats[i].last_log) << "\",";
                 c << "\"stage\":" << combats[i].stage; // useful for UI

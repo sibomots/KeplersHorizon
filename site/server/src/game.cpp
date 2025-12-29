@@ -1,39 +1,41 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // BSD 3-Clause License
-// 
+//
 // This file is part of Kepler's Horizon
 //
 // Copyright (c) 2025, sibomots
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
-// 1. Redistributions of source code must retain the above copyright notice, this
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its
 //    contributors may be used to endorse or promote products derived from
 //    this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include "game.h"
-#include "combat.h"
 
 #include "app.h"
+#include "combat.h"
 #include "db.h"
 
 /*
@@ -75,7 +77,8 @@ void apply_start_of_turn(Db *db, GameState &s)
 {
     // Called when a player begins their player-turn (phase 0 = Build Ships).
     // 1) Count victory points automatically.
-    // 2) In Advanced scenario, award BP (+10) at start of each player-turn after
+    // 2) In Advanced scenario, award BP (+10) at start of each player-turn
+    // after
     //    the very first player-turn.
 
     if (s.scenario.empty() || s.game_over)
@@ -90,10 +93,11 @@ void apply_start_of_turn(Db *db, GameState &s)
         std::string q =
             "SELECT COUNT(DISTINCT ss.name) "
             "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name "
-            "WHERE sh.game_id=" + std::to_string(s.game_id) +
-            " AND sh.owner='" + std::string(1, me) +
+            "WHERE sh.game_id=" +
+            std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
             "' AND sh.racked_in IS NULL "
-            " AND ss.is_base=1 AND ss.base_owner='" + std::string(1, enemy) + "'";
+            " AND ss.is_base=1 AND ss.base_owner='" +
+            std::string(1, enemy) + "'";
         auto r = db->query(q);
         if (!r.empty() && !r[0].empty())
             vp_gain = std::atoi(r[0][0].c_str());
@@ -151,22 +155,26 @@ void advance_next(Db *db, GameState &s)
     {
 
         // --- Prevent skipping active combat ---
-        if (s.phase_index == PH_RESOLVE_COMBAT) {
+        if (s.phase_index == PH_RESOLVE_COMBAT)
+        {
             CombatEngine ce(db, s.game_id);
-            if (!ce.get_active_combats().empty()) {
+            if (!ce.get_active_combats().empty())
+            {
                 return; // Cannot advance until all combats resolved
             }
         }
 
         s.phase_index++;
-        
+
         // --- Combat Trigger Logic ---
-        if (s.phase_index == PH_RESOLVE_COMBAT) {
+        if (s.phase_index == PH_RESOLVE_COMBAT)
+        {
             CombatEngine ce(db, s.game_id);
             ce.check_for_combat_triggers();
             auto combats = ce.get_active_combats();
-            
-            if (combats.empty()) {
+
+            if (combats.empty())
+            {
                 // No combat? Auto-skip to next phase
                 s.phase_index = PH_SYSTEM_PICKDROP;
             }
@@ -357,13 +365,13 @@ void delete_draft(Db *db, int game_id, char owner, const std::string &code)
 std::vector<ShipRow> load_ships(Db *db, int game_id, char owner)
 {
     std::vector<ShipRow> out;
-    auto rows =
-        db->query("SELECT "
-                  "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
-                  "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
-                  "FROM ships WHERE game_id=" +
-                  std::to_string(game_id) + " AND owner='" +
-                  std::string(1, owner) + "' ORDER BY ship_code");
+    auto rows = db->query(
+        "SELECT "
+        "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
+        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
+        "FROM ships WHERE game_id=" +
+        std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
+        "' ORDER BY ship_code");
     for (auto &r : rows)
     {
         ShipRow s;
@@ -436,7 +444,8 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
         "INSERT INTO "
         "ships(game_id,owner,ship_code,ship_name,ship_type,tech_level,built_"
         "turn,"
-        "pd,beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent) VALUES(" +
+        "pd,beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent) "
+        "VALUES(" +
         std::to_string(game_id) + ",'" + std::string(1, owner) + "','" +
         db->esc(s.code) + "','" + db->esc(s.name) + "','" +
         std::string(1, s.attr.type) + "'," + std::to_string(s.attr.tech) +
@@ -445,8 +454,7 @@ void insert_ship(Db *db, int game_id, char owner, const ShipRow &s)
         std::to_string(s.attr.T) + "," + std::to_string(s.attr.M) + "," +
         std::to_string(s.attr.SR) + "," +
         (s.at_system.empty() ? "NULL" : ("'" + db->esc(s.at_system) + "'")) +
-        "," +
-        (s.at_hex.empty() ? "NULL" : ("'" + db->esc(s.at_hex) + "'")) +
+        "," + (s.at_hex.empty() ? "NULL" : ("'" + db->esc(s.at_hex) + "'")) +
         "," +
         (s.racked_in.empty() ? "NULL" : ("'" + db->esc(s.racked_in) + "'")) +
         ",0)"; // pd_spent=0 on insert
@@ -461,8 +469,7 @@ void update_ship_location(Db *db, int game_id, char owner,
     std::string q =
         "UPDATE ships SET at_system=" +
         (at_system.empty() ? "NULL" : ("'" + db->esc(at_system) + "'")) +
-        ",at_hex=" +
-        (at_hex.empty() ? "NULL" : ("'" + db->esc(at_hex) + "'")) +
+        ",at_hex=" + (at_hex.empty() ? "NULL" : ("'" + db->esc(at_hex) + "'")) +
         ",racked_in=" +
         (racked_in.empty() ? "NULL" : ("'" + db->esc(racked_in) + "'")) +
         " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +

@@ -2,41 +2,44 @@
 #define __START_COMMAND_H__
 
 #include <memory>
+
 #include "icmd.h"
 #include "typedefs.h"
 
 class StartCommand : public ICmd
 {
-private:
+  private:
     ScenarioType m_scenario;
 
-public:
+  public:
+    class Builder
+    {
+      public:
+        ScenarioType _scenario = ScenarioType::UNDEFINED;
 
-    class Builder {
-         public:
-           ScenarioType _scenario = ScenarioType::UNDEFINED;
+        Builder &set_scenario(ScenarioType typ)
+        {
+            _scenario = std::move(typ);
+            return *this;
+        }
 
-           Builder& set_scenario(ScenarioType typ) {
-                _scenario = std::move(typ);
-                return *this;
-           }
-
-           // Returns unique_ptr to base interface ICmd
-           std::unique_ptr<ICmd> build() {
-                // Accessing private constructor of StartCommand
-                // Cannot use make_unique with private constructor easily without friend
-                // specialized handling, so sticking to new wrapped in unique_ptr
-                // or just define builder inside class (which it is).
-                return std::unique_ptr<StartCommand>(new StartCommand(_scenario));
-           }
+        // Returns unique_ptr to base interface ICmd
+        std::unique_ptr<ICmd> build()
+        {
+            // Accessing private constructor of StartCommand
+            // Cannot use make_unique with private constructor easily without
+            // friend specialized handling, so sticking to new wrapped in
+            // unique_ptr or just define builder inside class (which it is).
+            return std::unique_ptr<StartCommand>(new StartCommand(_scenario));
+        }
     };
-   
-private:
-    StartCommand(ScenarioType scenario) :
-          m_scenario(scenario)
-    {}
 
-public:
+  private:
+    StartCommand(ScenarioType scenario) : m_scenario(scenario)
+    {
+    }
+
+  public:
     // ICmd interface to invoke what must occur when the
     // command is executed. ONLY this class knows what to do
     // when the operation 'to start the game' means.
@@ -51,7 +54,7 @@ public:
     // the first phase for the player with initiative is
     // the state in the StateMachine.  This method (invoke)
     // and this class StartGame, and any other Command class
-    // that impleemnts ICmd does modify the State of the 
+    // that impleemnts ICmd does modify the State of the
     // game.. Only the  StateMachine is in control of the State
 
     virtual bool invoke(void);
@@ -62,7 +65,7 @@ public:
     // the nouns and verbs that relate to this command are learned.
 
     // For instance the parsing detects the command:
-    //   start 
+    //   start
     // then it detects the noun
     //   learning or basic or advanced -- the scenario
     //
@@ -77,9 +80,9 @@ public:
     //                                  .build();
     //
     // Then the command (the interface to the command is pCmd)
-    // is given to something that invokes it: 
+    // is given to something that invokes it:
     //
-    //    pCmd->invoke(); 
+    //    pCmd->invoke();
     //    // or passed to StateMachine:
     //    StateMachine::getInstance().active_player_execute(pCmd.get());
     //
@@ -88,7 +91,7 @@ public:
 
     // (NOTE: Let the Telemetry figure out how to escape or not escape
     // certain lines or parts of the message.. In fact the best
-    // thing is if the Telemetry::write method just takes plain 
+    // thing is if the Telemetry::write method just takes plain
     // vector of strings.. Escape the contents of the strings for
     // JSON, but DO NOT do json_esc for the newline characters
     // between strings.)
@@ -105,7 +108,7 @@ public:
     // This class, objects of this class or any command
     // should not know how to cause text to be rendered to the "user"
     // or the console.
-    // 
+    //
 };
 
 #endif

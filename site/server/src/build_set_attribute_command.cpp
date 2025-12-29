@@ -1,53 +1,58 @@
 #include "build_set_attribute_command.h"
+
+#include <sstream>
+
 #include "game.h"
 #include "logger.h"
 #include "typs.h"
-#include <sstream>
 
 bool BuildSetAttributeCommand::invoke(void)
 {
     GameState s = load_game(m_db, m_game_id);
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
     std::string draft_code = get_current_draft(m_db, m_game_id, active_player);
-    
-    if (draft_code.empty()) {
+
+    if (draft_code.empty())
+    {
         Logger::instance().error("No current draft to modify");
         return false;
     }
-    
+
     DraftRow d = load_draft(m_db, m_game_id, active_player, draft_code);
-    
+
     // Apply attributes using C++17 structured bindings
-    for (const auto& [attr_id, value] : m_attributes) {
-        switch (attr_id) {
-            case AttributeID::POWER_DRIVE:
-                d.attr.PD = value;
-                break;
-            case AttributeID::BEAM:
-                d.attr.B = value;
-                break;
-            case AttributeID::SCREEN:
-                d.attr.S = value;
-                break;
-            case AttributeID::TUBE:
-                d.attr.T = value;
-                break;
-            case AttributeID::MISSILE:
-                d.attr.M = value;
-                break;
-            case AttributeID::SYSTEM_RACK:
-                d.attr.SR = value;
-                break;
+    for (const auto &[attr_id, value] : m_attributes)
+    {
+        switch (attr_id)
+        {
+        case AttributeID::POWER_DRIVE:
+            d.attr.PD = value;
+            break;
+        case AttributeID::BEAM:
+            d.attr.B = value;
+            break;
+        case AttributeID::SCREEN:
+            d.attr.S = value;
+            break;
+        case AttributeID::TUBE:
+            d.attr.T = value;
+            break;
+        case AttributeID::MISSILE:
+            d.attr.M = value;
+            break;
+        case AttributeID::SYSTEM_RACK:
+            d.attr.SR = value;
+            break;
         }
     }
-    
+
     update_draft_attrs(m_db, m_game_id, active_player, draft_code, d);
-    
+
     std::ostringstream msg;
-    msg << "Draft updated: " << draft_code << " [PD=" << d.attr.PD 
-        << ", B=" << d.attr.B << ", S=" << d.attr.S << ", T=" << d.attr.T 
+    msg << "Draft updated: " << draft_code << " [PD=" << d.attr.PD
+        << ", B=" << d.attr.B << ", S=" << d.attr.S << ", T=" << d.attr.T
         << ", M=" << d.attr.M << ", SR=" << d.attr.SR << "]";
     Logger::instance().info(msg.str());
-    
+
     return true;
 }

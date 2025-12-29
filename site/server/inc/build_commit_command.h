@@ -2,34 +2,46 @@
 #define __BUILD_COMMIT_COMMAND_H__
 
 #include <memory>
-#include "icmd.h"
+
 #include "db.h"
+#include "icmd.h"
 
 class BuildCommitCommand : public ICmd
 {
-public:
-    class Builder {
-    public:
-        Db* _db = nullptr;
+  public:
+    class Builder
+    {
+      public:
+        Db *_db = nullptr;
         int _game_id = 0;
-        
-        Builder& set_db(Db* db) { _db = db; return *this; }
-        Builder& set_game_id(int id) { _game_id = id; return *this; }
-        
-        std::unique_ptr<ICmd> build() {
+
+        Builder &set_db(Db *db)
+        {
+            _db = db;
+            return *this;
+        }
+        Builder &set_game_id(int id)
+        {
+            _game_id = id;
+            return *this;
+        }
+
+        std::unique_ptr<ICmd> build()
+        {
             return std::unique_ptr<BuildCommitCommand>(
                 new BuildCommitCommand(_db, _game_id));
         }
     };
-   
-private:
-    BuildCommitCommand(Db* db, int game_id) 
-        : m_db(db), m_game_id(game_id) {}
-    
-    Db* m_db;
+
+  private:
+    BuildCommitCommand(Db *db, int game_id) : m_db(db), m_game_id(game_id)
+    {
+    }
+
+    Db *m_db;
     int m_game_id;
 
-public:
+  public:
     virtual bool invoke(void);
 };
 

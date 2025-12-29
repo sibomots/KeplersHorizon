@@ -1,38 +1,41 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // BSD 3-Clause License
-// 
+//
 // This file is part of Kepler's Horizon
 //
 // Copyright (c) 2025, sibomots
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
-// 1. Redistributions of source code must retain the above copyright notice, this
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this
 //    list of conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its
 //    contributors may be used to endorse or promote products derived from
 //    this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include "map.h"
-#include <queue>
+
 #include <algorithm>
+#include <queue>
 #include <sstream>
 
 MapGraph::MapGraph(Db *dbConn, int gId) : db(dbConn), game_id(gId)
@@ -51,9 +54,9 @@ std::string MapGraph::upper_ascii(const std::string &s)
 
 void MapGraph::load_hexes()
 {
-    std::vector<std::vector<std::string> > allHex = db->query(
-        "SELECT hex_id,q,r FROM hexes WHERE game_id=" +
-        std::to_string(game_id));
+    std::vector<std::vector<std::string>> allHex =
+        db->query("SELECT hex_id,q,r FROM hexes WHERE game_id=" +
+                  std::to_string(game_id));
 
     for (size_t i = 0; i < allHex.size(); i++)
     {
@@ -61,22 +64,24 @@ void MapGraph::load_hexes()
         int q = std::atoi(allHex[i][1].c_str());
         int r = std::atoi(allHex[i][2].c_str());
         qr[hid] = std::make_pair(q, r);
-        long long key = (static_cast<long long>(q) << 32) ^
-                        static_cast<unsigned int>(r);
+        long long key =
+            (static_cast<long long>(q) << 32) ^ static_cast<unsigned int>(r);
         byQr[key] = hid;
     }
 }
 
 void MapGraph::load_warplines()
 {
-    std::vector<std::vector<std::string> > wh = db->query(
+    std::vector<std::vector<std::string>> wh = db->query(
         "SELECT wh.hex_id,w.a_hex,w.b_hex "
         "FROM warpline_hexes wh "
         "JOIN warplines w ON w.id=wh.warpline_id AND w.game_id=wh.game_id "
-        "WHERE wh.game_id=" + std::to_string(game_id));
-    
-    std::vector<std::vector<std::string> > wlines = db->query(
-        "SELECT a_hex,b_hex FROM warplines WHERE game_id=" + std::to_string(game_id));
+        "WHERE wh.game_id=" +
+        std::to_string(game_id));
+
+    std::vector<std::vector<std::string>> wlines =
+        db->query("SELECT a_hex,b_hex FROM warplines WHERE game_id=" +
+                  std::to_string(game_id));
 
     for (size_t i = 0; i < wh.size(); i++)
     {
@@ -101,18 +106,20 @@ void MapGraph::load_state(char owner)
     enemy = (me == 'A') ? 'B' : 'A';
     enemyBlockades.clear();
 
-    std::vector<std::vector<std::string> > blocks = db->query(
-        "SELECT DISTINCT ss.hex_id FROM ships s "
-        "JOIN star_systems ss ON s.at_hex = ss.hex_id "
-        "WHERE s.game_id=" + std::to_string(game_id) + 
-        " AND s.owner='" + std::string(1, enemy) + "'");
-    
-    for(const auto& r : blocks) {
+    std::vector<std::vector<std::string>> blocks =
+        db->query("SELECT DISTINCT ss.hex_id FROM ships s "
+                  "JOIN star_systems ss ON s.at_hex = ss.hex_id "
+                  "WHERE s.game_id=" +
+                  std::to_string(game_id) + " AND s.owner='" +
+                  std::string(1, enemy) + "'");
+
+    for (const auto &r : blocks)
+    {
         enemyBlockades.insert(r[0]);
     }
 }
 
-std::string MapGraph::resolve_hex(const std::string& token)
+std::string MapGraph::resolve_hex(const std::string &token)
 {
     std::string destHex;
     // Strip 'h' prefix if present
@@ -124,8 +131,10 @@ std::string MapGraph::resolve_hex(const std::string& token)
     {
         // Infer if it looks like a hex ID (4 digits)
         bool allDigits = true;
-        for (char c : token) {
-            if (!std::isdigit((unsigned char)c)) {
+        for (char c : token)
+        {
+            if (!std::isdigit((unsigned char)c))
+            {
                 allDigits = false;
                 break;
             }
@@ -139,36 +148,41 @@ std::string MapGraph::resolve_hex(const std::string& token)
     if (!destHex.empty())
     {
         // Verify existence
-        if (qr.find(destHex) != qr.end()) {
+        if (qr.find(destHex) != qr.end())
+        {
             return destHex;
         }
     }
 
     // Try system name resolution
-    return resolve_system(token); // Implicitly returns hex if found, else logic flow up to caller
+    return resolve_system(
+        token); // Implicitly returns hex if found, else logic flow up to caller
 }
 
-std::string MapGraph::resolve_system(const std::string& token)
+std::string MapGraph::resolve_system(const std::string &token)
 {
     std::string u = upper_ascii(token);
     auto r = db->query("SELECT hex_id FROM star_systems WHERE game_id=" +
                        std::to_string(game_id) + " AND UPPER(name)='" +
                        db->esc(u) + "' LIMIT 1");
-    if (!r.empty() && !r[0].empty()) {
+    if (!r.empty() && !r[0].empty())
+    {
         return r[0][0];
-	}
+    }
     return "";
 }
 
-int MapGraph::get_path_cost(const std::string &from, const std::string &to, int limit)
+int MapGraph::get_path_cost(const std::string &from, const std::string &to,
+                            int limit)
 {
-    if (from == to) {
-		return 0;
-	}
-    
+    if (from == to)
+    {
+        return 0;
+    }
+
     std::unordered_map<std::string, int> dist;
     std::queue<std::string> qn;
-    
+
     dist[from] = 0;
     qn.push(from);
 
@@ -177,37 +191,49 @@ int MapGraph::get_path_cost(const std::string &from, const std::string &to, int 
         std::string cur = qn.front();
         qn.pop();
         int d = dist[cur];
-        
-        if (cur == to) return d;
-        if (d >= limit) continue;
+
+        if (cur == to)
+            return d;
+        if (d >= limit)
+            continue;
 
         std::vector<std::string> neighbors;
-        
+
         // Hex neighbors
         auto qt = qr.find(cur);
-        if (qt != qr.end()) {
+        if (qt != qr.end())
+        {
             int cq = qt->second.first;
             int cr = qt->second.second;
             const int dq[6] = {1, 1, 0, -1, -1, 0};
             const int dr[6] = {0, -1, -1, 0, 1, 1};
-            for(int k=0; k<6; ++k) {
-                long long key = (static_cast<long long>(cq + dq[k]) << 32) ^ static_cast<unsigned int>(cr + dr[k]);
+            for (int k = 0; k < 6; ++k)
+            {
+                long long key = (static_cast<long long>(cq + dq[k]) << 32) ^
+                                static_cast<unsigned int>(cr + dr[k]);
                 auto bit = byQr.find(key);
-                if (bit != byQr.end()) neighbors.push_back(bit->second);
+                if (bit != byQr.end())
+                    neighbors.push_back(bit->second);
             }
         }
-        
+
         // Warp neighbors
         auto wit = warpJumps.find(cur);
-        if (wit != warpJumps.end()) {
-            neighbors.insert(neighbors.end(), wit->second.begin(), wit->second.end());
+        if (wit != warpJumps.end())
+        {
+            neighbors.insert(neighbors.end(), wit->second.begin(),
+                             wit->second.end());
         }
 
-        for(const auto &n : neighbors) {
-            // Blockade Check: Cannot enter blocked hex unless it is the destination
-            if (enemyBlockades.count(n) && n != to) continue;
+        for (const auto &n : neighbors)
+        {
+            // Blockade Check: Cannot enter blocked hex unless it is the
+            // destination
+            if (enemyBlockades.count(n) && n != to)
+                continue;
 
-            if (dist.find(n) == dist.end()) {
+            if (dist.find(n) == dist.end())
+            {
                 dist[n] = d + 1;
                 qn.push(n);
             }
