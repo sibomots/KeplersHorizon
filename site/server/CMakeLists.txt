@@ -40,7 +40,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_compile_options(-O0 -pedantic)
+add_compile_options(-O0 -pedantic -g)
 
 # Get Git SHA
 execute_process(
@@ -57,7 +57,7 @@ add_definitions(-DGIT_SHA="${GIT_SHA}")
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
-BISON_TARGET(Parser src/lang.y ${CMAKE_CURRENT_BINARY_DIR}/lang.cpp COMPILE_FLAGS "-d -v")
+BISON_TARGET(Parser src/lang.y ${CMAKE_CURRENT_BINARY_DIR}/lang.cpp COMPILE_FLAGS "-d -v -g")
 FLEX_TARGET(Scanner src/scan.lex ${CMAKE_CURRENT_BINARY_DIR}/scan.cpp)
 ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 

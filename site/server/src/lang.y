@@ -44,8 +44,6 @@ BuildSetAttributeCommand::Builder g_build_set_builder;
 %token <sval> TOK_STRING
 %type  <sval> deployable_ship
 %type  <sval> building_draft_ship
-%type  <sval> ship_name_opt
-%type  <sval> ship_code
 
 %token TOK_ADVANCED
 %token TOK_APPLY
@@ -319,28 +317,6 @@ building_draft_ship:
   }
   ;
 
-ship_code:
-  TOK_STRING {
-      $$ = $1;  // Pass the ship code string up
-  }
-  ;
-
-ship_name_opt:
-  // empty
-  { $$ = nullptr;
-  }
-  | TOK_STRING ship_name_opt {
-      std::string *combined = new std::string;
-      combined->append(*$1);
-      combined->append(" ");
-      combined->append(*$2);
-      delete $1;
-      delete $2;
-      $$ = combined;
-  }
-  ;
-
-
 combat_initiator_ship:
   TOK_STRING {
       std::string ship_id(*$1);
@@ -535,12 +511,9 @@ build_cmd:
       Logger::instance().info("Without arguments, shows "
                               "current build state");
   }
-  | TOK_BUILD TOK_NEW ship_code ship_name_opt {
+  | TOK_BUILD TOK_NEW TOK_STRING TOK_STRING {
       std::string code(*$3);
-      std::string name;
-      if ($4 != nullptr) {
-          name = std::string(*$4);
-      }
+      std::string name(*$4);
       Logger::instance().info("Create new draft: " + code + " '" + name + "'");
       std::unique_ptr<ICmd> pCmd = BuildNewCommand::Builder()
                   .set_db(g_db)
