@@ -4,6 +4,7 @@
 
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 #include "typs.h"
 
 bool BuildCommitCommand::invoke(void)
@@ -17,6 +18,7 @@ bool BuildCommitCommand::invoke(void)
     if (draft_code.empty())
     {
         Logger::instance().error("No current draft to commit");
+        Telemetry::write("Error: No current draft to commit");
         return false;
     }
 
@@ -24,6 +26,7 @@ bool BuildCommitCommand::invoke(void)
     if (!draft_exists(m_db, m_game_id, active_player, draft_code))
     {
         Logger::instance().error("Draft not found: " + draft_code);
+        Telemetry::write("Error: Draft not found: " + draft_code);
         return false;
     }
 
@@ -34,17 +37,20 @@ bool BuildCommitCommand::invoke(void)
     if (d.attr.type == 'S' && d.attr.SR != 0)
     {
         Logger::instance().error("SystemShips cannot have SR");
+        Telemetry::write("Error: SystemShips cannot have SR");
         return false;
     }
     if (d.attr.M % 3 != 0)
     {
         Logger::instance().error("Missiles must be a multiple of 3");
+        Telemetry::write("Error: Missiles must be a multiple of 3");
         return false;
     }
     if (d.attr.PD < 0 || d.attr.B < 0 || d.attr.S < 0 || d.attr.T < 0 ||
         d.attr.M < 0 || d.attr.SR < 0)
     {
         Logger::instance().error("Negative attribute");
+        Telemetry::write("Error: Negative attribute values not allowed");
         return false;
     }
 
@@ -61,6 +67,9 @@ bool BuildCommitCommand::invoke(void)
         Logger::instance().error("Insufficient BP. Need " +
                                  std::to_string(cost) + ", have " +
                                  std::to_string(bp));
+        Telemetry::write("Error: Insufficient BP. Need " +
+                        std::to_string(cost) + ", have " +
+                        std::to_string(bp));
         return false;
     }
 
@@ -87,6 +96,11 @@ bool BuildCommitCommand::invoke(void)
                             std::to_string(sh.attr.tech) +
                             ") cost=" + std::to_string(cost) +
                             " BP. Remaining BP=" + std::to_string(bp));
+
+    Telemetry::write("Committed: " + sh.name + " - " + sh.code + " (L" +
+                    std::to_string(sh.attr.tech) + ")");
+    Telemetry::write("Cost: " + std::to_string(cost) + " BP, Remaining: " +
+                    std::to_string(bp) + " BP");
 
     return true;
 }

@@ -4,6 +4,7 @@
 
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 #include "typs.h"
 
 bool BuildShowDraftCommand::invoke(void)
@@ -14,6 +15,7 @@ bool BuildShowDraftCommand::invoke(void)
     if (!draft_exists(m_db, m_game_id, active_player, m_draft_code))
     {
         Logger::instance().error("Draft not found: " + m_draft_code);
+        Telemetry::write("Error: Draft not found: " + m_draft_code);
         return false;
     }
 
@@ -24,6 +26,7 @@ bool BuildShowDraftCommand::invoke(void)
         << "  PD=" << d.attr.PD << ", B=" << d.attr.B << ", S=" << d.attr.S
         << ", T=" << d.attr.T << ", M=" << d.attr.M << ", SR=" << d.attr.SR;
     Logger::instance().info(msg.str());
+    Telemetry::write(msg.str());
 
     set_current_draft(m_db, m_game_id, active_player, m_draft_code);
 

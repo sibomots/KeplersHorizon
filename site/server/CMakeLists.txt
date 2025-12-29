@@ -78,6 +78,7 @@ src/json.cpp
 src/map.cpp
 src/combat.cpp
 src/logger.cpp
+src/telemetry.cpp
 src/statemachine.cpp
 src/start_command.cpp
 src/build_command.cpp
@@ -109,6 +110,7 @@ inc/comms.h
 inc/map.h
 inc/combat.h
 inc/logger.h
+inc/telemetry.h
 inc/statemachine.h
 inc/icmd.h
 inc/typedefs.h

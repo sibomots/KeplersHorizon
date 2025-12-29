@@ -5,6 +5,7 @@
 
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 #include "typs.h"
 
 bool BuildNewCommand::invoke(void)
@@ -67,59 +68,57 @@ bool BuildNewCommand::invoke(void)
             m_db->query("SELECT ship_code FROM drafts WHERE game_id=" +
                         std::to_string(m_game_id) + " AND ship_type='" +
                         std::string(1, stype) + "'");
-        for (auto &r : rows2)
-        {
-            int nn = parse_num(r[0]);
-            if (nn > maxn)
-                maxn = nn;
-        }
-        n = maxn + 1;
-    }
-
-    if (n <= 0 || n >= 100)
+    if (m_ship_code.empty() || m_ship_code.length() > 10)
     {
-        Logger::instance().error("Ship id must be 1..99");
+        Logger::instance().error("Invalid ship code format");
+        Telemetry::write("Error: Invalid ship code format");
         return false;
     }
 
-    // Build final code
-    std::ostringstream c;
-    c << stype << n;
-    std::string code = c.str();
+    // Auto-assign ship number if not provided
+    std::string ship_code = m_ship_code;
+    if (ship_code.find_first_of("0123456789") == std::string::npos)
+    {
+        int next_num = 1;
+        std::string candidate;
+        do
+        {
+            candidate = ship_code + std::to_string(next_num);
+            next_num++;
+        } while (ship_exists(m_db, s.game_id, active_player, candidate) ||
+                 draft_exists(m_db, s.game_id, active_player, candidate));
+        ship_code = candidate;
+    }
 
     // Check for duplicates
-    auto r_check = m_db->query("SELECT 1 FROM ships WHERE game_id=" +
-                               std::to_string(m_game_id) +
-                               " AND ship_code='" + m_db->esc(code) + "'");
-    auto d_check = m_db->query("SELECT 1 FROM drafts WHERE game_id=" +
-                               std::to_string(m_game_id) +
-                               " AND ship_code='" + m_db->esc(code) + "'");
-
-    if (!r_check.empty() || !d_check.empty())
+    if (draft_exists(m_db, s.game_id, active_player, ship_code))
     {
-        Logger::instance().error("Ship code already in use: " + code);
+        Logger::instance().error("Draft already exists: " + ship_code);
+        Telemetry::write("Error: Draft already exists: " + ship_code);
         return false;
     }
 
-    // Prepare name
-    std::string name = m_ship_name;
-    if (name.empty())
-        name = (stype == 'W' ? "WarpShip" : "SystemShip");
-    if (name.size() > 32)
-        name.resize(32);
+    if (ship_exists(m_db, s.game_id, active_player, ship_code))
+    {
+        Logger::instance().error("Ship already exists: " + ship_code);
+        Telemetry::write("Error: Ship already exists: " + ship_code);
+        return false;
+    }
 
     // Create draft
-    DraftRow d;
-    d.code = code;
-    d.name = name;
-    d.attr.type = stype;
-    insert_draft(m_db, m_game_id, active_player, d);
-    set_current_draft(m_db, m_game_id, active_player, code);
+    DraftRow draft;
+    draft.code = ship_code;
+    draft.name = m_ship_name;
+    draft.attr.type = 'W'; // Default to warship
 
-    std::ostringstream msg;
-    msg << "Draft created: " << name << " - " << code
-        << " (current). Use: build set PD|B|S|T|M|SR <n>";
-    Logger::instance().info(msg.str());
+    insert_draft(m_db, s.game_id, active_player, draft);
+    set_current_draft(m_db, s.game_id, active_player, ship_code);
+
+    Logger::instance().info("Draft created: " + m_ship_name + " - " +
+                            ship_code);
+    Telemetry::write("Draft created: " + m_ship_name + " - " + ship_code +
+                     " (current)");
+    Telemetry::write("Use: build set PD|B|S|T|M|SR <n>");
 
     return true;
 }

@@ -37,6 +37,7 @@
 #include "db.h"
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 
 
 bool StartCommand::invoke(void)
@@ -80,5 +81,10 @@ bool StartCommand::invoke(void)
                             s.phase_name() + ", BP A=" + std::to_string(s.bpA) +
                             " B=" + std::to_string(s.bpB));
 
+    Telemetry::write("Game initialized: " + sc_str + " scenario");
+    Telemetry::write("Round " + std::to_string(s.round) + ", Phase: " + s.phase_name());
+    Telemetry::write("BP A=" + std::to_string(s.bpA) + " B=" + std::to_string(s.bpB));
+
     return true;
 }
+```

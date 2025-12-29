@@ -42,6 +42,7 @@
 #include "events.h"
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 #include "map.h"
 #include "state.h"
 #include "statemachine.h"
@@ -151,15 +152,39 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
 
     // Try parser first (handles migrated commands)
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
+    Telemetry::clear();
+    Telemetry::set_current_player(a.player);
+
     int parse_result = yyparse();
     yy_delete_buffer(buffer);
 
-    // If parser succeeded, return response
+    // If parser succeeded, return response with Telemetry
     if (parse_result == 0)
     {
         Logger::instance().info("Command handled by parser: " + cmdline);
         GameState s = load_game(db, a.game_id);
-        resp->body = json_ok_with_state_and_event(s, "");
+
+        // Handle broadcast messages (future: push to all players)
+        std::string broadcast_msg = Telemetry::get_broadcast_messages();
+        if (!broadcast_msg.empty())
+        {
+            // TODO: Implement push_to_all_players when needed
+            Logger::instance().info("Broadcast message: " + broadcast_msg);
+        }
+
+        // Handle opponent messages (future: push to opponent)
+        std::string opponent_msg = Telemetry::get_messages(PlayerTarget::THEM);
+        if (!opponent_msg.empty())
+        {
+            char opponent = Telemetry::resolve_player(PlayerTarget::THEM);
+            // TODO: Implement push_to_player when needed
+            Logger::instance().info("Message for player " +
+                                    std::string(1, opponent) + ": " +
+                                    opponent_msg);
+        }
+
+        // Build response for current player
+        resp->body = Telemetry::build_response(PlayerTarget::ME, s, true);
         return;
     }
 

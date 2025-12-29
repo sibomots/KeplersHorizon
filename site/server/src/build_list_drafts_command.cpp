@@ -4,6 +4,7 @@
 
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 #include "typs.h"
 
 bool BuildListDraftsCommand::invoke(void)
@@ -16,6 +17,7 @@ bool BuildListDraftsCommand::invoke(void)
     if (drafts.empty())
     {
         Logger::instance().info("No drafts found");
+        Telemetry::write("No drafts found");
     }
     else
     {
@@ -39,6 +41,7 @@ bool BuildListDraftsCommand::invoke(void)
             msg << "\n";
         }
         Logger::instance().info(msg.str());
+        Telemetry::write(msg.str());
     }
 
     return true;

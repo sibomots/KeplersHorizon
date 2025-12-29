@@ -2,6 +2,7 @@
 
 #include "game.h"
 #include "logger.h"
+#include "telemetry.h"
 
 bool BuildCancelCommand::invoke(void)
 {
@@ -12,12 +13,14 @@ bool BuildCancelCommand::invoke(void)
     if (draft_code.empty())
     {
         Logger::instance().error("No current draft to cancel");
+        Telemetry::write("Error: No current draft to cancel");
         return false;
     }
 
     delete_draft(m_db, m_game_id, active_player, draft_code);
     set_current_draft(m_db, m_game_id, active_player, "");
     Logger::instance().info("Canceled draft: " + draft_code);
+    Telemetry::write("Canceled draft: " + draft_code);
 
     return true;
 }

@@ -136,7 +136,8 @@
 "m"        { return TOK_MISSILE; }
 
 
-[a-zA-Z][a-zA-Z0-9]+ {
+
+[a-zA-Z][a-zA-Z0-9]* {
         yylval.sval = new std::string(yytext);
         return TOK_STRING;
 }
