@@ -142,31 +142,40 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
 
     // Configure StateMachine with DB context
-    // This allows the StateMachine to handle PreInit/Init phases independently
     StateMachine::getInstance().set_db(db);
     StateMachine::getInstance().set_game_id(a.game_id);
 
-    // trial through the parser
+    // Set global parser context
     g_db = db;
     g_game_id = a.game_id;
-    YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
-    if (!yyparse())
-    {
-        Logger::instance().error("Parse error with: >" + cmdline + "<");
-    }
-    else
-    {
-        Logger::instance().info("Parse OK with: >" + cmdline + "<");
-    }
-    yy_delete_buffer(buffer);
-    // end trial
 
+    // Parse and execute command via grammar
+    YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
+    int parse_result = yyparse();
+    yy_delete_buffer(buffer);
+
+    if (parse_result != 0)
+    {
+        Logger::instance().error("Parse error: " + cmdline);
+        resp->status = 400;
+        resp->body = json_error("Invalid command syntax");
+        return;
+    }
+
+    // Load current game state for response
     GameState s = load_game(db, a.game_id);
 
-    std::vector<std::string> tok = split_ws(cmdline);
-    std::string cmd = to_lower(tok[0]);
+    // Build response with current state
+    // Commands have already executed and logged their results
+    resp->body = json_ok_with_state_and_event(s, "");
+    return;
+}
 
-    std::string eventText;
+#if 0
+// ============================================================================
+// LEGACY COMMAND HANDLERS - All replaced by grammar/Command pattern
+// This code is preserved for reference but should not execute
+// ============================================================================
 
     // NOTE: 'me' is derived from the authenticated token, not from game state.
     char me = (a.player ? a.player : 'A');
@@ -447,6 +456,10 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             Logger::instance().info(eventText);
         }
     }
+#if 0
+    // Legacy build command handler - now handled by grammar/Commands
+    // All build subcommands (new, drafts, set, commit, cancel, etc.) are
+    // processed by lang.y and respective Command objects
     else if (cmd == "build")
     {
         if (tok.size() < 2)
@@ -886,6 +899,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             }
         }
     }
+#endif
     else if (cmd == "deploy")
     {
         if (!require_my_turn() || !require_build_phase())
@@ -1389,3 +1403,4 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     resp->body = json_ok_with_state_and_event(s, eventText);
     return;
 }
+#endif

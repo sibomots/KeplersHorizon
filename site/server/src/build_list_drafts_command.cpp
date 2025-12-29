@@ -6,12 +6,12 @@
 #include "logger.h"
 #include "typs.h"
 
-    bool
-    BuildListDraftsCommand::invoke(void)
+bool BuildListDraftsCommand::invoke(void)
 {
     GameState s = load_game(m_db, m_game_id);
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
     std::vector<DraftRow> drafts = load_drafts(m_db, m_game_id, active_player);
+    std::string current_draft = get_current_draft(m_db, m_game_id, active_player);
 
     if (drafts.empty())
     {
@@ -20,10 +20,23 @@
     else
     {
         std::ostringstream msg;
-        msg << "Drafts (" << drafts.size() << "):";
+        msg << "Draft ships (" << drafts.size() << "):\n";
         for (const auto &d : drafts)
         {
-            msg << "\n  " << d.code << " - " << d.name;
+            // Calculate cost
+            int cost = d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR;
+            cost += (d.attr.M + 2) / 3;
+            if (d.attr.type == 'W')
+                cost += 5;
+
+            msg << "  " << d.code << " '" << d.name << "' cost=" << cost << " BP\n";
+            msg << "    Type=" << d.attr.type 
+                << " PD=" << d.attr.PD << " B=" << d.attr.B << " S=" << d.attr.S
+                << " T=" << d.attr.T << " M=" << d.attr.M << " SR=" << d.attr.SR;
+            
+            if (d.code == current_draft)
+                msg << "  [current]";
+            msg << "\n";
         }
         Logger::instance().info(msg.str());
     }
