@@ -73,9 +73,15 @@ BuildSetAttributeCommand::Builder g_build_set_builder;
 
 %}
 
+%code requires {
+#include <string>
+#include <vector>
+}
+
 %union {
    int ival;
    std::string* sval;
+   //std::vector<std::string>* vec_sval;
    std::vector<std::string>* vec_sval;
 }
 
@@ -717,7 +723,7 @@ target_systemship:
 // "move" { return TOK_MOVE; }
 chain_move_location:
    /* empty - no more waypoints */ {
-       $$ = new std::vector<std::string>();
+       $$ = new std::vector<std::string>;
    }
    | TOK_STRING chain_move_location {
        std::string waypoint(*$1);
