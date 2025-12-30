@@ -40,6 +40,7 @@
 
 #include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 
 class MoveCommand : public ICmd
 {
@@ -47,14 +48,13 @@ class MoveCommand : public ICmd
     class Builder
     {
       public:
-        Builder(Db *db, int game_id);
+        Builder(StateMachine &sm);
         Builder &ship_code(const std::string &code);
         Builder &add_destination(const std::string &dest);
         ICmd *build();
 
       private:
-        Db *m_db;
-        int m_game_id;
+        StateMachine &m_sm;
         std::string m_ship_code;
         std::vector<std::string> m_destinations;
     };
@@ -62,11 +62,10 @@ class MoveCommand : public ICmd
     bool invoke(void) override;
 
   private:
-    MoveCommand(Db *db, int game_id, const std::string &ship_code,
+    MoveCommand(StateMachine &sm, const std::string &ship_code,
                 const std::vector<std::string> &destinations);
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
     std::string m_ship_code;
     std::vector<std::string> m_destinations;
 };

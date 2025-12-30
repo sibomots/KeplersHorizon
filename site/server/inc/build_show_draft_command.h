@@ -40,6 +40,7 @@
 
 #include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 
 class BuildShowDraftCommand : public ICmd
 {
@@ -47,18 +48,12 @@ class BuildShowDraftCommand : public ICmd
     class Builder
     {
       public:
-        Db *_db = nullptr;
-        int _game_id = 0;
+        StateMachine *_sm = nullptr;
         std::string _draft_code;
 
-        Builder &set_db(Db *db)
+        Builder &set_sm(StateMachine *sm)
         {
-            _db = db;
-            return *this;
-        }
-        Builder &set_game_id(int id)
-        {
-            _game_id = id;
+            _sm = sm;
             return *this;
         }
         Builder &set_draft_code(const std::string &code)
@@ -69,18 +64,17 @@ class BuildShowDraftCommand : public ICmd
 
         ICmd* build()
         {
-            return new BuildShowDraftCommand(_db, _game_id, _draft_code);
+            return new BuildShowDraftCommand(*_sm, _draft_code);
         }
     };
 
   private:
-    BuildShowDraftCommand(Db *db, int game_id, const std::string &draft_code)
-        : m_db(db), m_game_id(game_id), m_draft_code(draft_code)
+    BuildShowDraftCommand(StateMachine &sm, const std::string &draft_code)
+        : m_sm(sm), m_draft_code(draft_code)
     {
     }
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
     std::string m_draft_code;
 
   public:

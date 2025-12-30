@@ -79,8 +79,7 @@ static std::string resolve_system_hex(Db *db, int game_id,
     return r[0][0];
 }
 
-DeployCommand::Builder::Builder(Db *db, int game_id)
-    : m_db(db), m_game_id(game_id)
+DeployCommand::Builder::Builder(StateMachine &sm) : m_sm(sm)
 {
 }
 
@@ -98,20 +97,22 @@ DeployCommand::Builder &DeployCommand::Builder::system_name(const std::string &s
 
 ICmd *DeployCommand::Builder::build()
 {
-    return new DeployCommand(m_db, m_game_id, m_ship_code, m_system_name);
+    return new DeployCommand(m_sm, m_ship_code, m_system_name);
 }
 
-DeployCommand::DeployCommand(Db *db, int game_id, const std::string &ship_code,
+DeployCommand::DeployCommand(StateMachine &sm, const std::string &ship_code,
                              const std::string &system_name)
-    : m_db(db), m_game_id(game_id), m_ship_code(ship_code),
-      m_system_name(system_name)
+    : m_sm(sm), m_ship_code(ship_code), m_system_name(system_name)
 {
 }
 
 bool DeployCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
+
+    Db *m_db = m_sm.get_db();
+    int m_game_id = m_sm.get_game_id();
 
     std::string sys = resolve_system_name(m_db, m_game_id, m_system_name);
 

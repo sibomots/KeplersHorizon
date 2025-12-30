@@ -43,8 +43,11 @@
 
 bool BuildShowDraftCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
+
+    Db *m_db = m_sm.get_db();
+    int m_game_id = m_sm.get_game_id();
 
     if (!draft_exists(m_db, m_game_id, active_player, m_draft_code))
     {

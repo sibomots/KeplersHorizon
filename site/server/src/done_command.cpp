@@ -39,24 +39,25 @@
 #include "telemetry.h"
 #include "typs.h"
 
-DoneCommand::Builder::Builder(Db *db, int game_id)
-    : m_db(db), m_game_id(game_id)
+DoneCommand::Builder::Builder(StateMachine &sm) : m_sm(sm)
 {
 }
 
 ICmd *DoneCommand::Builder::build()
 {
-    return new DoneCommand(m_db, m_game_id);
+    return new DoneCommand(m_sm);
 }
 
-DoneCommand::DoneCommand(Db *db, int game_id) : m_db(db), m_game_id(game_id)
+DoneCommand::DoneCommand(StateMachine &sm) : m_sm(sm)
 {
 }
 
 bool DoneCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     char me = s.active_player.empty() ? 'A' : s.active_player[0];
+
+    Db *m_db = m_sm.get_db();
 
     // Auto-advance until active player changes or game over
     int safety = 0;

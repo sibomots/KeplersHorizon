@@ -37,6 +37,7 @@
 
 #include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 
 class NextCommand : public ICmd
 {
@@ -44,21 +45,19 @@ class NextCommand : public ICmd
     class Builder
     {
       public:
-        Builder(Db *db, int game_id);
+        Builder(StateMachine &sm);
         ICmd *build();
 
       private:
-        Db *m_db;
-        int m_game_id;
+        StateMachine &m_sm;
     };
 
     bool invoke(void) override;
 
   private:
-    NextCommand(Db *db, int game_id);
+    NextCommand(StateMachine &sm);
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
 };
 
 #endif

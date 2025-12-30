@@ -80,8 +80,7 @@ static std::string resolve_system_hex(Db *db, int game_id,
     return r[0][0];
 }
 
-MoveCommand::Builder::Builder(Db *db, int game_id)
-    : m_db(db), m_game_id(game_id)
+MoveCommand::Builder::Builder(StateMachine &sm) : m_sm(sm)
 {
 }
 
@@ -99,20 +98,22 @@ MoveCommand::Builder &MoveCommand::Builder::add_destination(const std::string &d
 
 ICmd *MoveCommand::Builder::build()
 {
-    return new MoveCommand(m_db, m_game_id, m_ship_code, m_destinations);
+    return new MoveCommand(m_sm, m_ship_code, m_destinations);
 }
 
-MoveCommand::MoveCommand(Db *db, int game_id, const std::string &ship_code,
+MoveCommand::MoveCommand(StateMachine &sm, const std::string &ship_code,
                          const std::vector<std::string> &destinations)
-    : m_db(db), m_game_id(game_id), m_ship_code(ship_code),
-      m_destinations(destinations)
+    : m_sm(sm), m_ship_code(ship_code), m_destinations(destinations)
 {
 }
 
 bool MoveCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
+
+    Db *m_db = m_sm.get_db();
+    int m_game_id = m_sm.get_game_id();
 
     if (!ship_exists(m_db, m_game_id, active_player, m_ship_code))
     {

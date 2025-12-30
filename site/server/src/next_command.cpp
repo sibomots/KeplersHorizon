@@ -41,29 +41,28 @@
 #include "telemetry.h"
 #include "typs.h"
 
-NextCommand::Builder::Builder(Db *db, int game_id)
-    : m_db(db), m_game_id(game_id)
+NextCommand::Builder::Builder(StateMachine &sm) : m_sm(sm)
 {
 }
 
 ICmd *NextCommand::Builder::build()
 {
-    return new NextCommand(m_db, m_game_id);
+    return new NextCommand(m_sm);
 }
 
-NextCommand::NextCommand(Db *db, int game_id) : m_db(db), m_game_id(game_id)
+NextCommand::NextCommand(StateMachine &sm) : m_sm(sm)
 {
 }
 
 bool NextCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     
     std::string before_phase = s.phase_name();
     std::string before_player = s.active_player;
     int before_round = s.round;
 
-    advance_next(m_db, s);
+    advance_next(m_sm.get_db(), s);
 
     std::ostringstream msg;
     msg << "Advanced: " << before_player << " / " << before_phase << " -> "

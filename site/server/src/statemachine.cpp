@@ -369,7 +369,7 @@ bool StateMachine::transition()
         // Handle build list drafts
         if (data.pending_build_list_drafts)
         {
-            GameState s = load_game(m_db, data.game_id);
+            GameState s = get_game_state();
             char active_player =
                 (s.active_player.empty() ? 'A' : s.active_player[0]);
             std::vector<DraftRow> drafts =
@@ -396,7 +396,7 @@ bool StateMachine::transition()
         // Handle build show draft
         if (!data.pending_build_show_draft.empty())
         {
-            GameState s = load_game(m_db, data.game_id);
+            GameState s = get_game_state();
             char active_player =
                 (s.active_player.empty() ? 'A' : s.active_player[0]);
             std::string ship_code = data.pending_build_show_draft;
@@ -427,7 +427,7 @@ bool StateMachine::transition()
         // Handle build cancel
         if (data.pending_build_cancel)
         {
-            GameState s = load_game(m_db, data.game_id);
+            GameState s = get_game_state();
             char active_player =
                 (s.active_player.empty() ? 'A' : s.active_player[0]);
             std::string draft_code =
@@ -450,7 +450,7 @@ bool StateMachine::transition()
         // Handle build commit
         if (data.pending_build_commit)
         {
-            GameState s = load_game(m_db, data.game_id);
+            GameState s = get_game_state();
             char active_player =
                 (s.active_player.empty() ? 'A' : s.active_player[0]);
             std::string draft_code =
@@ -554,7 +554,7 @@ bool StateMachine::transition()
         // Handle build set attributes
         if (!data.pending_build_attributes.empty())
         {
-            GameState s = load_game(m_db, data.game_id);
+            GameState s = get_game_state();
             char active_player =
                 (s.active_player.empty() ? 'A' : s.active_player[0]);
             std::string draft_code =

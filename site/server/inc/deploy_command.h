@@ -39,6 +39,7 @@
 
 #include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 
 class DeployCommand : public ICmd
 {
@@ -46,14 +47,13 @@ class DeployCommand : public ICmd
     class Builder
     {
       public:
-        Builder(Db *db, int game_id);
+        Builder(StateMachine &sm);
         Builder &ship_code(const std::string &code);
         Builder &system_name(const std::string &sys);
         ICmd *build();
 
       private:
-        Db *m_db;
-        int m_game_id;
+        StateMachine &m_sm;
         std::string m_ship_code;
         std::string m_system_name;
     };
@@ -61,11 +61,10 @@ class DeployCommand : public ICmd
     bool invoke(void) override;
 
   private:
-    DeployCommand(Db *db, int game_id, const std::string &ship_code,
+    DeployCommand(StateMachine &sm, const std::string &ship_code,
                   const std::string &system_name);
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
     std::string m_ship_code;
     std::string m_system_name;
 };
