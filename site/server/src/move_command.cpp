@@ -1,36 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////////
-// BSD 3-Clause License
-//
+//////////////////////////////////////////////////////////////////////////////////
 // This file is part of Kepler's Horizon
 //
+// Licensed under BSD 3-Clause License
+//
 // Copyright (c) 2025, sibomots
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this
-//    list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include "move_command.h"
 
@@ -90,7 +63,8 @@ MoveCommand::Builder &MoveCommand::Builder::ship_code(const std::string &code)
     return *this;
 }
 
-MoveCommand::Builder &MoveCommand::Builder::add_destination(const std::string &dest)
+MoveCommand::Builder &
+MoveCommand::Builder::add_destination(const std::string &dest)
 {
     m_destinations.push_back(dest);
     return *this;
@@ -123,25 +97,27 @@ bool MoveCommand::invoke(void)
     }
 
     ShipRow sh = load_ship(m_db, m_game_id, active_player, m_ship_code);
-    
+
     if (sh.attr.type != 'W')
     {
         Logger::instance().error("Only Warpships can move");
         Telemetry::write("Error: Only Warpships can move");
         return false;
     }
-    
+
     if (sh.attr.PD <= 0)
     {
         Logger::instance().error("Ship has PD=0 and cannot move");
         Telemetry::write("Error: Ship has PD=0 and cannot move");
         return false;
     }
-    
+
     if (!sh.racked_in.empty())
     {
-        Logger::instance().error("Ship is racked and cannot move: " + sh.racked_in);
-        Telemetry::write("Error: Ship is racked and cannot move: " + sh.racked_in);
+        Logger::instance().error("Ship is racked and cannot move: " +
+                                 sh.racked_in);
+        Telemetry::write("Error: Ship is racked and cannot move: " +
+                         sh.racked_in);
         return false;
     }
 
@@ -150,7 +126,7 @@ bool MoveCommand::invoke(void)
     {
         startHex = resolve_system_hex(m_db, m_game_id, sh.at_system);
     }
-    
+
     if (startHex.empty())
     {
         Logger::instance().error("Ship is not deployed");
@@ -187,13 +163,12 @@ bool MoveCommand::invoke(void)
 
         if (!stepHex.empty())
         {
-            // See if it matches a system name (reverse lookup for display/logic)
-            auto sysr = m_db->query(
-                "SELECT name FROM star_systems WHERE "
-                "game_id=" +
-                std::to_string(m_game_id) +
-                " AND hex_id='" + stepHex +
-                "' LIMIT 1");
+            // See if it matches a system name (reverse lookup for
+            // display/logic)
+            auto sysr = m_db->query("SELECT name FROM star_systems WHERE "
+                                    "game_id=" +
+                                    std::to_string(m_game_id) +
+                                    " AND hex_id='" + stepHex + "' LIMIT 1");
             if (!sysr.empty())
                 stepSys = sysr[0][0];
         }
@@ -203,28 +178,22 @@ bool MoveCommand::invoke(void)
             break;
         }
 
-        int stepCost = graph.get_path_cost(
-            currentHex, stepHex, allowance - totalCost);
+        int stepCost =
+            graph.get_path_cost(currentHex, stepHex, allowance - totalCost);
         if (stepCost == -1)
         {
-            int needed = graph.get_path_cost(
-                currentHex, stepHex, 999);
+            int needed = graph.get_path_cost(currentHex, stepHex, 999);
             if (needed != -1)
             {
-                errorMsg = "Cannot reach " + destTok +
-                          " from " + currentHex +
-                          ". Needed " +
-                          std::to_string(needed) +
-                          " PD, but limit is " +
-                          std::to_string(allowance -
-                                        totalCost) +
-                          ".";
+                errorMsg = "Cannot reach " + destTok + " from " + currentHex +
+                           ". Needed " + std::to_string(needed) +
+                           " PD, but limit is " +
+                           std::to_string(allowance - totalCost) + ".";
             }
             else
             {
-                errorMsg = "Cannot reach " + destTok +
-                          " from " + currentHex +
-                          " (No path or Blocked).";
+                errorMsg = "Cannot reach " + destTok + " from " + currentHex +
+                           " (No path or Blocked).";
             }
             break;
         }
@@ -233,10 +202,9 @@ bool MoveCommand::invoke(void)
         if (totalCost > allowance)
         {
             errorMsg = "Path exceeds PD allowance. "
-                      "Total cost would be " +
-                      std::to_string(totalCost) +
-                      ", remaining=" +
-                      std::to_string(allowance);
+                       "Total cost would be " +
+                       std::to_string(totalCost) +
+                       ", remaining=" + std::to_string(allowance);
             break;
         }
 
@@ -255,28 +223,24 @@ bool MoveCommand::invoke(void)
         return false;
     }
 
-
     // Update ship location and PD spent
     if (finalSystem.empty())
         finalSystem = "";
-    update_ship_location(m_db, m_game_id, active_player, sh.code,
-                         finalSystem, finalHex, "");
-    m_db->exec(
-        "UPDATE ships SET pd_spent=pd_spent+" +
-        std::to_string(totalCost) +
-        " WHERE game_id=" + std::to_string(m_game_id) +
-        " AND owner='" + std::string(1, active_player) + "'" +
-        " AND ship_code='" + m_db->esc(sh.code) + "'");
+    update_ship_location(m_db, m_game_id, active_player, sh.code, finalSystem,
+                         finalHex, "");
+    m_db->exec("UPDATE ships SET pd_spent=pd_spent+" +
+               std::to_string(totalCost) +
+               " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
+               std::string(1, active_player) + "'" + " AND ship_code='" +
+               m_db->esc(sh.code) + "'");
 
     // Save game state to persist changes
     save_game(m_db, s);
 
     std::ostringstream o;
-    o << "Moved " << sh.name << " - " << sh.code
-      << " to "
-      << (finalSystem.empty() ? finalHex : finalSystem)
-      << " (" << finalHex << ") cost " << totalCost
-      << " PD";
+    o << "Moved " << sh.name << " - " << sh.code << " to "
+      << (finalSystem.empty() ? finalHex : finalSystem) << " (" << finalHex
+      << ") cost " << totalCost << " PD";
 
     Logger::instance().info(o.str());
     Telemetry::write(o.str());

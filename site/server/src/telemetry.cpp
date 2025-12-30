@@ -1,36 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////////
-// BSD 3-Clause License
-//
+//////////////////////////////////////////////////////////////////////////////////
 // This file is part of Kepler's Horizon
 //
+// Licensed under BSD 3-Clause License
+//
 // Copyright (c) 2025, sibomots
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this
-//    list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include "telemetry.h"
 
@@ -44,14 +17,14 @@ std::string Telemetry::write(const std::string &msg)
 {
     StateMachine &sm = StateMachine::getInstance();
     GameState s = sm.get_game_state();
-    
+
     std::ostringstream o;
     o << "{";
     o << "\"ok\":true,";
     o << "\"event\":\"" << json_escape(msg) << "\",";
     o << "\"state\":" << s.to_json();
     o << "}";
-    
+
     return o.str();
 }
 
@@ -71,72 +44,71 @@ void Telemetry::status(HttpResponse *resp)
 {
     // Access StateMachine singleton - it has the slate of state
     StateMachine &sm = StateMachine::getInstance();
-    
+
     // Get current game state from StateMachine
     GameState s = sm.get_game_state();
-    
+
     // Build status JSON
     std::ostringstream status_json;
     status_json << "{";
     status_json << "\"gameId\":" << s.game_id << ",";
     status_json << "\"scenario\":\"" << json_escape(s.scenario) << "\",";
     status_json << "\"round\":" << s.round << ",";
-    status_json << "\"activePlayer\":\"" << json_escape(s.active_player) << "\",";
+    status_json << "\"activePlayer\":\"" << json_escape(s.active_player)
+                << "\",";
     status_json << "\"phaseIndex\":" << s.phase_index << ",";
     status_json << "\"phase\":\"" << json_escape(s.phase_name()) << "\",";
     status_json << "\"vp\":{\"A\":" << s.vpA << ",\"B\":" << s.vpB << "},";
     status_json << "\"bp\":{\"A\":" << s.bpA << ",\"B\":" << s.bpB << "},";
-    
+
     if (!s.combat_summary_json.empty())
     {
         status_json << "\"combat\":" << s.combat_summary_json << ",";
     }
-    
+
     status_json << "\"notes\":\"" << json_escape(s.notes()) << "\"";
     status_json << "}";
-    
+
     // Determine self/opponent info from current player
     char selfOwner = s.active_player.empty() ? 'A' : s.active_player[0];
     char oppOwner = (selfOwner == 'A') ? 'B' : 'A';
     std::string selfUser = (selfOwner == 'A') ? "alice" : "bob";
     std::string oppUser = (oppOwner == 'A') ? "alice" : "bob";
-    
+
     // Query opponent online status
     bool oppOnline = false;
     std::string oppLastSeen = "";
-    
+
     Db *db = sm.get_db();
-    auto prow = db->query(
-        "SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
-        "sessions s JOIN users u ON u.id=s.user_id "
-        "WHERE u.username='" + db->esc(oppUser) + 
-        "' ORDER BY s.last_seen DESC LIMIT 1");
-    
+    auto prow =
+        db->query("SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
+                  "sessions s JOIN users u ON u.id=s.user_id "
+                  "WHERE u.username='" +
+                  db->esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
+
     if (!prow.empty())
     {
         oppLastSeen = prow[0][0];
-        auto prow2 = db->query(
-            "SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
-            "FROM sessions s JOIN users u ON u.id=s.user_id "
-            "WHERE u.username='" + db->esc(oppUser) + 
-            "' ORDER BY s.last_seen DESC LIMIT 1");
-        
+        auto prow2 =
+            db->query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
+                      "FROM sessions s JOIN users u ON u.id=s.user_id "
+                      "WHERE u.username='" +
+                      db->esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
+
         if (!prow2.empty() && !prow2[0][0].empty() && prow2[0][0] != "0")
         {
             oppOnline = true;
         }
     }
-    
+
     // Build complete response and set directly
     std::ostringstream out;
     out << "{\"ok\":true,\"state\":" << status_json.str()
-        << ",\"self\":{\"owner\":\"" << selfOwner 
-        << "\",\"username\":\"" << json_escape(selfUser) << "\"}"
-        << ",\"peer\":{\"owner\":\"" << oppOwner 
-        << "\",\"username\":\"" << oppUser
+        << ",\"self\":{\"owner\":\"" << selfOwner << "\",\"username\":\""
+        << json_escape(selfUser) << "\"}" << ",\"peer\":{\"owner\":\""
+        << oppOwner << "\",\"username\":\"" << oppUser
         << "\",\"online\":" << (oppOnline ? "true" : "false")
-        << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}"
-        << "}";
-    
+        << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}" << "}";
+
     resp->body = out.str();
 }

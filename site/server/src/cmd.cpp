@@ -1,40 +1,14 @@
-///////////////////////////////////////////////////////////////////////////////////
-// BSD 3-Clause License
-//
+//////////////////////////////////////////////////////////////////////////////////
 // This file is part of Kepler's Horizon
 //
+// Licensed under BSD 3-Clause License
+//
 // Copyright (c) 2025, sibomots
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice,
-// this
-//    list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////////
 #include <iostream>
 #include <queue>
 #include <unordered_map>
+
 #include "app.h"
 #include "combat.h"
 #include "comms.h"
@@ -42,81 +16,19 @@
 #include "events.h"
 #include "game.h"
 #include "logger.h"
-#include "telemetry.h"
-#include "map.h"
+#include "mapgraph.h"
 #include "state.h"
 #include "statemachine.h"
+#include "telemetry.h"
 #include "typs.h"
 #include "util.h"
 
-// lex/yacc declarations
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
-
-// C++ Linkage (scan.cpp)
 extern YY_BUFFER_STATE yy_scan_string(const char *str);
-
-// C++ Linkage (scan.cpp)
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
-
-// yacc generated header usually declares yyparse,
-// but we can declare it here too.
-// Note: verify if it is extern "C" or not based on generated parser.cpp.
-// Standard bison (yacc) generates C-compatible functions.
-// If compiled as C++, it matches C++ linkage unless
-// 'extern "C"' is inside the generated file.
-// C Linkage (parse.cpp appears to use it)
 extern "C" int yyparse();
 
-// Parser globals defined here for linking
-Db *g_db = nullptr;
-int g_game_id = 0;
-StateMachine &g_statemachine = StateMachine::getInstance();
-
-static std::string upper_ascii(const std::string &s)
-{
-    std::string r = s;
-    for (size_t i = 0; i < r.size(); i++)
-        r[i] = (char)std::toupper((unsigned char)r[i]);
-    return r;
-}
-
-static std::string resolve_system_hex(Db *db, int game_id,
-                                      const std::string &canon_name)
-{
-    std::ostringstream q;
-    q << "SELECT hex_id FROM star_systems WHERE game_id=" << game_id
-      << " AND name='" << db->esc(canon_name) << "' LIMIT 1";
-    auto r = db->query(q.str());
-    if (r.empty())
-    {
-        return "";
-    }
-    return r[0][0];
-}
-
-static std::string resolve_system_name(Db *db, int game_id,
-                                       const std::string &user_supplied)
-{
-    std::string u = upper_ascii(user_supplied);
-    auto r = db->query("SELECT name FROM star_systems WHERE game_id=" +
-                       std::to_string(game_id) + " AND UPPER(name)='" +
-                       db->esc(u) + "' LIMIT 1");
-    if (!r.empty() && !r[0].empty())
-        return r[0][0];
-    return u;
-}
-
-static bool system_exists(Db *db, int game_id, const std::string &user_supplied)
-{
-    std::string u = upper_ascii(user_supplied);
-    auto r = db->query("SELECT name FROM star_systems WHERE game_id=" +
-                       std::to_string(game_id) + " AND UPPER(name)='" +
-                       db->esc(u) + "' LIMIT 1");
-    return !r.empty();
-}
-
-
-void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
+void handle_usr_command(const HttpRequest *req, HttpResponse *resp)
 {
     if (req->method != "POST")
     {
@@ -124,7 +36,7 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         resp->body = json_error("method");
         return;
     }
-    AuthContext a = require_auth(db, (const HttpRequest *)req, resp);
+    AuthContext a = require_auth((const HttpRequest *)req, resp);
     if (resp->status != 200)
     {
         return;
@@ -144,12 +56,12 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     }
 
     // Configure StateMachine with DB context
-    StateMachine::getInstance().set_db(db);
-    StateMachine::getInstance().set_game_id(a.game_id);
+    // StateMachine::getInstance().set_db(db);
+    // StateMachine::getInstance().set_game_id(a.game_id);
 
     // Set global parser context
-    g_db = db;
-    g_game_id = a.game_id;
+    // g_db = db;
+    // g_game_id = a.game_id;
 
     // Try parser first (handles migrated commands)
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
@@ -161,45 +73,30 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     if (parse_result == 0)
     {
         Logger::instance().info("Command handled by parser: " + cmdline);
+
         GameState s = load_game(db, a.game_id);
 
-        // Legacy command handling - will be deprecated
-        // Commands now use Command Pattern and return JSON directly
+        resp->body = Telemetry::write("Command executed");
 
-        // Execute command (legacy path)
-        // Note: 'tokens' is not defined here, assuming it's meant to be `split_ws(cmdline)`
-        // or that this block is a placeholder for a more complete migration.
-        // For now, we'll assume `tokens` would be available if this path were fully implemented.
-        // As the instruction is to replace Telemetry calls, and the provided snippet
-        // includes `execute_command`, we'll keep it as is, acknowledging `tokens` is missing.
-        // bool success = execute_command(db, a.game_id, a.player, tokens); // `tokens` is undefined
-
-        // For the purpose of this edit, we'll simulate success or failure
-        // based on a simple condition or assume `execute_command` would be added.
-        // Since the instruction is about Telemetry, we'll focus on that.
-        bool success = true; // Placeholder for actual command execution result
-
-        // Reload state after command execution
-        s = load_game(db, a.game_id);
-
-        // Build response using new Telemetry API
-        if (success)
-        {
-            resp->body = Telemetry::write("Command executed");
-        }
-        else
-        {
-            std::ostringstream err;
-            err << "{\"ok\":false,\"event\":\"Command failed\",\"state\":" << s.to_json() << "}";
-            resp->body = err.str();
-        }
+        /* std::ostringstream err; */
+        /* err << "{\"ok\":false,\"event\":\"Command failed\",\"state\":" <<
+         * s.to_json() << "}"; */
+        /* resp->body = err.str(); */
 
         return;
     }
 
     // Parser failed - fall back to legacy handlers for unmigrated commands
     Logger::instance().info("Falling back to legacy handler: " + cmdline);
-    
+
+    {
+        resp->status = 400;
+        resp->body = json_error("unknown command");
+        Logger::instance().error("Unknown command attempted");
+        return;
+    }
+
+#if USING_LEGACY
     GameState s = load_game(db, a.game_id);
 
     std::vector<std::string> tok = split_ws(cmdline);
@@ -214,7 +111,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     char active = (s.active_player.empty() ? 'A' : s.active_player[0]);
     auto turnToken = std::string("R") + std::to_string(s.round) + active;
 
-    auto require_build_phase = [&]() -> bool {
+    auto require_build_phase = [&]() -> bool
+    {
         if (s.scenario.empty())
         {
             eventText = "No scenario. Type: start learning|basic|advanced";
@@ -232,7 +130,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         return true;
     };
 
-    auto require_movement_phase = [&]() -> bool {
+    auto require_movement_phase = [&]() -> bool
+    {
         if (s.scenario.empty())
         {
             eventText = "No scenario. Type: start learning|basic|advanced";
@@ -249,7 +148,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         return true;
     };
 
-    auto require_my_turn = [&]() -> bool {
+    auto require_my_turn = [&]() -> bool
+    {
         if (active != me)
         {
             std::ostringstream o;
@@ -261,7 +161,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         return true;
     };
 
-    auto ship_cost_bp = [&](char ship_type, const DraftRow &d) -> int {
+    auto ship_cost_bp = [&](char ship_type, const DraftRow &d) -> int
+    {
         int cost = 0;
         cost += d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR;
         cost += (d.attr.M + 2) /
@@ -271,7 +172,8 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         return cost;
     };
 
-    auto compute_tech_level = [&]() -> int {
+    auto compute_tech_level = [&]() -> int
+    {
         if (s.scenario != "advanced")
             return 0;
         // Tech level increases every 4 game-turns (turns 1-4 = 0, 5-8 = 1, ...)
@@ -281,14 +183,16 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
     };
 
     auto fmt_attrs = [&](int PD, int B, int Sx, int T, int M,
-                         int SR) -> std::string {
+                         int SR) -> std::string
+    {
         std::ostringstream o;
         o << "PD=" << PD << ", B=" << B << ", S=" << Sx << ", T=" << T
           << ", M=" << M << ", SR=" << SR;
         return o.str();
     };
 
-    auto list_fleet_text = [&](char whichOwner) -> std::string {
+    auto list_fleet_text = [&](char whichOwner) -> std::string
+    {
         auto ships = load_ships(db, a.game_id, whichOwner);
         std::ostringstream o;
         o << (whichOwner == me ? "Blue-force fleet:" : "Red-force fleet:")
@@ -363,58 +267,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
         set_current_draft(db, a.game_id, 'B', "");
         eventText = "Game reset. Type: start learning|basic|advanced";
     }
-    else if (cmd == "start")
-    {
-        if (tok.size() < 2)
-        {
-            eventText = "Usage: start learning|basic|advanced";
-        }
-        else
-        {
-            std::string sc = to_lower(tok[1]);
-            if (sc != "learning" && sc != "basic" && sc != "advanced")
-            {
-                resp->status = 400;
-                resp->body = json_error("unknown scenario");
-                return;
-            }
-            s = new_game_state_for_scenario(sc);
-            s.game_id = a.game_id;
-
-            // Clear per-game DB state
-            db->exec("DELETE FROM drafts WHERE game_id=" +
-                     std::to_string(a.game_id));
-            db->exec("DELETE FROM ships  WHERE game_id=" +
-                     std::to_string(a.game_id));
-            set_current_draft(db, a.game_id, 'A', "");
-            set_current_draft(db, a.game_id, 'B', "");
-
-            eventText = "Game started: " + sc + ". " + s.notes();
-        }
-    }
-    else if (cmd == "next")
-    {
-        if (!require_my_turn())
-        {
-            // eventText set by require_my_turn
-            save_game(db, s);
-            append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
-            resp->body = json_ok_with_state_and_event(s, eventText);
-            return;
-        }
-        std::string before = s.phase_name();
-        std::string beforeP = s.active_player;
-        int beforeRound = s.round;
-
-        advance_next(db, s);
-
-        std::ostringstream msg;
-        msg << "Advanced: " << beforeP << " / " << before << " -> "
-            << s.active_player << " / " << s.phase_name();
-        if (s.round != beforeRound)
-            msg << " (round " << s.round << ")";
-        eventText = msg.str();
-    }
     else if (cmd == "list")
     {
         if (tok.size() == 1)
@@ -484,41 +336,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     "all | list scan";
             }
             Logger::instance().info(eventText);
-        }
-    }
-    else if (cmd == "deploy")
-    {
-        if (!require_my_turn() || !require_build_phase())
-        {
-            // eventText already set
-        }
-        else if (tok.size() < 3)
-        {
-            eventText = "Usage: deploy <W#|S##> <SYSTEM>";
-        }
-        else
-        {
-            std::string code = tok[1];
-            std::string sys = resolve_system_name(db, a.game_id, tok[2]);
-            if (!ship_exists(db, a.game_id, owner, code))
-                eventText = "Ship not found: " + code;
-            else
-            {
-                ShipRow sh = load_ship(db, a.game_id, owner, code);
-                if (!sh.racked_in.empty())
-                {
-                    eventText =
-                        "Ship is racked; drop it before deploying: " + code;
-                }
-                else
-                {
-                    std::string hex = resolve_system_hex(db, a.game_id, sys);
-                    update_ship_location(db, a.game_id, owner, code, sys, hex,
-                                         "");
-                    eventText =
-                        "Deployed " + sh.name + " - " + sh.code + " to " + sys;
-                }
-            }
         }
     }
     else if (cmd == "pickup" || cmd == "drop")
@@ -625,190 +442,6 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
                     }
                 }
             }
-        }
-    }
-    else if (cmd == "move")
-    {
-        if (!require_my_turn() || !require_movement_phase())
-        {
-            // eventText already set
-        }
-        else if (tok.size() < 3)
-        {
-            eventText = "Usage: move <W#> <DEST>";
-        }
-        else
-        {
-            std::string code = tok[1];
-            std::string destTok = tok[2];
-
-            if (!ship_exists(db, a.game_id, owner, code))
-            {
-                eventText = "Ship not found: " + code;
-            }
-            else
-            {
-                ShipRow sh = load_ship(db, a.game_id, owner, code);
-                if (sh.attr.type != 'W')
-                {
-                    eventText = "Only Warpships can move.";
-                }
-                else if (sh.attr.PD <= 0)
-                {
-                    eventText = "Ship has PD=0 and cannot move.";
-                }
-                else if (!sh.racked_in.empty())
-                {
-                    eventText =
-                        "Ship is racked and cannot move: " + sh.racked_in;
-                }
-                else
-                {
-                    std::string startHex = sh.at_hex;
-                    if (startHex.empty() && !sh.at_system.empty())
-                    {
-                        startHex =
-                            resolve_system_hex(db, a.game_id, sh.at_system);
-                    }
-                    if (startHex.empty())
-                    {
-                        eventText = "Ship is not deployed.";
-                    }
-                    else
-                    {
-                        MapGraph graph(db, a.game_id);
-                        graph.load_state(owner);
-
-                        // Process multi-step path
-                        std::string currentHex = startHex;
-                        int totalCost = 0;
-                        int allowance = sh.attr.PD - sh.pd_spent;
-                        std::string finalSystem = sh.at_system;
-                        std::string finalHex = startHex;
-
-                        if (allowance <= 0)
-                        {
-                            eventText =
-                                "Ship has no movement remaining (PD spent).";
-                        }
-                        else
-                        {
-                            for (size_t i = 2; i < tok.size(); ++i)
-                            {
-                                std::string destTok = tok[i];
-                                std::string stepHex =
-                                    graph.resolve_hex(destTok);
-                                std::string stepSys;
-
-                                if (!stepHex.empty())
-                                {
-                                    // See if it matches a system name (reverse
-                                    // lookup for display/logic)
-                                    auto sysr = db->query(
-                                        "SELECT name FROM star_systems WHERE "
-                                        "game_id=" +
-                                        std::to_string(a.game_id) +
-                                        " AND hex_id='" + stepHex +
-                                        "' LIMIT 1");
-                                    if (!sysr.empty())
-                                        stepSys = sysr[0][0];
-                                }
-                                else
-                                {
-                                    eventText =
-                                        "Unknown destination: " + destTok;
-                                    break;
-                                }
-
-                                int stepCost = graph.get_path_cost(
-                                    currentHex, stepHex, allowance - totalCost);
-                                if (stepCost == -1)
-                                {
-                                    int needed = graph.get_path_cost(
-                                        currentHex, stepHex, 999);
-                                    if (needed != -1)
-                                    {
-                                        eventText = "Cannot reach " + destTok +
-                                                    " from " + currentHex +
-                                                    ". Needed " +
-                                                    std::to_string(needed) +
-                                                    " PD, but limit is " +
-                                                    std::to_string(allowance -
-                                                                   totalCost) +
-                                                    ".";
-                                    }
-                                    else
-                                    {
-                                        eventText = "Cannot reach " + destTok +
-                                                    " from " + currentHex +
-                                                    " (No path or Blocked).";
-                                    }
-                                    break;
-                                }
-
-                                totalCost += stepCost;
-                                if (totalCost > allowance)
-                                {
-                                    eventText = "Path exceeds PD allowance. "
-                                                "Total cost would be " +
-                                                std::to_string(totalCost) +
-                                                ", remaining=" +
-                                                std::to_string(allowance);
-                                    break;
-                                }
-
-                                currentHex = stepHex;
-                                finalHex = stepHex;
-                                finalSystem = stepSys;
-                            }
-                        }
-
-                        if (eventText.empty())
-                        {
-                            if (finalSystem.empty())
-                                finalSystem = "";
-                            update_ship_location(db, a.game_id, owner, sh.code,
-                                                 finalSystem, finalHex, "");
-                            db->exec(
-                                "UPDATE ships SET pd_spent=pd_spent+" +
-                                std::to_string(totalCost) +
-                                " WHERE game_id=" + std::to_string(a.game_id) +
-                                " AND owner='" + std::string(1, owner) + "'" +
-                                " AND ship_code='" + db->esc(sh.code) + "'");
-                            std::ostringstream o;
-                            o << "Moved " << sh.name << " - " << sh.code
-                              << " to "
-                              << (finalSystem.empty() ? finalHex : finalSystem)
-                              << " (" << finalHex << ") cost " << totalCost
-                              << " PD";
-                            eventText = o.str();
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else if (cmd == "done")
-    {
-        if (!require_my_turn())
-        {
-            // error already set
-        }
-        else
-        {
-            char me = owner;
-            // Auto-advance until active player changes or game over
-            int safety = 0;
-            while (s.active_player == std::string(1, me) && !s.game_over &&
-                   safety < 50)
-            {
-                advance_next(db, s);
-                safety++;
-            }
-            if (s.game_over)
-                eventText = "Game Over during turn end.";
-            else
-                eventText = "Turn ended. Passed to " + s.active_player;
         }
     }
     else if (cmd == "combat")
@@ -971,20 +604,14 @@ void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp)
             return;
         }
     }
-    else
-    {
-        resp->status = 400;
-        resp->body = json_error("unknown command");
-        Logger::instance().error("Unknown command attempted");
-        return;
-    }
+#endif
 
-    save_game(db, s);
-    append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
+    // save_game(db, s);
+    // append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
 
-    Logger::instance().info("[" + std::string(1, owner) + "] " + cmdline +
-                            " -> " + eventText);
+    // Logger::instance().info("[" + std::string(1, owner) + "] " + cmdline +
+    //                        " -> " + eventText);
 
-    resp->body = json_ok_with_state_and_event(s, eventText);
+    // resp->body = json_ok_with_state_and_event(s, eventText);
     return;
 }

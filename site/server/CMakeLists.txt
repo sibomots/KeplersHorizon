@@ -75,7 +75,8 @@ src/state.cpp
 src/account.cpp
 src/main.cpp
 src/json.cpp
-src/map.cpp
+src/mapgraph.cpp
+src/maputil.cpp
 src/combat.cpp
 src/logger.cpp
 src/telemetry.cpp
@@ -111,7 +112,8 @@ inc/events.h
 inc/cmd.h
 inc/app.h
 inc/comms.h
-inc/map.h
+inc/mapgraph.h
+inc/maputil.h
 inc/combat.h
 inc/logger.h
 inc/telemetry.h
