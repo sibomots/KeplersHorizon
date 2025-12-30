@@ -67,9 +67,10 @@ void yyerror(const char *s);
 // Globals to inject context into the parser actions
 extern Db* g_db;
 extern int g_game_id;
+extern StateMachine& g_statemachine;
 
 // Global builder for accumulating build set attributes
-BuildSetAttributeCommand::Builder g_build_set_builder;
+BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder(g_statemachine);
 
 %}
 
@@ -300,14 +301,14 @@ looking_cmd:
 turn_cmd:
   TOK_NEXT {
       Logger::instance().info("Advance active player to next phase");
-      ICmd* pCmd = NextCommand::Builder(g_db, g_game_id).build();
+      ICmd* pCmd = NextCommand::Builder(g_statemachine).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_DONE {
       Logger::instance().info("Advance active player to first phase "
                       "of opponent, if possible");
-      ICmd* pCmd = DoneCommand::Builder(g_db, g_game_id).build();
+      ICmd* pCmd = DoneCommand::Builder(g_statemachine).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
@@ -575,9 +576,7 @@ build_cmd:
       std::string code(*$3);
       std::string name(*$4);
       Logger::instance().info("Create new draft: " + code + " '" + name + "'");
-      ICmd *pCmd = BuildNewCommand::Builder()
-                  .set_db(g_db)
-                  .set_game_id(g_game_id)
+      ICmd *pCmd = BuildNewCommand::Builder(g_statemachine)
                   .set_ship_code(code)
                   .set_ship_name(name)
                   .build();
@@ -586,9 +585,7 @@ build_cmd:
   }
   | TOK_BUILD TOK_DRAFTS {
       Logger::instance().info("List all pending build drafts");
-      ICmd *pCmd = BuildListDraftsCommand::Builder()
-                  .set_db(g_db)
-                  .set_game_id(g_game_id)
+      ICmd *pCmd = BuildListDraftsCommand::Builder(g_statemachine)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
@@ -596,9 +593,7 @@ build_cmd:
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
       std::string ship_code = *$3;
       Logger::instance().info("Show draft details: " + ship_code);
-      ICmd *pCmd = BuildShowDraftCommand::Builder()
-                  .set_db(g_db)
-                  .set_game_id(g_game_id)
+      ICmd *pCmd = BuildShowDraftCommand::Builder(g_statemachine)
                   .set_draft_code(ship_code)
                   .build();
       pCmd->invoke();
@@ -606,74 +601,69 @@ build_cmd:
   }
   | TOK_BUILD TOK_SET_ATTR build_attr_spec {
       Logger::instance().info("Set attributes on current draft");
-      ICmd *pCmd = g_build_set_builder
-                  .set_db(g_db)
-                  .set_game_id(g_game_id)
-                  .build();
+      ICmd *pCmd = g_build_set_builder->build();
       pCmd->invoke();
       SafeDelete(pCmd);
-      g_build_set_builder = BuildSetAttributeCommand::Builder(); // Reset
+      delete g_build_set_builder;
+      g_build_set_builder = new BuildSetAttributeCommand::Builder(g_statemachine); // Reset
   }
   | TOK_BUILD TOK_COMMIT {
       Logger::instance().info("Build commit - committing current draft");
-      ICmd *pCmd = BuildCommitCommand::Builder()
-                  .set_db(g_db)
-                  .set_game_id(g_game_id)
+      ICmd *pCmd = BuildCommitCommand::Builder(g_statemachine)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
   | TOK_BUILD TOK_CANCEL {
       Logger::instance().info("Build cancel - canceling current draft");
-      ICmd *pCmd = BuildCancelCommand::Builder()
-                  .set_db(g_db)
-                  .set_game_id(g_game_id)
+      ICmd *pCmd = BuildCancelCommand::Builder(g_statemachine)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
   ;
 
+
 build_attr_spec:
   TOK_PD_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_pd($1);
+      g_build_set_builder->set_pd($1);
   }
   | TOK_B_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_b($1);
+      g_build_set_builder->set_b($1);
   }
   | TOK_S_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_s($1);
+      g_build_set_builder->set_s($1);
   }
   | TOK_T_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_t($1);
+      g_build_set_builder->set_t($1);
   }
   | TOK_M_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_m($1);
+      g_build_set_builder->set_m($1);
   }
   | TOK_SR_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_sr($1);
+      g_build_set_builder->set_sr($1);
   }
   ;
 
 additional_build_attr_spec:
   // or no more spec
   | TOK_PD_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_pd($1);
+      g_build_set_builder->set_pd($1);
   }
   | TOK_B_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_b($1);
+      g_build_set_builder->set_b($1);
   }
   | TOK_S_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_s($1);
+      g_build_set_builder->set_s($1);
   }
   | TOK_T_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_t($1);
+      g_build_set_builder->set_t($1);
   }
   | TOK_M_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_m($1);
+      g_build_set_builder->set_m($1);
   }
   | TOK_SR_ASSIGN additional_build_attr_spec {
-      g_build_set_builder.set_sr($1);
+      g_build_set_builder->set_sr($1);
   }
   ;
 
@@ -700,7 +690,7 @@ deploy_cmd:
                                ">" + ship + "<" 
                                " at destination: "
                                ">" + destination + "<");
-       ICmd* pCmd = DeployCommand::Builder(g_db, g_game_id)
+       ICmd* pCmd = DeployCommand::Builder(g_statemachine)
            .ship_code(ship)
            .system_name(destination)
            .build();
@@ -747,7 +737,7 @@ move_cmd:
        Logger::instance().info("Moving ship >" + ship + "< to >" + first_dest + "<");
        
        // Build move command with all destinations
-       MoveCommand::Builder builder(g_db, g_game_id);
+       MoveCommand::Builder builder(g_statemachine);
        builder.ship_code(ship);
        builder.add_destination(first_dest);
        

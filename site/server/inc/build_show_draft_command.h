@@ -38,7 +38,6 @@
 
 #include <string>
 
-#include "db.h"
 #include "icmd.h"
 #include "statemachine.h"
 
@@ -48,13 +47,11 @@ class BuildShowDraftCommand : public ICmd
     class Builder
     {
       public:
-        StateMachine *_sm = nullptr;
+        StateMachine &_sm;
         std::string _draft_code;
 
-        Builder &set_sm(StateMachine *sm)
+        Builder(StateMachine &sm) : _sm(sm)
         {
-            _sm = sm;
-            return *this;
         }
         Builder &set_draft_code(const std::string &code)
         {
@@ -64,7 +61,7 @@ class BuildShowDraftCommand : public ICmd
 
         ICmd* build()
         {
-            return new BuildShowDraftCommand(*_sm, _draft_code);
+            return new BuildShowDraftCommand(_sm, _draft_code);
         }
     };
 

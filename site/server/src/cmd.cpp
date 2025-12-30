@@ -70,6 +70,7 @@ extern "C" int yyparse();
 // Parser globals defined here for linking
 Db *g_db = nullptr;
 int g_game_id = 0;
+StateMachine &g_statemachine = StateMachine::getInstance();
 
 static std::string upper_ascii(const std::string &s)
 {

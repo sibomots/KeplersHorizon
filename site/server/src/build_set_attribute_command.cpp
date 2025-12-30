@@ -43,9 +43,9 @@
 
 bool BuildSetAttributeCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
-    std::string draft_code = get_current_draft(m_db, m_game_id, active_player);
+    std::string draft_code = get_current_draft(m_sm.get_db(), m_sm.get_game_id(), active_player);
 
     if (draft_code.empty())
     {
@@ -54,7 +54,7 @@ bool BuildSetAttributeCommand::invoke(void)
         return false;
     }
 
-    DraftRow d = load_draft(m_db, m_game_id, active_player, draft_code);
+    DraftRow d = load_draft(m_sm.get_db(), m_sm.get_game_id(), active_player, draft_code);
 
     // Apply attributes using C++17 structured bindings
     for (const auto &[attr_id, value] : m_attributes)
@@ -82,7 +82,7 @@ bool BuildSetAttributeCommand::invoke(void)
         }
     }
 
-    update_draft_attrs(m_db, m_game_id, active_player, draft_code, d);
+    update_draft_attrs(m_sm.get_db(), m_sm.get_game_id(), active_player, draft_code, d);
 
     std::ostringstream msg;
     msg << "Draft updated: " << draft_code << " [PD=" << d.attr.PD

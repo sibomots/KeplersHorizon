@@ -37,8 +37,8 @@
 
 
 
-#include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 #include "typedefs.h"
 
 class BuildSetAttributeCommand : public ICmd
@@ -47,19 +47,11 @@ class BuildSetAttributeCommand : public ICmd
     class Builder
     {
       public:
-        Db *_db = nullptr;
-        int _game_id = 0;
+        StateMachine &_sm;
         AttributeMap _attributes;
 
-        Builder &set_db(Db *db)
+        Builder(StateMachine &sm) : _sm(sm)
         {
-            _db = db;
-            return *this;
-        }
-        Builder &set_game_id(int id)
-        {
-            _game_id = id;
-            return *this;
         }
 
         Builder &set_pd(int val)
@@ -100,18 +92,17 @@ class BuildSetAttributeCommand : public ICmd
 
         ICmd* build()
         {
-            return new BuildSetAttributeCommand(_db, _game_id, _attributes);
+            return new BuildSetAttributeCommand(_sm, _attributes);
         }
     };
 
   private:
-    BuildSetAttributeCommand(Db *db, int game_id, const AttributeMap &attrs)
-        : m_db(db), m_game_id(game_id), m_attributes(attrs)
+    BuildSetAttributeCommand(StateMachine &sm, const AttributeMap &attrs)
+        : m_sm(sm), m_attributes(attrs)
     {
     }
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
     AttributeMap m_attributes;
 
   public:

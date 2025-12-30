@@ -37,8 +37,8 @@
 
 
 
-#include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 
 class BuildCommitCommand : public ICmd
 {
@@ -46,33 +46,24 @@ class BuildCommitCommand : public ICmd
     class Builder
     {
       public:
-        Db *_db = nullptr;
-        int _game_id = 0;
+        StateMachine &_sm;
 
-        Builder &set_db(Db *db)
+        Builder(StateMachine &sm) : _sm(sm)
         {
-            _db = db;
-            return *this;
-        }
-        Builder &set_game_id(int id)
-        {
-            _game_id = id;
-            return *this;
         }
 
         ICmd* build()
         {
-            return new BuildCommitCommand(_db, _game_id);
+            return new BuildCommitCommand(_sm);
         }
     };
 
   private:
-    BuildCommitCommand(Db *db, int game_id) : m_db(db), m_game_id(game_id)
+    BuildCommitCommand(StateMachine &sm) : m_sm(sm)
     {
     }
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
 
   public:
     virtual bool invoke(void);

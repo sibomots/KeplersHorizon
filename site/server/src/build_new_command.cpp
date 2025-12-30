@@ -44,7 +44,7 @@
 
 bool BuildNewCommand::invoke(void)
 {
-    GameState s = load_game(m_db, m_game_id);
+    GameState s = m_sm.get_game_state();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
     // Check BP availability
@@ -74,20 +74,20 @@ bool BuildNewCommand::invoke(void)
         {
             candidate = ship_code + std::to_string(next_num);
             next_num++;
-        } while (ship_exists(m_db, s.game_id, active_player, candidate) ||
-                 draft_exists(m_db, s.game_id, active_player, candidate));
+        } while (ship_exists(m_sm.get_db(), s.game_id, active_player, candidate) ||
+                 draft_exists(m_sm.get_db(), s.game_id, active_player, candidate));
         ship_code = candidate;
     }
 
     // Check for duplicates
-    if (draft_exists(m_db, s.game_id, active_player, ship_code))
+    if (draft_exists(m_sm.get_db(), s.game_id, active_player, ship_code))
     {
         Logger::instance().error("Draft already exists: " + ship_code);
         Telemetry::write("Error: Draft already exists: " + ship_code);
         return false;
     }
 
-    if (ship_exists(m_db, s.game_id, active_player, ship_code))
+    if (ship_exists(m_sm.get_db(), s.game_id, active_player, ship_code))
     {
         Logger::instance().error("Ship already exists: " + ship_code);
         Telemetry::write("Error: Ship already exists: " + ship_code);
@@ -100,8 +100,8 @@ bool BuildNewCommand::invoke(void)
     draft.name = m_ship_name;
     draft.attr.type = 'W'; // Default to warship
 
-    insert_draft(m_db, s.game_id, active_player, draft);
-    set_current_draft(m_db, s.game_id, active_player, ship_code);
+    insert_draft(m_sm.get_db(), s.game_id, active_player, draft);
+    set_current_draft(m_sm.get_db(), s.game_id, active_player, ship_code);
 
     Logger::instance().info("Draft created: " + m_ship_name + " - " +
                             ship_code);

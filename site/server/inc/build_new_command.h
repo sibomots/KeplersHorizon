@@ -37,8 +37,8 @@
 
 #include <string>
 
-#include "db.h"
 #include "icmd.h"
+#include "statemachine.h"
 
 class BuildNewCommand : public ICmd
 {
@@ -46,20 +46,12 @@ class BuildNewCommand : public ICmd
     class Builder
     {
       public:
-        Db *_db = nullptr;
-        int _game_id = 0;
+        StateMachine &_sm;
         std::string _ship_code;
         std::string _ship_name;
 
-        Builder &set_db(Db *db)
+        Builder(StateMachine &sm) : _sm(sm)
         {
-            _db = db;
-            return *this;
-        }
-        Builder &set_game_id(int id)
-        {
-            _game_id = id;
-            return *this;
         }
         Builder &set_ship_code(const std::string &code)
         {
@@ -80,14 +72,13 @@ class BuildNewCommand : public ICmd
 
   private:
     BuildNewCommand(Builder &builder)
-        : m_db(builder._db), m_game_id(builder._game_id),
+        : m_sm(builder._sm),
           m_ship_code(std::move(builder._ship_code)),
           m_ship_name(std::move(builder._ship_name))
     {
     }
 
-    Db *m_db;
-    int m_game_id;
+    StateMachine &m_sm;
     std::string m_ship_code;
     std::string m_ship_name;
 

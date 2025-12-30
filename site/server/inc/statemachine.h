@@ -39,6 +39,7 @@
 #include "typedefs.h"
 #include "icmd.h"
 #include "db.h"
+#include "game.h"
 
 class StateMachine
 {
