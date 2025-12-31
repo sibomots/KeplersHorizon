@@ -34,8 +34,8 @@ bool DoneCommand::invoke(void)
     if (s.game_over)
     {
         Logger::instance().info("Game Over during turn end");
-        Telemetry::write("Game Over");
-        Telemetry::broadcast("🏁 Game Over!");
+        Telemetry::getInstance().write("Game Over");
+        Telemetry::getInstance().broadcast("🏁 Game Over!");
     }
     else
     {
@@ -43,11 +43,11 @@ bool DoneCommand::invoke(void)
         Logger::instance().info("Turn ended. Active player: " +
                                 s.active_player);
 
-        Telemetry::write("Your turn has ended");
-        Telemetry::tell(PlayerTarget::THEM, "⏰ It's YOUR turn! " +
+        Telemetry::getInstance().write("Your turn has ended");
+        Telemetry::getInstance().tell(PlayerTarget::THEM, "⏰ It's YOUR turn! " +
                                                 s.phase_name() + " (Round " +
                                                 std::to_string(s.round) + ")");
-        Telemetry::broadcast("Turn advanced to " + s.active_player);
+        Telemetry::getInstance().broadcast("Turn advanced to " + s.active_player);
     }
 
     // Save game state to persist changes

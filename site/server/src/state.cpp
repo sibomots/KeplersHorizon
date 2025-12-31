@@ -31,8 +31,8 @@ void handle_state(const HttpRequest* req, HttpResponse* resp)
     }
 
     // Telemetry::status() accesses StateMachine singleton and builds complete
-    // JSON
-    Telemetry::status(resp);
+    // JSON, including queued messages for this player
+    Telemetry::getInstance().status(a.player, resp);
     return;
 }
 

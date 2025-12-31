@@ -62,6 +62,9 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     // StateMachine::getInstance().set_db(db);
     StateMachine::getInstance().set_game_id(a.game_id);
 
+    // Clear telemetry message buffer before command execution
+    Telemetry::getInstance().clear_messages();
+
     // Set global parser context
     // g_db = db;
     // g_game_id = a.game_id;
@@ -95,7 +98,17 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
             GameState s = StateMachine::getInstance().load_game(new_game_id);
         }
 
-        resp->body = Telemetry::write("Command executed");
+        // Get accumulated telemetry messages and combine them
+        auto messages = Telemetry::getInstance().get_messages();
+        std::ostringstream combined;
+        for (size_t i = 0; i < messages.size(); ++i)
+        {
+            if (i > 0) combined << "\n";
+            combined << messages[i];
+        }
+        std::string event_msg = combined.str().empty() ? "Command executed" : combined.str();
+
+        resp->body = Telemetry::getInstance().write(event_msg);
 
         /* std::ostringstream err; */
         /* err << "{\"ok\":false,\"event\":\"Command failed\",\"state\":" <<

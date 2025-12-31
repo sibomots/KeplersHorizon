@@ -25,7 +25,7 @@ bool BuildSetAttributeCommand::invoke(void)
     if (draft_code.empty())
     {
         Logger::instance().error("No current draft to modify");
-        Telemetry::write("Error: No current draft to modify");
+        Telemetry::getInstance().write("Error: No current draft to modify");
         return false;
     }
 
@@ -64,7 +64,7 @@ bool BuildSetAttributeCommand::invoke(void)
         << ", B=" << d.attr.B << ", S=" << d.attr.S << ", T=" << d.attr.T
         << ", M=" << d.attr.M << ", SR=" << d.attr.SR << "]";
     Logger::instance().info(msg.str());
-    Telemetry::write(msg.str());
+    Telemetry::getInstance().write(msg.str());
 
     return true;
 }

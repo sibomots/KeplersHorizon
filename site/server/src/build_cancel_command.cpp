@@ -24,14 +24,14 @@ bool BuildCancelCommand::invoke(void)
     if (draft_code.empty())
     {
         Logger::instance().error("No current draft to cancel");
-        Telemetry::write("Error: No current draft to cancel");
+        Telemetry::getInstance().write("Error: No current draft to cancel");
         return false;
     }
 
     delete_draft(game_id, active_player, draft_code);
     set_current_draft(game_id, active_player, "");
     Logger::instance().info("Canceled draft: " + draft_code);
-    Telemetry::write("Canceled draft: " + draft_code);
+    Telemetry::getInstance().write("Canceled draft: " + draft_code);
 
     return true;
 }

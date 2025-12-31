@@ -25,17 +25,38 @@ enum class PlayerTarget
 
 class Telemetry
 {
+  private:
+    std::vector<std::string> write_buffer;
+    
+    // Singleton
+    Telemetry() = default;
+    Telemetry(const Telemetry&) = delete;
+    Telemetry& operator=(const Telemetry&) = delete;
+    
   public:
+    static Telemetry& getInstance()
+    {
+        static Telemetry instance;
+        return instance;
+    }
+    
     // Core methods - return complete JSON response
-    static std::string write(const std::string& msg);
-    static std::string tell(PlayerTarget target, const std::string& msg);
-    static std::string broadcast(const std::string& msg);
+    std::string write(const std::string& msg);
+    std::string tell(PlayerTarget target, const std::string& msg);
+    std::string broadcast(const std::string& msg);
 
     // Status response - called by heartbeat handler
-    static void status(HttpResponse* resp);
-
-  private:
-    Telemetry() = delete;
+    void status(char player, HttpResponse* resp);
+    
+    // Message accumulation for write() - used during command execution
+    void clear_messages();
+    void add_message(const std::string& msg);
+    std::vector<std::string> get_messages();
+    
+    // Message queuing for tell/broadcast - delivered via heartbeat (DB-backed)
+    void add_tell(char player, const std::string& msg);
+    void add_broadcast(const std::string& msg);
+    std::vector<std::string> get_queued_messages(char player);
 };
 
 #endif

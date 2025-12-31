@@ -26,7 +26,7 @@ bool BuildNewCommand::invoke(void)
     if (bp <= 0)
     {
         Logger::instance().error("No Build Points available");
-        Telemetry::write("Error: No Build Points available");
+        Telemetry::getInstance().write("Error: No Build Points available");
         return false;
     }
 
@@ -34,7 +34,7 @@ bool BuildNewCommand::invoke(void)
     if (m_ship_code.empty() || m_ship_code.length() > 10)
     {
         Logger::instance().error("Invalid ship code format");
-        Telemetry::write("Error: Invalid ship code format");
+        Telemetry::getInstance().write("Error: Invalid ship code format");
         return false;
     }
 
@@ -57,14 +57,14 @@ bool BuildNewCommand::invoke(void)
     if (draft_exists(s.game_id, active_player, ship_code))
     {
         Logger::instance().error("Draft already exists: " + ship_code);
-        Telemetry::write("Error: Draft already exists: " + ship_code);
+        Telemetry::getInstance().write("Error: Draft already exists: " + ship_code);
         return false;
     }
 
     if (ship_exists(s.game_id, active_player, ship_code))
     {
         Logger::instance().error("Ship already exists: " + ship_code);
-        Telemetry::write("Error: Ship already exists: " + ship_code);
+        Telemetry::getInstance().write("Error: Ship already exists: " + ship_code);
         return false;
     }
 
@@ -79,9 +79,9 @@ bool BuildNewCommand::invoke(void)
 
     Logger::instance().info("Draft created: " + m_ship_name + " - " +
                             ship_code);
-    Telemetry::write("Draft created: " + m_ship_name + " - " + ship_code +
+    Telemetry::getInstance().write("Draft created: " + m_ship_name + " - " + ship_code +
                      " (current)");
-    Telemetry::write("Use: build set PD|B|S|T|M|SR <n>");
+    Telemetry::getInstance().write("Use: build set PD|B|S|T|M|SR <n>");
 
     return true;
 }

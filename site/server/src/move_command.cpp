@@ -29,7 +29,7 @@ bool MoveCommand::invoke(void)
     if (!ship_exists(m_game_id, active_player, m_ship_code))
     {
         Logger::instance().error("Ship not found: " + m_ship_code);
-        Telemetry::write("Error: Ship not found: " + m_ship_code);
+        Telemetry::getInstance().write("Error: Ship not found: " + m_ship_code);
         return false;
     }
 
@@ -38,14 +38,14 @@ bool MoveCommand::invoke(void)
     if (sh.attr.type != 'W')
     {
         Logger::instance().error("Only Warpships can move");
-        Telemetry::write("Error: Only Warpships can move");
+        Telemetry::getInstance().write("Error: Only Warpships can move");
         return false;
     }
 
     if (sh.attr.PD <= 0)
     {
         Logger::instance().error("Ship has PD=0 and cannot move");
-        Telemetry::write("Error: Ship has PD=0 and cannot move");
+        Telemetry::getInstance().write("Error: Ship has PD=0 and cannot move");
         return false;
     }
 
@@ -53,7 +53,7 @@ bool MoveCommand::invoke(void)
     {
         Logger::instance().error("Ship is racked and cannot move: " +
                                  sh.racked_in);
-        Telemetry::write("Error: Ship is racked and cannot move: " +
+        Telemetry::getInstance().write("Error: Ship is racked and cannot move: " +
                          sh.racked_in);
         return false;
     }
@@ -68,7 +68,7 @@ bool MoveCommand::invoke(void)
     if (startHex.empty())
     {
         Logger::instance().error("Ship is not deployed");
-        Telemetry::write("Error: Ship is not deployed");
+        Telemetry::getInstance().write("Error: Ship is not deployed");
         return false;
     }
 
@@ -89,7 +89,7 @@ bool MoveCommand::invoke(void)
     if (allowance <= 0)
     {
         Logger::instance().error("Ship has no movement remaining (PD spent)");
-        Telemetry::write("Error: Ship has no movement remaining (PD spent)");
+        Telemetry::getInstance().write("Error: Ship has no movement remaining (PD spent)");
         return false;
     }
 
@@ -157,7 +157,7 @@ bool MoveCommand::invoke(void)
     if (!errorMsg.empty())
     {
         Logger::instance().error(errorMsg);
-        Telemetry::write("Error: " + errorMsg);
+        Telemetry::getInstance().write("Error: " + errorMsg);
         return false;
     }
 
@@ -180,7 +180,7 @@ bool MoveCommand::invoke(void)
       << ") cost " << totalCost << " PD";
 
     Logger::instance().info(o.str());
-    Telemetry::write(o.str());
+    Telemetry::getInstance().write(o.str());
 
     return true;
 }
