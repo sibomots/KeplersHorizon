@@ -102,7 +102,7 @@ class GameState
     {
         std::ostringstream o;
         o << "{";
-        o << "\"gameId\":" << game_id << ",";
+        // NOTE: gameId is NOT included in state_json - it's the database primary key
         o << "\"scenario\":\"" << json_escape(scenario) << "\",";
         o << "\"round\":" << round << ",";
         o << "\"activePlayer\":\"" << active_player << "\",";
@@ -123,6 +123,7 @@ class GameState
     {
         // Minimal parse by searching for known fields; not a general parser.
         GameState s;
+        s.game_id = 0; // Will be set by load_game() from database primary key
         s.game_over = false;
         s.winner = "";
         auto get_num = [&](const std::string& k) -> int {
@@ -158,7 +159,7 @@ class GameState
                 return "";
             return js.substr(p, e - p);
         };
-        s.game_id = get_num("gameId");
+        // NOTE: gameId is NOT parsed from JSON - it comes from database primary key
         s.scenario = get_str("scenario");
         s.round = std::max(1, get_num("round"));
         s.active_player = get_str("activePlayer");

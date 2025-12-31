@@ -15,15 +15,21 @@
 
 std::string Telemetry::write(const std::string& msg)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-
+    int game_id = StateMachine::getInstance().get_game_id();
+    
     std::ostringstream o;
     o << "{";
     o << "\"ok\":true,";
-    o << "\"event\":\"" << json_escape(msg) << "\",";
-    o << "\"state\":" << s.to_json();
+    o << "\"event\":\"" << json_escape(msg) << "\"";
+    
+    // Only include state if a game has been started
+    if (game_id != 0)
+    {
+        GameState s = StateMachine::getInstance().get_game_state();
+        o << ",\"state\":" << s.to_json();
+    }
+    
     o << "}";
-
     return o.str();
 }
 
@@ -41,6 +47,19 @@ std::string Telemetry::broadcast(const std::string& msg)
 
 void Telemetry::status(HttpResponse* resp)
 {
+    int game_id = StateMachine::getInstance().get_game_id();
+    
+    // If no game has been started yet, return minimal status
+    if (game_id == 0)
+    {
+        std::ostringstream out;
+        out << "{\"ok\":true,\"state\":{\"gameId\":0,\"scenario\":\"\","
+            << "\"notes\":\"Type: start learning|basic|advanced\"}";
+        out << ",\"self\":{},\"peer\":{}}";
+        resp->body = out.str();
+        return;
+    }
+    
     GameState s = StateMachine::getInstance().get_game_state();
 
     // Build status JSON
