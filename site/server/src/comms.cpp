@@ -214,43 +214,10 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     db.exec("UPDATE sessions SET last_seen=NOW() WHERE token='" + db.esc(tok) +
             "'");
 
-    // <REWORK>
-    // This query makes no sense.  It's going to pull up the first
-    // record from games.. why?  All this is doing is pulling up
-    // the most recent  ("order by id desc")
-    //
-    // The right time to 'create a new game' in games is when the
-    // 'start learning/basic/advanced' command is used.
+    // Game ID should NOT be set here - it will be set when the user
+    // runs 'start learning/basic/advanced' command
+    a.game_id = 0;
 
-    // It's not even tied to the player who just logged in.
-
-    auto g = db.query(
-        "SELECT id,state_json,scenario FROM games ORDER BY id DESC LIMIT 1");
-    if (g.empty())
-    {
-        // create default empty game
-        GameState s;
-        s.create_empty_game();
-
-        std::string state = s.to_json();
-        std::string ins =
-            "INSERT INTO games(scenario,state_json) VALUES(NULL,'" +
-            db.esc(state) + "')";
-        db.exec(ins);
-
-        // this is where the game ID is set.  but it shouldn't be here.
-        auto r = db.query("SELECT LAST_INSERT_ID()");
-        a.game_id = std::atoi(r[0][0].c_str());
-    }
-    else
-    {
-        // this is where the game ID is acquired
-        // BUGBUG this is just going pull up the game_id of the most recent
-        // game
-        a.game_id = std::atoi(g[0][0].c_str());
-    }
-
-    // </REWORK>
     return a;
 }
 

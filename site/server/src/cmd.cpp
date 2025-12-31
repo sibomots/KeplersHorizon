@@ -60,7 +60,7 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 
     // Configure StateMachine with DB context
     // StateMachine::getInstance().set_db(db);
-    // StateMachine::getInstance().set_game_id(a.game_id);
+    StateMachine::getInstance().set_game_id(a.game_id);
 
     // Set global parser context
     // g_db = db;
@@ -77,7 +77,12 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     {
         Logger::instance().info("Command handled by parser: " + cmdline);
 
-        GameState s = StateMachine::getInstance().load_game(a.game_id);
+        // Only load game state if a game has been started
+        // (game_id will be 0 until 'start' command is run)
+        if (a.game_id != 0)
+        {
+            GameState s = StateMachine::getInstance().load_game(a.game_id);
+        }
 
         resp->body = Telemetry::write("Command executed");
 

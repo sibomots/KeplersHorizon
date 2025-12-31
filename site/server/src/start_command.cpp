@@ -41,24 +41,33 @@ bool StartCommand::invoke(void)
     GameState s =
         StateMachine::getInstance().new_game_state_for_scenario(sc_str);
 
-    // BUGBUG -- this is wrong.
-    // the "new_game_state_fpr_scenario" should make the game_id here.
-    // not from ... ?
+    // Create a new game in the database
+    std::string state = s.to_json();
+    std::string ins =
+        "INSERT INTO games(scenario,state_json) VALUES('" +
+        db.esc(sc_str) + "','" + db.esc(state) + "')";
+    db.exec(ins);
 
-    // BUGBUG:  WRONG:
-    s.game_id = m_game_id;
+    // Get the new game ID
+    auto r = db.query("SELECT LAST_INSERT_ID()");
+    int new_game_id = std::atoi(r[0][0].c_str());
+    s.game_id = new_game_id;
 
-    // Clear any existing drafts and ships
-    db.exec("DELETE FROM drafts WHERE game_id=" + std::to_string(m_game_id));
-    db.exec("DELETE FROM ships WHERE game_id=" + std::to_string(m_game_id));
-    set_current_draft(m_game_id, 'A', "");
-    set_current_draft(m_game_id, 'B', "");
+    // Set the game_id in the StateMachine so subsequent commands use it
+    StateMachine::getInstance().set_game_id(new_game_id);
+
+    // Clear any existing drafts and ships for this game
+    db.exec("DELETE FROM drafts WHERE game_id=" + std::to_string(new_game_id));
+    db.exec("DELETE FROM ships WHERE game_id=" + std::to_string(new_game_id));
+    set_current_draft(new_game_id, 'A', "");
+    set_current_draft(new_game_id, 'B', "");
 
     // Save the initialized game state
     StateMachine::getInstance().save_game(s);
 
     Logger::instance().info(
-        "Game initialized: " + sc_str + " scenario, Round " +
+        "Game initialized: " + sc_str + " scenario (game_id=" + 
+        std::to_string(new_game_id) + "), Round " +
         std::to_string(s.round) + ", Phase: " + s.phase_name() +
         ", BP A=" + std::to_string(s.bpA) + " B=" + std::to_string(s.bpB));
 
@@ -70,3 +79,4 @@ bool StartCommand::invoke(void)
 
     return true;
 }
+
