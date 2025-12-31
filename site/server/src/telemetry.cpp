@@ -53,8 +53,17 @@ void Telemetry::status(HttpResponse* resp)
     if (game_id == 0)
     {
         std::ostringstream out;
-        out << "{\"ok\":true,\"state\":{\"gameId\":0,\"scenario\":\"\","
-            << "\"notes\":\"Type: start learning|basic|advanced\"}";
+        out << "{\"ok\":true,\"state\":{"
+            << "\"gameId\":0,"
+            << "\"scenario\":\"\","
+            << "\"round\":0,"
+            << "\"activePlayer\":\"\","
+            << "\"phaseIndex\":0,"
+            << "\"phase\":\"\","
+            << "\"vp\":{\"A\":0,\"B\":0},"
+            << "\"bp\":{\"A\":0,\"B\":0},"
+            << "\"notes\":\"Type: start learning|basic|advanced\""
+            << "}";
         out << ",\"self\":{},\"peer\":{}}";
         resp->body = out.str();
         return;
