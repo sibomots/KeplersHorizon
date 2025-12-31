@@ -254,7 +254,7 @@ class StateMachine
 
     } PlayerState;
 
-    struct Data
+    typedef struct
     {
         PlayerState state = PlayerState::INVALID;
         Player initiative = Player::NOPLAYER;
@@ -267,8 +267,16 @@ class StateMachine
         bool pending_build_commit = false;
         bool pending_build_cancel = false;
         bool pending_build_list_drafts = false;
-        std::string pending_build_show_draft = "";
+        std::string pending_build_show_draft;
+        std::string pending_build_draft;
         AttributeMap pending_build_attributes; // For build set command
+
+        // Repair/Resupply Phase properties
+        std::string pending_repair_ship;
+        std::string pending_repair_attribute;
+        int pending_repair_amount = 0;
+        std::string pending_resupply_ship;
+        int pending_resupply_missiles = 0;
     } Data;
 
   public:

@@ -102,17 +102,12 @@
   function renderStatus() {
     const st = S.state;
 
-    setText("stUser", S.username || "-");
-
+    // Peer info (kept for internal use, no longer displayed)
     const peer = S.peer;
-    setText("stPeer", peer ? (peer.username + " (" + peer.owner + ")") : "-");
-    setText("stPeerOnline", peer ? (peer.online ? ("yes (seen " + peer.last_seen + ")") :
-      (peer.last_seen ? ("no (last " + peer.last_seen + ")") : "no")) : "-");
     const peerPhase = (st && peer) ? ((st.activePlayer === peer.owner) ? st.phase : "waiting") : "-";
-    setText("stPeerPhase", peerPhase);
 
+    // Basic state fields (GameId, Round, etc. still displayed)
     setText("stGameId", st ? String(st.gameId) : "-");
-    setText("stScenario", st ? (st.scenario || "(none)") : "-");
     setText("stRound", st ? String(st.round) : "-");
     setText("stPlayer", st ? st.activePlayer : "-");
     setText("stPhase", st ? st.phase : "-");
@@ -122,11 +117,53 @@
     const selfBp = st ? (selfOwner === "A" ? st.bp.A : st.bp.B) : "-";
     setText("stBP", st ? (selfOwner + ":" + selfBp) : "-");
 
-    const note = st ? (st.notes || "") : "";
-    const peerSummary = peer ? ("Peer: " + peer.username + " (" + peer.owner + ") " +
-      (peer.online ? ("ONLINE (seen " + peer.last_seen + ")") :
-        (peer.last_seen ? ("offline (last " + peer.last_seen + ")") : "offline"))) : "";
-    setText("stNotes", note + (peerSummary ? (" | " + peerSummary) : ""));
+    // Bug 5: Update console title with player and scenario
+    const elTitle = $("consoleTitle");
+    if (elTitle) {
+      const scenario = (st && st.scenario) ? st.scenario : "";
+      const playerName = S.username || "Player";
+      if (scenario) {
+        elTitle.textContent = "Player " + playerName + " Main Console - Scenario: " + scenario;
+      } else {
+        elTitle.textContent = "Player " + playerName + " Main Console";
+      }
+    }
+
+    // Bug 3: Turn status indicator (green = your turn, yellow = opponent's turn)
+    const elTurn = $("turnStatus");
+    if (elTurn) {
+      const isYourTurn = st && S.self && (st.activePlayer === S.self.owner);
+      if (st && st.scenario) {
+        if (isYourTurn) {
+          elTurn.textContent = "Your Turn";
+          elTurn.style.backgroundColor = "rgba(110, 231, 183, 0.25)";
+          elTurn.style.color = "var(--good)";
+        } else {
+          const oppName = (peer && peer.username) ? peer.username : "Opponent";
+          elTurn.textContent = oppName + "'s Turn";
+          elTurn.style.backgroundColor = "rgba(250, 204, 21, 0.25)";
+          elTurn.style.color = "#facc15";
+        }
+      } else {
+        elTurn.textContent = "--";
+        elTurn.style.backgroundColor = "transparent";
+        elTurn.style.color = "var(--muted)";
+      }
+    }
+
+    // Bug 4: Peer online status indicator
+    const elPeerOnline = $("peerOnlineStatus");
+    if (elPeerOnline) {
+      if (peer && peer.online) {
+        elPeerOnline.textContent = peer.username + " is online";
+        elPeerOnline.style.backgroundColor = "rgba(110, 231, 183, 0.25)";
+        elPeerOnline.style.color = "var(--good)";
+      } else {
+        elPeerOnline.textContent = "Waiting for opponent";
+        elPeerOnline.style.backgroundColor = "rgba(250, 204, 21, 0.15)";
+        elPeerOnline.style.color = "#facc15";
+      }
+    }
 
     const stCmb = $("statusCombat");
     const elSensor = $("sensorStatus");
@@ -154,18 +191,15 @@
         text = "⚠️ COMBAT ACTIVE";
         color = "var(--bad)";
         bg = "rgba(251, 113, 133, 0.15)";
-      } else {
+      } else if (st && st.ships && Array.isArray(st.ships)) {
         // Enemy Check
-        const selfOwner = (S.self && S.self.owner) ? S.self.owner : "?";
-        // Basic check: if 'ships' array exists in state and contains other owner
-        if (st.ships && Array.isArray(st.ships)) {
-          for (let i = 0; i < st.ships.length; i++) {
-            if (st.ships[i].owner !== selfOwner) {
-              text = "⚠️ ENEMY DETECTED";
-              color = "#facc15";
-              bg = "rgba(250, 204, 21, 0.15)";
-              break;
-            }
+        const checkOwner = (S.self && S.self.owner) ? S.self.owner : "?";
+        for (let i = 0; i < st.ships.length; i++) {
+          if (st.ships[i].owner !== checkOwner) {
+            text = "⚠️ ENEMY DETECTED";
+            color = "#facc15";
+            bg = "rgba(250, 204, 21, 0.15)";
+            break;
           }
         }
       }
@@ -260,6 +294,28 @@
     }
   }
 
+  function handleHeartbeatCommand(cmd) {
+    const parts = cmd.trim().toLowerCase().split(/\s+/);
+    if (parts[0] !== "hb") return false;
+
+    const mode = parts[1] || "";
+    if (mode === "normal") {
+      S.hbMode = "normal";
+      appendLine("Heartbeat: normal (3s interval)", "line-good");
+      return true;
+    } else if (mode === "off") {
+      S.hbMode = "off";
+      appendLine("Heartbeat: off", "line-muted");
+      return true;
+    } else if (mode === "shot") {
+      appendLine("Heartbeat: one-shot", "line-muted");
+      apiFetchState().catch(() => { });
+      return true;
+    }
+    appendLine("Usage: hb normal | hb off | hb shot", "line-bad");
+    return true;
+  }
+
   // Export
   window.KEPLERHORIZON.behavior = {
     appendLine: appendLine,
@@ -267,7 +323,8 @@
     apiLogout: apiLogout,
     apiFetchState: apiFetchState,
     apiCommand: apiCommand,
-    toggleMapView: toggleMapView
+    toggleMapView: toggleMapView,
+    handleHeartbeatCommand: handleHeartbeatCommand
   };
 
 })();

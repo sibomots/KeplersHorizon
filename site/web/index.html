@@ -246,8 +246,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <div class="main">
       <section class="panel">
         <h2>
-          <span>Main Console</span>
-          <span class="line-muted">TBD for status</span>
+          <span id="consoleTitle">Main Console</span>
+          <span id="turnStatus" style="padding:2px 10px; border-radius:6px; font-size:12px;">--</span>
         </h2>
 
         <div class="viewport">
@@ -266,15 +266,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       </section>
 
       <section class="panel">
-        <h2>Telemetry</h2>
+        <h2>
+          <span>Telemetry</span>
+          <span id="peerOnlineStatus" style="padding:2px 10px; border-radius:6px; font-size:12px;">--</span>
+        </h2>
         <div class="statusBody">
           <div class="kv">
-            <div class="k">User</div>
-            <div class="v" id="stUser">-</div>
             <div class="k">GameId</div>
             <div class="v" id="stGameId">-</div>
-            <div class="k">Scenario</div>
-            <div class="v" id="stScenario">-</div>
             <div class="k">Round</div>
             <div class="v" id="stRound">-</div>
             <div class="k">Player</div>
@@ -285,8 +284,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <div class="v" id="stVP">-</div>
             <div class="k">BP</div>
             <div class="v" id="stBP">-</div>
-            <div class="k">Notes</div>
-            <div class="v line-muted" id="stNotes">-</div>
           </div>
 
           <div id="statusCombat" class="kv"

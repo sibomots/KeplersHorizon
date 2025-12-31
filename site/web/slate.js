@@ -38,5 +38,7 @@ window.KEPLERHORIZON.slate = {
   token: "",
   username: "",
   state: null,
-  viewMode: "log" // "log" | "map"
+  viewMode: "log", // "log" | "map"
+  hbMode: "normal", // "normal" | "off"
+  hbIntervalMs: 3000
 };

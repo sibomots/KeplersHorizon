@@ -48,26 +48,27 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
   }
 
   function wire() {
-   // Periodic state polling so peer 
-   // presence / phase updates show without user commands.
+    // Periodic state polling so peer 
+    // presence / phase updates show without user commands.
+    // Respects S.hbMode: "normal" = poll, "off" = no poll
 
-   if (!window.__khPollTimer) {
+    if (!window.__khPollTimer) {
       window.__khPollTimer = setInterval(async () => {
-          try {
-            const B = window.KEPLERHORIZON
-                     && window.KEPLERHORIZON.behavior
-                      ? window.KEPLERHORIZON.behavior : null;
-            const S = window.KEPLERHORIZON
-                     && window.KEPLERHORIZON.slate
-                      ? window.KEPLERHORIZON.slate : null;
-            if (B && S && S.token) {
+        try {
+          const B = window.KEPLERHORIZON
+            && window.KEPLERHORIZON.behavior
+            ? window.KEPLERHORIZON.behavior : null;
+          const S = window.KEPLERHORIZON
+            && window.KEPLERHORIZON.slate
+            ? window.KEPLERHORIZON.slate : null;
+          if (B && S && S.token && S.hbMode === "normal") {
             await B.apiFetchState();
-            }
-            } catch (e) {
-                 // ignore transient polling errors
-            }
+          }
+        } catch (e) {
+          // ignore transient polling errors
+        }
       }, 3000);
-   }
+    }
 
 
     const inp = document.getElementById("commandInput");
@@ -77,17 +78,24 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     const btnMap = document.getElementById("btnMap");
 
     btnLogin.addEventListener("click", promptLogin);
-    btnLogout.addEventListener("click", () => B.apiLogout().catch(() => {}));
+    btnLogout.addEventListener("click", () => B.apiLogout().catch(() => { }));
     btnMap.addEventListener("click", () => B.toggleMapView());
 
     async function runCmd() {
       const cmd = inp.value.trim();
       if (!cmd) {
-         return;
+        return;
       }
 
       B.appendLine(`> ${cmd}`, "");
       inp.value = "";
+
+      // Intercept heartbeat commands (client-side only)
+      if (cmd.toLowerCase().startsWith("hb ") || cmd.toLowerCase() === "hb") {
+        B.handleHeartbeatCommand(cmd);
+        return;
+      }
+
       try {
         await B.apiCommand(cmd);
       } catch (e) {
