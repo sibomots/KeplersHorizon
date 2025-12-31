@@ -2,3 +2,4 @@ priv/**
 upload/**
 site/server/build
 site/server/_build
+site/db/reset.sh
