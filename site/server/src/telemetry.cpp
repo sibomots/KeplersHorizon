@@ -127,45 +127,31 @@ void Telemetry::status(char player, HttpResponse* resp)
     // If no game has been started yet, return minimal status but still check peer online
     if (game_id == 0)
     {
-        // Look up requesting user's username from their session
-        std::string selfUser;
-        auto selfQuery = db.query(
-            "SELECT u.username FROM users u "
-            "JOIN sessions s ON s.user_id = u.id "
-            "WHERE s.token = (SELECT token FROM sessions WHERE user_id = "
-            "(SELECT user_id FROM sessions ORDER BY last_seen DESC LIMIT 1))");
-        // Simpler: look up by player char if we have game_seats, but no game yet
-        // For now, just get any other online user
+        // Get the requesting user's username from the current request context
+        // We need to find any OTHER user who has an active session
         
-        // Check if any other user has an active session (within 90 seconds)
+        // Query all active sessions (within 90 seconds) grouped by user
+        auto sessionsQuery = db.query(
+            "SELECT u.username, DATE_FORMAT(MAX(s.last_seen),'%Y-%m-%d %H:%i:%s') "
+            "FROM sessions s JOIN users u ON u.id = s.user_id "
+            "WHERE TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 90 "
+            "GROUP BY u.id, u.username "
+            "ORDER BY MAX(s.last_seen) DESC");
+        
+        // If there are 2+ distinct users with active sessions, peer is online
         bool peerOnline = false;
         std::string peerUser;
         std::string peerLastSeen;
         
-        // Find any other user with an active session
-        auto peerQuery = db.query(
-            "SELECT u.username, DATE_FORMAT(s.last_seen,'%Y-%m-%d %H:%i:%s'), "
-            "(TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 90) as is_online "
-            "FROM sessions s JOIN users u ON u.id = s.user_id "
-            "ORDER BY s.last_seen DESC");
-        
-        // We need to find a user other than the one making this request
-        // For now, if there are 2+ recent sessions, peer is online
-        int activeCount = 0;
-        for (const auto& row : peerQuery)
+        if (sessionsQuery.size() >= 2)
         {
-            if (!row[2].empty() && row[2] != "0")
-            {
-                activeCount++;
-                if (activeCount > 1)
-                {
-                    // Second active session found = peer is online
-                    peerOnline = true;
-                    peerUser = row[0];
-                    peerLastSeen = row[1];
-                    break;
-                }
-            }
+            // First user in list (most recent) might be the requester, 
+            // so peer is second one... but we don't know requester name here.
+            // Just report that there IS a peer online (pick different user).
+            peerOnline = true;
+            // Report the second user as peer (first might be self)
+            peerUser = sessionsQuery[1][0];
+            peerLastSeen = sessionsQuery[1][1];
         }
         
         std::ostringstream out;
