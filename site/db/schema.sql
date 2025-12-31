@@ -225,3 +225,16 @@ CREATE TABLE IF NOT EXISTS combat_orders (
   FOREIGN KEY (game_id) REFERENCES games(id),
   FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code)
 );
+
+-- Telemetry queue for tell/broadcast messages
+CREATE TABLE IF NOT EXISTS telemetry_queue (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  game_id INT NOT NULL,
+  target_player ENUM('A', 'B', 'BOTH') NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (game_id) REFERENCES games(id),
+  INDEX (game_id, target_player)
+);
+
+
