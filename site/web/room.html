@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kepler's Horizon - Room</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --accent: #3b82f6;
+            --good: #6ee7b7;
+            --bad: #fb7185;
+            --muted: #94a3b8;
+            --text: #f1f5f9;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        .room-card {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            padding: 2rem;
+        }
+
+        .room-code-display {
+            font-family: monospace;
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-align: center;
+            letter-spacing: 0.5rem;
+            margin: 1rem 0;
+            cursor: pointer;
+        }
+
+        .room-code-display:hover {
+            color: #60a5fa;
+        }
+
+        .room-name {
+            text-align: center;
+            color: var(--muted);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .seat-card {
+            background: var(--bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .seat-card.filled {
+            border-color: var(--good);
+        }
+
+        .seat-card.empty {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .seat-card.you {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .seat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .seat-name {
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .seat-name.waiting {
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-primary:disabled {
+            background: var(--muted);
+        }
+
+        .btn-outline-danger {
+            border-color: var(--bad);
+            color: var(--bad);
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--bad);
+            color: var(--bg);
+        }
+
+        .form-select {
+            background-color: var(--bg);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text);
+        }
+
+        .form-select:focus {
+            background-color: var(--bg);
+            border-color: var(--accent);
+            color: var(--text);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+        }
+
+        .status-text {
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .status-waiting {
+            color: var(--muted);
+        }
+
+        .status-ready {
+            color: var(--good);
+        }
+
+        .copy-hint {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="room-card">
+        <h4 class="text-center mb-0">Room</h4>
+        <div class="room-code-display" id="roomCode" title="Click to copy">------</div>
+        <div class="copy-hint">Click code to copy</div>
+        <div class="room-name" id="roomName">Loading...</div>
+
+        <div class="row">
+            <div class="col-6">
+                <div class="seat-card" id="seatA">
+                    <div class="seat-label">Player A</div>
+                    <div class="seat-name waiting" id="seatAName">Waiting...</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="seat-card" id="seatB">
+                    <div class="seat-label">Player B</div>
+                    <div class="seat-name waiting" id="seatBName">Waiting...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label text-muted small">Scenario</label>
+            <select class="form-select" id="scenarioSelect">
+                <option value="learning">Learning</option>
+                <option value="basic" selected>Basic</option>
+                <option value="advanced">Advanced</option>
+            </select>
+        </div>
+
+        <div class="status-text" id="statusText">
+            <span class="status-waiting">Waiting for opponent...</span>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary btn-lg" id="btnStart" disabled>Start Game</button>
+            <button class="btn btn-outline-danger" id="btnLeave">Leave Room</button>
+        </div>
+    </div>
+
+    <script src="room.js"></script>
+</body>
+
+</html>

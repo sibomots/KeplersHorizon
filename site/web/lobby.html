@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kepler's Horizon - Lobby</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --accent: #3b82f6;
+            --good: #6ee7b7;
+            --bad: #fb7185;
+            --muted: #94a3b8;
+            --text: #f1f5f9;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif;
+            padding: 2rem;
+        }
+
+        .navbar {
+            background: var(--panel);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+
+        .navbar-brand {
+            color: var(--accent) !important;
+            font-weight: 600;
+        }
+
+        .nav-text {
+            color: var(--muted);
+            margin-right: 1rem;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table {
+            color: var(--text);
+            margin-bottom: 0;
+        }
+
+        .table th {
+            border-color: rgba(255, 255, 255, 0.1);
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .table td {
+            border-color: rgba(255, 255, 255, 0.1);
+            vertical-align: middle;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-outline-light {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text);
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .online-badge {
+            background: var(--good);
+            color: var(--bg);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .form-control {
+            background: var(--bg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text);
+        }
+
+        .form-control:focus {
+            background: var(--bg);
+            border-color: var(--accent);
+            color: var(--text);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--muted);
+        }
+
+        .room-code {
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .seats-display {
+            font-size: 0.875rem;
+        }
+
+        .seats-display .filled {
+            color: var(--good);
+        }
+
+        .seats-display .empty {
+            color: var(--muted);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand px-3">
+        <span class="navbar-brand">Kepler's Horizon</span>
+        <div class="ms-auto d-flex align-items-center">
+            <span class="nav-text">
+                <span id="onlineCount">0</span> online
+            </span>
+            <span class="nav-text">
+                Logged in as <strong id="username">-</strong>
+            </span>
+            <button class="btn btn-sm btn-outline-light" id="btnLogout">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row g-4">
+            <!-- Room List -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header py-3 px-4">
+                        <h5 class="mb-0">Open Rooms</h5>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createModal">
+                            + Create Room
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="roomList">
+                            <div class="empty-state">
+                                <p>No open rooms</p>
+                                <p class="small">Create one or join by code</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Join by Code -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header py-3 px-4">
+                        <h5 class="mb-0">Join by Code</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="joinCode" placeholder="Enter room code"
+                                maxlength="6">
+                            <button class="btn btn-primary" id="btnJoinCode">Join</button>
+                        </div>
+                        <div id="joinError" class="text-danger small mt-2 d-none"></div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header py-3 px-4">
+                        <h5 class="mb-0">Your Room</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="yourRoom" class="text-center text-muted">
+                            Not in a room
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Room Modal -->
+    <div class="modal fade" id="createModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--panel); color: var(--text);">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title">Create Room</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Room Name</label>
+                        <input type="text" class="form-control" id="roomName" placeholder="My Game Room" maxlength="64">
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnCreateRoom">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="lobby.js"></script>
+</body>
+
+</html>

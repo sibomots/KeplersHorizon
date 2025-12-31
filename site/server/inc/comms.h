@@ -45,4 +45,12 @@ void dispatch_request(const HttpRequest* req, HttpResponse* resp);
 HttpRequest http_parse(int fd);
 bool authenticated(const HttpRequest* req, HttpResponse* resp);
 
+// Account handlers (account.cpp)
+void handle_login(const HttpRequest* req, HttpResponse* resp);
+void handle_logout(const HttpRequest* req, HttpResponse* resp);
+void handle_register(const HttpRequest* req, HttpResponse* resp);
+
+// Room handlers (rooms_api.cpp)
+void handle_rooms(const HttpRequest* req, HttpResponse* resp);
+
 #endif

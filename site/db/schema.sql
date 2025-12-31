@@ -41,7 +41,9 @@ USE khdb;
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(64) NOT NULL UNIQUE,
-  password_plain VARCHAR(128) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  password_plain VARCHAR(128),          -- Legacy, to be removed after migration
+  password_hash VARCHAR(255),           -- bcrypt hash
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -49,6 +51,26 @@ CREATE TABLE IF NOT EXISTS users (
 INSERT IGNORE INTO users(username,password_plain) VALUES
 ('alice','alicepw'),
 ('bob','bobpw');
+
+-- Rooms for multiplayer lobby
+CREATE TABLE IF NOT EXISTS rooms (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  room_code VARCHAR(8) NOT NULL UNIQUE,
+  name VARCHAR(64),
+  created_by INT NOT NULL,
+  seat_a INT DEFAULT NULL,
+  seat_b INT DEFAULT NULL,
+  game_id INT DEFAULT NULL,
+  status ENUM('waiting', 'ready', 'playing', 'finished') DEFAULT 'waiting',
+  scenario VARCHAR(16) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id),
+  FOREIGN KEY (seat_a) REFERENCES users(id),
+  FOREIGN KEY (seat_b) REFERENCES users(id),
+  INDEX (status),
+  INDEX (room_code)
+);
 
 CREATE TABLE IF NOT EXISTS sessions (
   token CHAR(64) PRIMARY KEY,
@@ -61,11 +83,24 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE TABLE IF NOT EXISTS games (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  room_id INT DEFAULT NULL,
   scenario VARCHAR(16) DEFAULT NULL,
   state_json MEDIUMTEXT NOT NULL,
   current_draft_A VARCHAR(4) DEFAULT NULL,
   current_draft_B VARCHAR(4) DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (room_id) REFERENCES rooms(id)
+);
+
+-- Maps users to game seats (A or B)
+CREATE TABLE IF NOT EXISTS game_seats (
+  game_id INT NOT NULL,
+  user_id INT NOT NULL,
+  seat CHAR(1) NOT NULL,
+  PRIMARY KEY (game_id, seat),
+  UNIQUE KEY uniq_user_game (game_id, user_id),
+  FOREIGN KEY (game_id) REFERENCES games(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS game_events (

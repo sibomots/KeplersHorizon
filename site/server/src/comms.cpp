@@ -21,6 +21,11 @@ void dispatch_request(const HttpRequest* req, HttpResponse* resp)
         handle_login(req, resp);
         return;
     }
+    else if (req->path == "/api/register")
+    {
+        handle_register(req, resp);
+        return;
+    }
     else if (req->path == "/api/logout")
     {
         handle_logout(req, resp);
@@ -40,6 +45,11 @@ void dispatch_request(const HttpRequest* req, HttpResponse* resp)
     {
         // Optional: events for console persistence
         handle_events(req, resp);
+        return;
+    }
+    else if (req->path == "/api/rooms" || starts_with(req->path, "/api/rooms/"))
+    {
+        handle_rooms(req, resp);
         return;
     }
     else

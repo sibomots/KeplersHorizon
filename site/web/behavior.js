@@ -88,12 +88,12 @@
   function setLoginBadge() {
     const b = $("loginBadge");
     if (!b) return;
-    if (S && S.token) {
-      b.textContent = "LOGGED IN";
+    if (S && S.token && S.username) {
+      b.textContent = S.username;
       b.classList.remove("bad");
       b.classList.add("good");
     } else {
-      b.textContent = "LOGGED OUT";
+      b.textContent = "not logged in";
       b.classList.remove("good");
       b.classList.add("bad");
     }

@@ -64,6 +64,8 @@ src/move_command.cpp
 src/next_command.cpp
 src/repair_command.cpp
 src/resupply_command.cpp
+src/roommanager.cpp
+src/rooms_api.cpp
 src/srvmgr.cpp
 src/start_command.cpp
 src/state.cpp
@@ -103,6 +105,7 @@ inc/move_command.h
 inc/next_command.h
 inc/repair_command.h
 inc/resupply_command.h
+inc/roommanager.h
 inc/ships.h
 inc/srvmgr.h
 inc/start_command.h

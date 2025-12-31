@@ -36,31 +36,39 @@
 window.KEPLERHORIZON = window.KEPLERHORIZON || {};
 (function () {
   const B = window.KEPLERHORIZON.behavior;
+  const S = window.KEPLERHORIZON.slate;
 
-  function promptLogin() {
-    const u = prompt("Username:", "alice");
-    if (u === null) return;
-    const p = prompt("Password:", "alicepw");
-    if (p === null) return;
-    B.apiLogin(u, p)
-      .then(() => B.apiFetchState())
-      .catch(e => B.appendLine(`Login error: ${e.message}`, "line-bad"));
+  function checkAuth() {
+    const token = localStorage.getItem('kh_token');
+    const username = localStorage.getItem('kh_username');
+
+    if (!token || !username) {
+      window.location.href = 'index.html';
+      return false;
+    }
+
+    // Load token into slate for API calls
+    S.token = token;
+    S.username = username;
+    return true;
+  }
+
+  function exitToLobby() {
+    window.location.href = 'lobby.html';
   }
 
   function wire() {
-    // Periodic state polling so peer 
-    // presence / phase updates show without user commands.
-    // Respects S.hbMode: "normal" = poll, "off" = no poll
+    // Check authentication first
+    if (!checkAuth()) return;
 
+    // Update login badge with username
+    const badge = document.getElementById('loginBadge');
+    if (badge) badge.textContent = S.username;
+
+    // Periodic state polling
     if (!window.__khPollTimer) {
       window.__khPollTimer = setInterval(async () => {
         try {
-          const B = window.KEPLERHORIZON
-            && window.KEPLERHORIZON.behavior
-            ? window.KEPLERHORIZON.behavior : null;
-          const S = window.KEPLERHORIZON
-            && window.KEPLERHORIZON.slate
-            ? window.KEPLERHORIZON.slate : null;
           if (B && S && S.token && S.hbMode === "normal") {
             await B.apiFetchState();
           }
@@ -70,16 +78,13 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
       }, 3000);
     }
 
-
     const inp = document.getElementById("commandInput");
     const send = document.getElementById("btnSend");
-    const btnLogin = document.getElementById("btnLogin");
-    const btnLogout = document.getElementById("btnLogout");
+    const btnLobby = document.getElementById("btnLobby");
     const btnMap = document.getElementById("btnMap");
 
-    btnLogin.addEventListener("click", promptLogin);
-    btnLogout.addEventListener("click", () => B.apiLogout().catch(() => { }));
-    btnMap.addEventListener("click", () => B.toggleMapView());
+    if (btnLobby) btnLobby.addEventListener("click", exitToLobby);
+    if (btnMap) btnMap.addEventListener("click", () => B.toggleMapView());
 
     async function runCmd() {
       const cmd = inp.value.trim();
@@ -109,7 +114,10 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     });
 
     B.appendLine("Kepler's Horizon client loaded.", "line-muted");
-    B.appendLine("Login to begin. Demo: alice/alicepw, bob/bobpw.", "line-muted");
+    B.appendLine("Type 'help' for commands.", "line-muted");
+
+    // Fetch initial state
+    B.apiFetchState().catch(() => { });
   }
 
   window.addEventListener("DOMContentLoaded", wire);
