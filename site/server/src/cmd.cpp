@@ -77,11 +77,22 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     {
         Logger::instance().info("Command handled by parser: " + cmdline);
 
+        // Check if game_id changed (e.g., after 'start' command)
+        int new_game_id = StateMachine::getInstance().get_game_id();
+        if (new_game_id != a.game_id)
+        {
+            // Update session with new game_id
+            DatabaseManager& db = DatabaseManager::getInstance();
+            db.exec("UPDATE sessions SET game_id=" + std::to_string(new_game_id) +
+                    " WHERE token='" + db.esc(a.token) + "'");
+            Logger::instance().info("Updated session game_id to " + std::to_string(new_game_id));
+        }
+
         // Only load game state if a game has been started
         // (game_id will be 0 until 'start' command is run)
-        if (a.game_id != 0)
+        if (new_game_id != 0)
         {
-            GameState s = StateMachine::getInstance().load_game(a.game_id);
+            GameState s = StateMachine::getInstance().load_game(new_game_id);
         }
 
         resp->body = Telemetry::write("Command executed");

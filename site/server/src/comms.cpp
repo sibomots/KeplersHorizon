@@ -195,7 +195,7 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     }
 
     std::string q =
-        "SELECT s.user_id,u.username FROM sessions s JOIN users u ON "
+        "SELECT s.user_id,u.username,COALESCE(s.game_id,0) FROM sessions s JOIN users u ON "
         "u.id=s.user_id WHERE s.token='" +
         db.esc(tok) + "'";
     auto rows = db.query(q);
@@ -207,16 +207,13 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     }
     a.user_id = std::atoi(rows[0][0].c_str());
     a.username = rows[0][1];
+    a.game_id = std::atoi(rows[0][2].c_str()); // Load game_id from session
     a.token = tok;
     a.player = owner_for_username(a.username);
 
     // heartbeat
     db.exec("UPDATE sessions SET last_seen=NOW() WHERE token='" + db.esc(tok) +
             "'");
-
-    // Game ID should NOT be set here - it will be set when the user
-    // runs 'start learning/basic/advanced' command
-    a.game_id = 0;
 
     return a;
 }
