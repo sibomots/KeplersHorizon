@@ -1,4 +1,0 @@
-build --cxxopt=-std=c++17
-build --cxxopt=-O0
-build --cxxopt=-g
-build --cxxopt=-pedantic

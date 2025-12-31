@@ -31,55 +31,101 @@ add_definitions(-DGIT_SHA="${GIT_SHA}")
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
-# Generate parser files (must be done before add_subdirectory)
-BISON_TARGET(Parser 
-    ${CMAKE_CURRENT_SOURCE_DIR}/app/parser/lang.y 
-    ${CMAKE_CURRENT_BINARY_DIR}/app/parser/lang.cpp 
-    COMPILE_FLAGS "-d -v -g"
-)
-FLEX_TARGET(Scanner 
-    ${CMAKE_CURRENT_SOURCE_DIR}/app/parser/scan.lex 
-    ${CMAKE_CURRENT_BINARY_DIR}/app/parser/scan.cpp
-)
+BISON_TARGET(Parser src/lang.y ${CMAKE_CURRENT_BINARY_DIR}/lang.cpp COMPILE_FLAGS "-d -v -g")
+FLEX_TARGET(Scanner src/scan.lex ${CMAKE_CURRENT_BINARY_DIR}/scan.cpp)
 ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
-# Include subdirectories to collect sources
-add_subdirectory(app/inc)
-add_subdirectory(app/internal)
-add_subdirectory(app/ships)
-add_subdirectory(app/movement)
-add_subdirectory(app/combat)
-add_subdirectory(app/repres)
-add_subdirectory(app/map)
 
-# Combine all sources
-set(ALL_SRCS
-    ${INTERNAL_SRCS}
-    ${BISON_Parser_OUTPUTS}
-    ${FLEX_Scanner_OUTPUTS}
-    ${SHIPS_SRCS}
-    ${MOVEMENT_SRCS}
-    ${COMBAT_SRCS}
-    ${REPRES_SRCS}
-    ${MAP_SRCS}
+# Source files
+set(SRCS
+src/account.cpp
+src/build_cancel_command.cpp
+src/build_command.cpp
+src/build_commit_command.cpp
+src/build_list_drafts_command.cpp
+src/build_new_command.cpp
+src/build_set_attribute_command.cpp
+src/build_show_draft_command.cpp
+src/cmd.cpp
+src/combat.cpp
+src/comms.cpp
+src/db.cpp
+src/deploy_command.cpp
+src/done_command.cpp
+src/events.cpp
+src/ships.cpp
+src/init.cpp
+src/json.cpp
+src/logger.cpp
+src/main.cpp
+src/mapgraph.cpp
+src/maputil.cpp
+src/move_command.cpp
+src/next_command.cpp
+src/repair_command.cpp
+src/resupply_command.cpp
+src/srvmgr.cpp
+src/start_command.cpp
+src/state.cpp
+src/statemachine.cpp
+src/telemetry.cpp
+src/util.cpp
+${BISON_Parser_OUTPUTS}
+${FLEX_Scanner_OUTPUTS}
 )
 
-# Create executable
+# Header files (not required for build, but useful for IDEs)
+set(HDRS
+inc/app.h
+inc/build_cancel_command.h
+inc/build_command.h
+inc/build_commit_command.h
+inc/build_list_drafts_command.h
+inc/build_new_command.h
+inc/build_set_attribute_command.h
+inc/build_show_draft_command.h
+inc/cmd.h
+inc/combat.h
+inc/comms.h
+inc/db.h
+inc/deploy_command.h
+inc/done_command.h
+inc/events.h
+inc/flavor_events.h
+inc/ships.h
+inc/icmd.h
+inc/init.h
+inc/json.h
+inc/logger.h
+inc/mapgraph.h
+inc/maputil.h
+inc/move_command.h
+inc/next_command.h
+inc/repair_command.h
+inc/resupply_command.h
+inc/ships.h
+inc/srvmgr.h
+inc/start_command.h
+inc/state.h
+inc/statemachine.h
+inc/telemetry.h
+inc/typedefs.h
+inc/util.h
+)
+
 add_executable(kh
-    ${ALL_SRCS}
-    ${INC_HDRS}
+    ${SRCS}
+    ${HDRS}
 )
 
 # Make headers visible to all source files
 target_include_directories(kh
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/app/inc
-        ${CMAKE_CURRENT_BINARY_DIR}/app/parser
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
 # Link MySQL client (exact Makefile equivalent)
 target_link_libraries(kh
     mysqlclient
 )
-
 
