@@ -134,7 +134,7 @@ void Telemetry::status(char player, HttpResponse* resp)
         auto sessionsQuery = db.query(
             "SELECT u.username, DATE_FORMAT(MAX(s.last_seen),'%Y-%m-%d %H:%i:%s') "
             "FROM sessions s JOIN users u ON u.id = s.user_id "
-            "WHERE TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 90 "
+            "WHERE TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 6 "
             "GROUP BY u.id, u.username "
             "ORDER BY MAX(s.last_seen) DESC");
         
@@ -234,7 +234,7 @@ void Telemetry::status(char player, HttpResponse* resp)
     {
         oppLastSeen = prow[0][0];
         auto prow2 =
-            db.query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
+            db.query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6) "
                      "FROM sessions s JOIN users u ON u.id=s.user_id "
                      "WHERE u.username='" +
                      db.esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
