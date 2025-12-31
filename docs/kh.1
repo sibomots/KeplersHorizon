@@ -1,0 +1,582 @@
+.TH KEPLER'S_HORIZON 1 "2025-12-31" "Version 1.0" "Kepler's Horizon Command Reference"
+.SH NAME
+kepler \- two-player tactical space combat game command interface
+.SH SYNOPSIS
+.B kepler
+[\fIcommand\fR [\fIarguments\fR...]]
+.SH DESCRIPTION
+Kepler's Horizon is a two-player tactical game of space combat where players build individualized ships, move them across a hex-based star map, and resolve combat without dice. The objective is to occupy opponent base star hexes and accumulate victory points.
+
+This manual describes all available commands in the Kepler's Horizon command language as defined by the game grammar.
+
+.SH GAME OVERVIEW
+.SS Map Components
+.TP
+.B StarHex
+A map hex containing a large or small star (graph node)
+.TP
+.B BaseStarHex
+A map hex containing a large star (6 total: 3 per player)
+.TP
+.B SpaceHex
+A map hex without a star or warpline
+.TP
+.B WarpLine
+Bi-directional edges connecting stars for instantaneous travel
+
+.SS Ship Types
+.TP
+.B WarpShip (W#)
+Ships capable of interstellar travel via warplines
+.TP
+.B SystemShip (S##)
+Ships that cannot travel between stars unless carried by WarpShips
+
+.SH GAME SEQUENCE
+Each player-turn consists of the following phases in order:
+.PP
+.RS
+1. Count Victory Points
+.br
+2. Build Ships (receive BP in Advanced scenario)
+.br
+3. Movement
+.br
+4. Resolve Combat
+.br
+5. SystemShip Pick and Drop
+.br
+6. End of Turn
+.RE
+
+.SH SCENARIOS
+.TP
+.B Learning Scenario
+40 BP initial, WarpShips only, 1 base star, first to 1 VP wins
+.TP
+.B Basic Scenario
+50 BP initial, WarpShips and SystemShips, 1 base star, first to 2 VP wins
+.TP
+.B Advanced Scenario
+20 BP initial + 10 BP/turn, all rules active, 3 base stars, first to 3 VP wins
+
+.SH COMMANDS
+
+.SS Session Management Commands
+.TP
+.B start learning
+Start a new game using the Learning scenario (40 BP, WarpShips only, 1 VP to win)
+.TP
+.B start basic
+Start a new game using the Basic scenario (50 BP, WarpShips + SystemShips, 2 VP to win)
+.TP
+.B start advanced
+Start a new game using the Advanced scenario (20 BP + 10/turn, all rules, 3 VP to win)
+.TP
+.B reset
+Reset the current game, wiping all game state
+.TP
+.B save \fIname\fR
+Save the current game state under the specified name (alphanumeric identifier)
+.TP
+.B load
+List all saved games available for loading
+.TP
+.B load \fIname\fR
+Load a previously saved game by name
+.TP
+.B delete
+Delete the most recently saved game
+.TP
+.B delete \fIname\fR
+Delete a specific saved game by name
+.TP
+.B quit
+Quit the game, automatically saving as 'lastgame' (overwrites previous lastgame)
+
+.SS Information Commands
+.TP
+.B status
+Show game status and important records (current phase, turn number, BP, VP)
+.TP
+.B crt
+Display the Combat Results Table
+.TP
+.B hex \fIlocation\fR
+Show location and spatial information about the specified hex
+.TP
+.B online
+Show which players are online and their connection times
+.TP
+.B stats
+Display statistics about the game, your fleet, and opponent
+.TP
+.B fleet
+Show manifest of your fleet (all ships and their current attributes)
+.TP
+.B system \fIname\fR
+Show environmental information about the specified star system
+.TP
+.B galaxy
+Complete overview of all systems and all ships in the game
+
+.SS Turn Management Commands
+.TP
+.B next
+Advance the active player to the next phase
+.TP
+.B done
+Complete current player's turn and advance to opponent's first phase
+
+.SS Build Commands
+.TP
+.B build
+Show current build state (active drafts, available BP)
+.TP
+.B build new \fIcode\fR \fIname\fR
+Create a new ship draft with the specified code (e.g., W1, S01) and name
+.TP
+.B build drafts
+List all pending build drafts
+.TP
+.B build drafts \fIship_code\fR
+Show detailed attributes of a specific draft ship
+.TP
+.B build set \fIattributes\fR
+Set attributes on the current draft ship. Attributes are specified as:
+.RS
+.TP
+.B pd=\fIN\fR or d=\fIN\fR
+Power/Drive strength (1 BP per unit, provides movement and combat power)
+.TP
+.B b=\fIN\fR
+Beam weapon strength (1 BP per unit, max power for beam projector)
+.TP
+.B s=\fIN\fR
+Screen strength (1 BP per unit, absorbs hits equal to power + tech level)
+.TP
+.B t=\fIN\fR
+Number of missile tubes (1 BP per tube, requires 1 PD to fire)
+.TP
+.B m=\fIN\fR
+Number of missiles (1 BP per 3 missiles, each does 2 + tech level hits)
+.TP
+.B sr=\fIN\fR
+SystemShip racks (1 BP per rack, WarpShips only, carries 1 SystemShip per rack)
+.PP
+Example: build set pd=7 b=3 s=2 t=1 m=6
+.br
+Note: Warp Generator costs 5 BP (automatically added for WarpShips)
+.RE
+.TP
+.B build commit
+Commit the current draft, spending BP and adding ship to your fleet
+.TP
+.B build cancel
+Cancel the current draft without spending BP
+
+.SS Deployment Commands
+.TP
+.B deploy
+Show current deployment status for both players
+.TP
+.B deploy \fIship_code\fR \fIsystem_name\fR
+Deploy the specified ship to the specified base star hex (must be your base star)
+
+.SS Movement Commands
+.TP
+.B move
+Show current movement status for all ships
+.TP
+.B move \fIship_code\fR \fIdestination\fR [\fIwaypoint\fR...]
+Move the specified ship to destination, optionally through waypoints. Movement costs:
+.RS
+.IP \(bu 2
+1 PD: Move to adjacent hex
+.IP \(bu 2
+1 PD: Enter warpline at star hex
+.IP \(bu 2
+1 PD: Travel full warpline to destination star
+.IP \(bu 2
+1 PD: Pick up one SystemShip
+.IP \(bu 2
+1 PD: Drop off one SystemShip
+.PP
+Ships must stop at star hexes occupied by enemy ships.
+.br
+Ships may freely move through space hexes with enemy ships.
+.RE
+
+.SS Combat Commands
+.TP
+.B combat
+Show status of current combat situation
+.TP
+.B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
+Issue combat orders for a ship. Components:
+.RS
+.TP
+.I ship
+Your ship identifier (e.g., W1, S05)
+.TP
+.I tactic
+Combat tactic: \fBattack\fR, \fBdodge\fR, or \fBescape\fR (WarpShips only)
+.TP
+.I target
+Enemy ship identifier to target
+.TP
+.I allocation
+Power allocation from PD to attributes:
+.RS
+.TP
+.B pd=\fIN\fR or d=\fIN\fR
+Drive allocation (for maneuver, affects CRT row/column)
+.TP
+.B b=\fIN\fR
+Beam power (cannot exceed built capacity)
+.TP
+.B s=\fIN\fR
+Screen power (cannot exceed built capacity)
+.TP
+.B t=\fIN\fR
+Tubes to power (1 PD per tube)
+.TP
+.B m=\fIN\fR
+Missiles to fire (requires powered tubes)
+.PP
+Note: Total allocation cannot exceed current PD
+.br
+Note: Cannot use Beams/Screens and Missiles in same round
+.RE
+.RE
+.TP
+.B combat order commit
+Commit all combat orders for this round
+.TP
+.B combat order cancel
+Cancel all combat orders and re-issue
+.TP
+.B combat apply \fIship\fR \fIdamage_allocation\fR
+Apply damage hits to ship attributes (defender chooses where hits are taken)
+.TP
+.B combat apply commit
+Commit damage allocation
+.TP
+.B combat apply cancel
+Cancel damage allocation and re-apply
+
+.SS Pick and Drop Commands
+.TP
+.B pick \fIlocation\fR
+Show status of what can be picked up at the specified hex
+.TP
+.B pick \fIsystemship\fR \fIwarpship\fR
+Pick up the specified SystemShip into the specified WarpShip's rack
+.TP
+.B drop \fIwarpship\fR
+List what may be dropped from the specified WarpShip
+.TP
+.B drop \fIsystemship\fR \fIwarpship\fR
+Drop the specified SystemShip from the specified WarpShip at current location
+
+.SS Repair and Resupply Commands
+.TP
+.B repair
+List ships that can be repaired (must be at your base star hex)
+.TP
+.B repair \fIship_code\fR
+Repair the specified ship using BP (1 BP repairs 1 unit of any attribute up to original max)
+.TP
+.B resupply
+Show available BP and resupply capabilities (missiles only)
+.TP
+.B resupply \fIship_code\fR \fIquantity\fR
+Resupply the specified ship with missiles (1 BP per 3 missiles, up to original max)
+
+.SS Help Commands
+.TP
+.B help
+Show help screen and list all help topics
+.TP
+.B help \fItopic\fR
+Show help about a specific topic or command
+
+.SH SHIP ATTRIBUTES
+.TP
+.B Power/Drive (PD)
+Engine strength. Provides movement points and combat power allocation. Cost: 1 BP per unit.
+.TP
+.B Warp Generator (WG)
+Enables interstellar travel and warpline usage. Cost: 5 BP. Required for WarpShips.
+.TP
+.B Beams (B)
+Energy weapon projector. Max strength = BP spent. Cost: 1 BP per unit. Damage = power + tech level.
+.TP
+.B Screens (S)
+Protective energy screen. Absorbs hits = power + tech level. Cost: 1 BP per unit.
+.TP
+.B Tubes (T)
+Missile launchers. Each tube fires 1 missile/round. Requires 1 PD to power. Cost: 1 BP per tube.
+.TP
+.B Missiles (M)
+Projectile weapons. Damage = 2 + tech level. Cost: 1 BP per 3 missiles.
+.TP
+.B SystemShip Racks (SR)
+Carries SystemShips (WarpShips only). 1 SystemShip per rack. Cost: 1 BP per rack.
+
+.SH TECHNOLOGY LEVELS
+In Advanced scenario, tech level increases every 4 turns:
+.PP
+.RS
+Turns 1-4: Level 0
+.br
+Turns 5-8: Level 1
+.br
+Turns 9-12: Level 2
+.br
+Turns 13-16: Level 3
+.br
+(continues +1 per 4 turns)
+.RE
+.PP
+Tech level adds to:
+.IP \(bu 2
+Beam damage when hitting
+.IP \(bu 2
+Missile damage when hitting (2 + tech level)
+.IP \(bu 2
+Screen absorption when powered
+
+.SH COMBAT RESOLUTION
+.SS Combat Results Table (CRT)
+The CRT determines hit/miss based on:
+.IP \(bu 2
+Firing ship's tactic (Attack/Dodge/Retreat)
+.IP \(bu 2
+Target ship's tactic (Attack/Dodge/Retreat)
+.IP \(bu 2
+Drive difference (Firing Drive - Target Drive)
+
+.SS Combat Tactics
+.TP
+.B Attack
+Aggressive offense. Best hit chance when drive advantage is 0 to +2.
+.TP
+.B Dodge
+Defensive maneuvering. Good hit chance at +1/+2 drive, hard to hit at 0/-1.
+.TP
+.B Retreat (WarpShips only)
+Attempt to escape combat. Must get "Escapes" result against all enemy ships.
+
+.SS Damage Application
+.IP 1. 3
+Calculate hits from all weapons that hit
+.IP 2. 3
+Subtract Screen power + tech level (if Screen powered)
+.IP 3. 3
+Apply remaining "effective hits" to ship attributes (owner chooses where)
+.IP 4. 3
+Ship destroyed when all attributes except Warp Generator reduced to 0
+
+.SS Special Combat Rules
+.IP \(bu 2
+Beams and Screens can be used together
+.IP \(bu 2
+Missiles cannot be used same round as Beams/Screens
+.IP \(bu 2
+Missiles always use Attack tactic with their own drive setting
+.IP \(bu 2
+SystemShips cannot Retreat (must be carried by WarpShip)
+.IP \(bu 2
+Combat ends when: all ships of one side destroyed/retreated, or 3 consecutive rounds with no unabsorbed damage (attacker must withdraw)
+
+.SH MOVEMENT RULES
+.IP 1. 3
+WarpShips must stop at star hexes occupied by enemy ships
+.IP 2. 3
+WarpShips may move through space hexes with enemy ships
+.IP 3. 3
+WarpLines are treated as space hexes for movement
+.IP 4. 3
+Ships with PD=0 cannot move
+.IP 5. 3
+PD used for movement is not expended (full PD available for combat)
+.IP 6. 3
+Cannot move onto enemy base star hex during turn 1
+
+.SH VICTORY CONDITIONS
+.TP
+.B Dominance Victory
+Accumulate required victory points (1/2/3 depending on scenario) by occupying enemy base stars at start of your turn
+.TP
+.B Elimination Victory
+Destroy all enemy ships
+.TP
+.B Draw
+Neither player has effective ships remaining (Learning/Basic scenarios only)
+
+.SH BUILD POINT COSTS
+.TS
+tab(|);
+l l.
+Attribute|Cost
+_
+Power/Drive (PD)|1 BP per unit
+Warp Generator (WG)|5 BP
+Beam (B)|1 BP per unit
+Screen (S)|1 BP per unit
+Tube (T)|1 BP per tube
+Missiles (M)|1 BP per 3 missiles
+SystemShip Rack (SR)|1 BP per rack
+.TE
+
+.SH EXAMPLES
+.SS Building a WarpShip
+.nf
+> build new W2 Destroyer
+> build set pd=5 b=3 s=2 t=1 m=3
+> build commit
+.fi
+.PP
+Total cost: 5+3+2+1+1+5(WG) = 17 BP
+.br
+Tech level 0 (if built turns 1-4)
+
+.SS Building a SystemShip Fighter
+.nf
+> build new S55 Fighter
+> build set pd=1 t=1 m=6
+> build commit
+.fi
+.PP
+Total cost: 1+1+2 = 4 BP
+.br
+No Warp Generator (SystemShip)
+
+.SS Movement Example
+.nf
+> move W6 Girsu Kish
+.fi
+.PP
+W6 moves from current hex to Girsu (1 PD), along warpline to next star (1 PD), then 3 hexes to Kish (3 PD) = 5 PD total
+
+.SS Combat Order Example
+.nf
+> combat order W3 attack S25 d=0 b=3 s=2
+.fi
+.PP
+W3 attacks S25, allocating 0 to drive, 3 to beam, 2 to screen (requires PD≥5)
+
+.SS Missile Fire Example
+.nf
+> combat order S25 dodge W3 d=4 t=1 m=1
+> (missile drive setting: 3)
+.fi
+.PP
+S25 dodges while firing 1 missile at W3 with drive=3 (requires PD≥5)
+
+.SH CONSTRAINTS AND INVARIANTS
+.IP \(bu 2
+No randomness - all outcomes deterministic
+.IP \(bu 2
+No hidden information - all game state is public
+.IP \(bu 2
+Rules do not change mid-game
+.IP \(bu 2
+Equal inputs yield equal outcomes
+.IP \(bu 2
+Ships retain original tech level permanently
+.IP \(bu 2
+Warp Generators never take damage (ship destroyed when all else is 0)
+.IP \(bu 2
+SystemShips cannot have Warp Generators or SystemShip Racks
+.IP \(bu 2
+WarpShips cannot be carried in SystemShip Racks
+
+.SH REPAIR AND RESUPPLY
+.IP \(bu 2
+Ship must start turn at your base star hex
+.IP \(bu 2
+SystemShips can be repaired/resupplied while loaded on WarpShip
+.IP \(bu 2
+1 BP repairs 1 unit of any attribute
+.IP \(bu 2
+Cannot repair beyond original built capacity
+.IP \(bu 2
+Tech level never changes
+.IP \(bu 2
+1 BP resupplies up to 3 missiles
+.IP \(bu 2
+Cannot resupply beyond original missile capacity
+
+.SH SYSTEMSHIP PICKUP/DROP
+.SS During Movement
+.IP \(bu 2
+Costs 1 PD per SystemShip picked up or dropped
+.IP \(bu 2
+Can be done at any star hex during movement
+
+.SS During Combat
+.IP \(bu 2
+Requires: Drive=0, Screen=0, Dodge or Retreat tactic
+.IP \(bu 2
+Only 1 SystemShip per combat round
+.IP \(bu 2
+May fire Beam (but not Missiles) while picking up/dropping
+.IP \(bu 2
+Dropped SystemShips cannot fire that round
+.IP \(bu 2
+Picked up SystemShips cannot fire but may power Screens
+
+.SS After Combat
+.IP \(bu 2
+Free rearrangement of SystemShips at star hexes
+.IP \(bu 2
+No movement cost
+.IP \(bu 2
+Active player only
+
+.SH FILES
+.TP
+.I ~/.kepler/saves/
+Directory containing saved game files
+.TP
+.I ~/.kepler/lastgame
+Automatically saved game when quitting
+
+.SH SEE ALSO
+.BR RULES.md (5),
+.BR COMBAT_RULES.md (5),
+.BR DESIGN.md (5)
+
+.SH NOTES
+.IP \(bu 2
+All ship records must be maintained by players
+.IP \(bu 2
+Records are shown to opponent after (not during) game
+.IP \(bu 2
+In Advanced scenario, track BP received and expended
+.IP \(bu 2
+Combat orders are written simultaneously and revealed together
+.IP \(bu 2
+Fractions of BP from missile resupply are not saved
+
+.SH BUGS
+Report bugs to the Kepler's Horizon issue tracker.
+
+.SH AUTHORS
+Game design and implementation by sibomots.
+
+.SH COPYRIGHT
+Copyright (c) 2025 sibomots. Licensed under BSD 3-Clause License.
+
+.SH GAME DESIGN PHILOSOPHY
+Kepler's Horizon is intentionally minimal. Strategic depth emerges from:
+.IP \(bu 2
+Constrained movement
+.IP \(bu 2
+Simultaneous decision-making
+.IP \(bu 2
+Irreversible consequences
+.PP
+The rules favor clarity over complexity.
