@@ -59,15 +59,11 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     }
 
     // Configure StateMachine with DB context
-    // StateMachine::getInstance().set_db(db);
     StateMachine::getInstance().set_game_id(a.game_id);
+    StateMachine::getInstance().set_current_player(a.player);
 
     // Clear telemetry message buffer before command execution
     Telemetry::getInstance().clear_messages();
-
-    // Set global parser context
-    // g_db = db;
-    // g_game_id = a.game_id;
 
     // Try parser first (handles migrated commands)
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());

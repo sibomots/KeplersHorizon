@@ -21,6 +21,7 @@ class NextCommand : public ICmd
         Builder()
         {
         }
+        
         ICmd* build()
         {
             return new NextCommand(*this);

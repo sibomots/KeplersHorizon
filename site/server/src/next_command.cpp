@@ -18,6 +18,15 @@ bool NextCommand::invoke(void)
 {
     GameState s = StateMachine::getInstance().get_game_state();
 
+    // Validate it's this player's turn
+    char requesting_player = StateMachine::getInstance().get_current_player();
+    if (s.active_player[0] != requesting_player)
+    {
+        Telemetry::getInstance().write("Error: It's not your turn (active player: " + 
+                                       s.active_player + ")");
+        return false;
+    }
+
     std::string before_phase = s.phase_name();
     std::string before_player = s.active_player;
     int before_round = s.round;

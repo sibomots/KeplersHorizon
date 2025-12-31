@@ -254,26 +254,21 @@ class StateMachine
 
     } PlayerState;
 
-    typedef struct
+    struct Data
     {
-        PlayerState state;
-        Player initiative;
-        int game_id;
-        int turn_number; // For tech level calculation
-        ScenarioType scenario;
+        PlayerState state = PlayerState::INVALID;
+        Player initiative = Player::NOPLAYER;
+        int game_id = 0;
+        char current_player = 'A'; // Who is making the current request
+        ScenarioType scenario = ScenarioType::UNDEFINED;
+        int turn_number = 0; // For tech level calculation
 
         // Build Phase properties
-        bool pending_build_commit;
-        bool pending_build_cancel;
-        bool pending_build_list_drafts;
-        std::string pending_build_show_draft;
+        bool pending_build_commit = false;
+        bool pending_build_cancel = false;
+        bool pending_build_list_drafts = false;
+        std::string pending_build_show_draft = "";
         AttributeMap pending_build_attributes; // For build set command
-        std::string pending_build_draft;       // For old BuildCommand
-        std::string pending_repair_ship;
-        std::string pending_repair_attribute;
-        int pending_repair_amount;
-        std::string pending_resupply_ship;
-        int pending_resupply_missiles;
     } Data;
 
   public:
@@ -315,6 +310,15 @@ class StateMachine
     int get_game_id() const
     {
         return data.game_id;
+    }
+    
+    void set_current_player(char player)
+    {
+        data.current_player = player;
+    }
+    char get_current_player() const
+    {
+        return data.current_player;
     }
 
     void set_turn_number(int turn)

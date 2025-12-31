@@ -41,7 +41,6 @@ void yyerror(const char *s);
 //BUGBUG extern int g_game_id;
 //BUGBUG extern StateMachine& g_statemachine;
 
-
 // BUGBUG
 // Global builder for accumulating build set attributes
 BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder();
