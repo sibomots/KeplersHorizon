@@ -78,7 +78,7 @@ std::vector<std::string> Telemetry::get_queued_messages(char player)
     return messages;
 }
 
-std::string Telemetry::getInstance().write(const std::string& msg)
+std::string Telemetry::write(const std::string& msg)
 {
     // Add message to buffer for later retrieval
     add_message(msg);
@@ -101,7 +101,7 @@ std::string Telemetry::getInstance().write(const std::string& msg)
     return o.str();
 }
 
-std::string Telemetry::getInstance().tell(PlayerTarget target, const std::string& msg)
+std::string Telemetry::tell(PlayerTarget target, const std::string& msg)
 {
     // Queue message for specific player (delivered via heartbeat)
     GameState s = StateMachine::getInstance().get_game_state();
@@ -111,7 +111,7 @@ std::string Telemetry::getInstance().tell(PlayerTarget target, const std::string
     return write(msg); // Also return immediate response
 }
 
-std::string Telemetry::getInstance().broadcast(const std::string& msg)
+std::string Telemetry::broadcast(const std::string& msg)
 {
     // Queue message for all players (delivered via heartbeat)
     add_broadcast(msg);
