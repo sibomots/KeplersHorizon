@@ -122,9 +122,52 @@ void Telemetry::status(char player, HttpResponse* resp)
 {
     int game_id = StateMachine::getInstance().get_game_id();
     
-    // If no game has been started yet, return minimal status
+    DatabaseManager& db = DatabaseManager::getInstance();
+    
+    // If no game has been started yet, return minimal status but still check peer online
     if (game_id == 0)
     {
+        // Look up requesting user's username from their session
+        std::string selfUser;
+        auto selfQuery = db.query(
+            "SELECT u.username FROM users u "
+            "JOIN sessions s ON s.user_id = u.id "
+            "WHERE s.token = (SELECT token FROM sessions WHERE user_id = "
+            "(SELECT user_id FROM sessions ORDER BY last_seen DESC LIMIT 1))");
+        // Simpler: look up by player char if we have game_seats, but no game yet
+        // For now, just get any other online user
+        
+        // Check if any other user has an active session (within 90 seconds)
+        bool peerOnline = false;
+        std::string peerUser;
+        std::string peerLastSeen;
+        
+        // Find any other user with an active session
+        auto peerQuery = db.query(
+            "SELECT u.username, DATE_FORMAT(s.last_seen,'%Y-%m-%d %H:%i:%s'), "
+            "(TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 90) as is_online "
+            "FROM sessions s JOIN users u ON u.id = s.user_id "
+            "ORDER BY s.last_seen DESC");
+        
+        // We need to find a user other than the one making this request
+        // For now, if there are 2+ recent sessions, peer is online
+        int activeCount = 0;
+        for (const auto& row : peerQuery)
+        {
+            if (!row[2].empty() && row[2] != "0")
+            {
+                activeCount++;
+                if (activeCount > 1)
+                {
+                    // Second active session found = peer is online
+                    peerOnline = true;
+                    peerUser = row[0];
+                    peerLastSeen = row[1];
+                    break;
+                }
+            }
+        }
+        
         std::ostringstream out;
         out << "{\"ok\":true,\"state\":{"
             << "\"gameId\":0,"
@@ -137,7 +180,14 @@ void Telemetry::status(char player, HttpResponse* resp)
             << "\"bp\":{\"A\":0,\"B\":0},"
             << "\"notes\":\"Type: start learning|basic|advanced\""
             << "}";
-        out << ",\"self\":{},\"peer\":{}}";
+        out << ",\"self\":{\"owner\":\"" << player << "\"}";
+        out << ",\"peer\":{\"online\":" << (peerOnline ? "true" : "false");
+        if (peerOnline && !peerUser.empty())
+        {
+            out << ",\"username\":\"" << json_escape(peerUser) << "\"";
+            out << ",\"last_seen\":\"" << json_escape(peerLastSeen) << "\"";
+        }
+        out << "}}";
         resp->body = out.str();
         return;
     }
@@ -165,17 +215,29 @@ void Telemetry::status(char player, HttpResponse* resp)
     status_json << "\"notes\":\"" << json_escape(s.notes()) << "\"";
     status_json << "}";
 
-    // Determine self/opponent info from current player
-    char selfOwner = s.active_player.empty() ? 'A' : s.active_player[0];
+    // Determine self/opponent info from the requesting player (not active_player!)
+    // 'player' is who made the request, 'active_player' is whose turn it is
+    char selfOwner = player;
     char oppOwner = (selfOwner == 'A') ? 'B' : 'A';
-    std::string selfUser = (selfOwner == 'A') ? "alice" : "bob";
-    std::string oppUser = (oppOwner == 'A') ? "alice" : "bob";
+    
+    // Look up actual usernames from game_seats
+    std::string selfUser, oppUser;
+    auto selfRow = db.query("SELECT u.username FROM users u "
+                            "JOIN game_seats gs ON gs.user_id = u.id "
+                            "WHERE gs.game_id=" + std::to_string(game_id) + 
+                            " AND gs.seat='" + std::string(1, selfOwner) + "'");
+    auto oppRow = db.query("SELECT u.username FROM users u "
+                           "JOIN game_seats gs ON gs.user_id = u.id "
+                           "WHERE gs.game_id=" + std::to_string(game_id) + 
+                           " AND gs.seat='" + std::string(1, oppOwner) + "'");
+    
+    selfUser = selfRow.empty() ? "" : selfRow[0][0];
+    oppUser = oppRow.empty() ? "" : oppRow[0][0];
 
     // Query opponent online status
     bool oppOnline = false;
-    std::string oppLastSeen = "";
+    std::string oppLastSeen;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
     auto prow =
         db.query("SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
                  "sessions s JOIN users u ON u.id=s.user_id "
