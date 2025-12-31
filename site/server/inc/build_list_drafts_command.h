@@ -17,24 +17,20 @@ class BuildListDraftsCommand : public ICmd
     class Builder
     {
       public:
-        StateMachine &_sm;
-
-        Builder(StateMachine &sm) : _sm(sm)
+        Builder()
         {
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new BuildListDraftsCommand(_sm);
+            return new BuildListDraftsCommand(*this);
         }
     };
 
   private:
-    BuildListDraftsCommand(StateMachine &sm) : m_sm(sm)
+    BuildListDraftsCommand(Builder& builder)
     {
     }
-
-    StateMachine &m_sm;
 
   public:
     virtual bool invoke(void);

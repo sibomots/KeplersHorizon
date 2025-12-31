@@ -10,8 +10,8 @@
 
 #include <string>
 
-std::string json_escape(const std::string &s);
-std::string json_error(const std::string &msg);
-std::string json_get_string(const std::string &body, const std::string &key);
+std::string json_escape(const std::string& s);
+std::string json_error(const std::string& msg);
+std::string json_get_string(const std::string& body, const std::string& key);
 
 #endif

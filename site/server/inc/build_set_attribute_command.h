@@ -14,67 +14,66 @@
 
 class BuildSetAttributeCommand : public ICmd
 {
+  private:
+    AttributeMap m_attributes;
+
   public:
     class Builder
     {
       public:
-        StateMachine &_sm;
         AttributeMap _attributes;
 
-        Builder(StateMachine &sm) : _sm(sm)
+        Builder()
         {
         }
 
-        Builder &set_pd(int val)
+        Builder& set_pd(int val)
         {
             _attributes[AttributeID::POWER_DRIVE] = val;
             return *this;
         }
 
-        Builder &set_b(int val)
+        Builder& set_b(int val)
         {
             _attributes[AttributeID::BEAM] = val;
             return *this;
         }
 
-        Builder &set_s(int val)
+        Builder& set_s(int val)
         {
             _attributes[AttributeID::SCREEN] = val;
             return *this;
         }
 
-        Builder &set_t(int val)
+        Builder& set_t(int val)
         {
             _attributes[AttributeID::TUBE] = val;
             return *this;
         }
 
-        Builder &set_m(int val)
+        Builder& set_m(int val)
         {
             _attributes[AttributeID::MISSILE] = val;
             return *this;
         }
 
-        Builder &set_sr(int val)
+        Builder& set_sr(int val)
         {
             _attributes[AttributeID::SYSTEM_RACK] = val;
             return *this;
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new BuildSetAttributeCommand(_sm, _attributes);
+            return new BuildSetAttributeCommand(*this);
         }
     };
 
   private:
-    BuildSetAttributeCommand(StateMachine &sm, const AttributeMap &attrs)
-        : m_sm(sm), m_attributes(attrs)
+    BuildSetAttributeCommand(Builder& builder)
+        : m_attributes(std::move(builder._attributes))
     {
     }
-
-    StateMachine &m_sm;
-    AttributeMap m_attributes;
 
   public:
     virtual bool invoke(void);

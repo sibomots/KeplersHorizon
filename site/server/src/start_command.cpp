@@ -7,20 +7,23 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "start_command.h"
 
-#include "db.h"
-#include "game.h"
-#include "logger.h"
 #include "telemetry.h"
+#include "logger.h"
+#include "statemachine.h"
+#include "db.h"
+#include "ships.h"
 
 bool StartCommand::invoke(void)
 {
     // Scenario type to string mapping (indexed by ScenarioType enum)
-    static const char *scenario_names[] = {
+    static const char* scenario_names[] = {
         nullptr,    // UNDEFINED
         "learning", // LEARNING
         "basic",    // BASIC
         "advanced"  // ADVANCED
     };
+
+    DatabaseManager& db = DatabaseManager::getInstance();
 
     // Validate scenario type
     if (m_scenario <= ScenarioType::UNDEFINED ||
@@ -35,17 +38,24 @@ bool StartCommand::invoke(void)
     Logger::instance().info("Initializing game scenario: " + sc_str);
 
     // Create new game state for the scenario
-    GameState s = new_game_state_for_scenario(sc_str);
+    GameState s =
+        StateMachine::getInstance().new_game_state_for_scenario(sc_str);
+
+    // BUGBUG -- this is wrong.
+    // the "new_game_state_fpr_scenario" should make the game_id here.
+    // not from ... ?
+
+    // BUGBUG:  WRONG:
     s.game_id = m_game_id;
 
     // Clear any existing drafts and ships
-    m_db->exec("DELETE FROM drafts WHERE game_id=" + std::to_string(m_game_id));
-    m_db->exec("DELETE FROM ships WHERE game_id=" + std::to_string(m_game_id));
-    set_current_draft(m_db, m_game_id, 'A', "");
-    set_current_draft(m_db, m_game_id, 'B', "");
+    db.exec("DELETE FROM drafts WHERE game_id=" + std::to_string(m_game_id));
+    db.exec("DELETE FROM ships WHERE game_id=" + std::to_string(m_game_id));
+    set_current_draft(m_game_id, 'A', "");
+    set_current_draft(m_game_id, 'B', "");
 
     // Save the initialized game state
-    save_game(m_db, s);
+    StateMachine::getInstance().save_game(s);
 
     Logger::instance().info(
         "Game initialized: " + sc_str + " scenario, Round " +

@@ -8,12 +8,10 @@
 #ifndef __CMD_H__
 #define __CMD_H__
 
-#include "db.h"
-#include "typs.h"
+#include "comms.h"
 
-void handle_usr_command(const HttpRequest *req, Db *db, HttpResponse *resp);
-
-void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp);
-void handle_logout(const HttpRequest *req, Db *db, HttpResponse *resp);
+void handle_usr_command(const HttpRequest* req, HttpResponse* resp);
+void handle_login(const HttpRequest* req, HttpResponse* resp);
+void handle_logout(const HttpRequest* req, HttpResponse* resp);
 
 #endif

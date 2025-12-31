@@ -21,20 +21,21 @@ class BuildCommand : public ICmd
       public:
         std::string _draft_code;
 
-        Builder &set_draft_code(const std::string &code)
+        Builder& set_draft_code(const std::string& code)
         {
             _draft_code = code;
             return *this;
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new BuildCommand(_draft_code);
+            return new BuildCommand(*this);
         }
     };
 
   private:
-    BuildCommand(const std::string &draft_code) : m_draft_code(draft_code)
+    BuildCommand(Builder& builder)
+        : m_draft_code(std::move(builder._draft_code))
     {
     }
 

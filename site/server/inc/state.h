@@ -10,11 +10,11 @@
 
 #include <string>
 
-#include "db.h"
-#include "typs.h"
+#include "comms.h"
+#include "statemachine.h"
 
-std::string json_ok_with_state_and_event(const GameState &s,
-                                         const std::string &eventText);
-void handle_state(const HttpRequest *req, Db *db, HttpResponse *resp);
+std::string json_ok_with_state_and_event(const GameState& s,
+                                         const std::string& eventText);
+void handle_state(const HttpRequest* req, HttpResponse* resp);
 
 #endif

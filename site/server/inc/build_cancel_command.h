@@ -17,24 +17,20 @@ class BuildCancelCommand : public ICmd
     class Builder
     {
       public:
-        StateMachine &_sm;
-
-        Builder(StateMachine &sm) : _sm(sm)
+        Builder()
         {
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new BuildCancelCommand(_sm);
+            return new BuildCancelCommand(*this);
         }
     };
 
   private:
-    BuildCancelCommand(StateMachine &sm) : m_sm(sm)
+    BuildCancelCommand(Builder& builder)
     {
     }
-
-    StateMachine &m_sm;
 
   public:
     virtual bool invoke(void);

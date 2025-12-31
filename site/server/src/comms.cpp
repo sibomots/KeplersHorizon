@@ -14,32 +14,32 @@
 #include "state.h"
 #include "util.h"
 
-void dispatch_request(const HttpRequest *req, Db *db, HttpResponse *resp)
+void dispatch_request(const HttpRequest* req, HttpResponse* resp)
 {
     if (req->path == "/api/login")
     {
-        handle_login(req, db, resp);
+        handle_login(req, resp);
         return;
     }
     else if (req->path == "/api/logout")
     {
-        handle_logout(req, db, resp);
+        handle_logout(req, resp);
         return;
     }
     else if (req->path == "/api/state")
     {
-        handle_state(req, db, resp);
+        handle_state(req, resp);
         return;
     }
     else if (req->path == "/api/command")
     {
-        handle_usr_command(req, db, resp);
+        handle_usr_command(req, resp);
         return;
     }
     else if (req->path == "/api/events")
     {
         // Optional: events for console persistence
-        handle_events(req, db, resp);
+        handle_events(req, resp);
         return;
     }
     else
@@ -75,7 +75,7 @@ std::string status_text(int code)
     }
 }
 
-std::string http_serialize(const HttpResponse &r)
+std::string http_serialize(const HttpResponse& r)
 {
     std::ostringstream o;
     o << "HTTP/1.1 " << r.status << " " << status_text(r.status) << "\r\n";
@@ -164,7 +164,7 @@ HttpRequest http_parse(int fd)
     return req;
 }
 
-std::string pick_bearer(const HttpRequest *req)
+std::string pick_bearer(const HttpRequest* req)
 {
     auto it = req->headers.find("authorization");
     if (it == req->headers.end())
@@ -182,8 +182,9 @@ std::string pick_bearer(const HttpRequest *req)
     return trim(v.substr(7));
 }
 
-AuthContext require_auth(const HttpRequest *req, HttpResponse *resp)
+AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
 {
+    DatabaseManager& db = DatabaseManager::getInstance();
     AuthContext a;
     std::string tok = pick_bearer(req);
     if (tok.empty())
@@ -196,8 +197,8 @@ AuthContext require_auth(const HttpRequest *req, HttpResponse *resp)
     std::string q =
         "SELECT s.user_id,u.username FROM sessions s JOIN users u ON "
         "u.id=s.user_id WHERE s.token='" +
-        db->esc(tok) + "'";
-    auto rows = db->query(q);
+        db.esc(tok) + "'";
+    auto rows = db.query(q);
     if (rows.empty())
     {
         resp->status = 401;
@@ -210,11 +211,20 @@ AuthContext require_auth(const HttpRequest *req, HttpResponse *resp)
     a.player = owner_for_username(a.username);
 
     // heartbeat
-    db->exec("UPDATE sessions SET last_seen=NOW() WHERE token='" +
-             db->esc(tok) + "'");
+    db.exec("UPDATE sessions SET last_seen=NOW() WHERE token='" + db.esc(tok) +
+            "'");
 
-    // Ensure a current game exists (single shared game for now)
-    auto g = db->query(
+    // <REWORK>
+    // This query makes no sense.  It's going to pull up the first
+    // record from games.. why?  All this is doing is pulling up
+    // the most recent  ("order by id desc")
+    //
+    // The right time to 'create a new game' in games is when the
+    // 'start learning/basic/advanced' command is used.
+
+    // It's not even tied to the player who just logged in.
+
+    auto g = db.query(
         "SELECT id,state_json,scenario FROM games ORDER BY id DESC LIMIT 1");
     if (g.empty())
     {
@@ -225,14 +235,37 @@ AuthContext require_auth(const HttpRequest *req, HttpResponse *resp)
         std::string state = s.to_json();
         std::string ins =
             "INSERT INTO games(scenario,state_json) VALUES(NULL,'" +
-            db->esc(state) + "')";
-        db->exec(ins);
-        auto r = db->query("SELECT LAST_INSERT_ID()");
+            db.esc(state) + "')";
+        db.exec(ins);
+
+        // this is where the game ID is set.  but it shouldn't be here.
+        auto r = db.query("SELECT LAST_INSERT_ID()");
         a.game_id = std::atoi(r[0][0].c_str());
     }
     else
     {
+        // this is where the game ID is acquired
+        // BUGBUG this is just going pull up the game_id of the most recent
+        // game
         a.game_id = std::atoi(g[0][0].c_str());
     }
+
+    // </REWORK>
     return a;
+}
+
+bool authenticated(const HttpRequest* req, HttpResponse* resp)
+{
+    if (req->method != "GET")
+    {
+        resp->status = 405;
+        resp->body = json_error("method");
+        return false;
+    }
+    AuthContext a = require_auth((const HttpRequest*)req, resp);
+    if (resp->status != 200)
+    {
+        return false;
+    }
+    return true;
 }

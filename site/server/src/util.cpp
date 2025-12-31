@@ -14,7 +14,10 @@
 #include <random>
 #include <sstream>
 
-std::string trim(const std::string &s)
+// These functions are here for utility.
+// Stop trying to re-create them as static functions throughout the software.
+
+std::string trim(const std::string& s)
 {
     auto start = s.begin();
     while (start != s.end() && std::isspace(*start))
@@ -31,7 +34,7 @@ std::string trim(const std::string &s)
     return std::string(start, end + 1);
 }
 
-char owner_for_username(const std::string &u)
+char owner_for_username(const std::string& u)
 {
     if (u == "alice")
         return 'A';
@@ -48,7 +51,7 @@ std::string now_iso()
     return std::string(buf);
 }
 
-bool starts_with(const std::string &s, const std::string &p)
+bool starts_with(const std::string& s, const std::string& p)
 {
     return s.rfind(p, 0) == 0;
 }
@@ -75,7 +78,7 @@ std::string rand_hex_64()
     return s;
 }
 
-std::vector<std::string> split_ws(const std::string &s)
+std::vector<std::string> split_ws(const std::string& s)
 {
     std::stringstream ss(s);
     std::string item;
@@ -87,7 +90,7 @@ std::vector<std::string> split_ws(const std::string &s)
     return elems;
 }
 
-std::vector<std::string> split(const std::string &s, char delim)
+std::vector<std::string> split(const std::string& s, char delim)
 {
     std::stringstream ss(s);
     std::string item;
@@ -99,7 +102,7 @@ std::vector<std::string> split(const std::string &s, char delim)
     return elems;
 }
 
-std::string escape_json(const std::string &s)
+std::string escape_json(const std::string& s)
 {
     std::ostringstream o;
     for (auto c : s)
@@ -143,7 +146,7 @@ std::string escape_json(const std::string &s)
 }
 
 // BUGBUG
-static std::string upper_ascii(const std::string &s)
+std::string upper_ascii(const std::string& s)
 {
     std::string r = s;
     for (size_t i = 0; i < r.size(); i++)

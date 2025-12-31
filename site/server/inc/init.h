@@ -5,11 +5,12 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#ifndef __ARGS_H__
-#define __ARGS_H__
+#ifndef __INIT_H__
+#define __INIT_H__
 
-#include "typs.h"
-
-Args parse_args(int argc, char **argv);
-
+void init(void);
+void banner(void);
+void apply_arguments(int, char**);
+void load_services();
+void run(void);
 #endif

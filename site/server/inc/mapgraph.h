@@ -14,8 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include "db.h"
-
 /**
  * MapGraph encapsulates the game map topology, including:
  * - Hex grid coordinates (q, r)
@@ -25,7 +23,7 @@
 class MapGraph
 {
   public:
-    MapGraph(Db *db, int game_id);
+    MapGraph(int game_id);
 
     // Load dynamic state for the current turn/command context.
     // 'owner' is the player moving; 'enemy' is inferred.
@@ -33,23 +31,19 @@ class MapGraph
 
     // Resolve a user token (e.g. "h0101", "0101", "Ur") to a hex ID (e.g.
     // "0101"). Returns empty string if invalid.
-    std::string resolve_hex(const std::string &token);
+    std::string resolve_hex(const std::string& token);
 
     // Resolve a user token to a system name (e.g. "ur" -> "UR").
     // Returns canonical name or empty string.
-    std::string resolve_system(const std::string &token);
+    std::string resolve_system(const std::string& token);
 
     // Calculate PD cost from 'fromHex' to 'toHex'.
     // Returns -1 if unreachable within 'limit'.
     // Respects blockades loaded by load_state().
-    int get_path_cost(const std::string &fromHex, const std::string &toHex,
+    int get_path_cost(const std::string& fromHex, const std::string& toHex,
                       int limit);
 
-    // Utility: Upper case ASCII string
-    static std::string upper_ascii(const std::string &s);
-
   private:
-    Db *db;
     int game_id;
     char me = ' ';
     char enemy = ' ';

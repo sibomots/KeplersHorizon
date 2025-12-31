@@ -5,23 +5,19 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include <iostream>
-
-#include "app.h"
-#include "args.h"
-#include "comms.h"
-#include "db.h"
-#include "logger.h"
-#include "util.h"
 #include "init.h"
-#include "services.h"
+#include "srvmgr.h"
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    init();
     banner();
     apply_arguments(argc, argv);
+    init();
     load_services();
-    run();
+
+    // Now we run...
+    ServerManager::getInstance().run();
+
+    // We never get here
     return 0;
 }

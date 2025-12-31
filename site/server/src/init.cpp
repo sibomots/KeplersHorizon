@@ -1,135 +1,135 @@
-#include "typedefs.h"
-#include "services.h"
+//////////////////////////////////////////////////////////////////////////////////
+// This file is part of Kepler's Horizon
+//
+// Licensed under BSD 3-Clause License
+//
+// Copyright (c) 2025, sibomots
+/////////////////////////////////////////////////////////////////////////////////
+#include <iostream>
+#include <memory>
 
-struct {
-    Args args;
-} Parameters;
-
-static
+#include "app.h"
+#include "db.h"
+#include "srvmgr.h"
+#include "util.h"
 
 void init(void)
 {
+    // entropy
     std::srand(static_cast<unsigned int>(std::time(NULL)));
 }
 
-
-void parse_args(int argc, char **argv)
+void license(void)
 {
+    std::cout
+        << std::endl
+        << std::endl
+        << "Kepler's Horizion is licensed under the BSD 3-Clause License\n"
+           "Copyright (c) 2025, sibomots\n\n"
+           "https://github.com/sibomots/KeplersHorizon\n"
+        << std::endl
+        << std::endl;
+}
+
+// BUGBUG
+void advice(void)
+{
+    std::cout << std::endl
+              << std::endl
+              << "Have fun!" << std::endl
+              << std::endl;
+}
+
+// BUGBUG
+void banner(void)
+{
+    license();
+    advice();
+}
+
+void apply_arguments(int argc, char** argv)
+{
+    DBConfig dbconfig;
+    ServerConfig srvconfig;
+
     for (int i = 1; i < argc; i++)
     {
         std::string k = argv[i];
-        auto next = [&](std::string &out)
-        {
+        auto next = [&](std::string& out) {
             if (i + 1 >= argc)
-                throw std::runtime_error("missing arg for " + k);
+            {
+                throw std::runtime_error("Missing arg for " + k);
+            }
             out = argv[++i];
         };
         if (k == "--dbhost")
-            next(Parameters.args.dbhost);
+        {
+            next(dbconfig.dbhost);
+        }
         else if (k == "--dbuser")
-            next(Parameters.args.dbuser);
+        {
+            next(dbconfig.dbuser);
+        }
         else if (k == "--dbpass")
-            next(Parameters.args.dbpass);
+        {
+            next(dbconfig.dbpass);
+        }
         else if (k == "--dbname")
-            next(Parameters.args.dbname);
-        else if (k == "--listen")
-            next(Parameters.args.listen);
+        {
+            next(dbconfig.dbname);
+        }
         else if (k == "--port")
         {
             std::string t;
             next(t);
-            Parameters.args.port = std::atoi(t.c_str());
+            srvconfig.port = std::atoi(t.c_str());
         }
     }
-    return a;
+    DatabaseManager::getInstance().configure(&dbconfig);
+    ServerManager::getInstance().configure(&srvconfig);
 }
 
+// Static Functions
 
-// 
-
-
-void apply_arguments(int argc, char** argv)
+void create_db()
 {
     try
     {
-        Parameters.args = parse_args(argc, argv);
+        DatabaseManager::getInstance().connect();
     }
-    catch (const std::exception &e)
+    catch (const std::exception& ex)
     {
-        std::fprintf(stderr, "arg error: %s\n", e.what());
-        return 2;
+        // BUGBUG
+        std::fprintf(stderr, "fatal: %s\n", ex.what());
+        return;
     }
 }
 
-        void banner() {
-        std::fprintf(stderr,
-                     "[%s] Kepler's Horizon_server listening on %s:%d\n",
-                     now_iso().c_str(), args.listen.c_str(), args.port);
-        Logger::instance().info(std::string("Server starting. Build SHA: ") +
-                                GIT_SHA);
-        }
-    load_db()
-    {
-    try
-    {
-        Db db;
-        db.connect(args.dbhost, args.dbuser, args.dbpass, args.dbname);
+void test_db(void)
+{
+    // BUGBUG
+    // Might as well try to test the DB?
+}
 
-        int srv = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (srv < 0)
-            throw std::runtime_error("socket failed");
+void load_services()
+{
+    // Backend Services
+    //////////////////////
+    create_db();
 
-        int one = 1;
-        setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    // Optional
+    // TBD test_db();
 
-        sockaddr_in addr;
-        std::memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(static_cast<uint16_t>(args.port));
-        addr.sin_addr.s_addr = inet_addr(args.listen.c_str());
+    // This creates the server and descritpr for listening on port for REST-ful
+    // transactions
+    ServerManager::getInstance().connect();
 
-        if (::bind(srv, (sockaddr *)&addr, sizeof(addr)) < 0)
-        {
-            throw std::runtime_error(std::string("bind failed: ") +
-                                     std::strerror(errno));
-        }
-        if (::listen(srv, 16) < 0)
-        {
-            throw std::runtime_error("listen failed");
-        }
+    // Front-end Services
+    /////////////////////
 
-        while (true)
-        {
-            sockaddr_in cli;
-            socklen_t clen = sizeof(cli);
-            int fd = ::accept(srv, (sockaddr *)&cli, &clen);
-            if (fd < 0)
-                continue;
+    // Now, let's register our services with the Actors
+    // in the system:
 
-            HttpRequest req = http_parse(fd);
-            HttpResponse resp;
-
-            try
-            {
-                dispatch_request((const HttpRequest *)&req, &db,
-                                 (HttpResponse *)&resp);
-            }
-            catch (const std::exception &e)
-            {
-                resp.status = 500;
-                resp.body =
-                    json_error(std::string("server error: ") + e.what());
-            }
-
-            std::string out = http_serialize(resp);
-            // Logger::instance().debug(out.c_str());
-            ::send(fd, out.c_str(), out.size(), 0);
-            ::close(fd);
-        }
-    }
-    catch (const std::exception &e)
-    {
-        std::fprintf(stderr, "fatal: %s\n", e.what());
-        return 1;
-    }
-    }
+    // Parser
+    // StateMachine
+}

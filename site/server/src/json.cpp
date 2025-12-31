@@ -9,7 +9,7 @@
 
 #include "app.h"
 
-std::string json_escape(const std::string &s)
+std::string json_escape(const std::string& s)
 {
     std::ostringstream o;
     for (size_t i = 0; i < s.size(); ++i)
@@ -56,7 +56,7 @@ std::string json_escape(const std::string &s)
 
 // Minimal JSON field extractor for string fields only: {"k":"v"}.
 // Not a general JSON parser. Good enough for controlled client.
-std::string json_get_string(const std::string &body, const std::string &key)
+std::string json_get_string(const std::string& body, const std::string& key)
 {
     const std::string pat = "\"" + key + "\"";
     size_t p = body.find(pat);
@@ -119,7 +119,7 @@ std::string json_get_string(const std::string &body, const std::string &key)
     return val.str();
 }
 
-std::string json_error(const std::string &msg)
+std::string json_error(const std::string& msg)
 {
     return std::string("{\"ok\":false,\"error\":\"") + json_escape(msg) + "\"}";
 }

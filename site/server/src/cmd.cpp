@@ -10,25 +10,25 @@
 #include <unordered_map>
 
 #include "app.h"
+#include "ships.h"
 #include "combat.h"
 #include "comms.h"
 #include "db.h"
 #include "events.h"
-#include "game.h"
 #include "logger.h"
 #include "mapgraph.h"
 #include "state.h"
 #include "statemachine.h"
 #include "telemetry.h"
-#include "typs.h"
+#include "typedefs.h"
 #include "util.h"
 
-typedef struct yy_buffer_state *YY_BUFFER_STATE;
-extern YY_BUFFER_STATE yy_scan_string(const char *str);
+typedef struct yy_buffer_state* YY_BUFFER_STATE;
+extern YY_BUFFER_STATE yy_scan_string(const char* str);
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 extern "C" int yyparse();
 
-void handle_usr_command(const HttpRequest *req, HttpResponse *resp)
+void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 {
     if (req->method != "POST")
     {
@@ -36,11 +36,14 @@ void handle_usr_command(const HttpRequest *req, HttpResponse *resp)
         resp->body = json_error("method");
         return;
     }
-    AuthContext a = require_auth((const HttpRequest *)req, resp);
+
+    AuthContext a = require_auth((const HttpRequest*)req, resp);
+
     if (resp->status != 200)
     {
         return;
     }
+
     std::string cmdline = trim(json_get_string(req->body, "command"));
 
     std::string debug_cmd = "Raw command from user >";
@@ -74,7 +77,7 @@ void handle_usr_command(const HttpRequest *req, HttpResponse *resp)
     {
         Logger::instance().info("Command handled by parser: " + cmdline);
 
-        GameState s = load_game(db, a.game_id);
+        GameState s = StateMachine::getInstance().load_game(a.game_id);
 
         resp->body = Telemetry::write("Command executed");
 
@@ -96,522 +99,429 @@ void handle_usr_command(const HttpRequest *req, HttpResponse *resp)
         return;
     }
 
-#if USING_LEGACY
-    GameState s = load_game(db, a.game_id);
+    //
+    // BUGBUG
+    ///////////
 
-    std::vector<std::string> tok = split_ws(cmdline);
-    std::string cmd = to_lower(tok[0]);
+    // This is all legacy that has to be re-factored/rolled into more abstract
+    // structure of commands...  soon..
 
-    std::string eventText;
+    // BUGBUG      GameState s = load_game(db, a.game_id);
+    // BUGBUG
+    // BUGBUG      std::vector<std::string> tok = split_ws(cmdline);
+    // BUGBUG      std::string cmd = to_lower(tok[0]);
+    // BUGBUG
+    // BUGBUG      std::string eventText;
+    // BUGBUG
+    // BUGBUG      // NOTE: 'me' is derived from the authenticated token, not
+    // from game state. BUGBUG      char me = (a.player ? a.player : 'A');
+    // BUGBUG      char owner = me;
+    // BUGBUG      char enemy = (owner == 'A') ? 'B' : 'A';
+    // BUGBUG      char active = (s.active_player.empty() ? 'A' :
+    // s.active_player[0]); BUGBUG      auto turnToken = std::string("R") +
+    // std::to_string(s.round) + active; BUGBUG BUGBUG      auto
+    // require_build_phase = [&]() -> bool BUGBUG      { BUGBUG          if
+    // (s.scenario.empty()) BUGBUG          { BUGBUG              eventText =
+    // "No scenario. Type: start learning|basic|advanced"; BUGBUG
+    // Logger::instance().error(eventText); BUGBUG              return false;
+    // BUGBUG          }
+    // BUGBUG          if (s.phase_index != PH_BUILD_SHIPS)
+    // BUGBUG          {
+    // BUGBUG              std::ostringstream o;
+    // BUGBUG              o << "Not in Build Ships phase. Current: " <<
+    // s.phase_name(); BUGBUG              eventText = o.str(); BUGBUG
+    // Logger::instance().error(eventText); BUGBUG              return false;
+    // BUGBUG          }
+    // BUGBUG          return true;
+    // BUGBUG      };
+    // BUGBUG
+    // BUGBUG      auto require_movement_phase = [&]() -> bool
+    // BUGBUG      {
+    // BUGBUG          if (s.scenario.empty())
+    // BUGBUG          {
+    // BUGBUG              eventText = "No scenario. Type: start
+    // learning|basic|advanced"; BUGBUG              return false; BUGBUG }
+    // BUGBUG          if (s.phase_index != PH_MOVEMENT)
+    // BUGBUG          {
+    // BUGBUG              std::ostringstream o;
+    // BUGBUG              o << "Not in Movement phase. Current: " <<
+    // s.phase_name(); BUGBUG              eventText = o.str(); BUGBUG
+    // Logger::instance().error(eventText); BUGBUG              return false;
+    // BUGBUG          }
+    // BUGBUG          return true;
+    // BUGBUG      };
+    // BUGBUG
+    // BUGBUG      auto require_my_turn = [&]() -> bool
+    // BUGBUG      {
+    // BUGBUG          if (active != me)
+    // BUGBUG          {
+    // BUGBUG              std::ostringstream o;
+    // BUGBUG              o << "Not your turn. Active player is " << active <<
+    // "."; BUGBUG              eventText = o.str(); BUGBUG
+    // Logger::instance().error(eventText); BUGBUG              return false;
+    // BUGBUG          }
+    // BUGBUG          return true;
+    // BUGBUG      };
+    // BUGBUG
+    // BUGBUG      auto ship_cost_bp = [&](char ship_type, const DraftRow &d) ->
+    // int BUGBUG      { BUGBUG          int cost = 0; BUGBUG          cost +=
+    // d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR; BUGBUG cost +=
+    // (d.attr.M + 2) / BUGBUG                  3; // M is validated
+    // multiple-of-3 elsewhere, but keep safe BUGBUG          if (ship_type ==
+    // 'W') BUGBUG              cost += 5; // Warp generator BUGBUG return cost;
+    // BUGBUG      };
+    // BUGBUG
+    // BUGBUG      auto compute_tech_level = [&]() -> int
+    // BUGBUG      {
+    // BUGBUG          if (s.scenario != "advanced")
+    // BUGBUG              return 0;
+    // BUGBUG          // Tech level increases every 4 game-turns (turns 1-4 =
+    // 0, 5-8 = 1, ...) BUGBUG          if (s.round < 1) BUGBUG return 0; BUGBUG
+    // return (s.round - 1) / 4; BUGBUG      }; BUGBUG BUGBUG      auto
+    // fmt_attrs = [&](int PD, int B, int Sx, int T, int M, BUGBUG int SR) ->
+    // std::string BUGBUG      { BUGBUG          std::ostringstream o; BUGBUG o
+    // << "PD=" << PD << ", B=" << B << ", S=" << Sx << ", T=" << T BUGBUG << ",
+    // M=" << M << ", SR=" << SR; BUGBUG          return o.str(); BUGBUG      };
+    // BUGBUG
+    // BUGBUG      auto list_fleet_text = [&](char whichOwner) -> std::string
+    // BUGBUG      {
+    // BUGBUG          auto ships = load_ships(db, a.game_id, whichOwner);
+    // BUGBUG          std::ostringstream o;
+    // BUGBUG          o << (whichOwner == me ? "Blue-force fleet:" : "Red-force
+    // fleet:") BUGBUG            << "\n"; BUGBUG          if (ships.empty())
+    // BUGBUG          {
+    // BUGBUG              o << "  (none)\n";
+    // BUGBUG              return o.str();
+    // BUGBUG          }
+    // BUGBUG          for (auto &sh : ships)
+    // BUGBUG          {
+    // BUGBUG              o << "  " << sh.name << " - " << sh.code << " (L" <<
+    // sh.attr.tech BUGBUG                << ") " BUGBUG                <<
+    // fmt_attrs(sh.attr.PD, sh.attr.B, sh.attr.S, sh.attr.T, BUGBUG sh.attr.M,
+    // sh.attr.SR); BUGBUG              if (!sh.racked_in.empty()) BUGBUG o << "
+    // [RACKED in " << sh.racked_in << "]"; BUGBUG              else if
+    // (!sh.at_system.empty()) BUGBUG                  o << " @ " <<
+    // sh.at_system; BUGBUG              else BUGBUG                  o << " @
+    // (undeployed)"; BUGBUG              if (sh.attr.type == 'W' && sh.attr.SR
+    // > 0) BUGBUG              { BUGBUG                  int cnt =
+    // count_racked_in(db, a.game_id, whichOwner, sh.code); BUGBUG if (cnt > 0)
+    // BUGBUG                  {
+    // BUGBUG                      auto carried = db->query(
+    // BUGBUG                          "SELECT ship_code FROM ships WHERE
+    // game_id=" + BUGBUG                          std::to_string(a.game_id) + "
+    // AND owner='" + BUGBUG                          std::string(1, whichOwner)
+    // + "' AND racked_in='" + BUGBUG                          db->esc(sh.code)
+    // + "' ORDER BY ship_code"); BUGBUG                      o << " carrying:";
+    // BUGBUG                      for (auto &c : carried)
+    // BUGBUG                          o << " " << c[0];
+    // BUGBUG                  }
+    // BUGBUG                  else
+    // BUGBUG                  {
+    // BUGBUG                      o << " carrying: (none)";
+    // BUGBUG                  }
+    // BUGBUG              }
+    // BUGBUG              o << "\n";
+    // BUGBUG          }
+    // BUGBUG          return o.str();
+    // BUGBUG      };
+    // BUGBUG
+    // BUGBUG      if (cmd == "status")
+    // BUGBUG      {
+    // BUGBUG          eventText = "Status refreshed.";
+    // BUGBUG      }
+    // BUGBUG      else if (cmd == "bases")
+    // BUGBUG      {
+    // BUGBUG          // Map/base-star configuration will move server-side
+    // later; for now BUGBUG          // allow free-form system names. BUGBUG
+    // std::ostringstream o; BUGBUG          o << "Base systems are not yet
+    // configured server-side.\n" BUGBUG            << "Use 'deploy <W#|S##>
+    // <SYSTEM>' with a system name (e.g., UR) for " BUGBUG "now."; BUGBUG
+    // eventText = o.str(); BUGBUG          Logger::instance().error(eventText);
+    // BUGBUG      }
+    // BUGBUG      else if (cmd == "reset")
+    // BUGBUG      {
+    // BUGBUG          // Clear scenario and state; also clear DB ships/drafts
+    // for the latest BUGBUG          // game BUGBUG          s.clear(); // =
+    // GameState(); BUGBUG          s.game_id = a.game_id; BUGBUG
+    // db->exec("DELETE FROM drafts WHERE game_id=" + BUGBUG
+    // std::to_string(a.game_id)); BUGBUG          db->exec("DELETE FROM ships
+    // WHERE game_id=" + BUGBUG                   std::to_string(a.game_id));
+    // BUGBUG          set_current_draft(db, a.game_id, 'A', "");
+    // BUGBUG          set_current_draft(db, a.game_id, 'B', "");
+    // BUGBUG          eventText = "Game reset. Type: start
+    // learning|basic|advanced"; BUGBUG      } BUGBUG      else if (cmd ==
+    // "list") BUGBUG      { BUGBUG          if (tok.size() == 1) BUGBUG {
+    // BUGBUG              eventText = list_fleet_text(owner) + "\n" +
+    // list_fleet_text(enemy); BUGBUG          } BUGBUG          else BUGBUG {
+    // BUGBUG              std::string sub = to_lower(tok[1]);
+    // BUGBUG              if (sub == "drafts")
+    // BUGBUG              {
+    // BUGBUG                  eventText = "Use: build drafts (list drafts is
+    // deprecated)."; BUGBUG              } BUGBUG              else if (sub ==
+    // "system" && tok.size() >= 3) BUGBUG              { BUGBUG std::string sys
+    // = resolve_system_name(db, a.game_id, tok[2]); BUGBUG auto aShips =
+    // db->query( BUGBUG                      "SELECT " BUGBUG
+    // "owner,ship_name,ship_code,ship_type,tech_level,pd,beam," BUGBUG
+    // "screen,tube,missiles,sr,racked_in " BUGBUG                      "FROM
+    // ships WHERE game_id=" + BUGBUG std::to_string(a.game_id) + " AND
+    // at_system='" + BUGBUG                      db->esc(sys) + "' ORDER BY
+    // owner,ship_code"); BUGBUG                  std::ostringstream o; BUGBUG
+    // o << "Ships at " << sys << ":\n"; BUGBUG                  if
+    // (aShips.empty()) BUGBUG                  { BUGBUG                      o
+    // << "  (none)\n"; BUGBUG                      eventText = o.str(); BUGBUG
+    // } BUGBUG                  else BUGBUG                  { BUGBUG for (auto
+    // &r : aShips) BUGBUG                      { BUGBUG char ow = r[0].empty()
+    // ? 'A' : r[0][0]; BUGBUG                          o << "  " << (ow ==
+    // owner ? "Blue" : "Red") << ": " BUGBUG                            << r[1]
+    // << " - " << r[2] << " (L" << r[4] << ") " BUGBUG <<
+    // fmt_attrs(std::atoi(r[5].c_str()), BUGBUG std::atoi(r[6].c_str()), BUGBUG
+    // std::atoi(r[7].c_str()), BUGBUG std::atoi(r[8].c_str()), BUGBUG
+    // std::atoi(r[9].c_str()), BUGBUG std::atoi(r[10].c_str())) BUGBUG << "\n";
+    // BUGBUG                      }
+    // BUGBUG                      eventText = o.str();
+    // BUGBUG                  }
+    // BUGBUG              }
+    // BUGBUG              else if (sub == "all")
+    // BUGBUG              {
+    // BUGBUG                  std::ostringstream o;
+    // BUGBUG                  char me = a.player;
+    // BUGBUG                  char enemy = (me == 'A') ? 'B' : 'A';
+    // BUGBUG                  o << list_fleet_text(me) << "\n" <<
+    // list_fleet_text(enemy); BUGBUG                  eventText = o.str();
+    // BUGBUG              }
+    // BUGBUG              else if (sub == "scan")
+    // BUGBUG              {
+    // BUGBUG                  eventText =
+    // BUGBUG                      "list scan: not implemented yet (sightings
+    // table is " BUGBUG                      "present for later)."; BUGBUG }
+    // BUGBUG              else
+    // BUGBUG              {
+    // BUGBUG                  eventText =
+    // BUGBUG                      "Usage: list | list drafts | list system
+    // <SYS> | list " BUGBUG                      "all | list scan"; BUGBUG }
+    // BUGBUG              Logger::instance().info(eventText);
+    // BUGBUG          }
+    // BUGBUG      }
+    // BUGBUG      else if (cmd == "pickup" || cmd == "drop")
+    // BUGBUG      {
+    // BUGBUG          if (!require_my_turn() || !require_build_phase())
+    // BUGBUG          {
+    // BUGBUG              // eventText already set
+    // BUGBUG          }
+    // BUGBUG          else if (tok.size() < 3)
+    // BUGBUG          {
+    // BUGBUG              eventText = std::string("Usage: ") + cmd + " <W#>
+    // <S##>"; BUGBUG          } BUGBUG          else BUGBUG          { BUGBUG
+    // std::string wcode = tok[1]; BUGBUG              std::string scode =
+    // tok[2]; BUGBUG BUGBUG              if (!ship_exists(db, a.game_id, owner,
+    // wcode)) BUGBUG              { BUGBUG                  eventText =
+    // "Warpship not found: " + wcode; BUGBUG              } BUGBUG else if
+    // (!ship_exists(db, a.game_id, owner, scode)) BUGBUG              { BUGBUG
+    // eventText = "Systemship not found: " + scode; BUGBUG              }
+    // BUGBUG              else
+    // BUGBUG              {
+    // BUGBUG                  ShipRow w = load_ship(db, a.game_id, owner,
+    // wcode); BUGBUG                  ShipRow sship = load_ship(db, a.game_id,
+    // owner, scode); BUGBUG                  if (w.attr.type != 'W') BUGBUG {
+    // BUGBUG                      eventText = "Not a Warpship: " + wcode;
+    // BUGBUG                  }
+    // BUGBUG                  else if (sship.attr.type != 'S')
+    // BUGBUG                  {
+    // BUGBUG                      eventText = "Not a Systemship: " + scode;
+    // BUGBUG                  }
+    // BUGBUG                  else if (w.built_turn != turnToken ||
+    // BUGBUG                           sship.built_turn != turnToken)
+    // BUGBUG                  {
+    // BUGBUG                      eventText = "Pre-rack rule: both ships must
+    // be committed " BUGBUG                                  "this same turn ("
+    // + BUGBUG                                  turnToken + ")."; BUGBUG }
+    // BUGBUG                  else if (cmd == "pickup")
+    // BUGBUG                  {
+    // BUGBUG                      if (w.at_system.empty() ||
+    // sship.at_system.empty()) BUGBUG                      { BUGBUG eventText =
+    // "Both ships must be deployed to the same " BUGBUG "system first."; BUGBUG
+    // } BUGBUG                      else if (w.at_system != sship.at_system)
+    // BUGBUG                      {
+    // BUGBUG                          eventText = "Not co-located: " + wcode +
+    // "@" + BUGBUG                                      w.at_system + " vs " +
+    // scode + "@" + BUGBUG sship.at_system; BUGBUG                      }
+    // BUGBUG                      else if (!sship.racked_in.empty())
+    // BUGBUG                      {
+    // BUGBUG                          eventText =
+    // BUGBUG                              "Systemship already racked in " +
+    // sship.racked_in; BUGBUG                      } BUGBUG else BUGBUG {
+    // BUGBUG                          int carried =
+    // BUGBUG                              count_racked_in(db, a.game_id, owner,
+    // w.code); BUGBUG                          if (carried >= w.attr.SR) BUGBUG
+    // { BUGBUG                              std::ostringstream o; BUGBUG o <<
+    // "No SR capacity. SR=" << w.attr.SR BUGBUG << ", carrying=" << carried;
+    // BUGBUG                              eventText = o.str();
+    // BUGBUG                          }
+    // BUGBUG                          else
+    // BUGBUG                          {
+    // BUGBUG                              update_ship_location(db, a.game_id,
+    // owner, scode, BUGBUG "", w.at_hex, wcode); BUGBUG eventText = "Picked up
+    // " + sship.name + " - " + BUGBUG sship.code + " into " + w.name + " - " +
+    // BUGBUG                                          w.code;
+    // BUGBUG                          }
+    // BUGBUG                      }
+    // BUGBUG                  }
+    // BUGBUG                  else
+    // BUGBUG                  { // drop
+    // BUGBUG                      if (sship.racked_in != wcode)
+    // BUGBUG                      {
+    // BUGBUG                          eventText = "Systemship is not racked in
+    // " + wcode; BUGBUG                      } BUGBUG                      else
+    // BUGBUG                      {
+    // BUGBUG                          if (w.at_system.empty())
+    // BUGBUG                          {
+    // BUGBUG                              eventText = "Warpship must be
+    // deployed to a system " BUGBUG "to drop."; BUGBUG } BUGBUG else BUGBUG {
+    // BUGBUG                              update_ship_location(db, a.game_id,
+    // owner, scode, BUGBUG w.at_system, w.at_hex, ""); BUGBUG eventText =
+    // "Dropped " + sship.name + " - " + BUGBUG sship.code + " at " +
+    // w.at_system; BUGBUG                          } BUGBUG } BUGBUG } BUGBUG }
+    // BUGBUG          }
+    // BUGBUG      }
+    // BUGBUG      else if (cmd == "combat")
+    // BUGBUG      {
+    // BUGBUG          std::istringstream iss(cmdline);
+    // BUGBUG          std::string cmdName;
+    // BUGBUG          iss >> cmdName; // "combat"
+    // BUGBUG
+    // BUGBUG          std::string action;
+    // BUGBUG          iss >> action;
+    // BUGBUG          if (action == "order")
+    // BUGBUG          {
+    // BUGBUG              // combat order <ship> [tactic=A|D|R] [target=ID]
+    // [d=N] [b=N] [s=N] BUGBUG              // [t=N] [m=JSON] BUGBUG
+    // CombatOrder ord; BUGBUG              ord.game_id = a.game_id; BUGBUG
+    // ord.round = 0; // Set by engine BUGBUG BUGBUG              // Defaults
+    // BUGBUG              ord.tactic = 'A'; // Default to Attack
+    // BUGBUG              ord.target_id = "";
+    // BUGBUG              ord.power_d = 0;
+    // BUGBUG              ord.power_b = 0;
+    // BUGBUG              ord.power_s = 0;
+    // BUGBUG              ord.power_t = 0;
+    // BUGBUG              ord.missiles_json = "[]";
+    // BUGBUG
+    // BUGBUG              if (!(iss >> ord.ship_code))
+    // BUGBUG              {
+    // BUGBUG                  resp->body = json_error("missing ship code");
+    // BUGBUG                  return;
+    // BUGBUG              }
+    // BUGBUG              ord.ship_code = upper_ascii(ord.ship_code);
+    // BUGBUG
+    // BUGBUG              std::string token;
+    // BUGBUG              while (iss >> token)
+    // BUGBUG              {
+    // BUGBUG                  size_t eq = token.find('=');
+    // BUGBUG                  if (eq == std::string::npos)
+    // BUGBUG                  {
+    // BUGBUG                      // check for implicit tactic (A, D, R)
+    // BUGBUG                      if (token.size() == 1)
+    // BUGBUG                      {
+    // BUGBUG                          char c = std::toupper(token[0]);
+    // BUGBUG                          if (c == 'A' || c == 'D' || c == 'R')
+    // BUGBUG                          {
+    // BUGBUG                              ord.tactic = c;
+    // BUGBUG                              continue;
+    // BUGBUG                          }
+    // BUGBUG                      }
+    // BUGBUG                      // Implicit target ID (e.g. "W1" in "combat
+    // order W2 D W1") BUGBUG                      ord.target_id = token; BUGBUG
+    // continue; BUGBUG                  } BUGBUG BUGBUG std::string key =
+    // to_lower(token.substr(0, eq)); BUGBUG                  std::string val =
+    // token.substr(eq + 1); BUGBUG BUGBUG                  if (key == "tactic"
+    // || key == "mode" || key == "opt") BUGBUG                  { BUGBUG if
+    // (!val.empty()) BUGBUG                          ord.tactic =
+    // std::toupper(val[0]); BUGBUG                  } BUGBUG else if (key ==
+    // "target" || key == "tgt") BUGBUG                  { BUGBUG ord.target_id
+    // = val; BUGBUG                  } BUGBUG                  else if (key ==
+    // "d" || key == "drive") BUGBUG                      ord.power_d =
+    // std::atoi(val.c_str()); BUGBUG                  else if (key == "b" ||
+    // key == "beam") BUGBUG                      ord.power_b =
+    // std::atoi(val.c_str()); BUGBUG                  else if (key == "s" ||
+    // key == "screen") BUGBUG                      ord.power_s =
+    // std::atoi(val.c_str()); BUGBUG                  else if (key == "t" ||
+    // key == "tube") BUGBUG                      ord.power_t =
+    // std::atoi(val.c_str()); BUGBUG                  else if (key == "m" ||
+    // key == "missiles") BUGBUG                      ord.missiles_json = val;
+    // BUGBUG              }
+    // BUGBUG
+    // BUGBUG              // No strict syntax check needed, defaults apply.
+    // BUGBUG
+    // BUGBUG              std::string candidate_target(ord.target_id);
+    // BUGBUG              Logger::instance().info(candidate_target);
+    // BUGBUG
+    // BUGBUG              // Validation
+    // BUGBUG              if (ord.tactic == 'D' && ord.target_id.empty())
+    // BUGBUG              {
+    // BUGBUG                  eventText =
+    // BUGBUG                      "Combat order to dodge requires a target
+    // opponent ship"; BUGBUG                  // Don't submit BUGBUG } BUGBUG
+    // else BUGBUG              { BUGBUG                  CombatEngine ce(db,
+    // a.game_id); BUGBUG                  eventText = ce.submit_order(owner,
+    // ord); BUGBUG              } BUGBUG          } BUGBUG          else if
+    // (action == "resolve") BUGBUG          { BUGBUG              std::string
+    // hex; BUGBUG              iss >> hex; BUGBUG              if (hex.empty())
+    // BUGBUG              {
+    // BUGBUG                  resp->status = 400;
+    // BUGBUG                  resp->body = json_error("missing hex");
+    // BUGBUG                  Logger::instance().error(
+    // BUGBUG                      "Trying to resolve combat, hex ID is
+    // missing"); BUGBUG                  return; BUGBUG              } BUGBUG
+    // CombatEngine ce(db, a.game_id); BUGBUG              eventText =
+    // ce.resolve_round(hex); BUGBUG          } BUGBUG          else if (action
+    // == "apply") BUGBUG          { BUGBUG              // combat apply <ship>
+    // <attr=val>... BUGBUG              std::string ship_code; BUGBUG if (!(iss
+    // >> ship_code)) BUGBUG              { BUGBUG                  resp->body =
+    // json_error("missing ship code"); BUGBUG Logger::instance().error( BUGBUG
+    // "Trying combat subcommand apply, ship code is missing"); BUGBUG return;
+    // BUGBUG              }
+    // BUGBUG              ship_code = upper_ascii(ship_code);
+    // BUGBUG              std::map<std::string, int> assignments;
+    // BUGBUG              std::string token;
+    // BUGBUG              while (iss >> token)
+    // BUGBUG              {
+    // BUGBUG                  size_t eq = token.find('=');
+    // BUGBUG                  if (eq == std::string::npos)
+    // BUGBUG                      continue;
+    // BUGBUG                  std::string k = to_lower(token.substr(0, eq));
+    // BUGBUG                  int v = std::atoi(token.substr(eq + 1).c_str());
+    // BUGBUG                  if (k == "beam" || k == "b")
+    // BUGBUG                      k = "B";
+    // BUGBUG                  else if (k == "d" || k == "drive" || k == "pd")
+    // BUGBUG                      k = "D";
+    // BUGBUG                  else if (k == "screen" || k == "s")
+    // BUGBUG                      k = "S";
+    // BUGBUG                  else if (k == "tube" || k == "t")
+    // BUGBUG                      k = "T";
+    // BUGBUG                  else if (k == "missiles" || k == "m")
+    // BUGBUG                      k = "M";
+    // BUGBUG                  assignments[k] = v;
+    // BUGBUG              }
+    // BUGBUG              CombatEngine ce(db, a.game_id);
+    // BUGBUG              eventText = ce.apply_damage(owner, ship_code,
+    // assignments); BUGBUG          } BUGBUG          else if (action ==
+    // "list") BUGBUG          { BUGBUG              CombatEngine ce(db,
+    // a.game_id); BUGBUG              auto list = ce.get_active_combats();
+    // BUGBUG              eventText = "Active Combats: " +
+    // std::to_string(list.size()); BUGBUG          } BUGBUG          else
+    // BUGBUG          {
+    // BUGBUG              resp->status = 400;
+    // BUGBUG              resp->body = json_error("unknown combat action");
+    // BUGBUG              Logger::instance().error("Unknown combat action
+    // attempted"); BUGBUG              return; BUGBUG        } BUGBUG    }
+    // BUGBUG    // save_game(db, s);
+    // BUGBUG    // append_event(db, a.game_id, a.user_id, cmdline, eventText,
+    // s); BUGBUG BUGBUG    // Logger::instance().info("[" + std::string(1,
+    // owner) + "] " + cmdline + BUGBUG    //                        " -> " +
+    // eventText); BUGBUG BUGBUG    // resp->body =
+    // json_ok_with_state_and_event(s, eventText);
 
-    // NOTE: 'me' is derived from the authenticated token, not from game state.
-    char me = (a.player ? a.player : 'A');
-    char owner = me;
-    char enemy = (owner == 'A') ? 'B' : 'A';
-    char active = (s.active_player.empty() ? 'A' : s.active_player[0]);
-    auto turnToken = std::string("R") + std::to_string(s.round) + active;
+    //
+    // BUGBUG
 
-    auto require_build_phase = [&]() -> bool
-    {
-        if (s.scenario.empty())
-        {
-            eventText = "No scenario. Type: start learning|basic|advanced";
-            Logger::instance().error(eventText);
-            return false;
-        }
-        if (s.phase_index != PH_BUILD_SHIPS)
-        {
-            std::ostringstream o;
-            o << "Not in Build Ships phase. Current: " << s.phase_name();
-            eventText = o.str();
-            Logger::instance().error(eventText);
-            return false;
-        }
-        return true;
-    };
-
-    auto require_movement_phase = [&]() -> bool
-    {
-        if (s.scenario.empty())
-        {
-            eventText = "No scenario. Type: start learning|basic|advanced";
-            return false;
-        }
-        if (s.phase_index != PH_MOVEMENT)
-        {
-            std::ostringstream o;
-            o << "Not in Movement phase. Current: " << s.phase_name();
-            eventText = o.str();
-            Logger::instance().error(eventText);
-            return false;
-        }
-        return true;
-    };
-
-    auto require_my_turn = [&]() -> bool
-    {
-        if (active != me)
-        {
-            std::ostringstream o;
-            o << "Not your turn. Active player is " << active << ".";
-            eventText = o.str();
-            Logger::instance().error(eventText);
-            return false;
-        }
-        return true;
-    };
-
-    auto ship_cost_bp = [&](char ship_type, const DraftRow &d) -> int
-    {
-        int cost = 0;
-        cost += d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR;
-        cost += (d.attr.M + 2) /
-                3; // M is validated multiple-of-3 elsewhere, but keep safe
-        if (ship_type == 'W')
-            cost += 5; // Warp generator
-        return cost;
-    };
-
-    auto compute_tech_level = [&]() -> int
-    {
-        if (s.scenario != "advanced")
-            return 0;
-        // Tech level increases every 4 game-turns (turns 1-4 = 0, 5-8 = 1, ...)
-        if (s.round < 1)
-            return 0;
-        return (s.round - 1) / 4;
-    };
-
-    auto fmt_attrs = [&](int PD, int B, int Sx, int T, int M,
-                         int SR) -> std::string
-    {
-        std::ostringstream o;
-        o << "PD=" << PD << ", B=" << B << ", S=" << Sx << ", T=" << T
-          << ", M=" << M << ", SR=" << SR;
-        return o.str();
-    };
-
-    auto list_fleet_text = [&](char whichOwner) -> std::string
-    {
-        auto ships = load_ships(db, a.game_id, whichOwner);
-        std::ostringstream o;
-        o << (whichOwner == me ? "Blue-force fleet:" : "Red-force fleet:")
-          << "\n";
-        if (ships.empty())
-        {
-            o << "  (none)\n";
-            return o.str();
-        }
-        for (auto &sh : ships)
-        {
-            o << "  " << sh.name << " - " << sh.code << " (L" << sh.attr.tech
-              << ") "
-              << fmt_attrs(sh.attr.PD, sh.attr.B, sh.attr.S, sh.attr.T,
-                           sh.attr.M, sh.attr.SR);
-            if (!sh.racked_in.empty())
-                o << " [RACKED in " << sh.racked_in << "]";
-            else if (!sh.at_system.empty())
-                o << " @ " << sh.at_system;
-            else
-                o << " @ (undeployed)";
-            if (sh.attr.type == 'W' && sh.attr.SR > 0)
-            {
-                int cnt = count_racked_in(db, a.game_id, whichOwner, sh.code);
-                if (cnt > 0)
-                {
-                    auto carried = db->query(
-                        "SELECT ship_code FROM ships WHERE game_id=" +
-                        std::to_string(a.game_id) + " AND owner='" +
-                        std::string(1, whichOwner) + "' AND racked_in='" +
-                        db->esc(sh.code) + "' ORDER BY ship_code");
-                    o << " carrying:";
-                    for (auto &c : carried)
-                        o << " " << c[0];
-                }
-                else
-                {
-                    o << " carrying: (none)";
-                }
-            }
-            o << "\n";
-        }
-        return o.str();
-    };
-
-    if (cmd == "status")
-    {
-        eventText = "Status refreshed.";
-    }
-    else if (cmd == "bases")
-    {
-        // Map/base-star configuration will move server-side later; for now
-        // allow free-form system names.
-        std::ostringstream o;
-        o << "Base systems are not yet configured server-side.\n"
-          << "Use 'deploy <W#|S##> <SYSTEM>' with a system name (e.g., UR) for "
-             "now.";
-        eventText = o.str();
-        Logger::instance().error(eventText);
-    }
-    else if (cmd == "reset")
-    {
-        // Clear scenario and state; also clear DB ships/drafts for the latest
-        // game
-        s.clear(); // = GameState();
-        s.game_id = a.game_id;
-        db->exec("DELETE FROM drafts WHERE game_id=" +
-                 std::to_string(a.game_id));
-        db->exec("DELETE FROM ships  WHERE game_id=" +
-                 std::to_string(a.game_id));
-        set_current_draft(db, a.game_id, 'A', "");
-        set_current_draft(db, a.game_id, 'B', "");
-        eventText = "Game reset. Type: start learning|basic|advanced";
-    }
-    else if (cmd == "list")
-    {
-        if (tok.size() == 1)
-        {
-            eventText = list_fleet_text(owner) + "\n" + list_fleet_text(enemy);
-        }
-        else
-        {
-            std::string sub = to_lower(tok[1]);
-            if (sub == "drafts")
-            {
-                eventText = "Use: build drafts (list drafts is deprecated).";
-            }
-            else if (sub == "system" && tok.size() >= 3)
-            {
-                std::string sys = resolve_system_name(db, a.game_id, tok[2]);
-                auto aShips = db->query(
-                    "SELECT "
-                    "owner,ship_name,ship_code,ship_type,tech_level,pd,beam,"
-                    "screen,tube,missiles,sr,racked_in "
-                    "FROM ships WHERE game_id=" +
-                    std::to_string(a.game_id) + " AND at_system='" +
-                    db->esc(sys) + "' ORDER BY owner,ship_code");
-                std::ostringstream o;
-                o << "Ships at " << sys << ":\n";
-                if (aShips.empty())
-                {
-                    o << "  (none)\n";
-                    eventText = o.str();
-                }
-                else
-                {
-                    for (auto &r : aShips)
-                    {
-                        char ow = r[0].empty() ? 'A' : r[0][0];
-                        o << "  " << (ow == owner ? "Blue" : "Red") << ": "
-                          << r[1] << " - " << r[2] << " (L" << r[4] << ") "
-                          << fmt_attrs(std::atoi(r[5].c_str()),
-                                       std::atoi(r[6].c_str()),
-                                       std::atoi(r[7].c_str()),
-                                       std::atoi(r[8].c_str()),
-                                       std::atoi(r[9].c_str()),
-                                       std::atoi(r[10].c_str()))
-                          << "\n";
-                    }
-                    eventText = o.str();
-                }
-            }
-            else if (sub == "all")
-            {
-                std::ostringstream o;
-                char me = a.player;
-                char enemy = (me == 'A') ? 'B' : 'A';
-                o << list_fleet_text(me) << "\n" << list_fleet_text(enemy);
-                eventText = o.str();
-            }
-            else if (sub == "scan")
-            {
-                eventText =
-                    "list scan: not implemented yet (sightings table is "
-                    "present for later).";
-            }
-            else
-            {
-                eventText =
-                    "Usage: list | list drafts | list system <SYS> | list "
-                    "all | list scan";
-            }
-            Logger::instance().info(eventText);
-        }
-    }
-    else if (cmd == "pickup" || cmd == "drop")
-    {
-        if (!require_my_turn() || !require_build_phase())
-        {
-            // eventText already set
-        }
-        else if (tok.size() < 3)
-        {
-            eventText = std::string("Usage: ") + cmd + " <W#> <S##>";
-        }
-        else
-        {
-            std::string wcode = tok[1];
-            std::string scode = tok[2];
-
-            if (!ship_exists(db, a.game_id, owner, wcode))
-            {
-                eventText = "Warpship not found: " + wcode;
-            }
-            else if (!ship_exists(db, a.game_id, owner, scode))
-            {
-                eventText = "Systemship not found: " + scode;
-            }
-            else
-            {
-                ShipRow w = load_ship(db, a.game_id, owner, wcode);
-                ShipRow sship = load_ship(db, a.game_id, owner, scode);
-                if (w.attr.type != 'W')
-                {
-                    eventText = "Not a Warpship: " + wcode;
-                }
-                else if (sship.attr.type != 'S')
-                {
-                    eventText = "Not a Systemship: " + scode;
-                }
-                else if (w.built_turn != turnToken ||
-                         sship.built_turn != turnToken)
-                {
-                    eventText = "Pre-rack rule: both ships must be committed "
-                                "this same turn (" +
-                                turnToken + ").";
-                }
-                else if (cmd == "pickup")
-                {
-                    if (w.at_system.empty() || sship.at_system.empty())
-                    {
-                        eventText = "Both ships must be deployed to the same "
-                                    "system first.";
-                    }
-                    else if (w.at_system != sship.at_system)
-                    {
-                        eventText = "Not co-located: " + wcode + "@" +
-                                    w.at_system + " vs " + scode + "@" +
-                                    sship.at_system;
-                    }
-                    else if (!sship.racked_in.empty())
-                    {
-                        eventText =
-                            "Systemship already racked in " + sship.racked_in;
-                    }
-                    else
-                    {
-                        int carried =
-                            count_racked_in(db, a.game_id, owner, w.code);
-                        if (carried >= w.attr.SR)
-                        {
-                            std::ostringstream o;
-                            o << "No SR capacity. SR=" << w.attr.SR
-                              << ", carrying=" << carried;
-                            eventText = o.str();
-                        }
-                        else
-                        {
-                            update_ship_location(db, a.game_id, owner, scode,
-                                                 "", w.at_hex, wcode);
-                            eventText = "Picked up " + sship.name + " - " +
-                                        sship.code + " into " + w.name + " - " +
-                                        w.code;
-                        }
-                    }
-                }
-                else
-                { // drop
-                    if (sship.racked_in != wcode)
-                    {
-                        eventText = "Systemship is not racked in " + wcode;
-                    }
-                    else
-                    {
-                        if (w.at_system.empty())
-                        {
-                            eventText = "Warpship must be deployed to a system "
-                                        "to drop.";
-                        }
-                        else
-                        {
-                            update_ship_location(db, a.game_id, owner, scode,
-                                                 w.at_system, w.at_hex, "");
-                            eventText = "Dropped " + sship.name + " - " +
-                                        sship.code + " at " + w.at_system;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else if (cmd == "combat")
-    {
-        std::istringstream iss(cmdline);
-        std::string cmdName;
-        iss >> cmdName; // "combat"
-
-        std::string action;
-        iss >> action;
-        if (action == "order")
-        {
-            // combat order <ship> [tactic=A|D|R] [target=ID] [d=N] [b=N] [s=N]
-            // [t=N] [m=JSON]
-            CombatOrder ord;
-            ord.game_id = a.game_id;
-            ord.round = 0; // Set by engine
-
-            // Defaults
-            ord.tactic = 'A'; // Default to Attack
-            ord.target_id = "";
-            ord.power_d = 0;
-            ord.power_b = 0;
-            ord.power_s = 0;
-            ord.power_t = 0;
-            ord.missiles_json = "[]";
-
-            if (!(iss >> ord.ship_code))
-            {
-                resp->body = json_error("missing ship code");
-                return;
-            }
-            ord.ship_code = upper_ascii(ord.ship_code);
-
-            std::string token;
-            while (iss >> token)
-            {
-                size_t eq = token.find('=');
-                if (eq == std::string::npos)
-                {
-                    // check for implicit tactic (A, D, R)
-                    if (token.size() == 1)
-                    {
-                        char c = std::toupper(token[0]);
-                        if (c == 'A' || c == 'D' || c == 'R')
-                        {
-                            ord.tactic = c;
-                            continue;
-                        }
-                    }
-                    // Implicit target ID (e.g. "W1" in "combat order W2 D W1")
-                    ord.target_id = token;
-                    continue;
-                }
-
-                std::string key = to_lower(token.substr(0, eq));
-                std::string val = token.substr(eq + 1);
-
-                if (key == "tactic" || key == "mode" || key == "opt")
-                {
-                    if (!val.empty())
-                        ord.tactic = std::toupper(val[0]);
-                }
-                else if (key == "target" || key == "tgt")
-                {
-                    ord.target_id = val;
-                }
-                else if (key == "d" || key == "drive")
-                    ord.power_d = std::atoi(val.c_str());
-                else if (key == "b" || key == "beam")
-                    ord.power_b = std::atoi(val.c_str());
-                else if (key == "s" || key == "screen")
-                    ord.power_s = std::atoi(val.c_str());
-                else if (key == "t" || key == "tube")
-                    ord.power_t = std::atoi(val.c_str());
-                else if (key == "m" || key == "missiles")
-                    ord.missiles_json = val;
-            }
-
-            // No strict syntax check needed, defaults apply.
-
-            std::string candidate_target(ord.target_id);
-            Logger::instance().info(candidate_target);
-
-            // Validation
-            if (ord.tactic == 'D' && ord.target_id.empty())
-            {
-                eventText =
-                    "Combat order to dodge requires a target opponent ship";
-                // Don't submit
-            }
-            else
-            {
-                CombatEngine ce(db, a.game_id);
-                eventText = ce.submit_order(owner, ord);
-            }
-        }
-        else if (action == "resolve")
-        {
-            std::string hex;
-            iss >> hex;
-            if (hex.empty())
-            {
-                resp->status = 400;
-                resp->body = json_error("missing hex");
-                Logger::instance().error(
-                    "Trying to resolve combat, hex ID is missing");
-                return;
-            }
-            CombatEngine ce(db, a.game_id);
-            eventText = ce.resolve_round(hex);
-        }
-        else if (action == "apply")
-        {
-            // combat apply <ship> <attr=val>...
-            std::string ship_code;
-            if (!(iss >> ship_code))
-            {
-                resp->body = json_error("missing ship code");
-                Logger::instance().error(
-                    "Trying combat subcommand apply, ship code is missing");
-                return;
-            }
-            ship_code = upper_ascii(ship_code);
-            std::map<std::string, int> assignments;
-            std::string token;
-            while (iss >> token)
-            {
-                size_t eq = token.find('=');
-                if (eq == std::string::npos)
-                    continue;
-                std::string k = to_lower(token.substr(0, eq));
-                int v = std::atoi(token.substr(eq + 1).c_str());
-                if (k == "beam" || k == "b")
-                    k = "B";
-                else if (k == "d" || k == "drive" || k == "pd")
-                    k = "D";
-                else if (k == "screen" || k == "s")
-                    k = "S";
-                else if (k == "tube" || k == "t")
-                    k = "T";
-                else if (k == "missiles" || k == "m")
-                    k = "M";
-                assignments[k] = v;
-            }
-            CombatEngine ce(db, a.game_id);
-            eventText = ce.apply_damage(owner, ship_code, assignments);
-        }
-        else if (action == "list")
-        {
-            CombatEngine ce(db, a.game_id);
-            auto list = ce.get_active_combats();
-            eventText = "Active Combats: " + std::to_string(list.size());
-        }
-        else
-        {
-            resp->status = 400;
-            resp->body = json_error("unknown combat action");
-            Logger::instance().error("Unknown combat action attempted");
-            return;
-        }
-    }
-#endif
-
-    // save_game(db, s);
-    // append_event(db, a.game_id, a.user_id, cmdline, eventText, s);
-
-    // Logger::instance().info("[" + std::string(1, owner) + "] " + cmdline +
-    //                        " -> " + eventText);
-
-    // resp->body = json_ok_with_state_and_event(s, eventText);
     return;
 }

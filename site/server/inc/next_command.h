@@ -18,19 +18,21 @@ class NextCommand : public ICmd
     class Builder
     {
       public:
-        Builder(StateMachine &sm);
-        ICmd *build();
-
-      private:
-        StateMachine &m_sm;
+        Builder()
+        {
+        }
+        ICmd* build()
+        {
+            return new NextCommand(*this);
+        }
     };
 
     bool invoke(void) override;
 
   private:
-    NextCommand(StateMachine &sm);
-
-    StateMachine &m_sm;
+    NextCommand(Builder& builder)
+    {
+    }
 };
 
 #endif

@@ -15,36 +15,35 @@
 
 class BuildShowDraftCommand : public ICmd
 {
+  private:
+    std::string m_draft_code;
+
   public:
     class Builder
     {
       public:
-        StateMachine &_sm;
         std::string _draft_code;
 
-        Builder(StateMachine &sm) : _sm(sm)
+        Builder()
         {
         }
-        Builder &set_draft_code(const std::string &code)
+        Builder& set_draft_code(const std::string& code)
         {
             _draft_code = code;
             return *this;
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new BuildShowDraftCommand(_sm, _draft_code);
+            return new BuildShowDraftCommand(*this);
         }
     };
 
   private:
-    BuildShowDraftCommand(StateMachine &sm, const std::string &draft_code)
-        : m_sm(sm), m_draft_code(draft_code)
+    BuildShowDraftCommand(Builder& builder)
+        : m_draft_code(std::move(builder._draft_code))
     {
     }
-
-    StateMachine &m_sm;
-    std::string m_draft_code;
 
   public:
     virtual bool invoke(void);

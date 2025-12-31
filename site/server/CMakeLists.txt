@@ -1,36 +1,10 @@
-###################################################################################
-## BSD 3-Clause License
-## 
+##################################################################################
 ## This file is part of Kepler's Horizon
 ##
+## Licensed under BSD 3-Clause License
+##
 ## Copyright (c) 2025, sibomots
-## 
-## Redistribution and use in source and binary forms, with or without
-## modification, are permitted provided that the following conditions are met:
-## 
-## 1. Redistributions of source code must retain the above copyright notice, this
-##    list of conditions and the following disclaimer.
-## 
-## 2. Redistributions in binary form must reproduce the above copyright notice,
-##    this list of conditions and the following disclaimer in the documentation
-##    and/or other materials provided with the distribution.
-## 
-## 3. Neither the name of the copyright holder nor the names of its
-##    contributors may be used to endorse or promote products derived from
-##    this software without specific prior written permission.
-## 
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-## DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-## FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-## DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-## SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-## CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-## OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #################################################################################
-
 cmake_minimum_required(VERSION 3.10)
 
 project(kh LANGUAGES CXX)
@@ -64,76 +38,79 @@ ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
 # Source files
 set(SRCS
-src/args.cpp
-src/game.cpp
-src/util.cpp
-src/events.cpp
-src/comms.cpp
-src/cmd.cpp
-src/db.cpp
-src/state.cpp
 src/account.cpp
-src/main.cpp
-src/json.cpp
-src/mapgraph.cpp
-src/maputil.cpp
-src/combat.cpp
-src/logger.cpp
-src/telemetry.cpp
-src/statemachine.cpp
-src/start_command.cpp
+src/build_cancel_command.cpp
 src/build_command.cpp
 src/build_commit_command.cpp
-src/build_new_command.cpp
-src/build_cancel_command.cpp
 src/build_list_drafts_command.cpp
-src/build_show_draft_command.cpp
+src/build_new_command.cpp
 src/build_set_attribute_command.cpp
+src/build_show_draft_command.cpp
+src/cmd.cpp
+src/combat.cpp
+src/comms.cpp
+src/db.cpp
+src/deploy_command.cpp
+src/done_command.cpp
+src/events.cpp
+src/ships.cpp
+src/init.cpp
+src/json.cpp
+src/logger.cpp
+src/main.cpp
+src/mapgraph.cpp
+src/maputil.cpp
+src/move_command.cpp
+src/next_command.cpp
 src/repair_command.cpp
 src/resupply_command.cpp
-src/next_command.cpp
-src/done_command.cpp
-src/deploy_command.cpp
-src/move_command.cpp
+src/srvmgr.cpp
+src/start_command.cpp
+src/state.cpp
+src/statemachine.cpp
+src/telemetry.cpp
+src/util.cpp
 ${BISON_Parser_OUTPUTS}
 ${FLEX_Scanner_OUTPUTS}
 )
 
 # Header files (not required for build, but useful for IDEs)
 set(HDRS
-inc/util.h
-inc/args.h
-inc/state.h
-inc/db.h
-inc/typs.h
-inc/game.h
-inc/json.h
-inc/events.h
-inc/cmd.h
 inc/app.h
-inc/comms.h
-inc/mapgraph.h
-inc/maputil.h
-inc/combat.h
-inc/logger.h
-inc/telemetry.h
-inc/statemachine.h
-inc/icmd.h
-inc/typedefs.h
-inc/start_command.h
+inc/build_cancel_command.h
 inc/build_command.h
 inc/build_commit_command.h
-inc/build_new_command.h
-inc/build_cancel_command.h
 inc/build_list_drafts_command.h
-inc/build_show_draft_command.h
+inc/build_new_command.h
 inc/build_set_attribute_command.h
+inc/build_show_draft_command.h
+inc/cmd.h
+inc/combat.h
+inc/comms.h
+inc/db.h
+inc/deploy_command.h
+inc/done_command.h
+inc/events.h
+inc/flavor_events.h
+inc/ships.h
+inc/icmd.h
+inc/init.h
+inc/json.h
+inc/logger.h
+inc/mapgraph.h
+inc/maputil.h
+inc/move_command.h
+inc/next_command.h
 inc/repair_command.h
 inc/resupply_command.h
-inc/next_command.h
-inc/done_command.h
-inc/deploy_command.h
-inc/move_command.h
+inc/ships.h
+inc/srvmgr.h
+inc/start_command.h
+inc/state.h
+inc/statemachine.h
+inc/telemetry.h
+inc/typedefs.h
+inc/util.h
 )
 
 add_executable(kh

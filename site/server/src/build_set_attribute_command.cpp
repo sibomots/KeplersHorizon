@@ -9,17 +9,18 @@
 
 #include <sstream>
 
-#include "game.h"
 #include "logger.h"
+#include "statemachine.h"
 #include "telemetry.h"
-#include "typs.h"
+#include "typedefs.h"
+#include "ships.h"
 
 bool BuildSetAttributeCommand::invoke(void)
 {
-    GameState s = m_sm.get_game_state();
+    GameState s = StateMachine::getInstance().get_game_state();
+    int game_id = StateMachine::getInstance().get_game_id();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
-    std::string draft_code =
-        get_current_draft(m_sm.get_db(), m_sm.get_game_id(), active_player);
+    std::string draft_code = get_current_draft(game_id, active_player);
 
     if (draft_code.empty())
     {
@@ -28,11 +29,10 @@ bool BuildSetAttributeCommand::invoke(void)
         return false;
     }
 
-    DraftRow d = load_draft(m_sm.get_db(), m_sm.get_game_id(), active_player,
-                            draft_code);
+    DraftRow d = load_draft(game_id, active_player, draft_code);
 
     // Apply attributes using C++17 structured bindings
-    for (const auto &[attr_id, value] : m_attributes)
+    for (const auto& [attr_id, value] : m_attributes)
     {
         switch (attr_id)
         {
@@ -57,8 +57,7 @@ bool BuildSetAttributeCommand::invoke(void)
         }
     }
 
-    update_draft_attrs(m_sm.get_db(), m_sm.get_game_id(), active_player,
-                       draft_code, d);
+    update_draft_attrs(game_id, active_player, draft_code, d);
 
     std::ostringstream msg;
     msg << "Draft updated: " << draft_code << " [PD=" << d.attr.PD

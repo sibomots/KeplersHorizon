@@ -19,30 +19,31 @@ class ResupplyCommand : public ICmd
     class Builder
     {
       public:
-        std::string _ship_code;
-        int _missiles = 0;
+        std::string ship_code;
+        int missiles = 0;
 
-        Builder &set_ship_code(const std::string &code)
+        Builder& set_ship_code(const std::string& code)
         {
-            _ship_code = code;
+            ship_code = code;
             return *this;
         }
 
-        Builder &set_missiles(int m)
+        Builder& set_missiles(int m)
         {
-            _missiles = m;
+            missiles = m;
             return *this;
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new ResupplyCommand(_ship_code, _missiles);
+            return new ResupplyCommand(*this);
         }
     };
 
   private:
-    ResupplyCommand(const std::string &ship_code, int missiles)
-        : m_ship_code(ship_code), m_missiles(missiles)
+    ResupplyCommand(Builder& builder)
+        : m_ship_code(std::move(builder.ship_code)),
+          m_missiles(std::move(builder.missiles))
     {
     }
 

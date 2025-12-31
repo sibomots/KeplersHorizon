@@ -9,14 +9,13 @@
 
 #include <sstream>
 
-#include "game.h"
+//#include "game.h"
 #include "json.h"
 #include "statemachine.h"
 
-std::string Telemetry::write(const std::string &msg)
+std::string Telemetry::write(const std::string& msg)
 {
-    StateMachine &sm = StateMachine::getInstance();
-    GameState s = sm.get_game_state();
+    GameState s = StateMachine::getInstance().get_game_state();
 
     std::ostringstream o;
     o << "{";
@@ -28,25 +27,21 @@ std::string Telemetry::write(const std::string &msg)
     return o.str();
 }
 
-std::string Telemetry::tell(PlayerTarget target, const std::string &msg)
+std::string Telemetry::tell(PlayerTarget target, const std::string& msg)
 {
     // Same as write - routing handled by caller
     return write(msg);
 }
 
-std::string Telemetry::broadcast(const std::string &msg)
+std::string Telemetry::broadcast(const std::string& msg)
 {
     // Same as write - broadcast to all
     return write(msg);
 }
 
-void Telemetry::status(HttpResponse *resp)
+void Telemetry::status(HttpResponse* resp)
 {
-    // Access StateMachine singleton - it has the slate of state
-    StateMachine &sm = StateMachine::getInstance();
-
-    // Get current game state from StateMachine
-    GameState s = sm.get_game_state();
+    GameState s = StateMachine::getInstance().get_game_state();
 
     // Build status JSON
     std::ostringstream status_json;
@@ -79,21 +74,21 @@ void Telemetry::status(HttpResponse *resp)
     bool oppOnline = false;
     std::string oppLastSeen = "";
 
-    Db *db = sm.get_db();
+    DatabaseManager& db = DatabaseManager::getInstance();
     auto prow =
-        db->query("SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
-                  "sessions s JOIN users u ON u.id=s.user_id "
-                  "WHERE u.username='" +
-                  db->esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
+        db.query("SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
+                 "sessions s JOIN users u ON u.id=s.user_id "
+                 "WHERE u.username='" +
+                 db.esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
 
     if (!prow.empty())
     {
         oppLastSeen = prow[0][0];
         auto prow2 =
-            db->query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
-                      "FROM sessions s JOIN users u ON u.id=s.user_id "
-                      "WHERE u.username='" +
-                      db->esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
+            db.query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 90) "
+                     "FROM sessions s JOIN users u ON u.id=s.user_id "
+                     "WHERE u.username='" +
+                     db.esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
 
         if (!prow2.empty() && !prow2[0][0].empty() && prow2[0][0] != "0")
         {
@@ -105,10 +100,11 @@ void Telemetry::status(HttpResponse *resp)
     std::ostringstream out;
     out << "{\"ok\":true,\"state\":" << status_json.str()
         << ",\"self\":{\"owner\":\"" << selfOwner << "\",\"username\":\""
-        << json_escape(selfUser) << "\"}" << ",\"peer\":{\"owner\":\""
-        << oppOwner << "\",\"username\":\"" << oppUser
-        << "\",\"online\":" << (oppOnline ? "true" : "false")
-        << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}" << "}";
+        << json_escape(selfUser) << "\"}"
+        << ",\"peer\":{\"owner\":\"" << oppOwner << "\",\"username\":\""
+        << oppUser << "\",\"online\":" << (oppOnline ? "true" : "false")
+        << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}"
+        << "}";
 
     resp->body = out.str();
 }

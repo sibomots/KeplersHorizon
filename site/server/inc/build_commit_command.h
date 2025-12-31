@@ -17,24 +17,20 @@ class BuildCommitCommand : public ICmd
     class Builder
     {
       public:
-        StateMachine &_sm;
-
-        Builder(StateMachine &sm) : _sm(sm)
+        Builder()
         {
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new BuildCommitCommand(_sm);
+            return new BuildCommitCommand(*this);
         }
     };
 
   private:
-    BuildCommitCommand(StateMachine &sm) : m_sm(sm)
+    BuildCommitCommand(Builder& builder)
     {
     }
-
-    StateMachine &m_sm;
 
   public:
     virtual bool invoke(void);

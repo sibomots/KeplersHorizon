@@ -5,35 +5,31 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
+#include "mapgraph.h"
+
 #include <algorithm>
 #include <queue>
 #include <sstream>
 
-#include "map.h"
+#include "db.h"
+#include "util.h"
 
-MapGraph::MapGraph(Db *dbConn, int gId) : db(dbConn), game_id(gId)
+MapGraph::MapGraph(int gId) : game_id(gId)
 {
     load_hexes();
     load_warplines();
 }
 
-std::string MapGraph::upper_ascii(const std::string &s)
-{
-    std::string r = s;
-    for (size_t i = 0; i < r.size(); i++)
-        r[i] = (char)std::toupper((unsigned char)r[i]);
-    return r;
-}
-
 void MapGraph::load_hexes()
 {
+    DatabaseManager& db = DatabaseManager::getInstance();
     std::vector<std::vector<std::string>> allHex =
-        db->query("SELECT hex_id,q,r FROM hexes WHERE game_id=" +
-                  std::to_string(game_id));
+        db.query("SELECT hex_id,q,r FROM hexes WHERE game_id=" +
+                 std::to_string(game_id));
 
     for (size_t i = 0; i < allHex.size(); i++)
     {
-        const std::string &hid = allHex[i][0];
+        const std::string& hid = allHex[i][0];
         int q = std::atoi(allHex[i][1].c_str());
         int r = std::atoi(allHex[i][2].c_str());
         qr[hid] = std::make_pair(q, r);
@@ -45,7 +41,8 @@ void MapGraph::load_hexes()
 
 void MapGraph::load_warplines()
 {
-    std::vector<std::vector<std::string>> wh = db->query(
+    DatabaseManager& db = DatabaseManager::getInstance();
+    std::vector<std::vector<std::string>> wh = db.query(
         "SELECT wh.hex_id,w.a_hex,w.b_hex "
         "FROM warpline_hexes wh "
         "JOIN warplines w ON w.id=wh.warpline_id AND w.game_id=wh.game_id "
@@ -53,8 +50,8 @@ void MapGraph::load_warplines()
         std::to_string(game_id));
 
     std::vector<std::vector<std::string>> wlines =
-        db->query("SELECT a_hex,b_hex FROM warplines WHERE game_id=" +
-                  std::to_string(game_id));
+        db.query("SELECT a_hex,b_hex FROM warplines WHERE game_id=" +
+                 std::to_string(game_id));
 
     for (size_t i = 0; i < wh.size(); i++)
     {
@@ -75,24 +72,25 @@ void MapGraph::load_warplines()
 
 void MapGraph::load_state(char owner)
 {
+    DatabaseManager& db = DatabaseManager::getInstance();
     me = owner;
     enemy = (me == 'A') ? 'B' : 'A';
     enemyBlockades.clear();
 
     std::vector<std::vector<std::string>> blocks =
-        db->query("SELECT DISTINCT ss.hex_id FROM ships s "
-                  "JOIN star_systems ss ON s.at_hex = ss.hex_id "
-                  "WHERE s.game_id=" +
-                  std::to_string(game_id) + " AND s.owner='" +
-                  std::string(1, enemy) + "'");
+        db.query("SELECT DISTINCT ss.hex_id FROM ships s "
+                 "JOIN star_systems ss ON s.at_hex = ss.hex_id "
+                 "WHERE s.game_id=" +
+                 std::to_string(game_id) + " AND s.owner='" +
+                 std::string(1, enemy) + "'");
 
-    for (const auto &r : blocks)
+    for (const auto& r : blocks)
     {
         enemyBlockades.insert(r[0]);
     }
 }
 
-std::string MapGraph::resolve_hex(const std::string &token)
+std::string MapGraph::resolve_hex(const std::string& token)
 {
     std::string destHex;
     // Strip 'h' prefix if present
@@ -128,16 +126,17 @@ std::string MapGraph::resolve_hex(const std::string &token)
     }
 
     // Try system name resolution
-    return resolve_system(
-        token); // Implicitly returns hex if found, else logic flow up to caller
+    // Implicitly returns hex if found, else logic flow up to caller
+    return resolve_system(token);
 }
 
-std::string MapGraph::resolve_system(const std::string &token)
+std::string MapGraph::resolve_system(const std::string& token)
 {
+    DatabaseManager& db = DatabaseManager::getInstance();
     std::string u = upper_ascii(token);
-    auto r = db->query("SELECT hex_id FROM star_systems WHERE game_id=" +
-                       std::to_string(game_id) + " AND UPPER(name)='" +
-                       db->esc(u) + "' LIMIT 1");
+    auto r = db.query("SELECT hex_id FROM star_systems WHERE game_id=" +
+                      std::to_string(game_id) + " AND UPPER(name)='" +
+                      db.esc(u) + "' LIMIT 1");
     if (!r.empty() && !r[0].empty())
     {
         return r[0][0];
@@ -145,7 +144,7 @@ std::string MapGraph::resolve_system(const std::string &token)
     return "";
 }
 
-int MapGraph::get_path_cost(const std::string &from, const std::string &to,
+int MapGraph::get_path_cost(const std::string& from, const std::string& to,
                             int limit)
 {
     if (from == to)
@@ -198,7 +197,7 @@ int MapGraph::get_path_cost(const std::string &from, const std::string &to,
                              wit->second.end());
         }
 
-        for (const auto &n : neighbors)
+        for (const auto& n : neighbors)
         {
             // Blockade Check: Cannot enter blocked hex unless it is the
             // destination

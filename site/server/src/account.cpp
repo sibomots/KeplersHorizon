@@ -9,10 +9,10 @@
 #include "comms.h"
 #include "db.h"
 #include "json.h"
-#include "typs.h"
+#include "typedefs.h"
 #include "util.h"
 
-void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp)
+void handle_login(const HttpRequest* req, HttpResponse* resp)
 {
     if (req->method != "POST")
     {
@@ -29,9 +29,11 @@ void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp)
         return;
     }
 
-    auto rows =
-        db->query("SELECT id,password_plain FROM users WHERE username='" +
-                  db->esc(u) + "' LIMIT 1");
+    auto rows = DatabaseManager::getInstance().query(
+        "SELECT id,password_plain "
+        "FROM users "
+        "WHERE username='" +
+        DatabaseManager::getInstance().esc(u) + "' LIMIT 1");
     if (rows.empty() || rows[0][1] != p)
     {
         resp->status = 401;
@@ -41,8 +43,11 @@ void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp)
     int user_id = std::atoi(rows[0][0].c_str());
 
     std::string token = rand_hex_64();
-    db->exec("INSERT INTO sessions(token,user_id) VALUES('" + db->esc(token) +
-             "'," + std::to_string(user_id) + ")");
+
+    DatabaseManager::getInstance().exec(
+        "INSERT INTO sessions(token,user_id) VALUES('" +
+        DatabaseManager::getInstance().esc(token) + "'," +
+        std::to_string(user_id) + ")");
 
     resp->body = std::string("{\"ok\":true,\"token\":\"") + token +
                  "\",\"username\":\"" + json_escape(u) + "\"" +
@@ -53,7 +58,7 @@ void handle_login(const HttpRequest *req, Db *db, HttpResponse *resp)
     return;
 }
 
-void handle_logout(const HttpRequest *req, Db *db, HttpResponse *resp)
+void handle_logout(const HttpRequest* req, HttpResponse* resp)
 {
     if (req->method != "POST")
     {
@@ -65,7 +70,9 @@ void handle_logout(const HttpRequest *req, Db *db, HttpResponse *resp)
 
     if (!tok.empty())
     {
-        db->exec("DELETE FROM sessions WHERE token='" + db->esc(tok) + "'");
+        DatabaseManager::getInstance().exec(
+            "DELETE FROM sessions WHERE token='" +
+            DatabaseManager::getInstance().esc(tok) + "'");
     }
     resp->body = "{\"ok\":true}";
     return;

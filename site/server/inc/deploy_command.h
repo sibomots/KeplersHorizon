@@ -9,37 +9,51 @@
 #define __DEPLOY_COMMAND_H__
 
 #include <string>
-
-#include "db.h"
 #include "icmd.h"
-#include "statemachine.h"
 
 class DeployCommand : public ICmd
 {
+  private:
+    std::string m_ship_code;
+    std::string m_system_name;
+
   public:
     class Builder
     {
       public:
-        Builder(StateMachine &sm);
-        Builder &ship_code(const std::string &code);
-        Builder &system_name(const std::string &sys);
-        ICmd *build();
+        std::string _ship_code;
+        std::string _system_name;
 
-      private:
-        StateMachine &m_sm;
-        std::string m_ship_code;
-        std::string m_system_name;
+        Builder()
+        {
+        }
+
+        Builder& ship_code(const std::string& code)
+        {
+            _ship_code = code;
+            return *this;
+        }
+
+        Builder& system_name(const std::string& sys)
+        {
+            _system_name = sys;
+            return *this;
+        }
+
+        ICmd* build()
+        {
+            return new DeployCommand(*this);
+        }
     };
 
     bool invoke(void) override;
 
   private:
-    DeployCommand(StateMachine &sm, const std::string &ship_code,
-                  const std::string &system_name);
-
-    StateMachine &m_sm;
-    std::string m_ship_code;
-    std::string m_system_name;
+    DeployCommand(Builder& builder): 
+          m_ship_code(std::move(builder._ship_code)),
+          m_system_name(std::move(builder._system_name))
+    {
+    }
 };
 
 #endif

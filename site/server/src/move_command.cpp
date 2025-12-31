@@ -10,93 +10,30 @@
 #include <cctype>
 #include <sstream>
 
-#include "game.h"
+#include "typedefs.h"
 #include "logger.h"
-#include "map.h"
+#include "mapgraph.h"
+#include "maputil.h"
+#include "statemachine.h"
 #include "telemetry.h"
-#include "typs.h"
-
-// Utility: Convert string to uppercase
-static std::string upper_ascii(const std::string &s)
-{
-    std::string r = s;
-    for (size_t i = 0; i < r.size(); i++)
-        r[i] = (char)std::toupper((unsigned char)r[i]);
-    return r;
-}
-
-// Utility: Resolve system name (case-insensitive lookup)
-static std::string resolve_system_name(Db *db, int game_id,
-                                       const std::string &user_supplied)
-{
-    std::string u = upper_ascii(user_supplied);
-    auto r = db->query("SELECT name FROM star_systems WHERE game_id=" +
-                       std::to_string(game_id) + " AND UPPER(name)='" +
-                       db->esc(u) + "' LIMIT 1");
-    if (!r.empty() && !r[0].empty())
-        return r[0][0];
-    return u;
-}
-
-// Utility: Get hex ID for a system
-static std::string resolve_system_hex(Db *db, int game_id,
-                                      const std::string &canon_name)
-{
-    std::ostringstream q;
-    q << "SELECT hex_id FROM star_systems WHERE game_id=" << game_id
-      << " AND name='" << db->esc(canon_name) << "' LIMIT 1";
-    auto r = db->query(q.str());
-    if (r.empty())
-    {
-        return "";
-    }
-    return r[0][0];
-}
-
-MoveCommand::Builder::Builder(StateMachine &sm) : m_sm(sm)
-{
-}
-
-MoveCommand::Builder &MoveCommand::Builder::ship_code(const std::string &code)
-{
-    m_ship_code = code;
-    return *this;
-}
-
-MoveCommand::Builder &
-MoveCommand::Builder::add_destination(const std::string &dest)
-{
-    m_destinations.push_back(dest);
-    return *this;
-}
-
-ICmd *MoveCommand::Builder::build()
-{
-    return new MoveCommand(m_sm, m_ship_code, m_destinations);
-}
-
-MoveCommand::MoveCommand(StateMachine &sm, const std::string &ship_code,
-                         const std::vector<std::string> &destinations)
-    : m_sm(sm), m_ship_code(ship_code), m_destinations(destinations)
-{
-}
+#include "ships.h"
 
 bool MoveCommand::invoke(void)
 {
-    GameState s = m_sm.get_game_state();
+    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::getInstance().get_game_state();
+    int m_game_id = StateMachine::getInstance().get_game_id();
+
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
-    Db *m_db = m_sm.get_db();
-    int m_game_id = m_sm.get_game_id();
-
-    if (!ship_exists(m_db, m_game_id, active_player, m_ship_code))
+    if (!ship_exists(m_game_id, active_player, m_ship_code))
     {
         Logger::instance().error("Ship not found: " + m_ship_code);
         Telemetry::write("Error: Ship not found: " + m_ship_code);
         return false;
     }
 
-    ShipRow sh = load_ship(m_db, m_game_id, active_player, m_ship_code);
+    ShipRow sh = load_ship(m_game_id, active_player, m_ship_code);
 
     if (sh.attr.type != 'W')
     {
@@ -124,7 +61,8 @@ bool MoveCommand::invoke(void)
     std::string startHex = sh.at_hex;
     if (startHex.empty() && !sh.at_system.empty())
     {
-        startHex = resolve_system_hex(m_db, m_game_id, sh.at_system);
+        startHex =
+            MapUtil::getInstance().resolve_system_hex(m_game_id, sh.at_system);
     }
 
     if (startHex.empty())
@@ -137,7 +75,7 @@ bool MoveCommand::invoke(void)
     // ============================================================================
     // PATHFINDING ALGORITHM - PRESERVED EXACTLY FROM LEGACY CODE
     // ============================================================================
-    MapGraph graph(m_db, m_game_id);
+    MapGraph graph(m_game_id);
     graph.load_state(active_player);
 
     // Process multi-step path
@@ -165,10 +103,10 @@ bool MoveCommand::invoke(void)
         {
             // See if it matches a system name (reverse lookup for
             // display/logic)
-            auto sysr = m_db->query("SELECT name FROM star_systems WHERE "
-                                    "game_id=" +
-                                    std::to_string(m_game_id) +
-                                    " AND hex_id='" + stepHex + "' LIMIT 1");
+            auto sysr = db.query("SELECT name FROM star_systems WHERE "
+                                 "game_id=" +
+                                 std::to_string(m_game_id) + " AND hex_id='" +
+                                 stepHex + "' LIMIT 1");
             if (!sysr.empty())
                 stepSys = sysr[0][0];
         }
@@ -226,16 +164,15 @@ bool MoveCommand::invoke(void)
     // Update ship location and PD spent
     if (finalSystem.empty())
         finalSystem = "";
-    update_ship_location(m_db, m_game_id, active_player, sh.code, finalSystem,
+    update_ship_location(m_game_id, active_player, sh.code, finalSystem,
                          finalHex, "");
-    m_db->exec("UPDATE ships SET pd_spent=pd_spent+" +
-               std::to_string(totalCost) +
-               " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
-               std::string(1, active_player) + "'" + " AND ship_code='" +
-               m_db->esc(sh.code) + "'");
+    db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
+            " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
+            std::string(1, active_player) + "'" + " AND ship_code='" +
+            db.esc(sh.code) + "'");
 
     // Save game state to persist changes
-    save_game(m_db, s);
+    StateMachine::getInstance().save_game(s);
 
     std::ostringstream o;
     o << "Moved " << sh.name << " - " << sh.code << " to "

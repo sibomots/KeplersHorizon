@@ -9,27 +9,29 @@
 
 #include <sstream>
 
-#include "game.h"
+#include "typedefs.h"
+#include "db.h"
+#include "ships.h"
 #include "logger.h"
+#include "statemachine.h"
 #include "telemetry.h"
-#include "typs.h"
 
 bool BuildShowDraftCommand::invoke(void)
 {
-    GameState s = m_sm.get_game_state();
+    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::getInstance().get_game_state();
+    int m_game_id = StateMachine::getInstance().get_game_id();
+
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
-    Db *m_db = m_sm.get_db();
-    int m_game_id = m_sm.get_game_id();
-
-    if (!draft_exists(m_db, m_game_id, active_player, m_draft_code))
+    if (!draft_exists(m_game_id, active_player, m_draft_code))
     {
         Logger::instance().error("Draft not found: " + m_draft_code);
         Telemetry::write("Error: Draft not found: " + m_draft_code);
         return false;
     }
 
-    DraftRow d = load_draft(m_db, m_game_id, active_player, m_draft_code);
+    DraftRow d = load_draft(m_game_id, active_player, m_draft_code);
     std::ostringstream msg;
     msg << "Draft: " << d.name << " - " << d.code << "\n"
         << "  Type: " << d.attr.type << "\n"
@@ -38,7 +40,7 @@ bool BuildShowDraftCommand::invoke(void)
     Logger::instance().info(msg.str());
     Telemetry::write(msg.str());
 
-    set_current_draft(m_db, m_game_id, active_player, m_draft_code);
+    set_current_draft(m_game_id, active_player, m_draft_code);
 
     return true;
 }

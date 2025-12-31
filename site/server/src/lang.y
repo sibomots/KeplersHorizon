@@ -28,7 +28,7 @@
 #include "deploy_command.h"
 #include "move_command.h"
 #include "statemachine.h"
-#include "game.h"
+// #include "game.h"
 #include "db.h"
 
 extern "C" int yylex();
@@ -38,12 +38,13 @@ extern "C" FILE *yyin;
 void yyerror(const char *s);
 
 // Globals to inject context into the parser actions
-extern Db* g_db;
-extern int g_game_id;
-extern StateMachine& g_statemachine;
+//BUGBUG extern int g_game_id;
+//BUGBUG extern StateMachine& g_statemachine;
 
+
+// BUGBUG
 // Global builder for accumulating build set attributes
-BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder(g_statemachine);
+BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder();
 
 %}
 
@@ -147,8 +148,6 @@ session_cmd:
    {
         Logger::instance().info("Start a learning game scenario");
         ICmd *pCmd = StartCommand::Builder()
-                      .set_db(g_db)
-                      .set_game_id(g_game_id)
                       .set_scenario(ScenarioType::LEARNING)
                       .build();
         pCmd->invoke();
@@ -159,8 +158,6 @@ session_cmd:
    {
         Logger::instance().info("Start a basic game scenario");
         ICmd *pCmd = StartCommand::Builder()
-                      .set_db(g_db)
-                      .set_game_id(g_game_id)
                       .set_scenario(ScenarioType::BASIC)
                       .build();
         pCmd->invoke();
@@ -171,8 +168,6 @@ session_cmd:
    {
         Logger::instance().info("Start an advanced game scenario");
         ICmd *pCmd = StartCommand::Builder()
-                      .set_db(g_db)
-                      .set_game_id(g_game_id)
                       .set_scenario(ScenarioType::ADVANCED)
                       .build();
         pCmd->invoke();
@@ -274,14 +269,14 @@ looking_cmd:
 turn_cmd:
   TOK_NEXT {
       Logger::instance().info("Advance active player to next phase");
-      ICmd* pCmd = NextCommand::Builder(g_statemachine).build();
+      ICmd* pCmd = NextCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_DONE {
       Logger::instance().info("Advance active player to first phase "
                       "of opponent, if possible");
-      ICmd* pCmd = DoneCommand::Builder(g_statemachine).build();
+      ICmd* pCmd = DoneCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
@@ -549,7 +544,7 @@ build_cmd:
       std::string code(*$3);
       std::string name(*$4);
       Logger::instance().info("Create new draft: " + code + " '" + name + "'");
-      ICmd *pCmd = BuildNewCommand::Builder(g_statemachine)
+      ICmd *pCmd = BuildNewCommand::Builder()
                   .set_ship_code(code)
                   .set_ship_name(name)
                   .build();
@@ -558,7 +553,7 @@ build_cmd:
   }
   | TOK_BUILD TOK_DRAFTS {
       Logger::instance().info("List all pending build drafts");
-      ICmd *pCmd = BuildListDraftsCommand::Builder(g_statemachine)
+      ICmd *pCmd = BuildListDraftsCommand::Builder()
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
@@ -566,7 +561,7 @@ build_cmd:
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
       std::string ship_code = *$3;
       Logger::instance().info("Show draft details: " + ship_code);
-      ICmd *pCmd = BuildShowDraftCommand::Builder(g_statemachine)
+      ICmd *pCmd = BuildShowDraftCommand::Builder()
                   .set_draft_code(ship_code)
                   .build();
       pCmd->invoke();
@@ -578,18 +573,18 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
       delete g_build_set_builder;
-      g_build_set_builder = new BuildSetAttributeCommand::Builder(g_statemachine); // Reset
+      g_build_set_builder = new BuildSetAttributeCommand::Builder(); // Reset
   }
   | TOK_BUILD TOK_COMMIT {
       Logger::instance().info("Build commit - committing current draft");
-      ICmd *pCmd = BuildCommitCommand::Builder(g_statemachine)
+      ICmd *pCmd = BuildCommitCommand::Builder()
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
   | TOK_BUILD TOK_CANCEL {
       Logger::instance().info("Build cancel - canceling current draft");
-      ICmd *pCmd = BuildCancelCommand::Builder(g_statemachine)
+      ICmd *pCmd = BuildCancelCommand::Builder()
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
@@ -663,10 +658,12 @@ deploy_cmd:
                                ">" + ship + "<" 
                                " at destination: "
                                ">" + destination + "<");
-       ICmd* pCmd = DeployCommand::Builder(g_statemachine)
-           .ship_code(ship)
-           .system_name(destination)
-           .build();
+
+       ICmd* pCmd = DeployCommand::Builder()
+                    .ship_code(ship)
+                    .system_name(destination)
+                    .build();
+
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
        delete $2;
@@ -710,16 +707,12 @@ move_cmd:
        Logger::instance().info("Moving ship >" + ship + "< to >" + first_dest + "<");
        
        // Build move command with all destinations
-       MoveCommand::Builder builder(g_statemachine);
-       builder.ship_code(ship);
-       builder.add_destination(first_dest);
+       ICmd* pCmd = MoveCommand::Builder()
+            .ship_code(ship)
+            .add_destination(first_dest)
+            .add_waypoints(waypoints)
+            .build();
        
-       // Add chained waypoints
-       for (const auto& wp : *waypoints) {
-           builder.add_destination(wp);
-       }
-       
-       ICmd* pCmd = builder.build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
        

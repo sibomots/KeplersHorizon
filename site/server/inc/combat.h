@@ -60,33 +60,32 @@ struct CombatOrder
 class CombatEngine
 {
   public:
-    CombatEngine(Db *db, int game_id);
+    CombatEngine(int game_id);
 
     // Initial checks
     void check_for_combat_triggers();
 
     // State retrieval
     std::vector<CombatState> get_active_combats();
-    CombatState get_combat_state(const std::string &hex_id);
+    CombatState get_combat_state(const std::string& hex_id);
 
     // Order handling
-    std::string submit_order(char owner, const CombatOrder &order);
+    std::string submit_order(char owner, const CombatOrder& order);
 
     // Resolution (called when stage advances)
     // Returns event log text
-    std::string resolve_round(const std::string &hex_id);
+    std::string resolve_round(const std::string& hex_id);
 
     // Damage Assignment
-    std::string apply_damage(char owner, const std::string &ship_code,
-                             const std::map<std::string, int> &assignments);
+    std::string apply_damage(char owner, const std::string& ship_code,
+                             const std::map<std::string, int>& assignments);
 
   private:
-    Db *db;
     int game_id;
 
     // Helpers
-    bool all_orders_submitted(const std::string &hex_id, int round);
-    void create_combat(const std::string &hex_id);
+    bool all_orders_submitted(const std::string& hex_id, int round);
+    void create_combat(const std::string& hex_id);
 };
 
 #endif

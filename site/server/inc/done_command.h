@@ -10,7 +10,6 @@
 
 #include "db.h"
 #include "icmd.h"
-#include "statemachine.h"
 
 class DoneCommand : public ICmd
 {
@@ -18,19 +17,21 @@ class DoneCommand : public ICmd
     class Builder
     {
       public:
-        Builder(StateMachine &sm);
-        ICmd *build();
-
-      private:
-        StateMachine &m_sm;
+        Builder()
+        {
+        }
+        ICmd* build()
+        {
+            return new DoneCommand(*this);
+        }
     };
 
     bool invoke(void) override;
 
   private:
-    DoneCommand(StateMachine &sm);
-
-    StateMachine &m_sm;
+    DoneCommand(Builder& builder)
+    {
+    }
 };
 
 #endif

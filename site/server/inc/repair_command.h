@@ -19,38 +19,39 @@ class RepairCommand : public ICmd
     class Builder
     {
       public:
-        std::string _ship_code;
-        std::string _attribute;
-        int _amount = 0;
+        std::string ship_code;
+        std::string attribute;
+        int amount = 0;
 
-        Builder &set_ship_code(const std::string &code)
+        Builder& set_ship_code(const std::string& code)
         {
-            _ship_code = code;
+            ship_code = code;
             return *this;
         }
 
-        Builder &set_attribute(const std::string &attr)
+        Builder& set_attribute(const std::string& attr)
         {
-            _attribute = attr;
+            attribute = attr;
             return *this;
         }
 
-        Builder &set_amount(int amt)
+        Builder& set_amount(int amt)
         {
-            _amount = amt;
+            amount = amt;
             return *this;
         }
 
-        ICmd *build()
+        ICmd* build()
         {
-            return new RepairCommand(_ship_code, _attribute, _amount);
+            return new RepairCommand(*this);
         }
     };
 
   private:
-    RepairCommand(const std::string &ship_code, const std::string &attribute,
-                  int amount)
-        : m_ship_code(ship_code), m_attribute(attribute), m_amount(amount)
+    RepairCommand(Builder& builder)
+        : m_ship_code(std::move(builder.ship_code)),
+          m_attribute(std::move(builder.attribute)),
+          m_amount(std::move(builder.amount))
     {
     }
 

@@ -9,11 +9,11 @@
 #define __EVENTS_H__
 #include <string>
 
-#include "db.h"
-#include "typs.h"
+#include "comms.h"
+#include "statemachine.h"
 
-void handle_events(const HttpRequest *req, Db *db, HttpResponse *resp);
-void append_event(Db *db, int game_id, int user_id, const std::string &cmd,
-                  const std::string &result, const GameState &s);
+void handle_events(const HttpRequest* req, HttpResponse* resp);
+void append_event(int game_id, int user_id, const std::string& cmd,
+                  const std::string& result, const GameState& s);
 
 #endif

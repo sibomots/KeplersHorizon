@@ -9,176 +9,118 @@
 
 #include "app.h"
 #include "combat.h"
-#include "typs.h"
+#include "typedefs.h"
 #include "util.h"
 
-GameState load_game(Db *db, int game_id)
+// Static variables for the DatabaseManager Singleton
+
+MYSQL* DatabaseManager::driver = 0;
+std::string DatabaseManager::dbhost = "127.0.0.1";
+std::string DatabaseManager::dbuser = "dbusr";
+std::string DatabaseManager::dbpass = "dbpass";
+std::string DatabaseManager::dbname = "dbname";
+
+bool DatabaseManager::driver_invalid()
 {
-    auto rows = db->query("SELECT scenario,state_json FROM games WHERE id=" +
-                          std::to_string(game_id) + " LIMIT 1");
-    if (rows.empty())
-        throw std::runtime_error("game not found");
-    std::string scenario = rows[0][0];
-    std::string state_json = rows[0][1];
-
-    // state_json already includes scenario; trust it.
-    GameState s = GameState::from_json_min(state_json);
-    s.game_id = game_id;
-
-    // safer: extract scenario/activePlayer/phaseIndex/round/bp/vp from the
-    // authoritative stored JSON is omitted. We'll keep a minimal local parse +
-    // a fallback:
-    if (s.scenario.empty())
+    if (!driver)
     {
-        s.scenario = scenario;
+        throw std::runtime_error("mysql_init failed");
+    }
+    return false;
+}
+
+// void connect(const std::string &host, const std::string &user,
+//             const std::string &pass, const std::string &dbname)
+void DatabaseManager::connect()
+{
+    driver = mysql_init(NULL);
+    if (driver_invalid())
+    {
+        return;
+    }
+    if (!mysql_real_connect(driver, dbhost.c_str(), dbuser.c_str(),
+                            dbpass.c_str(), dbname.c_str(), 0, NULL, 0))
+    {
+        throw std::runtime_error(std::string("mysql_real_connect failed: ") +
+                                 mysql_error(driver));
+    }
+    mysql_set_character_set(driver, "utf8mb4");
+}
+
+void DatabaseManager::exec(const std::string& q)
+{
+    if (driver_invalid())
+    {
+        return;
     }
 
-    // Quick re-sync by reading a few known fields with string search (simple).
-    auto find_int = [&](const std::string &key, int fallback) -> int
+    if (mysql_query(driver, q.c_str()))
     {
-        std::string pat = "\"" + key + "\":";
-        size_t p = state_json.find(pat);
-        if (p == std::string::npos)
-            return fallback;
-        p += pat.size();
-        while (p < state_json.size() &&
-               std::isspace((unsigned char)state_json[p]))
-            p++;
-        int sign = 1;
-        if (p < state_json.size() && state_json[p] == '-')
+        throw std::runtime_error(std::string("mysql_query: ") +
+                                 mysql_error(driver));
+    }
+}
+
+std::vector<std::vector<std::string>>
+DatabaseManager::query(const std::string& q)
+{
+    if (driver_invalid())
+    {
+        return {};
+    }
+    if (mysql_query(driver, q.c_str()))
+    {
+        throw std::runtime_error(std::string("mysql_query: ") +
+                                 mysql_error(driver));
+    }
+    MYSQL_RES* res = mysql_store_result(driver);
+    if (!res)
+    {
+        return {};
+    }
+
+    int cols = mysql_num_fields(res);
+    std::vector<std::vector<std::string>> out;
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res)))
+    {
+        unsigned long* lens = mysql_fetch_lengths(res);
+        std::vector<std::string> r;
+        for (int i = 0; i < cols; i++)
         {
-            sign = -1;
-            p++;
+            if (!row[i])
+            {
+                r.push_back("");
+            }
+            else
+            {
+                r.push_back(std::string(row[i], row[i] + lens[i]));
+            }
         }
-        long v = 0;
-        while (p < state_json.size() &&
-               std::isdigit((unsigned char)state_json[p]))
-        {
-            v = v * 10 + (state_json[p] - '0');
-            p++;
-        }
-        return (int)(v * sign);
-    };
-    auto find_str = [&](const std::string &key,
-                        const std::string &fallback) -> std::string
-    {
-        std::string pat = "\"" + key + "\":\"";
-        size_t p = state_json.find(pat);
-        if (p == std::string::npos)
-            return fallback;
-        p += pat.size();
-        size_t e = state_json.find("\"", p);
-        if (e == std::string::npos)
-            return fallback;
-        return state_json.substr(p, e - p);
-    };
-
-    s.round = std::max(1, find_int("round", s.round));
-    s.active_player = find_str("activePlayer", s.active_player);
-    s.phase_index = find_int("phaseIndex", s.phase_index);
-    s.scenario = find_str("scenario", s.scenario);
-
-    // Parse bp/vp objects
-    auto find_obj_int = [&](const std::string &objKey,
-                            const std::string &fieldKey, int fallback) -> int
-    {
-        std::string op = "\"" + objKey + "\":{";
-        size_t p = state_json.find(op);
-        if (p == std::string::npos)
-            return fallback;
-        size_t end = state_json.find("}", p + op.size());
-        if (end == std::string::npos)
-            return fallback;
-        std::string sub = state_json.substr(p, end - p + 1);
-        return find_int(
-            fieldKey,
-            fallback); // re-use global find_int (ok for now; small JSON)
-    };
-
-    // We'll do simple direct searches for "vp":{"A":X,"B":Y} etc.
-    size_t vpPos = state_json.find("\"vp\":{");
-    if (vpPos != std::string::npos)
-    {
-        size_t end = state_json.find("}", vpPos);
-        std::string vpSub = state_json.substr(vpPos, end - vpPos + 1);
-        auto getv = [&](const std::string &k) -> int
-        {
-            std::string pat = "\"" + k + "\":";
-            size_t p = vpSub.find(pat);
-            if (p == std::string::npos)
-                return 0;
-            p += pat.size();
-            while (p < vpSub.size() && std::isspace((unsigned char)vpSub[p]))
-                p++;
-            long v = 0;
-            while (p < vpSub.size() && std::isdigit((unsigned char)vpSub[p]))
-            {
-                v = v * 10 + (vpSub[p] - '0');
-                p++;
-            }
-            return (int)v;
-        };
-        s.vpA = getv("A");
-        s.vpB = getv("B");
+        out.push_back(r);
     }
-    size_t bpPos = state_json.find("\"bp\":{");
-    if (bpPos != std::string::npos)
-    {
-        size_t end = state_json.find("}", bpPos);
-        std::string bpSub = state_json.substr(bpPos, end - bpPos + 1);
-        auto getv = [&](const std::string &k) -> int
-        {
-            std::string pat = "\"" + k + "\":";
-            size_t p = bpSub.find(pat);
-            if (p == std::string::npos)
-                return 0;
-            p += pat.size();
-            while (p < bpSub.size() && std::isspace((unsigned char)bpSub[p]))
-                p++;
-            long v = 0;
-            while (p < bpSub.size() && std::isdigit((unsigned char)bpSub[p]))
-            {
-                v = v * 10 + (bpSub[p] - '0');
-                p++;
-            }
-            return (int)v;
-        };
-        s.bpA = getv("A");
-        s.bpB = getv("B");
-    }
+    mysql_free_result(res);
+    return out;
+}
 
-    // Load Combat Summary
-    {
-        CombatEngine ce(db, game_id);
-        auto combats = ce.get_active_combats();
-        if (!combats.empty())
-        {
-            std::ostringstream c;
-            c << "{";
-            c << "\"active_hexes\":[";
-            for (size_t i = 0; i < combats.size(); ++i)
-            {
-                if (i > 0)
-                    c << ",";
-                c << "\"" << combats[i].hex_id << "\"";
-            }
-            c << "],";
-            c << "\"combats\":[";
-            for (size_t i = 0; i < combats.size(); ++i)
-            {
-                if (i > 0)
-                    c << ",";
-                c << "{\"hex\":\"" << combats[i].hex_id << "\",";
-                c << "\"log\":\"" << escape_json(combats[i].last_log) << "\",";
-                c << "\"stage\":" << combats[i].stage; // useful for UI
-                c << "}";
-            }
-            c << "],";
-            c << "\"count\":" << combats.size();
-            c << "}";
-            s.combat_summary_json = c.str();
-        }
-    }
+std::string DatabaseManager::esc(const std::string& s)
+{
+    std::string out;
+    out.resize(s.size() * 2 + 1);
+    unsigned long n =
+        mysql_real_escape_string(driver, &out[0], s.c_str(), s.size());
+    out.resize(n);
+    return out;
+}
 
-    return s;
+void DatabaseManager::configure(void* param)
+{
+    if (param != NULL)
+    {
+        DBConfig* pconf = static_cast<DBConfig*>(param);
+        dbhost = std::string(pconf->dbhost);
+        dbuser = std::string(pconf->dbuser);
+        dbpass = std::string(pconf->dbpass);
+        dbname = std::string(pconf->dbname);
+    }
 }

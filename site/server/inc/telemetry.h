@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 
-#include "typs.h"
+#include "comms.h"
+#include "typedefs.h"
 
 // Player targeting - clean enum-based API
 // Future: migrate entire codebase from char 'A'/'B' to this pattern
@@ -26,12 +27,12 @@ class Telemetry
 {
   public:
     // Core methods - return complete JSON response
-    static std::string write(const std::string &msg);
-    static std::string tell(PlayerTarget target, const std::string &msg);
-    static std::string broadcast(const std::string &msg);
+    static std::string write(const std::string& msg);
+    static std::string tell(PlayerTarget target, const std::string& msg);
+    static std::string broadcast(const std::string& msg);
 
     // Status response - called by heartbeat handler
-    static void status(HttpResponse *resp);
+    static void status(HttpResponse* resp);
 
   private:
     Telemetry() = delete;

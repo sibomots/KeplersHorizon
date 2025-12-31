@@ -19,38 +19,33 @@ class BuildNewCommand : public ICmd
     class Builder
     {
       public:
-        StateMachine &_sm;
         std::string _ship_code;
         std::string _ship_name;
 
-        Builder(StateMachine &sm) : _sm(sm)
-        {
-        }
-        Builder &set_ship_code(const std::string &code)
+        Builder& set_ship_code(const std::string& code)
         {
             _ship_code = code;
             return *this;
         }
-        Builder &set_ship_name(const std::string &name)
+        Builder& set_ship_name(const std::string& name)
         {
             _ship_name = name;
             return *this;
         }
 
-        ICmd *build()
+        ICmd* build()
         {
             return new BuildNewCommand(*this);
         }
     };
 
   private:
-    BuildNewCommand(Builder &builder)
-        : m_sm(builder._sm), m_ship_code(std::move(builder._ship_code)),
+    BuildNewCommand(Builder& builder)
+        : m_ship_code(std::move(builder._ship_code)),
           m_ship_name(std::move(builder._ship_name))
     {
     }
 
-    StateMachine &m_sm;
     std::string m_ship_code;
     std::string m_ship_name;
 

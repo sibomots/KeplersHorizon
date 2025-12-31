@@ -9,19 +9,22 @@
 
 #include <sstream>
 
-#include "game.h"
+#include "ships.h"
 #include "logger.h"
+#include "ships.h"
 #include "telemetry.h"
-#include "typs.h"
+#include "typedefs.h"
 
 bool BuildListDraftsCommand::invoke(void)
 {
-    GameState s = m_sm.get_game_state();
+    // begin: redundancy -- There is something redundant in all of this.
+    GameState s = StateMachine::getInstance().get_game_state();
+    int game_id = StateMachine::getInstance().get_game_id();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
-    std::vector<DraftRow> drafts =
-        load_drafts(m_sm.get_db(), m_sm.get_game_id(), active_player);
-    std::string current_draft =
-        get_current_draft(m_sm.get_db(), m_sm.get_game_id(), active_player);
+    // end of redundancy
+
+    std::vector<DraftRow> drafts = load_drafts(game_id, active_player);
+    std::string current_draft = get_current_draft(game_id, active_player);
 
     if (drafts.empty())
     {
@@ -32,7 +35,7 @@ bool BuildListDraftsCommand::invoke(void)
     {
         std::ostringstream msg;
         msg << "Draft ships (" << drafts.size() << "):\n";
-        for (const auto &d : drafts)
+        for (const auto& d : drafts)
         {
             // Calculate cost
             int cost = d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR;

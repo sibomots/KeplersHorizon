@@ -7,39 +7,30 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "done_command.h"
 
-#include "game.h"
+// BUGBUG #include "game.h"
 #include "logger.h"
+#include "statemachine.h"
 #include "telemetry.h"
-#include "typs.h"
-
-DoneCommand::Builder::Builder(StateMachine &sm) : m_sm(sm)
-{
-}
-
-ICmd *DoneCommand::Builder::build()
-{
-    return new DoneCommand(m_sm);
-}
-
-DoneCommand::DoneCommand(StateMachine &sm) : m_sm(sm)
-{
-}
+#include "typedefs.h"
 
 bool DoneCommand::invoke(void)
 {
-    GameState s = m_sm.get_game_state();
+    GameState s = StateMachine::getInstance().get_game_state();
     char me = s.active_player.empty() ? 'A' : s.active_player[0];
-
-    Db *m_db = m_sm.get_db();
 
     // Auto-advance until active player changes or game over
     int safety = 0;
-    while (s.active_player == std::string(1, me) && !s.game_over && safety < 50)
+
+    // BUGBUG safety should be based on the last enum value of possible
+    // phases of a turn.
+    while (s.active_player == std::string(1, me) && !s.game_over && safety < 10)
     {
-        advance_next(m_db, s);
+        StateMachine::getInstance().advance_next(s);
         safety++;
     }
 
+    // NO, game over decision cannot be made until the count of
+    // victory points on the onset of a new turn.
     if (s.game_over)
     {
         Logger::instance().info("Game Over during turn end");
@@ -60,7 +51,7 @@ bool DoneCommand::invoke(void)
     }
 
     // Save game state to persist changes
-    save_game(m_db, s);
+    StateMachine::getInstance().save_game(s);
 
     return true;
 }

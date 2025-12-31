@@ -8,13 +8,14 @@
 #include "app.h"
 #include "comms.h"
 #include "db.h"
-#include "game.h"
+#include "statemachine.h"
+// BUGBUG #include "game.h"
 #include "json.h"
 #include "telemetry.h"
-#include "typs.h"
+#include "typedefs.h"
 #include "util.h"
 
-void handle_state(const HttpRequest *req, HttpResponse *resp)
+void handle_state(const HttpRequest* req, HttpResponse* resp)
 {
     if (req->method != "GET")
     {
@@ -23,7 +24,7 @@ void handle_state(const HttpRequest *req, HttpResponse *resp)
         return;
     }
 
-    AuthContext a = require_auth((const HttpRequest *)req, resp);
+    AuthContext a = require_auth((const HttpRequest*)req, resp);
     if (resp->status != 200)
     {
         return;
@@ -35,8 +36,8 @@ void handle_state(const HttpRequest *req, HttpResponse *resp)
     return;
 }
 
-std::string json_ok_with_state_and_event(const GameState &s,
-                                         const std::string &eventText)
+std::string json_ok_with_state_and_event(const GameState& s,
+                                         const std::string& eventText)
 {
     std::ostringstream o;
     o << "{";

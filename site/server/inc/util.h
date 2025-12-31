@@ -11,14 +11,14 @@
 #include <string>
 #include <vector>
 
-std::string trim(const std::string &s);
-char owner_for_username(const std::string &u);
+std::string trim(const std::string& s);
+char owner_for_username(const std::string& u);
 std::string now_iso();
-bool starts_with(const std::string &s, const std::string &p);
+bool starts_with(const std::string& s, const std::string& p);
 std::string to_lower(std::string s);
 std::string rand_hex_64();
-std::vector<std::string> split_ws(const std::string &s);
-std::vector<std::string> split(const std::string &s, char delim);
-std::string escape_json(const std::string &s);
-
+std::vector<std::string> split_ws(const std::string& s);
+std::vector<std::string> split(const std::string& s, char delim);
+std::string escape_json(const std::string& s);
+std::string upper_ascii(const std::string& s);
 #endif
