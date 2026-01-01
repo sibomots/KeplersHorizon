@@ -7,7 +7,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "done_command.h"
 
-// BUGBUG #include "game.h"
+#include "combat.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -27,19 +27,42 @@ bool DoneCommand::invoke(void)
     GameState s = StateMachine::getInstance().get_game_state();
     char me = s.active_player.empty() ? 'A' : s.active_player[0];
 
-    // Auto-advance until active player changes or game over
-    int safety = 0;
-
-    // BUGBUG safety should be based on the last enum value of possible
-    // phases of a turn.
-    while (s.active_player == std::string(1, me) && !s.game_over && safety < 10)
+    // Auto-advance until active player changes, game over, or blocked on combat
+    // Maximum iterations: one per phase plus turn flip (PH_END_TURN + 2 to be safe)
+    int iterations = 0;
+    const int max_iterations = PH_END_TURN + 2;
+    
+    while (s.active_player == std::string(1, me) && !s.game_over && iterations < max_iterations)
     {
         StateMachine::getInstance().advance_next(s);
-        safety++;
+        iterations++;
     }
 
-    // NO, game over decision cannot be made until the count of
-    // victory points on the onset of a new turn.
+    // Check if we're blocked on combat
+    if (s.phase_index == PH_RESOLVE_COMBAT && s.active_player == std::string(1, me))
+    {
+        CombatEngine ce(s.game_id);
+        auto combats = ce.get_active_combats();
+        if (!combats.empty())
+        {
+            // Blocked on combat - don't advance turn, report combat pending
+            std::ostringstream msg;
+            msg << "⚔️ Combat pending! " << combats.size() << " active combat(s) must be resolved.";
+            for (const auto& c : combats)
+            {
+                msg << "\n  - Hex " << c.hex_id << " (Round " << c.round << ")";
+            }
+            msg << "\nUse: combat order <ship> <target> <tactic> <power allocation>";
+            
+            Telemetry::getInstance().write(msg.str());
+            
+            // Save state (still in combat phase)
+            StateMachine::getInstance().save_game(s);
+            return true;
+        }
+    }
+
+    // Game over check
     if (s.game_over)
     {
         Logger::instance().info("Game Over during turn end");

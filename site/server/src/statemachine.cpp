@@ -35,10 +35,10 @@ bool StateMachine::initialize()
     // For now, to satisfy the flow, we will assume we are ready after init.
     // But per user instruction, we don't do transition logic here if it's
     // "handling a state". We'll set the initial valid state for the game loop.
-    if (data.state == PlayerState::INVALID ||
-        data.state == PlayerState::PREINITIALIZE)
+    if (data.state == ServerState::INVALID ||
+        data.state == ServerState::PREINITIALIZE)
     {
-        data.state = PlayerState::READY_GAME_START;
+        data.state = ServerState::READY_GAME_START;
     }
     return true;
 }
@@ -62,7 +62,7 @@ bool StateMachine::transition()
     switch (data.state)
     {
 
-    case READY_GAME_START:
+    case ServerState::READY_GAME_START:
         // Check if we have a pending scenario from StartCommand
         // The State Slate has been updated by the Agent (StartCommand) with the
         // intent.
@@ -105,22 +105,19 @@ bool StateMachine::transition()
             save_game(s);
 
             Logger::instance().info(
-                "Transition: Game Initialized. Moving to GAME_START.");
-            data.state = GAME_START;
+                "Transition: Game Initialized. Moving to IN_GAME.");
+            data.state = ServerState::IN_GAME;
 
             // Clear intent? Or keep it as part of state?
             // User said "We set it. We test it. What's possibly going to change
             // it?" So maybe we don't clear it. It IS the scenario of the game.
 
-            // Auto-advance
-            Logger::instance().info(
-                "Auto-Transition: GAME_START -> BUILD_PHASE");
-            data.state = BUILD_PHASE;
+            // Game is now active - turn phases tracked via PhaseIndex in GameState
             return true;
         }
         break;
 
-    case BUILD_PHASE:
+    case ServerState::IN_GAME:
 #if 0
             // Legacy BUILD_PHASE logic - replaced by self-contained Commands
             // Commands now execute their own logic directly
