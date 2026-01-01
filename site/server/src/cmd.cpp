@@ -61,6 +61,7 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     // Configure StateMachine with DB context
     StateMachine::getInstance().set_game_id(a.game_id);
     StateMachine::getInstance().set_current_player(a.player);
+    StateMachine::getInstance().set_current_user_id(a.user_id);
 
     // Clear telemetry message buffer before command execution
     Telemetry::getInstance().clear_messages();

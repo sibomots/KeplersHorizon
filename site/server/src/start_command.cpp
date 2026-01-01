@@ -56,8 +56,18 @@ bool StartCommand::invoke(void)
     // Set the game_id in the StateMachine so subsequent commands use it
     StateMachine::getInstance().set_game_id(new_game_id);
 
+    // Create game_seats entry for the player who started the game (they are player A)
+    int starter_user_id = StateMachine::getInstance().get_current_user_id();
+    if (starter_user_id > 0)
+    {
+        db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
+                std::to_string(new_game_id) + "," + 
+                std::to_string(starter_user_id) + ",'A')");
+        Logger::instance().info("Created game_seat: user " + std::to_string(starter_user_id) + " is player A");
+    }
+
     // Note: Map data (star_systems, warplines, hexes) is shared across all games
-    // using game_id=1. No need to copy - map queries always use game_id=1.
+    // using map_id=1. No need to copy - map queries always use map_id=1.
 
     // Clear any existing drafts and ships for this game
     db.exec("DELETE FROM drafts WHERE game_id=" + std::to_string(new_game_id));

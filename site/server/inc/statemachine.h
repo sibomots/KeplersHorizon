@@ -260,6 +260,7 @@ class StateMachine
         Player initiative = Player::NOPLAYER;
         int game_id = 0;
         char current_player = 'A'; // Who is making the current request
+        int current_user_id = 0;   // Database user_id of current requester
         ScenarioType scenario = ScenarioType::UNDEFINED;
         int turn_number = 0; // For tech level calculation
 
@@ -327,6 +328,15 @@ class StateMachine
     char get_current_player() const
     {
         return data.current_player;
+    }
+
+    void set_current_user_id(int user_id)
+    {
+        data.current_user_id = user_id;
+    }
+    int get_current_user_id() const
+    {
+        return data.current_user_id;
     }
 
     void set_turn_number(int turn)

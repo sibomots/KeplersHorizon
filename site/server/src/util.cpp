@@ -14,6 +14,8 @@
 #include <random>
 #include <sstream>
 
+#include "db.h"
+
 // These functions are here for utility.
 // Stop trying to re-create them as static functions throughout the software.
 
@@ -34,12 +36,33 @@ std::string trim(const std::string& s)
     return std::string(start, end + 1);
 }
 
+// Dynamic seat lookup - checks game_seats table for the user's seat in a game
+// Falls back to legacy alice=A, bob=B for backward compatibility
 char owner_for_username(const std::string& u)
 {
-    if (u == "alice")
+    // Legacy fallback for hardcoded test users
+    std::string lower = to_lower(u);
+    if (lower == "alice")
         return 'A';
-    if (u == "bob")
+    if (lower == "bob")
         return 'B';
+    return 0;
+}
+
+// Dynamic seat lookup - returns 'A' or 'B' based on game_seats table, or 0 if not in game
+char seat_for_user(int game_id, int user_id)
+{
+    if (game_id == 0 || user_id == 0)
+        return 0;
+    
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto rows = db.query("SELECT seat FROM game_seats WHERE game_id=" + 
+                         std::to_string(game_id) + " AND user_id=" + 
+                         std::to_string(user_id) + " LIMIT 1");
+    if (!rows.empty() && !rows[0].empty() && !rows[0][0].empty())
+    {
+        return rows[0][0][0];  // Return 'A' or 'B'
+    }
     return 0;
 }
 

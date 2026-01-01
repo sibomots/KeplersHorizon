@@ -219,7 +219,6 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     a.username = rows[0][1];
     a.game_id = std::atoi(rows[0][2].c_str()); // Load game_id from session
     a.token = tok;
-    a.player = owner_for_username(a.username);
 
     // If user has no game_id, auto-join the most recent active game
     if (a.game_id == 0)
@@ -234,6 +233,49 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
             db.exec("UPDATE sessions SET game_id=" + std::to_string(a.game_id) +
                     " WHERE token='" + db.esc(tok) + "'");
         }
+    }
+
+    // Determine player seat: first try dynamic lookup from game_seats table
+    a.player = seat_for_user(a.game_id, a.user_id);
+    
+    // If not in game_seats but have a game_id, try to auto-assign a seat
+    if (a.player == 0 && a.game_id != 0 && a.user_id != 0)
+    {
+        // Check if seat B is available
+        auto seat_check = db.query("SELECT seat FROM game_seats WHERE game_id=" + 
+                                   std::to_string(a.game_id));
+        bool has_a = false, has_b = false;
+        for (const auto& row : seat_check)
+        {
+            if (!row.empty() && !row[0].empty())
+            {
+                if (row[0][0] == 'A') has_a = true;
+                if (row[0][0] == 'B') has_b = true;
+            }
+        }
+        
+        // Assign first available seat
+        char new_seat = 0;
+        if (!has_a) new_seat = 'A';
+        else if (!has_b) new_seat = 'B';
+        
+        if (new_seat != 0)
+        {
+            db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
+                    std::to_string(a.game_id) + "," + 
+                    std::to_string(a.user_id) + ",'" + std::string(1, new_seat) + "')");
+            a.player = new_seat;
+        }
+        else
+        {
+            // Both seats taken, fall back to legacy
+            a.player = owner_for_username(a.username);
+        }
+    }
+    else if (a.player == 0)
+    {
+        // Fall back to legacy username-based mapping if no game context
+        a.player = owner_for_username(a.username);
     }
 
     // heartbeat
