@@ -55,6 +55,7 @@ class Telemetry
     
     // Message queuing for tell/broadcast - delivered via heartbeat (DB-backed)
     void add_tell(char player, const std::string& msg);
+    void add_tell(int game_id, char player, const std::string& msg);  // Explicit game context
     void add_broadcast(const std::string& msg);
     std::vector<std::string> get_queued_messages(char player);
 };

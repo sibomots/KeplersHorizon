@@ -31,10 +31,15 @@ void Telemetry::add_message(const std::string& msg)
 
 void Telemetry::add_tell(char player, const std::string& msg)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
     int game_id = StateMachine::getInstance().get_game_id();
+    add_tell(game_id, player, msg);
+}
+
+void Telemetry::add_tell(int game_id, char player, const std::string& msg)
+{
     if (game_id == 0) return; // No game, no messages
     
+    DatabaseManager& db = DatabaseManager::getInstance();
     std::string target = std::string(1, player);
     std::string ins = "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
                       std::to_string(game_id) + ",'" + target + "','" +

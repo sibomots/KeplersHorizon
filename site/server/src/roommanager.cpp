@@ -306,12 +306,16 @@ int RoomManager::startGame(const std::string& code)
     db.exec("UPDATE sessions SET game_id=" + std::to_string(game_id) + 
             " WHERE user_id=" + std::to_string(room.seat_b));
     
+    // Set StateMachine context for this operation
+    // This ensures all subsequent state operations (like Telemetry) work correctly
+    StateMachine::getInstance().set_game_id(game_id);
+    
     // Queue initial turn notification for both players
     // The active player (gs.active_player) goes first
     std::string first_player = gs.active_player;
     std::string first_phase = gs.phase_name();
     
-    // Add to telemetry queue for each player
+    // Add to telemetry queue for each player (StateMachine context now set)
     if (first_player == "A")
     {
         // Player A goes first

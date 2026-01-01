@@ -925,11 +925,21 @@ void StateMachine::advance_next(GameState& s)
             CombatEngine ce(s.game_id);
             ce.check_for_combat_triggers();
             auto combats = ce.get_active_combats();
+            
+            Logger::instance().info("[advance_next] Combat phase for game " + 
+                                   std::to_string(s.game_id) + ", combats found: " + 
+                                   std::to_string(combats.size()));
 
             if (combats.empty())
             {
                 // No combat? Auto-skip to next phase
+                Logger::instance().info("[advance_next] No combat, skipping to Pick/Drop phase");
                 s.phase_index = PH_SYSTEM_PICKDROP;
+            }
+            else
+            {
+                Logger::instance().info("[advance_next] Combat detected! Pausing at Combat phase");
+                // Combat exists - don't advance further (will return on next call via line 911-918)
             }
         }
         // ----------------------------
