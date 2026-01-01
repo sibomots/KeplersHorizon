@@ -104,11 +104,16 @@ std::string Telemetry::write(const std::string& msg)
 std::string Telemetry::tell(PlayerTarget target, const std::string& msg)
 {
     // Queue message for specific player (delivered via heartbeat)
-    GameState s = StateMachine::getInstance().get_game_state();
-    char target_player = (target == PlayerTarget::ME) ? s.active_player[0] : 
-                         (s.active_player[0] == 'A' ? 'B' : 'A');
+    // ME = the player who made this request (from set_current_player)
+    // THEM = the other player
+    char requesting_player = StateMachine::getInstance().get_current_player();
+    char target_player = (target == PlayerTarget::ME) ? requesting_player : 
+                         (requesting_player == 'A' ? 'B' : 'A');
     add_tell(target_player, msg);
-    return write(msg); // Also return immediate response
+    
+    // Don't return via write() - tell() is for async delivery via heartbeat only
+    // Returning empty so the caller's response isn't duplicated
+    return "";
 }
 
 std::string Telemetry::broadcast(const std::string& msg)

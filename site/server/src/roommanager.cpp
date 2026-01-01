@@ -272,6 +272,12 @@ int RoomManager::startGame(const std::string& code)
     std::string scenario = room.scenario.empty() ? "basic" : room.scenario;
     GameState gs = StateMachine::getInstance().new_game_state_for_scenario(scenario);
     
+    // Randomly assign initiative (who goes first)
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 1);
+    gs.active_player = (dis(gen) == 0) ? "A" : "B";
+    
     // Insert game with room_id
     std::string sql = "INSERT INTO games(room_id, scenario, state_json) VALUES(" +
                       std::to_string(room.id) + ",'" + db.esc(scenario) + "','" +

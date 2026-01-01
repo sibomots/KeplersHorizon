@@ -48,6 +48,15 @@ static std::string room_to_json(const RoomInfo& r)
 // GET /api/rooms - List open rooms
 void handle_rooms_list(const HttpRequest* req, HttpResponse* resp)
 {
+    // Update heartbeat for online count tracking
+    std::string token = pick_bearer(req);
+    int user_id = get_user_id_from_token(token);
+    if (user_id > 0)
+    {
+        DatabaseManager& db = DatabaseManager::getInstance();
+        db.exec("UPDATE sessions SET last_seen=NOW() WHERE user_id=" + std::to_string(user_id));
+    }
+    
     RoomManager& rm = RoomManager::getInstance();
     auto rooms = rm.listOpenRooms();
     

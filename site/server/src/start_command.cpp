@@ -24,6 +24,26 @@ bool StartCommand::invoke(void)
     };
 
     DatabaseManager& db = DatabaseManager::getInstance();
+    
+    // Check if user is already in a game (from room flow)
+    int current_game_id = StateMachine::getInstance().get_game_id();
+    int current_user_id = StateMachine::getInstance().get_current_user_id();
+    
+    if (current_game_id > 0 && current_user_id > 0)
+    {
+        // Check if there's a game_seat for this user in this game
+        auto seat_check = db.query("SELECT seat FROM game_seats WHERE game_id=" + 
+                                   std::to_string(current_game_id) + " AND user_id=" +
+                                   std::to_string(current_user_id));
+        if (!seat_check.empty())
+        {
+            // User already has a game from room flow - don't create another!
+            Logger::instance().info("Game already started via room flow (game_id=" + 
+                                   std::to_string(current_game_id) + ")");
+            Telemetry::getInstance().write("Game already started! Use 'status' to view game state.");
+            return true;  // Not an error, just already done
+        }
+    }
 
     // Validate scenario type
     if (m_scenario <= ScenarioType::UNDEFINED ||
