@@ -44,8 +44,9 @@ bool DoneCommand::invoke(void)
                                 s.active_player);
 
         Telemetry::getInstance().write("Your turn has ended");
-        // s.active_player is now the NEW active player, so ME = the one whose turn it is
-        Telemetry::getInstance().tell(PlayerTarget::ME, "⏰ It's YOUR turn! " +
+        // After advance, s.active_player is the NEW active player
+        // The requester (ME) is the OLD player, so THEM = the new player
+        Telemetry::getInstance().tell(PlayerTarget::THEM, "⏰ It's YOUR turn! " +
                                                 s.phase_name() + " (Round " +
                                                 std::to_string(s.round) + ")");
         Telemetry::getInstance().broadcast("Turn advanced to " + s.active_player);

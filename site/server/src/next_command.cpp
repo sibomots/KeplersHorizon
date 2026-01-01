@@ -17,9 +17,16 @@
 bool NextCommand::invoke(void)
 {
     GameState s = StateMachine::getInstance().get_game_state();
+    int game_id = StateMachine::getInstance().get_game_id();
 
     // Validate it's this player's turn
     char requesting_player = StateMachine::getInstance().get_current_player();
+    
+    Logger::instance().info("[next] game_id=" + std::to_string(game_id) + 
+                           ", s.game_id=" + std::to_string(s.game_id) +
+                           ", s.active_player=" + s.active_player + 
+                           ", requesting_player=" + std::string(1, requesting_player));
+    
     if (s.active_player[0] != requesting_player)
     {
         Telemetry::getInstance().write("Error: It's not your turn (active player: " + 
@@ -47,10 +54,12 @@ bool NextCommand::invoke(void)
     Logger::instance().info(msg.str());
     Telemetry::getInstance().write(msg.str());
 
-    // If active player changed, notify the NEW active player (s.active_player is now the new player)
+    // If active player changed, notify the NEW active player
+    // After advance, s.active_player is the new player (e.g., 'B')
+    // The requester (ME) is the old player (e.g., 'A'), so THEM = the new player
     if (before_player != s.active_player)
     {
-        Telemetry::getInstance().tell(PlayerTarget::ME,
+        Telemetry::getInstance().tell(PlayerTarget::THEM,
                         "⏰ It's YOUR turn! " + s.phase_name());
     }
 

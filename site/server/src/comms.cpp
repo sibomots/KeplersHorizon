@@ -11,6 +11,7 @@
 #include "cmd.h"
 #include "db.h"
 #include "events.h"
+#include "logger.h"
 #include "state.h"
 #include "util.h"
 
@@ -220,8 +221,22 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     a.game_id = std::atoi(rows[0][2].c_str()); // Load game_id from session
     a.token = tok;
 
-    // If user has no game_id, auto-join the most recent active game
-    if (a.game_id == 0)
+    // If user has no game_id OR their current game is over, auto-join the most recent active game
+    bool need_game = (a.game_id == 0);
+    if (!need_game && a.game_id != 0)
+    {
+        // Validate current game still exists and is active
+        auto check = db.query("SELECT id FROM games WHERE id=" + std::to_string(a.game_id) + 
+                              " AND state_json NOT LIKE '%\"game_over\":true%'");
+        if (check.empty())
+        {
+            Logger::instance().info("[require_auth] User " + a.username + 
+                                   "'s game_id=" + std::to_string(a.game_id) + " is invalid/over");
+            need_game = true;
+        }
+    }
+    
+    if (need_game)
     {
         auto latest = db.query(
             "SELECT id FROM games WHERE state_json NOT LIKE '%\"game_over\":true%' "
@@ -232,7 +247,14 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
             // Update session with found game_id
             db.exec("UPDATE sessions SET game_id=" + std::to_string(a.game_id) +
                     " WHERE token='" + db.esc(tok) + "'");
+            Logger::instance().info("[require_auth] Auto-joined user " + a.username + 
+                                   " to game " + std::to_string(a.game_id));
         }
+    }
+    else
+    {
+        Logger::instance().debug("[require_auth] User " + a.username + 
+                                " has valid game_id=" + std::to_string(a.game_id));
     }
 
     // Determine player seat: first try dynamic lookup from game_seats table
