@@ -293,6 +293,12 @@ int RoomManager::startGame(const std::string& code)
     db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
             std::to_string(game_id) + "," + std::to_string(room.seat_b) + ",'B')");
     
+    // Update both players' sessions with the new game_id
+    db.exec("UPDATE sessions SET game_id=" + std::to_string(game_id) + 
+            " WHERE user_id=" + std::to_string(room.seat_a));
+    db.exec("UPDATE sessions SET game_id=" + std::to_string(game_id) + 
+            " WHERE user_id=" + std::to_string(room.seat_b));
+    
     return game_id;
 }
 

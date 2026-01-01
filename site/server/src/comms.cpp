@@ -218,86 +218,20 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     }
     a.user_id = std::atoi(rows[0][0].c_str());
     a.username = rows[0][1];
-    a.game_id = std::atoi(rows[0][2].c_str()); // Load game_id from session
+    a.game_id = std::atoi(rows[0][2].c_str()); // Load game_id from session (set by room flow)
     a.token = tok;
 
-    // If user has no game_id OR their current game is over, auto-join the most recent active game
-    bool need_game = (a.game_id == 0);
-    if (!need_game && a.game_id != 0)
-    {
-        // Validate current game still exists and is active
-        auto check = db.query("SELECT id FROM games WHERE id=" + std::to_string(a.game_id) + 
-                              " AND state_json NOT LIKE '%\"game_over\":true%'");
-        if (check.empty())
-        {
-            Logger::instance().info("[require_auth] User " + a.username + 
-                                   "'s game_id=" + std::to_string(a.game_id) + " is invalid/over");
-            need_game = true;
-        }
-    }
-    
-    if (need_game)
-    {
-        auto latest = db.query(
-            "SELECT id FROM games WHERE state_json NOT LIKE '%\"game_over\":true%' "
-            "ORDER BY id DESC LIMIT 1");
-        if (!latest.empty())
-        {
-            a.game_id = std::atoi(latest[0][0].c_str());
-            // Update session with found game_id
-            db.exec("UPDATE sessions SET game_id=" + std::to_string(a.game_id) +
-                    " WHERE token='" + db.esc(tok) + "'");
-            Logger::instance().info("[require_auth] Auto-joined user " + a.username + 
-                                   " to game " + std::to_string(a.game_id));
-        }
-    }
-    else
-    {
-        Logger::instance().debug("[require_auth] User " + a.username + 
-                                " has valid game_id=" + std::to_string(a.game_id));
-    }
-
-    // Determine player seat: first try dynamic lookup from game_seats table
+    // Look up player's seat from game_seats table
+    // Room flow already set up game_id and game_seats properly
     a.player = seat_for_user(a.game_id, a.user_id);
     
-    // If not in game_seats but have a game_id, try to auto-assign a seat
-    if (a.player == 0 && a.game_id != 0 && a.user_id != 0)
+    // If no seat found (user not in a game yet), that's okay for lobby/room operations
+    // Commands that require a game will check for valid game state
+    if (a.game_id != 0 && a.player == 0)
     {
-        // Check if seat B is available
-        auto seat_check = db.query("SELECT seat FROM game_seats WHERE game_id=" + 
-                                   std::to_string(a.game_id));
-        bool has_a = false, has_b = false;
-        for (const auto& row : seat_check)
-        {
-            if (!row.empty() && !row[0].empty())
-            {
-                if (row[0][0] == 'A') has_a = true;
-                if (row[0][0] == 'B') has_b = true;
-            }
-        }
-        
-        // Assign first available seat
-        char new_seat = 0;
-        if (!has_a) new_seat = 'A';
-        else if (!has_b) new_seat = 'B';
-        
-        if (new_seat != 0)
-        {
-            db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
-                    std::to_string(a.game_id) + "," + 
-                    std::to_string(a.user_id) + ",'" + std::string(1, new_seat) + "')");
-            a.player = new_seat;
-        }
-        else
-        {
-            // Both seats taken, fall back to legacy
-            a.player = owner_for_username(a.username);
-        }
-    }
-    else if (a.player == 0)
-    {
-        // Fall back to legacy username-based mapping if no game context
-        a.player = owner_for_username(a.username);
+        Logger::instance().debug("[require_auth] User " + a.username + 
+                                " has game_id=" + std::to_string(a.game_id) + 
+                                " but no seat (may be stale session)");
     }
 
     // heartbeat
