@@ -842,9 +842,10 @@ void StateMachine::apply_start_of_turn(GameState& s)
 
     int vp_gain = 0;
     {
+        // star_systems uses map_id (shared map data), ships use game_id
         std::string q =
             "SELECT COUNT(DISTINCT ss.name) "
-            "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name "
+            "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND ss.map_id=1 "
             "WHERE sh.game_id=" +
             std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
             "' AND sh.racked_in IS NULL "

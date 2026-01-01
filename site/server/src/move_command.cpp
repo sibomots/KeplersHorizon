@@ -102,10 +102,9 @@ bool MoveCommand::invoke(void)
         if (!stepHex.empty())
         {
             // See if it matches a system name (reverse lookup for
-            // display/logic)
+            // display/logic) - star_systems uses map_id, not game_id
             auto sysr = db.query("SELECT name FROM star_systems WHERE "
-                                 "game_id=" +
-                                 std::to_string(m_game_id) + " AND hex_id='" +
+                                 "map_id=1 AND hex_id='" +
                                  stepHex + "' LIMIT 1");
             if (!sysr.empty())
                 stepSys = sysr[0][0];
