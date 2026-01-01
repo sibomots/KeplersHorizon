@@ -75,6 +75,68 @@ typedef int AttributeValue;
 // Map of attributes for commands
 typedef std::map<AttributeID, AttributeValue> AttributeMap;
 
+//------------------------------------------------------------------------------
+// Command Inhibit System - IDs and parameter structs for check_inhibits()
+//------------------------------------------------------------------------------
+
+// Command IDs for the check_inhibits() system
+enum class CommandID
+{
+    BUILD_NEW,
+    BUILD_SET,
+    BUILD_COMMIT,
+    DEPLOY,
+    MOVE,
+    NEXT,
+    DONE,
+    STATUS,
+    HELP,
+    COMBAT_ORDER,
+    COMBAT_FIRE,
+    // Add more as needed
+};
+
+// Parameter type definitions for check_inhibits (typedef these types)
+typedef struct
+{
+    char ship_type;
+    std::string ship_name;
+} BuildNewParams_t;
+
+typedef struct
+{
+    std::string ship_code;
+    AttributeMap attributes;
+} BuildSetParams_t;
+
+typedef struct
+{
+    std::string ship_code;
+} BuildCommitParams_t;
+
+typedef struct
+{
+    std::string ship_code;
+    std::string destination;
+} DeployParams_t;
+
+typedef struct
+{
+    std::string ship_code;
+    std::string destination;
+} MoveParams_t;
+
+typedef struct { /* empty - no parameters */ } NextParams_t;
+typedef struct { /* empty - no parameters */ } DoneParams_t;
+typedef struct { /* empty - no parameters */ } StatusParams_t;
+typedef struct { /* empty - no parameters */ } HelpParams_t;
+
+typedef struct
+{
+    std::string ship_code;
+    int order_type;
+} CombatOrderParams_t;
+
 
 // end typedefs
 #endif

@@ -16,23 +16,17 @@
 
 bool NextCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-
-    // Validate it's this player's turn
-    char requesting_player = StateMachine::getInstance().get_current_player();
-    
-    Logger::instance().info("[next] game_id=" + std::to_string(game_id) + 
-                           ", s.game_id=" + std::to_string(s.game_id) +
-                           ", s.active_player=" + s.active_player + 
-                           ", requesting_player=" + std::string(1, requesting_player));
-    
-    if (s.active_player[0] != requesting_player)
+    // Check if this command is allowed given current game state
+    NextParams_t params;
+    std::string inhibit_error;
+    if (!StateMachine::getInstance().check_inhibits(CommandID::NEXT, &params, inhibit_error))
     {
-        Telemetry::getInstance().write("Error: It's not your turn (active player: " + 
-                                       s.active_player + ")");
+        Telemetry::getInstance().write("Error: " + inhibit_error);
         return false;
     }
+
+    GameState s = StateMachine::getInstance().get_game_state();
+    int game_id = StateMachine::getInstance().get_game_id();
 
     std::string before_phase = s.phase_name();
     std::string before_player = s.active_player;

@@ -15,6 +15,15 @@
 
 bool DoneCommand::invoke(void)
 {
+    // Check if this command is allowed given current game state
+    DoneParams_t params;
+    std::string inhibit_error;
+    if (!StateMachine::getInstance().check_inhibits(CommandID::DONE, &params, inhibit_error))
+    {
+        Telemetry::getInstance().write("Error: " + inhibit_error);
+        return false;
+    }
+
     GameState s = StateMachine::getInstance().get_game_state();
     char me = s.active_player.empty() ? 'A' : s.active_player[0];
 

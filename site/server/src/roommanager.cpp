@@ -10,6 +10,7 @@
 #include "util.h"
 #include "json.h"
 #include "statemachine.h"
+#include "telemetry.h"
 
 #include <random>
 #include <sstream>
@@ -304,6 +305,25 @@ int RoomManager::startGame(const std::string& code)
             " WHERE user_id=" + std::to_string(room.seat_a));
     db.exec("UPDATE sessions SET game_id=" + std::to_string(game_id) + 
             " WHERE user_id=" + std::to_string(room.seat_b));
+    
+    // Queue initial turn notification for both players
+    // The active player (gs.active_player) goes first
+    std::string first_player = gs.active_player;
+    std::string first_phase = gs.phase_name();
+    
+    // Add to telemetry queue for each player
+    if (first_player == "A")
+    {
+        // Player A goes first
+        Telemetry::getInstance().add_tell('A', "⏰ You have the initiative! " + first_phase);
+        Telemetry::getInstance().add_tell('B', "Player A goes first. Waiting for your turn...");
+    }
+    else
+    {
+        // Player B goes first
+        Telemetry::getInstance().add_tell('B', "⏰ You have the initiative! " + first_phase);
+        Telemetry::getInstance().add_tell('A', "Player B goes first. Waiting for your turn...");
+    }
     
     return game_id;
 }

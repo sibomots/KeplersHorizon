@@ -20,6 +20,18 @@
 
 bool DeployCommand::invoke(void)
 {
+    // Check if this command is allowed given current game state
+    DeployParams_t params;
+    params.ship_code = m_ship_code;
+    params.destination = m_system_name;
+    
+    std::string inhibit_error;
+    if (!StateMachine::getInstance().check_inhibits(CommandID::DEPLOY, &params, inhibit_error))
+    {
+        Telemetry::getInstance().write("Error: " + inhibit_error);
+        return false;
+    }
+
     DatabaseManager& db = DatabaseManager::getInstance();
     GameState s = StateMachine::getInstance().get_game_state();
     int m_game_id = StateMachine::getInstance().get_game_id();

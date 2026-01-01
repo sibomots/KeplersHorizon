@@ -18,6 +18,18 @@
 
 bool BuildNewCommand::invoke(void)
 {
+    // Check if this command is allowed given current game state
+    BuildNewParams_t params;
+    params.ship_type = m_ship_code.empty() ? 'W' : m_ship_code[0];
+    params.ship_name = m_ship_name;
+    
+    std::string inhibit_error;
+    if (!StateMachine::getInstance().check_inhibits(CommandID::BUILD_NEW, &params, inhibit_error))
+    {
+        Telemetry::getInstance().write("Error: " + inhibit_error);
+        return false;
+    }
+
     GameState s = StateMachine::getInstance().get_game_state();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 

@@ -354,6 +354,11 @@ class StateMachine
         return load_game(data.game_id);
     }
 
+    // Command inhibit checking - determines if a command is allowed
+    // based on current game state, phase, and initiative.
+    // Returns true if allowed, false if inhibited (error_msg set)
+    bool check_inhibits(CommandID cmd, void* params, std::string& error_msg);
+
     // Setters for state properties (used by Commands to set up Transitions)
     void set_scenario(ScenarioType s)
     {

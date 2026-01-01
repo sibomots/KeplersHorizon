@@ -20,6 +20,18 @@
 
 bool MoveCommand::invoke(void)
 {
+    // Check if this command is allowed given current game state
+    MoveParams_t params;
+    params.ship_code = m_ship_code;
+    params.destination = m_destinations.empty() ? "" : m_destinations[0];
+    
+    std::string inhibit_error;
+    if (!StateMachine::getInstance().check_inhibits(CommandID::MOVE, &params, inhibit_error))
+    {
+        Telemetry::getInstance().write("Error: " + inhibit_error);
+        return false;
+    }
+
     DatabaseManager& db = DatabaseManager::getInstance();
     GameState s = StateMachine::getInstance().get_game_state();
     int m_game_id = StateMachine::getInstance().get_game_id();

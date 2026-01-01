@@ -979,3 +979,174 @@ int StateMachine::next_event_seq(int game_id)
         return 1;
     return std::atoi(r[0][0].c_str());
 }
+
+//------------------------------------------------------------------------------
+// Command Inhibit System - centralized validation for all commands
+// Check priority: 1) Initiative, 2) Phase, 3) Intra-phase state
+//------------------------------------------------------------------------------
+
+bool StateMachine::check_inhibits(CommandID cmd, void* params, std::string& error_msg)
+{
+    GameState s = get_game_state();
+    char requesting_player = data.current_player;
+    bool has_initiative = (s.active_player[0] == requesting_player);
+    
+    switch (cmd)
+    {
+    //--------------------------------------------------------------------------
+    // BUILD commands - only during Build Ships phase, only with initiative
+    //--------------------------------------------------------------------------
+    case CommandID::BUILD_NEW:
+    {
+        // 1. Check initiative first
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        // 2. Check phase
+        if (s.phase_index != PH_BUILD_SHIPS)
+        {
+            error_msg = "Building only allowed during Build Ships phase";
+            return false;
+        }
+        // 3. Parameter-specific checks could go here using:
+        // auto* p = static_cast<BuildNewParams_t*>(params);
+        return true;
+    }
+    break;
+    
+    case CommandID::BUILD_SET:
+    {
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        if (s.phase_index != PH_BUILD_SHIPS)
+        {
+            error_msg = "Build modifications only allowed during Build Ships phase";
+            return false;
+        }
+        return true;
+    }
+    break;
+    
+    case CommandID::BUILD_COMMIT:
+    {
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        if (s.phase_index != PH_BUILD_SHIPS)
+        {
+            error_msg = "Committing ships only allowed during Build Ships phase";
+            return false;
+        }
+        return true;
+    }
+    break;
+    
+    //--------------------------------------------------------------------------
+    // DEPLOY command - only during Build Ships phase, only with initiative
+    //--------------------------------------------------------------------------
+    case CommandID::DEPLOY:
+    {
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        if (s.phase_index != PH_BUILD_SHIPS)
+        {
+            error_msg = "Deployment only allowed during Build Ships phase";
+            return false;
+        }
+        return true;
+    }
+    break;
+    
+    //--------------------------------------------------------------------------
+    // MOVE command - only during Movement phase, only with initiative
+    //--------------------------------------------------------------------------
+    case CommandID::MOVE:
+    {
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        if (s.phase_index != PH_MOVEMENT)
+        {
+            error_msg = "Movement only allowed during Movement phase";
+            return false;
+        }
+        return true;
+    }
+    break;
+    
+    //--------------------------------------------------------------------------
+    // NEXT/DONE - phase advancement, only with initiative
+    //--------------------------------------------------------------------------
+    case CommandID::NEXT:
+    case CommandID::DONE:
+    {
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        return true;
+    }
+    break;
+    
+    //--------------------------------------------------------------------------
+    // STATUS/HELP - always allowed, no restrictions
+    //--------------------------------------------------------------------------
+    case CommandID::STATUS:
+    case CommandID::HELP:
+    {
+        return true;
+    }
+    break;
+    
+    //--------------------------------------------------------------------------
+    // COMBAT commands - during Combat phase
+    // Note: Combat has special rules - both players issue orders, then apply
+    //--------------------------------------------------------------------------
+    case CommandID::COMBAT_ORDER:
+    {
+        if (!has_initiative)
+        {
+            error_msg = "It's not your turn (active player: " + s.active_player + ")";
+            return false;
+        }
+        if (s.phase_index != PH_RESOLVE_COMBAT)
+        {
+            error_msg = "Combat orders only allowed during Combat phase";
+            return false;
+        }
+        // TODO: Intra-phase check - orders must be issued before apply
+        return true;
+    }
+    break;
+    
+    case CommandID::COMBAT_FIRE:
+    {
+        if (s.phase_index != PH_RESOLVE_COMBAT)
+        {
+            error_msg = "Combat fire only allowed during Combat phase";
+            return false;
+        }
+        // TODO: Intra-phase check - both players must have issued orders first
+        return true;
+    }
+    break;
+    
+    } // end switch
+    
+    // Default: allow (for any commands not explicitly handled)
+    return true;
+}
+
