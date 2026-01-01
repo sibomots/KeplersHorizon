@@ -56,6 +56,23 @@ bool StartCommand::invoke(void)
     // Set the game_id in the StateMachine so subsequent commands use it
     StateMachine::getInstance().set_game_id(new_game_id);
 
+    // Copy map data from template (game_id=1) to new game
+    // This includes star_systems, warplines, hexes, warpline_hexes
+    db.exec("INSERT INTO star_systems(game_id, hex_id, name, is_base, base_owner) "
+            "SELECT " + std::to_string(new_game_id) + ", hex_id, name, is_base, base_owner "
+            "FROM star_systems WHERE game_id=1");
+    
+    db.exec("INSERT INTO warplines(game_id, a_hex, b_hex) "
+            "SELECT " + std::to_string(new_game_id) + ", a_hex, b_hex "
+            "FROM warplines WHERE game_id=1");
+    
+    db.exec("INSERT INTO hexes(game_id, hex_id, q, r) "
+            "SELECT " + std::to_string(new_game_id) + ", hex_id, q, r "
+            "FROM hexes WHERE game_id=1");
+    
+    // Note: warpline_hexes references warpline_id which won't match, but we'll use hex-based lookups
+    // For now, skip warpline_hexes copy as we use MapGraph which loads from warplines+hexes
+
     // Clear any existing drafts and ships for this game
     db.exec("DELETE FROM drafts WHERE game_id=" + std::to_string(new_game_id));
     db.exec("DELETE FROM ships WHERE game_id=" + std::to_string(new_game_id));

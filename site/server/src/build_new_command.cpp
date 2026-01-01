@@ -39,6 +39,7 @@ bool BuildNewCommand::invoke(void)
     }
 
     // Auto-assign ship number if not provided
+    // Numbers must be unique across ALL players, not just the active player
     std::string ship_code = m_ship_code;
     if (ship_code.find_first_of("0123456789") == std::string::npos)
     {
@@ -48,8 +49,11 @@ bool BuildNewCommand::invoke(void)
         {
             candidate = ship_code + std::to_string(next_num);
             next_num++;
-        } while (ship_exists(s.game_id, active_player, candidate) ||
-                 draft_exists(s.game_id, active_player, candidate));
+            // Check both players to ensure global uniqueness
+        } while (ship_exists(s.game_id, 'A', candidate) ||
+                 ship_exists(s.game_id, 'B', candidate) ||
+                 draft_exists(s.game_id, 'A', candidate) ||
+                 draft_exists(s.game_id, 'B', candidate));
         ship_code = candidate;
     }
 
