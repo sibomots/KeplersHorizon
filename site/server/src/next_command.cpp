@@ -47,10 +47,10 @@ bool NextCommand::invoke(void)
     Logger::instance().info(msg.str());
     Telemetry::getInstance().write(msg.str());
 
-    // If active player changed, notify the new player
+    // If active player changed, notify the NEW active player (s.active_player is now the new player)
     if (before_player != s.active_player)
     {
-        Telemetry::getInstance().tell(PlayerTarget::THEM,
+        Telemetry::getInstance().tell(PlayerTarget::ME,
                         "⏰ It's YOUR turn! " + s.phase_name());
     }
 

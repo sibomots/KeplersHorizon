@@ -180,48 +180,49 @@ CREATE TABLE IF NOT EXISTS sightings (
 -- ALTER TABLE sessions ADD COLUMN last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 
--- map metadata per game
+-- Map metadata (shared across games, identified by map_id)
+-- map_id=1 is the default Kepler map. Future maps can use map_id=2, 3, etc.
 CREATE TABLE IF NOT EXISTS star_systems (
-  game_id INT NOT NULL,
+  map_id INT NOT NULL DEFAULT 1,
   hex_id VARCHAR(8) NOT NULL,
   name VARCHAR(64) NOT NULL,
   is_base TINYINT NOT NULL DEFAULT 0,
   base_owner CHAR(1) NULL,
-  PRIMARY KEY (game_id, name),
-  INDEX (game_id, hex_id),
-  INDEX (game_id, is_base),
-  INDEX (game_id, base_owner)
+  PRIMARY KEY (map_id, name),
+  INDEX (map_id, hex_id),
+  INDEX (map_id, is_base),
+  INDEX (map_id, base_owner)
 );
 
 CREATE TABLE IF NOT EXISTS warplines (
-  game_id INT NOT NULL,
+  map_id INT NOT NULL DEFAULT 1,
   id INT NOT NULL AUTO_INCREMENT,
   a_hex VARCHAR(8) NOT NULL,
   b_hex VARCHAR(8) NOT NULL,
   PRIMARY KEY (id),
-  INDEX (game_id),
-  INDEX (game_id, a_hex),
-  INDEX (game_id, b_hex)
+  INDEX (map_id),
+  INDEX (map_id, a_hex),
+  INDEX (map_id, b_hex)
 );
 
 
 CREATE TABLE IF NOT EXISTS hexes (
-  game_id INT NOT NULL,
+  map_id INT NOT NULL DEFAULT 1,
   hex_id VARCHAR(8) NOT NULL,
   q INT NOT NULL,
   r INT NOT NULL,
-  PRIMARY KEY (game_id, hex_id),
-  INDEX (game_id, q),
-  INDEX (game_id, r)
+  PRIMARY KEY (map_id, hex_id),
+  INDEX (map_id, q),
+  INDEX (map_id, r)
 );
 
 CREATE TABLE IF NOT EXISTS warpline_hexes (
-  game_id INT NOT NULL,
+  map_id INT NOT NULL DEFAULT 1,
   warpline_id INT NOT NULL,
   hex_id VARCHAR(8) NOT NULL,
-  PRIMARY KEY (game_id, warpline_id, hex_id),
-  INDEX (game_id, hex_id),
-  INDEX (game_id, warpline_id)
+  PRIMARY KEY (map_id, warpline_id, hex_id),
+  INDEX (map_id, hex_id),
+  INDEX (map_id, warpline_id)
 );
 
 

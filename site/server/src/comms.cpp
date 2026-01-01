@@ -221,6 +221,21 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     a.token = tok;
     a.player = owner_for_username(a.username);
 
+    // If user has no game_id, auto-join the most recent active game
+    if (a.game_id == 0)
+    {
+        auto latest = db.query(
+            "SELECT id FROM games WHERE state_json NOT LIKE '%\"game_over\":true%' "
+            "ORDER BY id DESC LIMIT 1");
+        if (!latest.empty())
+        {
+            a.game_id = std::atoi(latest[0][0].c_str());
+            // Update session with found game_id
+            db.exec("UPDATE sessions SET game_id=" + std::to_string(a.game_id) +
+                    " WHERE token='" + db.esc(tok) + "'");
+        }
+    }
+
     // heartbeat
     db.exec("UPDATE sessions SET last_seen=NOW() WHERE token='" + db.esc(tok) +
             "'");
