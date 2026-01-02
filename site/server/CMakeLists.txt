@@ -48,6 +48,8 @@ src/build_set_attribute_command.cpp
 src/build_show_draft_command.cpp
 src/cmd.cpp
 src/combat.cpp
+src/combat_order_command.cpp
+src/combat_apply_command.cpp
 src/comms.cpp
 src/db.cpp
 src/deploy_command.cpp

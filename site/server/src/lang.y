@@ -27,6 +27,8 @@
 #include "done_command.h"
 #include "deploy_command.h"
 #include "move_command.h"
+#include "combat_order_command.h"
+#include "combat_apply_command.h"
 #include "statemachine.h"
 // #include "game.h"
 #include "db.h"
@@ -44,6 +46,10 @@ void yyerror(const char *s);
 // BUGBUG
 // Global builder for accumulating build set attributes
 BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder();
+
+// Global builders for combat commands (accumulate power/damage specs from sub-rules)
+CombatOrderCommand::Builder* g_combat_order_builder = new CombatOrderCommand::Builder();
+CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
 
 %}
 
@@ -321,11 +327,22 @@ combat_cmd:
       Logger::instance().info("Status of combat situation");
    }
    | TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship combat_order_spec {
-      Logger::instance().info("Combat order spec: ");
+       // Build and invoke combat order command
+       ICmd* pCmd = g_combat_order_builder->build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+       // Reset builder for next command
+       delete g_combat_order_builder;
+       g_combat_order_builder = new CombatOrderCommand::Builder();
    }
    | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_application_spec {
-      // TODO (used by the non-active player)
-      Logger::instance().info("Combat application spec: ");
+       // Build and invoke combat apply command
+       ICmd* pCmd = g_combat_apply_builder->build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+       // Reset builder for next command
+       delete g_combat_apply_builder;
+       g_combat_apply_builder = new CombatApplyCommand::Builder();
    }
    | TOK_COMBAT TOK_ORDER combat_order_commitment_cmd {
       // TODO
@@ -348,103 +365,79 @@ building_draft_ship:
 combat_initiator_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Combat ship initiator: "
-                              ">" + ship_id + "<" );
+      Logger::instance().info("Combat ship initiator: >" + ship_id + "<");
+      g_combat_order_builder->ship_code(ship_id);
+      delete $1;
   }
   ;
 
 combat_damaged_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Combat damaged ship: "
-                              ">" + ship_id + "<" );
+      Logger::instance().info("Combat damaged ship: >" + ship_id + "<");
+      g_combat_apply_builder->ship_code(ship_id);
+      delete $1;
   }
   ;
 
 combat_tactic:
   TOK_ATTACK {
       Logger::instance().info("Combat Attack Tactic");
+      g_combat_order_builder->tactic('A');
   }
   | TOK_DODGE {
       Logger::instance().info("Combat Dodge Tactic");
+      g_combat_order_builder->tactic('D');
   }
   | TOK_ESCAPE {
       Logger::instance().info("Combat Escape Tactic");
+      g_combat_order_builder->tactic('R');
   }
   ;
 
 combat_target_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Combat target ship: "
-                              ">" + ship_id + "<");
+      Logger::instance().info("Combat target ship: >" + ship_id + "<");
+      g_combat_order_builder->target(ship_id);
+      delete $1;
   }
   ;
 
 combat_order_spec:
   TOK_PD_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Combat Order update spec PD ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->drive_power($1);
   }
   | TOK_B_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Combat Order update spec BEAM ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->beam_power($1);
   }
   | TOK_S_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Combat Order update spec SCREEN ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->screen_power($1);
   }
   | TOK_T_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Combat Order update spec TUBE ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->tube_power($1);
   }
   | TOK_M_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Combat Order update spec MISSILE ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->missiles(std::to_string($1));
   }
   ;
 
 additional_combat_order_spec:
-  // no spec
+  /* empty - no more specs */
   | TOK_PD_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Order update spec PD ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->drive_power($1);
   }
   | TOK_B_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Order update spec BEAM ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->beam_power($1);
   }
   | TOK_S_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Order update spec SCREEN ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->screen_power($1);
   }
   | TOK_T_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Order update spec TUBE ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->tube_power($1);
   }
   | TOK_M_ASSIGN additional_combat_order_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Order update spec MISSILE ";
-      ss << $1;
-      Logger::instance().info(ss.str());
+      g_combat_order_builder->missiles(std::to_string($1));
   }
   ;
 
@@ -462,58 +455,38 @@ additional_combat_order_spec:
 
 combat_application_spec:
   TOK_PD_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Combat Application update spec PD ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("D", $1);
   }
   | TOK_B_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Combat Application update spec BEAM ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("B", $1);
   }
   | TOK_S_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Combat Application update spec SCREEN ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("S", $1);
   }
   | TOK_T_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Combat Application update spec TUBE ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("T", $1);
   }
   | TOK_M_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Combat Application update spec MISSILE ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("M", $1);
   }
   ;
 
 additional_combat_application_spec:
-  // no spec
+  /* empty - no more specs */
   | TOK_PD_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Application update spec PD ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("D", $1);
   }
   | TOK_B_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Application update spec BEAM ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("B", $1);
   }
   | TOK_S_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Application update spec SCREEN ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("S", $1);
   }
   | TOK_T_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Application update spec TUBE ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("T", $1);
   }
   | TOK_M_ASSIGN additional_combat_application_spec {
-      std::stringstream ss;
-      ss << "Additional Combat Application update spec MISSILE ";
-      Logger::instance().info(ss.str());
+      g_combat_apply_builder->assign("M", $1);
   }
   ;
 
