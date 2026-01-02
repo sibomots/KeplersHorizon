@@ -165,15 +165,15 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
     // 3. Insert/Update
     db.exec("INSERT INTO combat_orders (game_id, owner, ship_code, round, "
             "tactic, target_id, power_d, power_b, power_s, power_t, "
-            "missiles_json) VALUES (" +
+            "missiles_data, committed) VALUES (" +
             std::to_string(game_id) + ", '" + std::string(1, owner) + "', '" +
             order.ship_code + "', " + std::to_string(order.round) + ", '" +
             std::string(1, order.tactic) + "', '" + order.target_id + "', " +
             std::to_string(order.power_d) + ", " +
             std::to_string(order.power_b) + ", " +
             std::to_string(order.power_s) + ", " +
-            std::to_string(order.power_t) + ", '" + order.missiles_json +
-            "') "
+            std::to_string(order.power_t) + ", '" + order.missiles_data +
+            "', 0) "
             "ON DUPLICATE KEY UPDATE "
             "tactic='" +
             std::string(1, order.tactic) +
@@ -193,18 +193,11 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
             "power_t=" +
             std::to_string(order.power_t) +
             ", "
-            "missiles_json='" +
-            order.missiles_json + "'");
+            "missiles_data='" +
+            order.missiles_data + "', committed=0");
 
-    // 4. Check completion
-    if (all_orders_submitted(hex_id, order.round))
-    {
-        // Auto-Resolve!
-        std::string res = resolve_round(hex_id);
-        return "Orders Saved. Invoking Auto-Resolve...\n" + res;
-    }
-
-    return "Order Saved";
+    // Resolution triggered by explicit 'combat commit'
+    return "Order draft saved. Use 'combat commit' when ready.";
 }
 
 bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
@@ -232,6 +225,33 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
                             " Orders=" + std::to_string(orderCount));
 
     return orderCount >= shipCount;
+}
+
+bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    // Count ships in hex
+    auto sr = db.query(
+        "SELECT COUNT(*) FROM ships WHERE game_id=" + std::to_string(game_id) +
+        " AND at_hex='" + hex_id + "' AND racked_in IS NULL");
+    int shipCount = std::atoi(sr[0][0].c_str());
+
+    // Count COMMITTED orders
+    auto or_ = db.query("SELECT COUNT(*) FROM combat_orders co "
+                        "JOIN ships s ON s.game_id = co.game_id AND "
+                        "s.ship_code = co.ship_code AND s.owner = co.owner "
+                        "WHERE co.game_id=" +
+                        std::to_string(game_id) +
+                        " AND co.round=" + std::to_string(round) +
+                        " AND co.committed=1 AND s.at_hex='" + hex_id + "'");
+    int commitCount = std::atoi(or_[0][0].c_str());
+
+    Logger::instance().info("[DEBUG] Hex " + hex_id + " Round " +
+                            std::to_string(round) +
+                            ": Ships=" + std::to_string(shipCount) +
+                            " Committed=" + std::to_string(commitCount));
+
+    return commitCount >= shipCount;
 }
 
 // --- CRT Helper ---
@@ -431,7 +451,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     // Load orders
     auto ro = db.query(
         "SELECT ship_code, owner, tactic, target_id, power_d, power_b, "
-        "power_s, power_t, missiles_json FROM combat_orders WHERE game_id=" +
+        "power_s, power_t, missiles_data FROM combat_orders WHERE game_id=" +
         std::to_string(game_id) + " AND round=" + std::to_string(cs.round));
 
     for (const auto& row : ro)
@@ -447,7 +467,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             ships[key].ord.power_b = std::atoi(row[5].c_str());
             ships[key].ord.power_s = std::atoi(row[6].c_str());
             ships[key].ord.power_t = std::atoi(row[7].c_str());
-            ships[key].ord.missiles_json = row[8];
+            ships[key].ord.missiles_data = row[8];
         }
     }
 
@@ -523,9 +543,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     // Missiles
     for (auto& [key, ship] : ships)
     {
-        if (!ship.ord.missiles_json.empty() && ship.ord.missiles_json != "[]")
+        if (!ship.ord.missiles_data.empty() && ship.ord.missiles_data != "[]")
         {
-            int count = std::atoi(ship.ord.missiles_json.c_str());
+            int count = std::atoi(ship.ord.missiles_data.c_str());
             if (count > 0 && ship.ord.power_t >= count)
             {
                 // Determine target

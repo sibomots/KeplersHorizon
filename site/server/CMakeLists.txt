@@ -50,6 +50,9 @@ src/cmd.cpp
 src/combat.cpp
 src/combat_order_command.cpp
 src/combat_apply_command.cpp
+src/combat_drafts_command.cpp
+src/combat_commit_command.cpp
+src/combat_cancel_command.cpp
 src/comms.cpp
 src/db.cpp
 src/deploy_command.cpp
@@ -69,6 +72,7 @@ src/resupply_command.cpp
 src/roommanager.cpp
 src/rooms_api.cpp
 src/srvmgr.cpp
+src/star_system_constraints.cpp
 src/start_command.cpp
 src/state.cpp
 src/statemachine.cpp

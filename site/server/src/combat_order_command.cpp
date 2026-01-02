@@ -41,7 +41,7 @@ bool CombatOrderCommand::invoke(void)
     order.power_b = m_power_b;
     order.power_s = m_power_s;
     order.power_t = m_power_t;
-    order.missiles_json = m_missiles_json;
+    order.missiles_data = m_missiles_json;
 
     // Submit order to combat engine
     CombatEngine ce(s.game_id);

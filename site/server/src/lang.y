@@ -29,6 +29,9 @@
 #include "move_command.h"
 #include "combat_order_command.h"
 #include "combat_apply_command.h"
+#include "combat_drafts_command.h"
+#include "combat_commit_command.h"
+#include "combat_cancel_command.h"
 #include "statemachine.h"
 // #include "game.h"
 #include "db.h"
@@ -326,6 +329,21 @@ combat_cmd:
    TOK_COMBAT {
       Logger::instance().info("Status of combat situation");
    }
+   | TOK_COMBAT TOK_DRAFTS {
+       ICmd* pCmd = CombatDraftsCommand::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+   | TOK_COMBAT TOK_COMMIT {
+       ICmd* pCmd = CombatCommitCommand::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+   | TOK_COMBAT TOK_CANCEL {
+       ICmd* pCmd = CombatCancelCommand::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
    | TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship combat_order_spec {
        // Build and invoke combat order command
        ICmd* pCmd = g_combat_order_builder->build();
@@ -343,12 +361,6 @@ combat_cmd:
        // Reset builder for next command
        delete g_combat_apply_builder;
        g_combat_apply_builder = new CombatApplyCommand::Builder();
-   }
-   | TOK_COMBAT TOK_ORDER combat_order_commitment_cmd {
-      // TODO
-   }
-   | TOK_COMBAT TOK_APPLY damage_allotment_commitment_cmd {
-      // TODO (used by the non-active player)
    }
   ;
 

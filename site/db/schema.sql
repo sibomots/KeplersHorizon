@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS games (
   state_json MEDIUMTEXT NOT NULL,
   current_draft_A VARCHAR(4) DEFAULT NULL,
   current_draft_B VARCHAR(4) DEFAULT NULL,
+  active_combat_hex VARCHAR(8) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (room_id) REFERENCES rooms(id)
 );
@@ -256,7 +257,8 @@ CREATE TABLE IF NOT EXISTS combat_orders (
   power_b INT NOT NULL DEFAULT 0,
   power_s INT NOT NULL DEFAULT 0,
   power_t INT NOT NULL DEFAULT 0,
-  missiles_json TEXT DEFAULT NULL, -- JSON array of missile IDs launched
+  missiles_data TEXT DEFAULT NULL, -- Comma-separated drive values, e.g. "4,5,3"
+  committed BOOLEAN NOT NULL DEFAULT 0,
   PRIMARY KEY (game_id, owner, ship_code, round),
   FOREIGN KEY (game_id) REFERENCES games(id),
   FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code)

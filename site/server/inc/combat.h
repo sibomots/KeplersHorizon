@@ -54,7 +54,7 @@ struct CombatOrder
     int power_b;
     int power_s;
     int power_t;
-    std::string missiles_json;
+    std::string missiles_data; // Comma-separated drive values, e.g. "4,5,3"
 };
 
 class CombatEngine
@@ -79,6 +79,9 @@ class CombatEngine
     // Damage Assignment
     std::string apply_damage(char owner, const std::string& ship_code,
                              const std::map<std::string, int>& assignments);
+
+    // Commit checking
+    bool all_orders_committed(const std::string& hex_id, int round);
 
   private:
     int game_id;

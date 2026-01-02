@@ -59,8 +59,10 @@
 "order"    { return TOK_ORDER; }
 "apply"    { return TOK_APPLY; }
 "attack"   { return TOK_ATTACK;}
+"a"        { return TOK_ATTACK; }
 "dodge"    { return TOK_DODGE; }
 "escape"   { return TOK_ESCAPE; }
+"e"        { return TOK_ESCAPE; }
 
 "build"    { return TOK_BUILD; }
 "new"      { return TOK_NEW; }
