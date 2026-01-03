@@ -40,5 +40,6 @@ window.KEPLERHORIZON.slate = {
   state: null,
   viewMode: "log", // "log" | "map"
   hbMode: "normal", // "normal" | "off"
-  hbIntervalMs: 3000
+  hbIntervalMs: 3000,
+  playerNames: { A: "PLAYER 1", B: "PLAYER 2" }  // Will be updated from server
 };

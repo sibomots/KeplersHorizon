@@ -79,7 +79,6 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     }
 
     const inp = document.getElementById("commandInput");
-    const send = document.getElementById("btnSend");
     const btnLobby = document.getElementById("btnLobby");
     const btnMap = document.getElementById("btnMap");
 
@@ -108,7 +107,6 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
       }
     }
 
-    send.addEventListener("click", runCmd);
     inp.addEventListener("keydown", (e) => {
       if (e.key === "Enter") runCmd();
     });
