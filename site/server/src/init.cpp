@@ -13,6 +13,8 @@
 #include "srvmgr.h"
 #include "util.h"
 
+static DataConfig  dataconfig;
+
 void init(void)
 {
     // entropy
@@ -51,7 +53,6 @@ void apply_arguments(int argc, char** argv)
 {
     DBConfig dbconfig;
     ServerConfig srvconfig;
-    DataConfig  dataconfig;
 
     for (int i = 1; i < argc; i++)
     {
@@ -106,7 +107,6 @@ void apply_arguments(int argc, char** argv)
         }
     }
     DatabaseManager::getInstance().configure(&dbconfig);
-    DatabaseManager::getInstance().load(&dataconfig);
     ServerManager::getInstance().configure(&srvconfig);
 }
 
@@ -239,18 +239,24 @@ void test_db(void)
     std::cout << "[test_db] Database validation complete." << std::endl;
 }
 
+void load_db()
+{
+    DatabaseManager::getInstance().load(&dataconfig);
+}
+
 void load_services()
 {
     // Backend Services
     //////////////////////
     create_db();
+    load_db();
+    // Optional: validate database schema
+    test_db();
 
     // This creates the server and descritpr for listening on port for REST-ful
     // transactions
     ServerManager::getInstance().connect();
 
-    // Optional: validate database schema
-    test_db();
 
     // Front-end Services
     /////////////////////
