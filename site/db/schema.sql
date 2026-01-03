@@ -33,8 +33,6 @@
 -- schema
 -- MySQL / MariaDB
 
-drop database khdb;
-
 CREATE DATABASE IF NOT EXISTS khdb;
 USE khdb;
 

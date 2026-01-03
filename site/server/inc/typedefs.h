@@ -46,6 +46,20 @@ typedef struct
     unsigned short port;
 } ServerConfig;
 
+typedef struct DataConfig
+{
+    bool clean;
+    bool schema;
+    bool seed;
+
+    DataConfig() {
+         clean = false;
+         schema = false;
+         seed = false;
+         // strings are already initialized to empty strings.
+    }
+} DataConfig;
+
 // Kepler's Horizon phase sequencing: VP count is implicit at start-of-turn;
 // player-facing phases begin at Build Ships.
 enum PhaseIndex

@@ -34,6 +34,7 @@ class DatabaseManager
 
     // Setup
     void configure(void* param);
+    void load(void* param);
     void connect();
     bool driver_invalid();
 

@@ -7,11 +7,14 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "db.h"
 
+#include <iostream>
+
 #include "app.h"
+#include "logger.h"
 #include "combat.h"
+#include "load.h"
 #include "typedefs.h"
 #include "util.h"
-
 // Static variables for the DatabaseManager Singleton
 
 MYSQL* DatabaseManager::driver = 0;
@@ -29,8 +32,116 @@ bool DatabaseManager::driver_invalid()
     return false;
 }
 
-// void connect(const std::string &host, const std::string &user,
-//             const std::string &pass, const std::string &dbname)
+void DatabaseManager::load(void* param)
+{
+    DataConfig* pconf = static_cast<DataConfig*>(param);
+    if (!pconf) 
+    {
+        Logger::instance().info("[DB] Using database as-is. No initialization");
+
+    }return;
+
+    // Part 1: If --clean flag is set, drop all schema tables
+    if (pconf->clean) {
+        Logger::instance().info("[DB] CLEAN: Dropping schema tables...");
+        int dropped = 0;
+        for (const auto& stmt : DROP_STATEMENTS) {
+            if (mysql_query(driver, stmt.c_str())) {
+                std::ostringstream warning_msg;
+                warning_msg << "[DB] Warning: "
+                            << mysql_error(driver);
+                Logger::instance().error(warning_msg.str());
+            } else {
+                dropped++;
+            }
+        }
+        std::ostringstream notice;
+        notice << "[DB] CLEAN: Dropped "
+               << (int) dropped
+               << " tables";
+        Logger::instance().info(notice.str());
+    }
+
+    // Part 2: If --schema flag is set, create all schema tables
+    if (pconf->schema) {
+        std::ostringstream notice;
+        notice <<  "[DB] SCHEMA: Creating tables...";
+        Logger::instance().info(notice.str());
+
+        int created = 0;
+        for (const auto& stmt : SCHEMA_STATEMENTS) {
+            if (mysql_query(driver, stmt.c_str())) {
+                std::ostringstream err;
+                err << "[DB] SQL Error: "
+                    << mysql_error(driver);
+                Logger::instance().error(err.str()); 
+                std::ostringstream badline;
+                badline << "[DB] Statement: "
+                        << stmt.substr(0, 80)
+                        << "...";
+                Logger::instance().error(badline.str());
+            } else {
+                created++;
+            }
+        }
+        std::ostringstream msg;
+        msg << "[DB] SCHEMA: Executed "
+            << (int)created 
+            << " statements";
+        Logger::instance().info(msg.str());
+    }
+
+    // Part 3: If --seed flag is set, insert seed data
+    if (pconf->seed) {
+        std::ostringstream msg;
+        msg << "[DB] SEED: Inserting seed data...";
+        Logger::instance().info(msg.str());
+        int inserted = 0;
+        
+        // Star systems, warplines
+        for (const auto& stmt : SEED_STATEMENTS) {
+            if (mysql_query(driver, stmt.c_str())) {
+                std::ostringstream err;
+                err << "[DB] SQL Error: "
+                    << mysql_error(driver);
+                Logger::instance().error(err.str());
+            } else {
+                inserted++;
+            }
+        }
+        
+        // Hexes
+        for (const auto& stmt : HEXES_SEED) {
+            if (mysql_query(driver, stmt.c_str())) {
+                std::ostringstream err;
+                err << "[DB] SQL Error: "
+                    << mysql_error(driver);
+                Logger::instance().error(err.str());
+            } else {
+                inserted++;
+            }
+        }
+        
+        // Warpline hexes
+        for (const auto& stmt : WARPLINE_HEXES_SEED) {
+            if (mysql_query(driver, stmt.c_str())) {
+                std::ostringstream err;
+                err << "[DB] SQL Error: "
+                    << mysql_error(driver);
+                Logger::instance().error(err.str());
+            } else {
+                inserted++;
+            }
+        }
+        
+        std::ostringstream summary_msg;
+        summary_msg << "[DB] SEED: Executed "
+            << (int) inserted
+            << " insert statements";
+        Logger::instance().info(summary_msg.str());
+    }
+}
+
 void DatabaseManager::connect()
 {
     driver = mysql_init(NULL);

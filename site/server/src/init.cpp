@@ -51,6 +51,7 @@ void apply_arguments(int argc, char** argv)
 {
     DBConfig dbconfig;
     ServerConfig srvconfig;
+    DataConfig  dataconfig;
 
     for (int i = 1; i < argc; i++)
     {
@@ -62,6 +63,17 @@ void apply_arguments(int argc, char** argv)
             }
             out = argv[++i];
         };
+
+        auto next_flag = [&](bool& out) {
+            if ( i + 1 >= argc)
+            {
+                throw std::runtime_error("Missing arg for " + k);
+            }
+            // the fact the flag was used, it's true.
+            // no need to look at i+1 argv.  the flag is just a flag. No arguments to it.
+            out = true;
+        };
+
         if (k == "--dbhost")
         {
             next(dbconfig.dbhost);
@@ -78,6 +90,18 @@ void apply_arguments(int argc, char** argv)
         {
             next(dbconfig.dbname);
         }
+        else if (k == "--clean") 
+        {
+            next_flag(dataconfig.clean);
+        }
+        else if (k == "--schema")
+        {
+            next_flag(dataconfig.schema);
+        }
+        else if (k == "--seed")
+        {
+            next_flag(dataconfig.seed);
+        }
         else if (k == "--port")
         {
             std::string t;
@@ -86,6 +110,7 @@ void apply_arguments(int argc, char** argv)
         }
     }
     DatabaseManager::getInstance().configure(&dbconfig);
+    DatabaseManager::getInstance().load(&dataconfig);
     ServerManager::getInstance().configure(&srvconfig);
 }
 
