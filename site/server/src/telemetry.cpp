@@ -74,12 +74,21 @@ std::vector<std::string> Telemetry::get_queued_messages(char player)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     int game_id = StateMachine::getInstance().get_game_id();
-    if (game_id == 0) return {};
+    
+    Logger::instance().info("[get_queued_messages] player=" + std::string(1, player) + 
+                           " game_id=" + std::to_string(game_id));
+    
+    if (game_id == 0) {
+        Logger::instance().info("[get_queued_messages] Skipping - game_id=0");
+        return {};
+    }
     
     std::string target = std::string(1, player);
     auto rows = db.query("SELECT message FROM telemetry_queue WHERE game_id=" +
                         std::to_string(game_id) + " AND (target_player='" +
                         target + "' OR target_player='BOTH') ORDER BY id");
+    
+    Logger::instance().info("[get_queued_messages] Found " + std::to_string(rows.size()) + " messages");
     
     std::vector<std::string> messages;
     for (const auto& row : rows)
