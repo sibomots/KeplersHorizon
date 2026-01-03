@@ -26,13 +26,13 @@ bool FleetCommand::invoke(void)
 
     if (rows.empty())
     {
-        Telemetry::getInstance().write("You have no ships.");
+        Telemetry::getInstance().write("FLEET OPS: No vessels under your command.");
         return true;
     }
 
     std::ostringstream out;
-    out << "Your Fleet (" << rows.size() << " ships):\n";
-    out << "Code  Name            Location    PD  B  S  T  M  Tech\n";
+    out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
+    out << "Hull  Designation      Sector      PD  B  S  T  M  Tech\n";
     out << "----  --------------  ----------  --  -  -  -  -  ----\n";
 
     for (const auto& r : rows)

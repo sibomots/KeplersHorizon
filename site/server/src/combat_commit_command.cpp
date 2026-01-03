@@ -39,7 +39,7 @@ bool CombatCommitCommand::invoke(void)
 
     if (hexRows.empty())
     {
-        Telemetry::getInstance().write("No orders to commit.");
+        Telemetry::getInstance().write("TACTICAL: No combat orders queued.");
         return true;
     }
 
@@ -64,7 +64,7 @@ bool CombatCommitCommand::invoke(void)
         std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) + 
         "' AND committed=0");
 
-    Telemetry::getInstance().write("Combat orders committed.");
+    Telemetry::getInstance().write("TACTICAL: Combat orders transmitted.");
 
     // Check each affected hex for resolution
     CombatEngine ce(s.game_id);
@@ -108,7 +108,7 @@ bool CombatCommitCommand::invoke(void)
                 "Player " + std::string(1, owner) + " has committed combat orders for hex " + 
                 hex_id + ". Use 'combat order' then 'combat commit' for your ships.");
             
-            Telemetry::getInstance().write("Hex " + hex_id + ": Waiting for opponent.");
+            Telemetry::getInstance().write("TACTICAL: Sector " + hex_id + " - Awaiting enemy orders.");
         }
     }
     return true;

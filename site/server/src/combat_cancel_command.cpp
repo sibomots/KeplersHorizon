@@ -24,6 +24,6 @@ bool CombatCancelCommand::invoke(void)
         std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) + 
         "' AND committed=0");
 
-    Telemetry::getInstance().write("Combat orders cancelled.");
+    Telemetry::getInstance().write("TACTICAL: Orders rescinded. Issue new commands.");
     return true;
 }
