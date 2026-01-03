@@ -38,8 +38,8 @@ void DatabaseManager::load(void* param)
     if (!pconf) 
     {
         Logger::instance().info("[DB] Using database as-is. No initialization");
-
-    }return;
+        return;
+    }
 
     // Part 1: If --clean flag is set, drop all schema tables
     if (pconf->clean) {
