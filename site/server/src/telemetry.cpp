@@ -11,6 +11,7 @@
 
 //#include "game.h"
 #include "json.h"
+#include "logger.h"
 #include "statemachine.h"
 #include "db.h"
 
@@ -37,13 +38,18 @@ void Telemetry::add_tell(char player, const std::string& msg)
 
 void Telemetry::add_tell(int game_id, char player, const std::string& msg)
 {
-    if (game_id == 0) return; // No game, no messages
+    if (game_id == 0) {
+        Logger::instance().info("[add_tell] Skipping - game_id=0");
+        return;
+    }
     
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string target = std::string(1, player);
     std::string ins = "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
                       std::to_string(game_id) + ",'" + target + "','" +
                       db.esc(msg) + "')";
+    Logger::instance().info("[add_tell] game_id=" + std::to_string(game_id) + 
+                           " player=" + target + " msg=" + msg.substr(0, 40));
     db.exec(ins);
 }
 

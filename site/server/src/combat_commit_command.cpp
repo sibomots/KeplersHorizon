@@ -104,7 +104,7 @@ bool CombatCommitCommand::invoke(void)
         {
             // Notify opponent that this player has committed
             char opponent = (owner == 'A') ? 'B' : 'A';
-            Telemetry::getInstance().add_tell(s.game_id, opponent,
+            Telemetry::getInstance().add_tell(opponent,
                 "Player " + std::string(1, owner) + " has committed combat orders for hex " + 
                 hex_id + ". Use 'combat order' then 'combat commit' for your ships.");
             
