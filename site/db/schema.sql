@@ -273,8 +273,9 @@ CREATE TABLE IF NOT EXISTS telemetry_queue (
   target_player ENUM('A', 'B', 'BOTH') NOT NULL,
   message TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sent_at TIMESTAMP NULL DEFAULT NULL,
   FOREIGN KEY (game_id) REFERENCES games(id),
-  INDEX (game_id, target_player)
+  INDEX (game_id, target_player, sent_at)
 );
 
 

@@ -84,21 +84,34 @@ std::vector<std::string> Telemetry::get_queued_messages(char player)
     }
     
     std::string target = std::string(1, player);
-    auto rows = db.query("SELECT message FROM telemetry_queue WHERE game_id=" +
+    
+    // Only get unsent messages (sent_at IS NULL)
+    auto rows = db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +
                         std::to_string(game_id) + " AND (target_player='" +
-                        target + "' OR target_player='BOTH') ORDER BY id");
+                        target + "' OR target_player='BOTH') AND sent_at IS NULL ORDER BY id");
     
     Logger::instance().info("[get_queued_messages] Found " + std::to_string(rows.size()) + " messages");
     
     std::vector<std::string> messages;
+    std::vector<std::string> ids;
     for (const auto& row : rows)
     {
-        messages.push_back(row[0]);
+        ids.push_back(row[0]);
+        messages.push_back(row[1]);
     }
     
-    // Flush messages for this player (including BOTH)
-    db.exec("DELETE FROM telemetry_queue WHERE game_id=" +
-            std::to_string(game_id) + " AND (target_player='" + target + "' OR target_player='BOTH')");
+    // Mark messages as sent instead of deleting
+    if (!ids.empty())
+    {
+        std::string id_list;
+        for (size_t i = 0; i < ids.size(); ++i)
+        {
+            if (i > 0) id_list += ",";
+            id_list += ids[i];
+        }
+        db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" + id_list + ")");
+        Logger::instance().info("[get_queued_messages] Marked " + std::to_string(ids.size()) + " messages as sent");
+    }
     
     return messages;
 }
