@@ -58,6 +58,7 @@ src/db.cpp
 src/deploy_command.cpp
 src/done_command.cpp
 src/events.cpp
+src/fleet_command.cpp
 src/ships.cpp
 src/init.cpp
 src/json.cpp

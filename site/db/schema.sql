@@ -237,10 +237,12 @@ CREATE TABLE IF NOT EXISTS combat_state (
   game_id INT NOT NULL,
   hex_id VARCHAR(8) NOT NULL, -- e.g. "h1616"
   round INT NOT NULL DEFAULT 1,
-  stage INT NOT NULL DEFAULT 0, -- 0=Order, 1=Resolve, 2=Done
+  stage INT NOT NULL DEFAULT 0, -- 0=ORDERS, 1=RESOLVE_READY, 2=DAMAGE_PENDING, 3=RETREAT_PENDING
   attacker_remains BOOLEAN NOT NULL DEFAULT 0,
   stalemate_counter INT NOT NULL DEFAULT 0,
   pending_damage_json TEXT DEFAULT NULL,
+  damage_assigned_A BOOLEAN NOT NULL DEFAULT 0,
+  damage_assigned_B BOOLEAN NOT NULL DEFAULT 0,
   last_log TEXT DEFAULT NULL,
   PRIMARY KEY (game_id, hex_id),
   FOREIGN KEY (game_id) REFERENCES games(id)

@@ -32,6 +32,9 @@
 #include "combat_drafts_command.h"
 #include "combat_commit_command.h"
 #include "combat_cancel_command.h"
+#include "fleet_command.h"
+#include "repair_command.h"
+#include "resupply_command.h"
 #include "statemachine.h"
 // #include "game.h"
 #include "db.h"
@@ -53,6 +56,9 @@ BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCo
 // Global builders for combat commands (accumulate power/damage specs from sub-rules)
 CombatOrderCommand::Builder* g_combat_order_builder = new CombatOrderCommand::Builder();
 CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
+
+// Global builder for repair command
+RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
 %}
 
@@ -261,7 +267,9 @@ looking_cmd:
       Logger::instance().info("Statistics about game, fleet, opponent");
   }
   | TOK_FLEET {
-      Logger::instance().info("Manifest of your fleet");
+      ICmd* pCmd = FleetCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
   | TOK_SYSTEM TOK_STRING {
       std::string identifier(*$2);
@@ -750,31 +758,38 @@ pickdrop_cmd:
 
 rep_cmd:
   TOK_REPAIR {
-     // No arguments, always just explains briefly what you can do.
-     Logger::instance().info("List the ships that can be repaired by "
-                "location, type of ship and their current attributes.");
+     ICmd* pCmd = RepairCommand::Builder().build();
+     if (pCmd && pCmd->invoke()) { /* success */ }
+     SafeDelete(pCmd);
   }
-  | TOK_REPAIR TOK_STRING {
-     // specify the ship always just explains briefly what you can do.
-     std::string repairable_ship(*$2);
-     Logger::instance().info("Repair ship >" + repairable_ship + "<");
+  | TOK_REPAIR TOK_STRING repair_attr_spec {
+     // g_repair_builder populated by repair_attr_spec
+     g_repair_builder->set_ship_code(*$2);
+     ICmd* pCmd = g_repair_builder->build();
+     if (pCmd && pCmd->invoke()) { /* success */ }
+     SafeDelete(pCmd);
+     delete g_repair_builder;
+     g_repair_builder = new RepairCommand::Builder();
   }
   | TOK_RESUPPLY {
-     // No arguments, always just explains briefly what you can do.
-     Logger::instance().info("List/show how many BP you have and what "
-                "kind of support you can provide.  The rules state that "
-                "all that can be 'resupplied' are MISSILES. For later work "
-                "we might revisit this for more interesting gameplay");
+     ICmd* pCmd = ResupplyCommand::Builder().build();
+     if (pCmd && pCmd->invoke()) { /* success */ }
+     SafeDelete(pCmd);
   }
   | TOK_RESUPPLY TOK_STRING TOK_INT {
-     // specify the ship always just explains briefly what you can do.
-     // and how many MISSILES to resupply from BuildPoints
      std::string ship(*$2);
      int qty = (int) $3;
-     std::string tmp = "" + qty;
-     Logger::instance().info("Resupply ship >" + ship + "< "
-                   "with >" + tmp + "< MISSILES");
+     ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_missiles(qty).build();
+     if (pCmd && pCmd->invoke()) { /* success */ }
+     SafeDelete(pCmd);
   }
+  ;
+
+repair_attr_spec:
+  TOK_PD_ASSIGN { g_repair_builder->set_attribute("pd"); g_repair_builder->set_amount($1); }
+  | TOK_B_ASSIGN { g_repair_builder->set_attribute("b"); g_repair_builder->set_amount($1); }
+  | TOK_S_ASSIGN { g_repair_builder->set_attribute("s"); g_repair_builder->set_amount($1); }
+  | TOK_T_ASSIGN { g_repair_builder->set_attribute("t"); g_repair_builder->set_amount($1); }
   ; 
  
  

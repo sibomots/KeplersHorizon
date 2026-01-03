@@ -13,6 +13,8 @@
 
 #include "logger.h"
 #include "maputil.h"
+#include "statemachine.h"
+#include "telemetry.h"
 #include "util.h"
 
 CombatEngine::CombatEngine(int game_id) : game_id(game_id)
@@ -656,27 +658,57 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     if (total_net_damage > 0)
     {
         next_stage = 2;     // DAMAGE_PENDING
-        next_stalemate = 0; // Reset
+        next_stalemate = 0; // Reset stalemate counter
         log << "----------------------------------------\\n";
         log << "RESULT: Critical Damage! Assign Damage now.\\n";
+        
+        // Notify both players about damage
+        char initiative = StateMachine::getInstance().get_current_player();
+        char opponent = (initiative == 'A') ? 'B' : 'A';
+        Telemetry::getInstance().add_tell(game_id, opponent,
+            "Combat Round " + std::to_string(cs.round) + " resolved with damage. "
+            "Use 'combat apply <ship> d=N b=N...' to assign your damage.");
     }
     else
     {
+        next_stalemate++;
         log << "----------------------------------------\\n";
         log << "RESULT: Stalemate (No Hull Damage).\\n";
-        log << "STATUS: Beginning Round " << (next_round + 1) << "\\n";
-        log << "ACTION: Submit Orders for Round " << (next_round + 1) << "\\n";
-        log << "========================================\\n";
-        next_round++;
-        next_stalemate++;
+        
+        // Check for 3 consecutive stalemates - per rules, initiative player must retreat
+        if (next_stalemate >= 3)
+        {
+            next_stage = 3; // RETREAT_PENDING
+            log << "STALEMATE: 3 rounds with no damage!\\n";
+            log << "Initiative player must withdraw all ships from this hex.\\n";
+            
+            // Notify initiative player they must retreat
+            char initiative = StateMachine::getInstance().get_current_player();
+            Telemetry::getInstance().add_tell(game_id, initiative,
+                "3 consecutive stalemates. You must retreat your ships from hex " + hex_id);
+        }
+        else
+        {
+            log << "STATUS: Beginning Round " << (next_round + 1) << "\\n";
+            log << "ACTION: Submit Orders for Round " << (next_round + 1) << "\\n";
+            log << "========================================\\n";
+            next_round++;
+            
+            // Notify both players next round begins
+            Telemetry::getInstance().add_broadcast(
+                "Combat Round " + std::to_string(next_round) + " begins in hex " + hex_id + ". Submit orders.");
+        }
     }
 
+    // Reset damage assignment flags for new damage phase
     std::string sql =
         "UPDATE combat_state SET round=" + std::to_string(next_round) +
         ", stage=" + std::to_string(next_stage) +
         ", stalemate_counter=" + std::to_string(next_stalemate) +
-        ", pending_damage_json='" + dmgJson.str() + "'" + ", last_log='" +
-        db.esc(log.str()) + "'" + " WHERE game_id=" + std::to_string(game_id) +
+        ", pending_damage_json='" + dmgJson.str() + "'" +
+        ", damage_assigned_A=0, damage_assigned_B=0" +
+        ", last_log='" + db.esc(log.str()) + "'" +
+        " WHERE game_id=" + std::to_string(game_id) +
         " AND hex_id='" + hex_id + "'";
     db.exec(sql);
 
@@ -828,6 +860,30 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
 
     pending.erase(key);
 
+    // Check if this player has any more pending damage (other ships)
+    bool playerHasMoreDamage = false;
+    for (auto const& [k, v] : pending)
+    {
+        if (k[0] == owner) // key format is "A_W1" or "B_S20"
+        {
+            playerHasMoreDamage = true;
+            break;
+        }
+    }
+
+    // Update player's damage_assigned flag if they have no more ships to assign
+    std::string ownerFlag = (owner == 'A') ? "damage_assigned_A" : "damage_assigned_B";
+    if (!playerHasMoreDamage)
+    {
+        db.exec("UPDATE combat_state SET " + ownerFlag + "=1 WHERE game_id=" +
+                std::to_string(game_id) + " AND hex_id='" + hex + "'");
+        
+        // Notify opponent that this player finished damage assignment
+        char opponent = (owner == 'A') ? 'B' : 'A';
+        Telemetry::getInstance().add_tell(game_id, opponent,
+            "Player " + std::string(1, owner) + " has assigned all damage.");
+    }
+
     // Reconstruct JSON
     std::ostringstream newJson;
     newJson << "{";
@@ -843,17 +899,40 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     std::string next_json = newJson.str();
     int next_stage = 2; // Stay in damage
     int next_round = cs.round;
-    int next_stale = cs.stalemate_counter;
 
     if (pending.empty())
     {
-        // All done!
-        next_stage = 0;
+        // All damage assigned by both players!
+        next_stage = 0; // Back to orders for next round
         next_round++;
-        next_stale++; // Round effectively ended. Stalemate increment logic was
-                      // handled in resolve, but wait... If verification
-                      // revealed hits, resolve reset stalemate to 0. So here we
-                      // don't touch stalemate. Wait, we need to advance round.
+        
+        // Check if combat should end (one side has no ships left)
+        auto shipsA = db.query("SELECT COUNT(*) FROM ships WHERE game_id=" + 
+            std::to_string(game_id) + " AND at_hex='" + hex + "' AND owner='A'");
+        auto shipsB = db.query("SELECT COUNT(*) FROM ships WHERE game_id=" + 
+            std::to_string(game_id) + " AND at_hex='" + hex + "' AND owner='B'");
+        int countA = std::atoi(shipsA[0][0].c_str());
+        int countB = std::atoi(shipsB[0][0].c_str());
+        
+        if (countA == 0 || countB == 0)
+        {
+            // Combat ends - one side eliminated
+            db.exec("DELETE FROM combat_state WHERE game_id=" + 
+                std::to_string(game_id) + " AND hex_id='" + hex + "'");
+            db.exec("UPDATE games SET active_combat_hex=NULL WHERE id=" + 
+                std::to_string(game_id));
+            
+            std::string winner = (countA > 0) ? "A" : "B";
+            Telemetry::getInstance().add_broadcast(
+                "Combat in hex " + hex + " ends. Player " + winner + " controls the hex.");
+            
+            return "Damage Applied. Combat ends - " + winner + " victorious!";
+        }
+        
+        // Combat continues - notify both players
+        Telemetry::getInstance().add_broadcast(
+            "All damage assigned. Combat Round " + std::to_string(next_round) + 
+            " begins in hex " + hex + ". Submit orders.");
     }
 
     db.exec("UPDATE combat_state SET stage=" + std::to_string(next_stage) +
