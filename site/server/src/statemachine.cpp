@@ -936,7 +936,17 @@ void StateMachine::advance_next(GameState& s)
             else
             {
                 Logger::instance().info("[advance_next] Combat detected! Pausing at Combat phase");
-                // Combat exists - don't advance further (will return on next call via line 911-918)
+                
+                // Notify BOTH players about combat detection
+                std::ostringstream combatMsg;
+                combatMsg << "COMBAT DETECTED! Active combat in " << combats.size() << " hex(es): ";
+                for (size_t i = 0; i < combats.size(); ++i)
+                {
+                    if (i > 0) combatMsg << ", ";
+                    combatMsg << combats[i].hex_id;
+                }
+                combatMsg << "\nBoth players: Submit orders with 'combat order', then 'combat commit'.";
+                Telemetry::getInstance().add_broadcast(combatMsg.str());
             }
         }
         // ----------------------------
