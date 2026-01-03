@@ -310,23 +310,30 @@ int RoomManager::startGame(const std::string& code)
     // This ensures all subsequent state operations (like Telemetry) work correctly
     StateMachine::getInstance().set_game_id(game_id);
     
+    // Look up player usernames
+    std::string playerA_name = "PLAYER 1";
+    std::string playerB_name = "PLAYER 2";
+    auto userA = db.query("SELECT username FROM users WHERE id=" + std::to_string(room.seat_a));
+    auto userB = db.query("SELECT username FROM users WHERE id=" + std::to_string(room.seat_b));
+    if (!userA.empty()) playerA_name = userA[0][0];
+    if (!userB.empty()) playerB_name = userB[0][0];
+    
     // Queue initial turn notification for both players
     // The active player (gs.active_player) goes first
     std::string first_player = gs.active_player;
     std::string first_phase = gs.phase_name();
+    std::string first_name = (first_player == "A") ? playerA_name : playerB_name;
     
     // Add to telemetry queue for each player (StateMachine context now set)
     if (first_player == "A")
     {
-        // Player A goes first
-        Telemetry::getInstance().add_tell('A', "⏰ You have the initiative! " + first_phase);
-        Telemetry::getInstance().add_tell('B', "Player A goes first. Waiting for your turn...");
+        Telemetry::getInstance().add_tell('A', "COMMAND: YOU HAVE THE INITIATIVE! " + first_phase);
+        Telemetry::getInstance().add_tell('B', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
     }
     else
     {
-        // Player B goes first
-        Telemetry::getInstance().add_tell('B', "⏰ You have the initiative! " + first_phase);
-        Telemetry::getInstance().add_tell('A', "Player B goes first. Waiting for your turn...");
+        Telemetry::getInstance().add_tell('B', "COMMAND: YOU HAVE THE INITIATIVE! " + first_phase);
+        Telemetry::getInstance().add_tell('A', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
     }
     
     return game_id;

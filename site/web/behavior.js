@@ -235,6 +235,15 @@
     S.state = j.state;
     S.self = j.self || null;
     S.peer = j.peer || null;
+
+    // Update playerNames from self/peer usernames
+    if (S.self && S.self.username && S.self.owner) {
+      S.playerNames[S.self.owner] = S.self.username.toUpperCase();
+    }
+    if (S.peer && S.peer.username && S.peer.owner) {
+      S.playerNames[S.peer.owner] = S.peer.username.toUpperCase();
+    }
+
     renderStatus();
 
     // Display queued messages (tell/broadcast notifications)
