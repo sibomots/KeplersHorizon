@@ -75,11 +75,39 @@ bool CombatCommitCommand::invoke(void)
         
         if (ce.all_orders_committed(hex_id, cs.round))
         {
+            // Reveal all orders to both players before resolution (per rules)
+            auto orders = db.query(
+                "SELECT co.owner, co.ship_code, co.tactic, co.target_id, "
+                "co.power_d, co.power_b, co.power_s, co.power_t "
+                "FROM combat_orders co "
+                "JOIN ships s ON s.game_id=co.game_id AND s.ship_code=co.ship_code AND s.owner=co.owner "
+                "WHERE co.game_id=" + std::to_string(s.game_id) +
+                " AND s.at_hex='" + hex_id + "' AND co.round=" + std::to_string(cs.round) +
+                " ORDER BY co.owner, co.ship_code");
+            
+            std::ostringstream reveal;
+            reveal << "=== COMBAT ORDERS REVEALED ===\n";
+            for (const auto& ord : orders)
+            {
+                char t = ord[2][0];
+                std::string tactic = (t == 'A') ? "Attack" : (t == 'D') ? "Dodge" : "Escape";
+                reveal << "  " << ord[0] << ":" << ord[1] << " " << tactic << " " << ord[3]
+                       << " [D=" << ord[4] << " B=" << ord[5] << " S=" << ord[6] << " T=" << ord[7] << "]\n";
+            }
+            reveal << "==============================";
+            Telemetry::getInstance().add_broadcast(reveal.str());
+            
             std::string result = ce.resolve_round(hex_id);
             Telemetry::getInstance().write(result);
         }
         else
         {
+            // Notify opponent that this player has committed
+            char opponent = (owner == 'A') ? 'B' : 'A';
+            Telemetry::getInstance().add_tell(s.game_id, opponent,
+                "Player " + std::string(1, owner) + " has committed combat orders for hex " + 
+                hex_id + ". Use 'combat order' then 'combat commit' for your ships.");
+            
             Telemetry::getInstance().write("Hex " + hex_id + ": Waiting for opponent.");
         }
     }

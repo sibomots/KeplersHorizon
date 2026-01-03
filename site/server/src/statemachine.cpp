@@ -1120,21 +1120,17 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params, std::string& erro
     
     //--------------------------------------------------------------------------
     // COMBAT commands - during Combat phase
-    // Note: Combat has special rules - both players issue orders, then apply
+    // Note: Combat has special rules - BOTH players issue orders simultaneously
     //--------------------------------------------------------------------------
     case CommandID::COMBAT_ORDER:
     {
-        if (!has_initiative)
-        {
-            error_msg = "It's not your turn (active player: " + s.active_player + ")";
-            return false;
-        }
+        // Both players can issue combat orders during combat phase
+        // (no initiative check - simultaneous orders)
         if (s.phase_index != PH_RESOLVE_COMBAT)
         {
             error_msg = "Combat orders only allowed during Combat phase";
             return false;
         }
-        // TODO: Intra-phase check - orders must be issued before apply
         return true;
     }
     break;
