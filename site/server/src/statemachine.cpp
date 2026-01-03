@@ -946,7 +946,7 @@ void StateMachine::advance_next(GameState& s)
                     combatMsg << combats[i].hex_id;
                 }
                 combatMsg << "\nBoth players: Submit orders with 'combat order', then 'combat commit'.";
-                Telemetry::getInstance().add_broadcast(combatMsg.str());
+                Telemetry::getInstance().add_broadcast(s.game_id, combatMsg.str());
             }
         }
         // ----------------------------

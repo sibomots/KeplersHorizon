@@ -57,6 +57,7 @@ class Telemetry
     void add_tell(char player, const std::string& msg);
     void add_tell(int game_id, char player, const std::string& msg);  // Explicit game context
     void add_broadcast(const std::string& msg);
+    void add_broadcast(int game_id, const std::string& msg);  // Explicit game context
     std::vector<std::string> get_queued_messages(char player);
 };
 

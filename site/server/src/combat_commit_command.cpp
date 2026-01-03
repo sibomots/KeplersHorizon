@@ -95,7 +95,7 @@ bool CombatCommitCommand::invoke(void)
                        << " [D=" << ord[4] << " B=" << ord[5] << " S=" << ord[6] << " T=" << ord[7] << "]\n";
             }
             reveal << "==============================";
-            Telemetry::getInstance().add_broadcast(reveal.str());
+            Telemetry::getInstance().add_broadcast(s.game_id, reveal.str());
             
             std::string result = ce.resolve_round(hex_id);
             Telemetry::getInstance().write(result);

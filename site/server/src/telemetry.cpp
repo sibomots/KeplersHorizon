@@ -49,10 +49,15 @@ void Telemetry::add_tell(int game_id, char player, const std::string& msg)
 
 void Telemetry::add_broadcast(const std::string& msg)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
     int game_id = StateMachine::getInstance().get_game_id();
+    add_broadcast(game_id, msg);
+}
+
+void Telemetry::add_broadcast(int game_id, const std::string& msg)
+{
     if (game_id == 0) return; // No game, no messages
     
+    DatabaseManager& db = DatabaseManager::getInstance();
     std::string ins = "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
                       std::to_string(game_id) + ",'BOTH','" +
                       db.esc(msg) + "')";
