@@ -49,55 +49,91 @@ Each player-turn consists of the following phases in order:
 6. End of Turn
 .RE
 
-.SH SCENARIOS
-.TP
-.B Learning Scenario
+.SH CONCEPTS
+.SS Starting a Game
+Games are started through the web interface, not via command line:
+.PP
+.RS
+.B 1. Portal
+.br
+Login or create an account at the web portal.
+.PP
+.B 2. Lobby
+.br
+View open rooms or create a new one. Each room can host one game.
+.PP
+.B 3. Room
+.br
+Join a room and take a seat (A or B). When both seats are filled, either player can start the game.
+.PP
+.B 4. Scenario Selection
+.br
+The room creator selects the scenario:
+.RS
+.IP \fBlearning\fR
 40 BP initial, WarpShips only, 1 base star, first to 1 VP wins
-.TP
-.B Basic Scenario
+.IP \fBbasic\fR
 50 BP initial, WarpShips and SystemShips, 1 base star, first to 2 VP wins
-.TP
-.B Advanced Scenario
+.IP \fBadvanced\fR
 20 BP initial + 10 BP/turn, all rules active, 3 base stars, first to 3 VP wins
+.RE
+.RE
+
+.SH SCENARIOS
 
 .SH COMMANDS
 
-.SS Session Management Commands
+.SS Turn Management Commands
 .TP
-.B start learning
-Start a new game using the Learning scenario (40 BP, WarpShips only, 1 VP to win)
+.B next
+Advance the active player to the next phase.
+.RS
+.PP
+\fBSyntax:\fR next
+.PP
+\fBExample:\fR
+.nf
+> next
+Phase advanced to: Movement
+.fi
+.RE
 .TP
-.B start basic
-Start a new game using the Basic scenario (50 BP, WarpShips + SystemShips, 2 VP to win)
-.TP
-.B start advanced
-Start a new game using the Advanced scenario (20 BP + 10/turn, all rules, 3 VP to win)
-.TP
-.B reset
-Reset the current game, wiping all game state
-.TP
-.B save \fIname\fR
-Save the current game state under the specified name (alphanumeric identifier)
-.TP
-.B load
-List all saved games available for loading
-.TP
-.B load \fIname\fR
-Load a previously saved game by name
-.TP
-.B delete
-Delete the most recently saved game
-.TP
-.B delete \fIname\fR
-Delete a specific saved game by name
-.TP
-.B quit
-Quit the game, automatically saving as 'lastgame' (overwrites previous lastgame)
+.B done
+Complete current player's turn and advance to opponent's first phase.
+.RS
+.PP
+\fBSyntax:\fR done
+.PP
+\fBExample:\fR
+.nf
+> done
+COMMAND: Your turn has ended. Standing down.
+.fi
+.RE
 
 .SS Information Commands
 .TP
 .B status
-Show game status and important records (current phase, turn number, BP, VP)
+Show game status and important records (current phase, turn number, BP, VP).
+.RS
+.PP
+\fBSyntax:\fR status
+.RE
+.TP
+.B fleet
+Show manifest of your fleet (all ships and their current attributes).
+.RS
+.PP
+\fBSyntax:\fR fleet
+.PP
+\fBExample:\fR
+.nf
+> fleet
+Your Fleet (Player A):
+  W1 The Vanguard  [PD:5 B:3 S:2 T:1 M:6] at SONAL
+  W2 The Sentinel  [PD:4 B:2 S:3 T:0 M:0] at UR
+.fi
+.RE
 .TP
 .B crt
 Display the Combat Results Table

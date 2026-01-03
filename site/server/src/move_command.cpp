@@ -41,7 +41,7 @@ bool MoveCommand::invoke(void)
     if (!ship_exists(m_game_id, active_player, m_ship_code))
     {
         Logger::instance().error("Ship not found: " + m_ship_code);
-        Telemetry::getInstance().write("Error: Ship not found: " + m_ship_code);
+        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code + " is not in your fleet!");
         return false;
     }
 
@@ -50,14 +50,14 @@ bool MoveCommand::invoke(void)
     if (sh.attr.type != 'W')
     {
         Logger::instance().error("Only Warpships can move");
-        Telemetry::getInstance().write("Error: Only Warpships can move");
+        Telemetry::getInstance().write("NAV: Only WarpShip class vessels can engage hyperdrive.");
         return false;
     }
 
     if (sh.attr.PD <= 0)
     {
         Logger::instance().error("Ship has PD=0 and cannot move");
-        Telemetry::getInstance().write("Error: Ship has PD=0 and cannot move");
+        Telemetry::getInstance().write("NAV: " + sh.name + " has no power drive capacity. Unable to maneuver.");
         return false;
     }
 
@@ -80,7 +80,7 @@ bool MoveCommand::invoke(void)
     if (startHex.empty())
     {
         Logger::instance().error("Ship is not deployed");
-        Telemetry::getInstance().write("Error: Ship is not deployed");
+        Telemetry::getInstance().write("NAV: " + sh.name + " is not deployed. Ship must be in-theater to move.");
         return false;
     }
 
@@ -101,7 +101,7 @@ bool MoveCommand::invoke(void)
     if (allowance <= 0)
     {
         Logger::instance().error("Ship has no movement remaining (PD spent)");
-        Telemetry::getInstance().write("Error: Ship has no movement remaining (PD spent)");
+        Telemetry::getInstance().write("NAV: " + sh.name + " has exhausted power drive for this turn.");
         return false;
     }
 
@@ -186,9 +186,9 @@ bool MoveCommand::invoke(void)
     StateMachine::getInstance().save_game(s);
 
     std::ostringstream o;
-    o << "Moved " << sh.name << " - " << sh.code << " to "
-      << (finalSystem.empty() ? finalHex : finalSystem) << " (" << finalHex
-      << ") cost " << totalCost << " PD";
+    o << "NAV: " << sh.name << " (" << sh.code << ") transit to "
+      << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
+      << "] complete. Power expended: " << totalCost << " PD";
 
     Logger::instance().info(o.str());
     Telemetry::getInstance().write(o.str());

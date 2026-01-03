@@ -182,26 +182,45 @@
 
     // 2. Sensor Strip
     if (elSensor) {
-      let text = "✓ SENSORS CLEAR";
+      let text = "SENSORS CLEAR";
       let color = "var(--good)";
       let bg = "rgba(110, 231, 183, 0.15)";
 
-      // Combat Priority
-      if (st && st.combat && st.combat.count > 0) {
-        text = "⚠️ COMBAT ACTIVE";
-        color = "var(--bad)";
-        bg = "rgba(251, 113, 133, 0.15)";
-      } else if (st && st.ships && Array.isArray(st.ships)) {
-        // Enemy Check
-        const checkOwner = (S.self && S.self.owner) ? S.self.owner : "?";
+      // Check if player has any ships deployed
+      const checkOwner = (S.self && S.self.owner) ? S.self.owner : "?";
+      let playerHasShips = false;
+      let enemyColocated = false;
+
+      if (st && st.ships && Array.isArray(st.ships)) {
         for (let i = 0; i < st.ships.length; i++) {
-          if (st.ships[i].owner !== checkOwner) {
-            text = "⚠️ ENEMY DETECTED";
-            color = "#facc15";
-            bg = "rgba(250, 204, 21, 0.15)";
-            break;
+          if (st.ships[i].owner === checkOwner) {
+            playerHasShips = true;
+          } else {
+            // Check if enemy is in same hex as any of our ships
+            for (let j = 0; j < st.ships.length; j++) {
+              if (st.ships[j].owner === checkOwner &&
+                st.ships[j].at_hex === st.ships[i].at_hex) {
+                enemyColocated = true;
+                break;
+              }
+            }
           }
         }
+      }
+
+      // Priority: Combat > No Ships > Enemy Colocated > Clear
+      if (st && st.combat && st.combat.count > 0) {
+        text = "COMBAT ACTIVE";
+        color = "var(--bad)";
+        bg = "rgba(251, 113, 133, 0.15)";
+      } else if (!playerHasShips) {
+        text = "SENSORS OFFLINE";
+        color = "var(--muted)";
+        bg = "rgba(168, 168, 194, 0.15)";
+      } else if (enemyColocated) {
+        text = "ENEMY DETECTED";
+        color = "#facc15";
+        bg = "rgba(250, 204, 21, 0.15)";
       }
       elSensor.innerText = text;
       elSensor.style.color = color;
@@ -225,7 +244,7 @@
         const msgLines = j.messages[i].replace(/\\n/g, "\n").split("\n");
         for (let k = 0; k < msgLines.length; k++) {
           if (msgLines[k].length > 0) {
-            appendLine((k === 0 ? "📢 " : "   ") + msgLines[k], "line-bad");
+            appendLine((k === 0 ? ">> " : "   ") + msgLines[k], "line-bad");
           }
         }
       }
@@ -305,11 +324,11 @@
     if (showingMap) {
       mv.style.display = "none";
       log.style.display = "block";
-      if (btn) btn.textContent = "Map";
+      if (btn) btn.textContent = "Show Map";
     } else {
       log.style.display = "none";
       mv.style.display = "block";
-      if (btn) btn.textContent = "Log";
+      if (btn) btn.textContent = "Show Log";
     }
   }
 

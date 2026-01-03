@@ -44,7 +44,7 @@ bool DeployCommand::invoke(void)
     if (!ship_exists(m_game_id, active_player, m_ship_code))
     {
         Logger::instance().error("Ship not found: " + m_ship_code);
-        Telemetry::getInstance().write("Error: Ship not found: " + m_ship_code);
+        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code + " is not in your fleet!");
         return false;
     }
 
@@ -66,7 +66,7 @@ bool DeployCommand::invoke(void)
 
     Logger::instance().info("Deployed " + sh.name + " - " + sh.code + " to " +
                             sys);
-    Telemetry::getInstance().write("Deployed " + sh.name + " - " + sh.code + " to " + sys);
+    Telemetry::getInstance().write("FLEET COMMAND: " + sh.name + " (" + sh.code + ") deployed to " + sys);
 
     return true;
 }

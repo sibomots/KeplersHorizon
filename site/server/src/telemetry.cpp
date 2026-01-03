@@ -39,7 +39,6 @@ void Telemetry::add_tell(char player, const std::string& msg)
 void Telemetry::add_tell(int game_id, char player, const std::string& msg)
 {
     if (game_id == 0) {
-        Logger::instance().info("[add_tell] Skipping - game_id=0");
         return;
     }
     
@@ -48,8 +47,6 @@ void Telemetry::add_tell(int game_id, char player, const std::string& msg)
     std::string ins = "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
                       std::to_string(game_id) + ",'" + target + "','" +
                       db.esc(msg) + "')";
-    Logger::instance().info("[add_tell] game_id=" + std::to_string(game_id) + 
-                           " player=" + target + " msg=" + msg.substr(0, 40));
     db.exec(ins);
 }
 
@@ -75,11 +72,7 @@ std::vector<std::string> Telemetry::get_queued_messages(char player)
     DatabaseManager& db = DatabaseManager::getInstance();
     int game_id = StateMachine::getInstance().get_game_id();
     
-    Logger::instance().info("[get_queued_messages] player=" + std::string(1, player) + 
-                           " game_id=" + std::to_string(game_id));
-    
     if (game_id == 0) {
-        Logger::instance().info("[get_queued_messages] Skipping - game_id=0");
         return {};
     }
     
@@ -89,8 +82,6 @@ std::vector<std::string> Telemetry::get_queued_messages(char player)
     auto rows = db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +
                         std::to_string(game_id) + " AND (target_player='" +
                         target + "' OR target_player='BOTH') AND sent_at IS NULL ORDER BY id");
-    
-    Logger::instance().info("[get_queued_messages] Found " + std::to_string(rows.size()) + " messages");
     
     std::vector<std::string> messages;
     std::vector<std::string> ids;
@@ -110,7 +101,6 @@ std::vector<std::string> Telemetry::get_queued_messages(char player)
             id_list += ids[i];
         }
         db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" + id_list + ")");
-        Logger::instance().info("[get_queued_messages] Marked " + std::to_string(ids.size()) + " messages as sent");
     }
     
     return messages;

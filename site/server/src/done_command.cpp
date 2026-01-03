@@ -8,6 +8,7 @@
 #include "done_command.h"
 
 #include "combat.h"
+#include "db.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -47,10 +48,10 @@ bool DoneCommand::invoke(void)
         {
             // Blocked on combat - don't advance turn, report combat pending
             std::ostringstream msg;
-            msg << "⚔️ Combat pending! " << combats.size() << " active combat(s) must be resolved.";
+            msg << "TACTICAL: Combat pending! " << combats.size() << " active engagement(s) must be resolved.";
             for (const auto& c : combats)
             {
-                msg << "\n  - Hex " << c.hex_id << " (Round " << c.round << ")";
+                msg << "\n  - Sector " << c.hex_id << " (Round " << c.round << ")";
             }
             msg << "\nUse: combat order <ship> <target> <tactic> <power allocation>";
             
@@ -67,7 +68,7 @@ bool DoneCommand::invoke(void)
     {
         Logger::instance().info("Game Over during turn end");
         Telemetry::getInstance().write("Game Over");
-        Telemetry::getInstance().broadcast("🏁 Game Over!");
+        Telemetry::getInstance().broadcast(">> GAME OVER <<");
     }
     else
     {
@@ -75,13 +76,24 @@ bool DoneCommand::invoke(void)
         Logger::instance().info("Turn ended. Active player: " +
                                 s.active_player);
 
-        Telemetry::getInstance().write("Your turn has ended");
+        // Look up opponent's username for the broadcast
+        DatabaseManager& db = DatabaseManager::getInstance();
+        std::string oppUser = s.active_player;
+        auto oppRow = db.query("SELECT u.username FROM users u "
+                               "JOIN game_seats gs ON gs.user_id = u.id "
+                               "WHERE gs.game_id=" + std::to_string(s.game_id) + 
+                               " AND gs.seat='" + s.active_player + "'");
+        if (!oppRow.empty()) {
+            oppUser = oppRow[0][0];
+        }
+
+        Telemetry::getInstance().write("COMMAND: Your turn has ended. Standing down.");
         // After advance, s.active_player is the NEW active player
         // The requester (ME) is the OLD player, so THEM = the new player
-        Telemetry::getInstance().tell(PlayerTarget::THEM, "⏰ It's YOUR turn! " +
+        Telemetry::getInstance().tell(PlayerTarget::THEM, "COMMAND: You are now in command! " +
                                                 s.phase_name() + " (Round " +
                                                 std::to_string(s.round) + ")");
-        Telemetry::getInstance().broadcast("Turn advanced to " + s.active_player);
+        Telemetry::getInstance().broadcast("COMMAND: " + oppUser + " now has the conn.");
     }
 
     // Save game state to persist changes

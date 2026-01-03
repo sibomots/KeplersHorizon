@@ -937,16 +937,66 @@ void StateMachine::advance_next(GameState& s)
             {
                 Logger::instance().info("[advance_next] Combat detected! Pausing at Combat phase");
                 
-                // Notify BOTH players about combat detection
-                std::ostringstream combatMsg;
-                combatMsg << "COMBAT DETECTED! Active combat in " << combats.size() << " hex(es): ";
-                for (size_t i = 0; i < combats.size(); ++i)
+                // Notify BOTH players about combat detection with detailed listing
+                DatabaseManager& db = DatabaseManager::getInstance();
+                char meOwner = (s.active_player.empty() ? 'A' : s.active_player[0]);
+                char oppOwner = (meOwner == 'A') ? 'B' : 'A';
+                
+                for (const auto& combat : combats)
                 {
-                    if (i > 0) combatMsg << ", ";
-                    combatMsg << combats[i].hex_id;
+                    std::ostringstream combatMsg;
+                    
+                    // Look up system name from hex
+                    std::string sysName = combat.hex_id;
+                    auto sysRow = db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" + 
+                                          combat.hex_id + "' LIMIT 1");
+                    if (!sysRow.empty()) {
+                        sysName = sysRow[0][0];
+                    }
+                    
+                    combatMsg << "COMBAT DETECTED!\\n";
+                    combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName << " [" << combat.hex_id << "]\\n";
+                    combatMsg << "     SHIPS IN SYSTEM " << sysName << "\\n";
+                    
+                    // Query ships in this hex
+                    auto shipRows = db.query(
+                        "SELECT ship_code, ship_name, ship_type, owner, pd, beam, screen, tube, missiles "
+                        "FROM ships WHERE game_id=" + std::to_string(s.game_id) + 
+                        " AND at_hex='" + combat.hex_id + "' AND destroyed_at IS NULL ORDER BY owner, ship_code");
+                    
+                    // Blue-Force (player's ships) - show stats
+                    combatMsg << "         Blue-Force\\n";
+                    int blueNum = 1;
+                    for (const auto& ship : shipRows)
+                    {
+                        if (ship[3][0] == meOwner)
+                        {
+                            std::string shipClass = (ship[2] == "W") ? "WarpShip" : "SystemShip";
+                            combatMsg << "             " << blueNum++ << ". " << shipClass << " class " 
+                                     << ship[0] << " The " << ship[1] 
+                                     << " (PD:" << ship[4] << " B:" << ship[5] << " S:" << ship[6] 
+                                     << " T:" << ship[7] << " M:" << ship[8] << ")\\n";
+                        }
+                    }
+                    
+                    // Red-Force (enemy ships) - NO stats per Bug 19
+                    combatMsg << "         Red-Force\\n";
+                    int redNum = 1;
+                    for (const auto& ship : shipRows)
+                    {
+                        if (ship[3][0] == oppOwner)
+                        {
+                            std::string shipClass = (ship[2] == "W") ? "WarpShip" : "SystemShip";
+                            combatMsg << "             " << redNum++ << ". " << shipClass << " class " 
+                                     << ship[0] << " The " << ship[1] << "\\n";
+                        }
+                    }
+                    
+                    combatMsg << "     >> Submit orders with 'combat order'\\n";
+                    combatMsg << "     >> Then 'combat commit' will execute them!";
+                    
+                    Telemetry::getInstance().add_broadcast(s.game_id, combatMsg.str());
                 }
-                combatMsg << "\nBoth players: Submit orders with 'combat order', then 'combat commit'.";
-                Telemetry::getInstance().add_broadcast(s.game_id, combatMsg.str());
             }
         }
         // ----------------------------
