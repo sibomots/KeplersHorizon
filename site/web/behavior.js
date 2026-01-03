@@ -218,6 +218,13 @@
     S.peer = j.peer || null;
     renderStatus();
 
+    // Display queued messages (tell/broadcast notifications)
+    if (j.messages && Array.isArray(j.messages)) {
+      for (let i = 0; i < j.messages.length; i++) {
+        appendLine("📢 " + j.messages[i], "line-bad");
+      }
+    }
+
     // Poll Combat Log (Feedback Loop)
     if (j.state && j.state.combat && j.state.combat.combats) {
       S.lastCombatLogs = S.lastCombatLogs || {};
