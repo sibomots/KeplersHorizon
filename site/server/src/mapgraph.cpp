@@ -90,7 +90,7 @@ void MapGraph::load_state(char owner)
                  std::to_string(DEFAULT_MAP_ID) + " "
                  "WHERE s.game_id=" +
                  std::to_string(game_id) + " AND s.owner='" +
-                 std::string(1, enemy) + "'");
+                 std::string(1, enemy) + "' AND s.destroyed_at IS NULL");
 
     for (const auto& r : blocks)
     {

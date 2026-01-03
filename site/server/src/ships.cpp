@@ -50,7 +50,7 @@
     auto rows = db.query(
         "SELECT id FROM ships WHERE game_id=" + std::to_string(game_id) +
         " AND owner='" + std::string(1, owner) + "' AND ship_code='" +
-        db.esc(code) + "' LIMIT 1");
+        db.esc(code) + "' AND destroyed_at IS NULL LIMIT 1");
     return !rows.empty();
 }
 
@@ -165,7 +165,7 @@
         "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
         "FROM ships WHERE game_id=" +
         std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
-        "' ORDER BY ship_code");
+        "' AND destroyed_at IS NULL ORDER BY ship_code");
     for (auto& r : rows)
     {
         ShipRow s;
@@ -198,7 +198,7 @@
         "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
         "FROM ships WHERE game_id=" +
         std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
-        "' AND ship_code='" + db.esc(code) + "' LIMIT 1");
+        "' AND ship_code='" + db.esc(code) + "' AND destroyed_at IS NULL LIMIT 1");
     if (rows.empty())
         throw std::runtime_error("ship not found");
     auto& r = rows[0];
@@ -227,7 +227,7 @@
     auto rows = db.query(
         "SELECT COUNT(*) FROM ships WHERE game_id=" + std::to_string(game_id) +
         " AND owner='" + std::string(1, owner) + "' AND racked_in='" +
-        db.esc(warpship_code) + "'");
+        db.esc(warpship_code) + "' AND destroyed_at IS NULL");
     if (rows.empty())
         return 0;
     return std::atoi(rows[0][0].c_str());

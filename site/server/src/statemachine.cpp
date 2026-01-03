@@ -845,7 +845,7 @@ void StateMachine::apply_start_of_turn(GameState& s)
             "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND ss.map_id=1 "
             "WHERE sh.game_id=" +
             std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
-            "' AND sh.racked_in IS NULL "
+            "' AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
             " AND ss.is_base=1 AND ss.base_owner='" +
             std::string(1, enemy) + "'";
         auto r = db.query(q);

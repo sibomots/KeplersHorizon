@@ -22,7 +22,7 @@ bool FleetCommand::invoke(void)
         "SELECT ship_code, ship_name, at_hex, racked_in, pd, beam, screen, "
         "tube, missiles, tech_level FROM ships WHERE game_id=" +
         std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
-        "' ORDER BY ship_code");
+        "' AND destroyed_at IS NULL ORDER BY ship_code");
 
     if (rows.empty())
     {

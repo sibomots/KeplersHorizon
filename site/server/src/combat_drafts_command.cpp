@@ -26,7 +26,7 @@ bool CombatDraftsCommand::invoke(void)
         "FROM combat_orders co "
         "JOIN ships s ON s.game_id=co.game_id AND s.owner=co.owner AND s.ship_code=co.ship_code "
         "WHERE co.game_id=" + std::to_string(s.game_id) +
-        " AND co.owner='" + std::string(1, owner) + "' AND co.committed=0 "
+        " AND co.owner='" + std::string(1, owner) + "' AND co.committed=0 AND s.destroyed_at IS NULL "
         "ORDER BY s.at_hex, co.ship_code");
 
     if (rows.empty())

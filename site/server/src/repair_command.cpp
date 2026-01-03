@@ -29,7 +29,7 @@ bool RepairCommand::invoke(void)
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
             "WHERE s.game_id=" + std::to_string(s.game_id) +
             " AND s.owner='" + std::string(1, owner) + "' AND bs.owner='" + 
-            std::string(1, owner) + "' AND ("
+            std::string(1, owner) + "' AND s.destroyed_at IS NULL AND ("
             "s.pd < s.pd_orig OR s.beam < s.beam_orig OR "
             "s.screen < s.screen_orig OR s.tube < s.tube_orig OR "
             "s.missiles < s.missiles_orig)");
@@ -60,7 +60,7 @@ bool RepairCommand::invoke(void)
         "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
         "WHERE s.game_id=" + std::to_string(s.game_id) +
         " AND s.owner='" + std::string(1, owner) + "' AND s.ship_code='" +
-        db.esc(m_ship_code) + "' AND bs.owner='" + std::string(1, owner) + "'");
+        db.esc(m_ship_code) + "' AND bs.owner='" + std::string(1, owner) + "' AND s.destroyed_at IS NULL");
 
     if (shipRow.empty())
     {

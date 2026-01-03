@@ -221,7 +221,13 @@
     // Display queued messages (tell/broadcast notifications)
     if (j.messages && Array.isArray(j.messages)) {
       for (let i = 0; i < j.messages.length; i++) {
-        appendLine("📢 " + j.messages[i], "line-bad");
+        // Handle escaped newlines in messages
+        const msgLines = j.messages[i].replace(/\\n/g, "\n").split("\n");
+        for (let k = 0; k < msgLines.length; k++) {
+          if (msgLines[k].length > 0) {
+            appendLine((k === 0 ? "📢 " : "   ") + msgLines[k], "line-bad");
+          }
+        }
       }
     }
 
@@ -234,7 +240,13 @@
         if (c.log && c.log !== S.lastCombatLogs[c.hex]) {
           if (S.lastCombatLogs[c.hex] && c.log.length > 0) {
             appendLine("--- Combat Update (" + c.hex + ") ---", "line-bad");
-            appendLine(c.log);
+            // Handle escaped newlines in combat log
+            const logLines = c.log.replace(/\\n/g, "\n").split("\n");
+            for (let k = 0; k < logLines.length; k++) {
+              if (logLines[k].trim().length > 0) {
+                appendLine(logLines[k]);
+              }
+            }
           }
           S.lastCombatLogs[c.hex] = c.log;
         }

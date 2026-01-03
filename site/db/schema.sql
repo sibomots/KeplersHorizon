@@ -157,6 +157,7 @@ CREATE TABLE IF NOT EXISTS ships (
   at_system VARCHAR(16) DEFAULT NULL,
   at_hex VARCHAR(8) DEFAULT NULL,
   racked_in VARCHAR(4) DEFAULT NULL,
+  destroyed_at TIMESTAMP NULL DEFAULT NULL,  -- NULL = active, set = destroyed
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_ship (game_id, owner, ship_code),
   FOREIGN KEY (game_id) REFERENCES games(id)
@@ -262,8 +263,8 @@ CREATE TABLE IF NOT EXISTS combat_orders (
   missiles_data TEXT DEFAULT NULL, -- Comma-separated drive values, e.g. "4,5,3"
   committed BOOLEAN NOT NULL DEFAULT 0,
   PRIMARY KEY (game_id, owner, ship_code, round),
-  FOREIGN KEY (game_id) REFERENCES games(id),
-  FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code)
+  FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+  FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code) ON DELETE CASCADE
 );
 
 -- Telemetry queue for tell/broadcast messages

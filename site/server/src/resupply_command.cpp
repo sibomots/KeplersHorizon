@@ -28,7 +28,7 @@ bool ResupplyCommand::invoke(void)
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
             "WHERE s.game_id=" + std::to_string(s.game_id) +
             " AND s.owner='" + std::string(1, owner) + "' AND bs.owner='" + 
-            std::string(1, owner) + "' AND s.missiles < s.missiles_orig");
+            std::string(1, owner) + "' AND s.missiles < s.missiles_orig AND s.destroyed_at IS NULL");
 
         if (rows.empty())
         {
@@ -57,7 +57,7 @@ bool ResupplyCommand::invoke(void)
         "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
         "WHERE s.game_id=" + std::to_string(s.game_id) +
         " AND s.owner='" + std::string(1, owner) + "' AND s.ship_code='" +
-        db.esc(m_ship_code) + "' AND bs.owner='" + std::string(1, owner) + "'");
+        db.esc(m_ship_code) + "' AND bs.owner='" + std::string(1, owner) + "' AND s.destroyed_at IS NULL");
 
     if (shipRow.empty())
     {
