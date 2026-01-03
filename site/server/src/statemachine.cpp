@@ -944,8 +944,6 @@ void StateMachine::advance_next(GameState& s)
                 
                 for (const auto& combat : combats)
                 {
-                    std::ostringstream combatMsg;
-                    
                     // Look up system name from hex
                     std::string sysName = combat.hex_id;
                     auto sysRow = db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" + 
@@ -954,48 +952,55 @@ void StateMachine::advance_next(GameState& s)
                         sysName = sysRow[0][0];
                     }
                     
-                    combatMsg << "COMBAT DETECTED!\\n";
-                    combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName << " [" << combat.hex_id << "]\\n";
-                    combatMsg << "     SHIPS IN SYSTEM " << sysName << "\\n";
-                    
                     // Query ships in this hex
                     auto shipRows = db.query(
                         "SELECT ship_code, ship_name, ship_type, owner, pd, beam, screen, tube, missiles "
                         "FROM ships WHERE game_id=" + std::to_string(s.game_id) + 
                         " AND at_hex='" + combat.hex_id + "' AND destroyed_at IS NULL ORDER BY owner, ship_code");
                     
-                    // Blue-Force (player's ships) - show stats
-                    combatMsg << "         Blue-Force\\n";
-                    int blueNum = 1;
-                    for (const auto& ship : shipRows)
+                    // Generate message for each player (A and B) with their perspective
+                    for (char viewer : {'A', 'B'})
                     {
-                        if (ship[3][0] == meOwner)
+                        char enemyOwner = (viewer == 'A') ? 'B' : 'A';
+                        
+                        std::ostringstream combatMsg;
+                        combatMsg << "COMBAT DETECTED!\\n";
+                        combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName << " [" << combat.hex_id << "]\\n";
+                        combatMsg << "     SHIPS IN SYSTEM " << sysName << "\\n";
+                        
+                        // Blue-Force (viewer's ships) - show stats
+                        combatMsg << "         Blue-Force\\n";
+                        int blueNum = 1;
+                        for (const auto& ship : shipRows)
                         {
-                            std::string shipClass = (ship[2] == "W") ? "WarpShip" : "SystemShip";
-                            combatMsg << "             " << blueNum++ << ". " << shipClass << " class " 
-                                     << ship[0] << " The " << ship[1] 
-                                     << " (PD:" << ship[4] << " B:" << ship[5] << " S:" << ship[6] 
-                                     << " T:" << ship[7] << " M:" << ship[8] << ")\\n";
+                            if (ship[3][0] == viewer)
+                            {
+                                std::string shipClass = (ship[2] == "W") ? "WarpShip" : "SystemShip";
+                                combatMsg << "             " << blueNum++ << ". " << shipClass << " class " 
+                                         << ship[0] << " The " << ship[1] 
+                                         << " (PD:" << ship[4] << " B:" << ship[5] << " S:" << ship[6] 
+                                         << " T:" << ship[7] << " M:" << ship[8] << ")\\n";
+                            }
                         }
-                    }
-                    
-                    // Red-Force (enemy ships) - NO stats per Bug 19
-                    combatMsg << "         Red-Force\\n";
-                    int redNum = 1;
-                    for (const auto& ship : shipRows)
-                    {
-                        if (ship[3][0] == oppOwner)
+                        
+                        // Red-Force (enemy ships) - NO stats (private info)
+                        combatMsg << "         Red-Force\\n";
+                        int redNum = 1;
+                        for (const auto& ship : shipRows)
                         {
-                            std::string shipClass = (ship[2] == "W") ? "WarpShip" : "SystemShip";
-                            combatMsg << "             " << redNum++ << ". " << shipClass << " class " 
-                                     << ship[0] << " The " << ship[1] << "\\n";
+                            if (ship[3][0] == enemyOwner)
+                            {
+                                std::string shipClass = (ship[2] == "W") ? "WarpShip" : "SystemShip";
+                                combatMsg << "             " << redNum++ << ". " << shipClass << " class " 
+                                         << ship[0] << " The " << ship[1] << "\\n";
+                            }
                         }
+                        
+                        combatMsg << "     >> Draft orders:   'combat order'\\n";
+                        combatMsg << "     >> Execute orders: 'combat commit'";
+                        
+                        Telemetry::getInstance().add_tell(s.game_id, viewer, combatMsg.str());
                     }
-                    
-                    combatMsg << "     >> Submit orders with 'combat order'\\n";
-                    combatMsg << "     >> Then 'combat commit' will execute them!";
-                    
-                    Telemetry::getInstance().add_broadcast(s.game_id, combatMsg.str());
                 }
             }
         }

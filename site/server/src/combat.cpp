@@ -424,6 +424,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     struct ShipCtx
     {
         std::string code;
+        std::string name;
         char owner;
         int tech;
         CombatOrder ord;
@@ -436,15 +437,16 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
     // Load active ships in hex
     auto r = db.query(
-        "SELECT ship_code, owner, tech_level FROM ships WHERE game_id=" +
+        "SELECT ship_code, ship_name, owner, tech_level FROM ships WHERE game_id=" +
         std::to_string(game_id) + " AND at_hex='" + hex_id +
         "' AND racked_in IS NULL AND destroyed_at IS NULL");
     for (const auto& row : r)
     {
         ShipCtx s;
         s.code = row[0];
-        s.owner = row[1][0];
-        s.tech = std::atoi(row[2].c_str());
+        s.name = row[1];
+        s.owner = row[2][0];
+        s.tech = std::atoi(row[3].c_str());
         std::string key = std::string(1, s.owner) + "_" + s.code;
         ships[key] = s;
     }
@@ -473,9 +475,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     }
 
     std::ostringstream log;
-    log << "\\n========================================\\n";
+    log << "\\n=====\\n";
     log << "       COMBAT ROUND " << cs.round << " RESOLUTION\\n";
-    log << "========================================\\n";
+    log << "========\\n";
 
     // 3. Resolve Fire
     // Beams
@@ -514,18 +516,18 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     if (dmg > 0)
                     {
                         target->damage_received += dmg;
-                        log << ship.code << " beams " << target->code << " for "
+                        log << ship.code << " '" << ship.name << "' beams " << target->code << " '" << target->name << "' for "
                             << dmg << " dmg!\\n";
                     }
                 }
                 else
                 {
                     if (escaped)
-                        log << target->code << " outruns " << ship.code
-                            << "'s beams.\\n";
+                        log << target->code << " '" << target->name << "' outruns " << ship.code << " '" << ship.name
+                            << "' beams.\\n";
                     else
-                        log << ship.code << " misses " << target->code
-                            << ".\\n";
+                        log << ship.code << " '" << ship.name << "' misses " << target->code << " '" << target->name
+                            << "'.\\n";
                 }
             }
             else
@@ -577,17 +579,17 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         {
                             int dmg = 3 + ship.tech + mod; // Base warhead 3?
                             target->damage_received += dmg;
-                            log << ship.code << " missile hits " << target->code
-                                << " for " << dmg << " dmg!\\n";
+                            log << ship.code << " '" << ship.name << "' missile hits " << target->code << " '" << target->name
+                                << "' for " << dmg << " dmg!\\n";
                         }
                         else
                         {
                             if (escaped)
-                                log << target->code << " outruns " << ship.code
-                                    << "'s missile.\\n";
+                                log << target->code << " '" << target->name << "' outruns " << ship.code << " '" << ship.name
+                                    << "' missile.\\n";
                             else
-                                log << ship.code << " missile misses "
-                                    << target->code << ".\\n";
+                                log << ship.code << " '" << ship.name << "' missile misses "
+                                    << target->code << " '" << target->name << "'.\\n";
                         }
                     }
                     // Deduct ammo? Need to update ships table?
@@ -621,7 +623,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             dmgJson << "\\\"" << key << "\\\":" << net; // Uses owner_code key
             total_net_damage += net;
             first = false;
-            log << ship.code << " takes " << net << " net damage (Absorbed "
+            log << ship.code << " '" << ship.name << "' takes " << net << " net damage (Absorbed "
                 << absorb << ").\\n";
         }
 
@@ -636,14 +638,14 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
             if (escape)
             {
-                log << ship.code << " successfully retreats!\\n";
+                log << ship.code << " '" << ship.name << "' successfully retreats!\\n";
                 // Execute Retreat immediately? Or at end of round?
                 // Rules: "Retreat Resolution".
                 // We can mark them. For now, strict damage focus.
             }
             else
             {
-                log << ship.code << " failed to retreat.\\n";
+                log << ship.code << " '" << ship.name << "' failed to retreat.\\n";
             }
         }
     }
@@ -658,15 +660,67 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     {
         next_stage = 2;     // DAMAGE_PENDING
         next_stalemate = 0; // Reset stalemate counter
-        log << "----------------------------------------\\n";
-        log << "RESULT: Critical Damage! Assign Damage now.\\n";
+        log << "-----\\n"
+            << "RESULT:\\n"
+            << "Critical Damage!\\n"
+            << "Assign Damage Now.\\n";
         
-        // Notify both players about damage
-        char initiative = StateMachine::getInstance().get_current_player();
-        char opponent = (initiative == 'A') ? 'B' : 'A';
-        Telemetry::getInstance().add_tell(game_id, opponent,
-            "Combat Round " + std::to_string(cs.round) + " resolved with damage. "
-            "Use 'combat apply <ship> d=N b=N...' to assign your damage.");
+        // Build per-player damage summaries
+        std::ostringstream dmgA;
+        std::ostringstream dmgB;
+        int dmgA_total = 0;
+        int dmgB_total = 0;
+        
+        for (auto& [key, ship] : ships)
+        {
+            int absorb = 0;
+            if (ship.ord.power_s > 0)
+                absorb = ship.ord.power_s + ship.tech;
+            int net = std::max(0, ship.damage_received - absorb);
+            
+            if (net > 0)
+            {
+                if (ship.owner == 'A')
+                {
+                    dmgA << "  " << ship.code << " '" << ship.name << "': " << net << " DAMAGE\\n";
+                    dmgA_total += net;
+                }
+                else
+                {
+                    dmgB << "  " << ship.code << " '" << ship.name << "': " << net << " DAMAGE\\n";
+                    dmgB_total += net;
+                }
+            }
+        }
+        
+        // Notify each player about their damage
+        if (dmgA_total > 0)
+        {
+            Telemetry::getInstance().add_tell(game_id, 'A',
+                "TACTICAL: ROUND " + std::to_string(cs.round) + " DAMAGE REPORT\\n" +
+                dmgA.str() +
+                "TOTAL: " + std::to_string(dmgA_total) + " DAMAGE TO ASSIGN\\n" +
+                ">> Use 'combat apply <ship> pd=N b=N...' to assign damage.");
+        }
+        else
+        {
+            Telemetry::getInstance().add_tell(game_id, 'A',
+                "TACTICAL: ROUND " + std::to_string(cs.round) + " - YOUR SHIPS TOOK NO DAMAGE.");
+        }
+        
+        if (dmgB_total > 0)
+        {
+            Telemetry::getInstance().add_tell(game_id, 'B',
+                "TACTICAL: ROUND " + std::to_string(cs.round) + " DAMAGE REPORT\\n" +
+                dmgB.str() +
+                "TOTAL: " + std::to_string(dmgB_total) + " DAMAGE TO ASSIGN\\n" +
+                ">> Use 'combat apply <ship> pd=N b=N...' to assign damage.");
+        }
+        else
+        {
+            Telemetry::getInstance().add_tell(game_id, 'B',
+                "TACTICAL: ROUND " + std::to_string(cs.round) + " - YOUR SHIPS TOOK NO DAMAGE.");
+        }
     }
     else
     {
