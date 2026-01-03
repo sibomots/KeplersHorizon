@@ -65,10 +65,6 @@ void apply_arguments(int argc, char** argv)
         };
 
         auto next_flag = [&](bool& out) {
-            if ( i + 1 >= argc)
-            {
-                throw std::runtime_error("Missing arg for " + k);
-            }
             // the fact the flag was used, it's true.
             // no need to look at i+1 argv.  the flag is just a flag. No arguments to it.
             out = true;
@@ -249,12 +245,12 @@ void load_services()
     //////////////////////
     create_db();
 
-    // Optional: validate database schema
-    test_db();
-
     // This creates the server and descritpr for listening on port for REST-ful
     // transactions
     ServerManager::getInstance().connect();
+
+    // Optional: validate database schema
+    test_db();
 
     // Front-end Services
     /////////////////////
