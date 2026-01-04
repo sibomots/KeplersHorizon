@@ -11,27 +11,27 @@ START TRANSACTION;
 -- DELETE FROM warplines WHERE map_id=1;
 -- DELETE FROM star_systems WHERE map_id=1;
 
-LOAD DATA LOCAL INFILE 'data/star_systems.csv'
+LOAD DATA LOCAL INFILE 'star_systems.csv'
 INTO TABLE star_systems
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 (map_id, hex_id, name, is_base, base_owner);
 
-LOAD DATA LOCAL INFILE 'data/warplines.csv'
+LOAD DATA LOCAL INFILE 'warplines.csv'
 INTO TABLE warplines
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 (map_id, a_hex, b_hex);
 
 
-LOAD DATA LOCAL INFILE 'data/hexes.csv'
+LOAD DATA LOCAL INFILE 'hexes.csv'
 INTO TABLE hexes
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '
 '
 (map_id, hex_id, q, r);
 
-LOAD DATA LOCAL INFILE 'data/warpline_hexes.csv'
+LOAD DATA LOCAL INFILE 'warpline_hexes.csv'
 INTO TABLE warpline_hexes
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '

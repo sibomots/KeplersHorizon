@@ -56,7 +56,13 @@ void apply_arguments(int argc, char** argv)
             }
             out = argv[++i];
         };
-
+        auto next_ushort = [&](unsigned short& out) {
+            if (i + 1 >= argc) 
+            {
+                throw std::runtime_error("Missing arg for " + k);
+            }
+            out = std::atoi(argv[++i]);
+        };
         auto next_flag = [&](bool& out) {
             // the fact the flag was used, it's true.
             // no need to look at i+1 argv.  the flag is just a flag. No
@@ -80,27 +86,9 @@ void apply_arguments(int argc, char** argv)
         {
             next(dbconfig.dbname);
         }
-        else if (k == "--clean")
-        {
-            next_flag(dataconfig.clean);
-        }
-        else if (k == "--schema")
-        {
-            next_flag(dataconfig.schema);
-        }
-        else if (k == "--seed-game")
-        {
-            next(dataconfig.seed_game_path);
-        }
-        else if (k == "--seed-milieu")
-        {
-            next(dataconfig.seed_milieu_path);
-        }
         else if (k == "--port")
         {
-            std::string t;
-            next(t);
-            srvconfig.port = std::atoi(t.c_str());
+            next_ushort(srvconfig.port);
         }
     }
     DatabaseManager::getInstance().configure(&dbconfig);
@@ -109,7 +97,7 @@ void apply_arguments(int argc, char** argv)
 
 // Static Functions
 
-void create_db()
+void activate_db()
 {
     try
     {
@@ -128,7 +116,7 @@ void test_db(void)
 
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    // Test 1: Connection test (already connected by create_db)
+    // Test 1: Connection test (already connected by activate_db)
     try
     {
         auto ping = db.query("SELECT 1");
@@ -235,17 +223,11 @@ void test_db(void)
     std::cout << "[TEST] Database validation complete." << std::endl;
 }
 
-void load_db()
-{
-    DatabaseManager::getInstance().load(&dataconfig);
-}
-
 void load_services()
 {
     // Backend Services
     //////////////////////
-    create_db();
-    load_db();
+    activate_db();
     test_db();
 
     // This creates the server and descritpr for

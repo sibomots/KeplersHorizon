@@ -17,7 +17,6 @@ class DatabaseManager
   public:
     static DatabaseManager& getInstance()
     {
-        // The static instance is created upon the first call to this function.
         static DatabaseManager instance;
         return instance;
     }
@@ -34,7 +33,6 @@ class DatabaseManager
 
     // Setup
     void configure(void* param);
-    void load(void* param);
     void connect();
     bool driver_invalid();
 

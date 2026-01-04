@@ -11,13 +11,11 @@
 
 #include "app.h"
 #include "combat.h"
-#include "csv_loader.h"
-#include "load.h"
 #include "logger.h"
 #include "typedefs.h"
 #include "util.h"
-// Static variables for the DatabaseManager Singleton
 
+// Static variables for the DatabaseManager Singleton
 MYSQL* DatabaseManager::driver = 0;
 std::string DatabaseManager::dbhost = "127.0.0.1";
 std::string DatabaseManager::dbuser = "dbusr";
@@ -31,120 +29,6 @@ bool DatabaseManager::driver_invalid()
         throw std::runtime_error("mysql_init failed");
     }
     return false;
-}
-
-void DatabaseManager::load(void* param)
-{
-    DataConfig* pconf = static_cast<DataConfig*>(param);
-    if (!pconf)
-    {
-        Logger::instance().info("[DB] Using database as-is. No initialization");
-        return;
-    }
-
-    // Part 1: If --clean flag is set, drop ALL tables (game + milieu)
-    if (pconf->clean)
-    {
-        Logger::instance().info("[DB] CLEAN: Dropping all tables...");
-        int dropped = 0;
-
-        // Drop milieu tables first (they may reference game tables)
-        for (const auto& stmt : MILIEU_DROP_STATEMENTS)
-        {
-            mysql_query(driver, stmt.c_str());
-            dropped++;
-        }
-
-        // Drop game tables
-        for (const auto& stmt : DROP_STATEMENTS)
-        {
-            if (mysql_query(driver, stmt.c_str()))
-            {
-                std::ostringstream warning_msg;
-                warning_msg << "[DB] Warning: " << mysql_error(driver);
-                Logger::instance().error(warning_msg.str());
-            }
-            else
-            {
-                dropped++;
-            }
-        }
-        std::ostringstream notice;
-        notice << "[DB] CLEAN: Dropped " << (int)dropped << " tables";
-        Logger::instance().info(notice.str());
-    }
-
-    // Part 2: If --schema flag is set, create ALL tables (game + milieu)
-    if (pconf->schema)
-    {
-        Logger::instance().info("[DB] SCHEMA: Creating all tables...");
-        int created = 0;
-
-        // Create game tables first
-        for (const auto& stmt : SCHEMA_STATEMENTS)
-        {
-            if (mysql_query(driver, stmt.c_str()))
-            {
-                std::ostringstream err;
-                err << "[DB] SQL Error: " << mysql_error(driver);
-                Logger::instance().error(err.str());
-                std::ostringstream badline;
-                badline << "[DB] Statement: " << stmt.substr(0, 80) << "...";
-                Logger::instance().error(badline.str());
-            }
-            else
-            {
-                created++;
-            }
-        }
-
-        // Create milieu tables
-        for (const auto& stmt : MILIEU_SCHEMA_STATEMENTS)
-        {
-            if (mysql_query(driver, stmt.c_str()))
-            {
-                std::ostringstream err;
-                err << "[DB] SQL Error: " << mysql_error(driver);
-                Logger::instance().error(err.str());
-            }
-            else
-            {
-                created++;
-            }
-        }
-
-        std::ostringstream msg;
-        msg << "[DB] SCHEMA: Created " << (int)created << " tables";
-        Logger::instance().info(msg.str());
-    }
-
-    // Part 3: If --seed-game <path> is set, load game seed data from CSVs
-    if (!pconf->seed_game_path.empty())
-    {
-        Logger::instance().info("[DB] SEED-GAME: Loading game data from " +
-                                pconf->seed_game_path);
-
-        int loaded = CSVLoader::load_game_data(pconf->seed_game_path);
-        if (loaded < 0)
-        {
-            Logger::instance().error(
-                "[DB] SEED-GAME: Failed to load CSV files");
-        }
-    }
-
-    // Part 4: If --seed-milieu <path> is set, load milieu seed data from CSVs
-    if (!pconf->seed_milieu_path.empty())
-    {
-        Logger::instance().info("[DB] SEED-MILIEU: Loading milieu data from " +
-                                pconf->seed_milieu_path);
-
-        int loaded = CSVLoader::load_milieu_data(pconf->seed_milieu_path);
-        if (loaded < 0)
-        {
-            Logger::instance().error(
-                "[DB] SEED-MILIEU: Failed to load CSV files");
-        }
-    }
 }
 
 void DatabaseManager::connect()

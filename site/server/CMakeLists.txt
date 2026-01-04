@@ -46,7 +46,6 @@ src/Turn.cpp
 src/account.cpp
 src/cmd.cpp
 src/comms.cpp
-src/csv_loader.cpp
 src/db.cpp
 src/events.cpp
 src/fleet_command.cpp
@@ -84,7 +83,6 @@ inc/build_show_draft_command.h
 inc/cmd.h
 inc/combat.h
 inc/comms.h
-inc/csv_loader.h
 inc/db.h
 inc/deploy_command.h
 inc/done_command.h
