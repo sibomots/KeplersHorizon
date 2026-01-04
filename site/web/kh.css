@@ -1,0 +1,286 @@
+/*
+ * BSD 3-Clause License
+ * This file is part of Kepler's Horizon
+ * Copyright (c) 2025, sibomots
+ *
+ * Kepler's Horizon - Unified CRT Terminal Stylesheet
+ * Phosphor green theme with enhanced brightness
+ */
+
+:root {
+  --bg: #050508;
+  --panel: #0a0a12;
+  --text: #3f3;  /* Bright phosphor green */
+  --muted: #2a2;
+  --accent: #4f4;
+  --border: #1a3a1a;
+  --good: #4f8;
+  --bad: #f44;
+  --warn: #facc15;
+  --glow: rgba(50, 255, 50, 0.8);
+  --glow-soft: rgba(50, 255, 50, 0.4);
+}
+
+/* Base Reset */
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'VT323', ui-monospace, monospace;
+  text-transform: uppercase;
+  text-shadow: 0 0 5px var(--glow), 0 0 15px var(--glow-soft);
+}
+
+/* Layout */
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(122, 92, 255, .12), rgba(0, 0, 0, 0));
+}
+
+header .title {
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+
+header .right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Buttons */
+button {
+  background: rgba(122, 92, 255, .15);
+  color: var(--text);
+  border: 1px solid rgba(122, 92, 255, .35);
+  border-radius: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
+  text-shadow: 0 0 5px var(--glow);
+}
+
+button:hover {
+  background: rgba(122, 92, 255, .22);
+}
+
+/* Main Grid */
+.main {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+}
+
+/* Panels */
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(17, 17, 26, .9);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .35);
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.panel h2 {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 20px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-shadow: 0 0 5px rgba(34, 170, 34, 0.6);
+}
+
+/* Viewport (console area) */
+.viewport {
+  min-height: 0;
+  position: relative;
+}
+
+/* Console Log */
+#consoleLog {
+  height: 100%;
+  overflow-y: auto;
+  padding: 10px 12px;
+  font-family: 'VT323', ui-monospace, Consolas, monospace;
+  font-size: 20px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  color: var(--text);
+  text-shadow: 0 0 5px var(--glow), 0 0 15px var(--glow-soft);
+  position: relative;
+}
+
+/* Scanline Overlay */
+.viewport::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+  background-size: 100% 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Flicker Overlay */
+.viewport::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(18, 16, 16, 0.15);
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+  animation: crt-flicker 0.15s infinite;
+}
+
+@keyframes crt-flicker {
+  0%   { opacity: 0.20; }
+  5%   { opacity: 0.42; }
+  10%  { opacity: 0.58; }
+  15%  { opacity: 0.65; }
+  20%  { opacity: 0.85; }
+  50%  { opacity: 0.85; }
+  100% { opacity: 0.80; }
+}
+
+/* Text Variants */
+.line-muted {
+  color: var(--muted);
+  text-shadow: 0 0 4px rgba(34, 170, 34, 0.5);
+}
+
+.line-good {
+  color: var(--good);
+  text-shadow: 0 0 8px rgba(68, 255, 136, 0.7);
+}
+
+.line-bad {
+  color: var(--bad);
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.7);
+}
+
+/* Map View */
+#mapView {
+  height: 100%;
+  width: 100%;
+  display: none;
+}
+
+#mapFrame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+}
+
+/* Input Row */
+.inputRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--accent);
+  background: #0a100a;
+  color: var(--text);
+  outline: none;
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 20px;
+  text-shadow: 0 0 5px var(--glow);
+}
+
+input[type="text"]::placeholder {
+  color: var(--muted);
+  text-shadow: none;
+}
+
+input[type="text"]:focus {
+  border-color: var(--good);
+  box-shadow: 0 0 8px rgba(50, 255, 50, 0.4);
+}
+
+/* Status Body */
+.statusBody {
+  padding: 10px 12px;
+  overflow: auto;
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--text);
+  text-shadow: 0 0 5px var(--glow);
+}
+
+/* Key-Value Grid */
+.kv {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 6px 10px;
+}
+
+.k {
+  color: var(--muted);
+}
+
+.v {
+  color: var(--text);
+}
+
+/* Pills */
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(122, 92, 255, .35);
+  background: rgba(122, 92, 255, .12);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 20px;
+  text-shadow: 0 0 5px var(--glow);
+}
+
+/* Links */
+a {
+  color: var(--muted);
+  text-decoration: none;
+  text-shadow: 0 0 4px rgba(34, 170, 34, 0.5);
+}
+
+a:hover {
+  color: var(--text);
+  text-shadow: 0 0 5px var(--glow);
+}

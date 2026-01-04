@@ -9,6 +9,7 @@
 #include <cctype>
 #include <sstream>
 
+#include "combat.h"
 #include "db.h"
 #include "deploy_command.h"
 #include "logger.h"
@@ -258,6 +259,32 @@ bool MoveCommand::invoke(void)
 
     Logger::instance().info(o.str());
     Telemetry::getInstance().write(o.str());
+
+    // Check for combat trigger: enemy ships in destination hex
+    char enemy = (active_player == 'A') ? 'B' : 'A';
+    auto enemy_ships =
+        db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
+                 std::to_string(m_game_id) + " AND owner='" +
+                 std::string(1, enemy) + "' AND at_hex='" + db.esc(finalHex) +
+                 "' AND racked_in IS NULL AND destroyed_at IS NULL");
+
+    if (!enemy_ships.empty() && std::atoi(enemy_ships[0][0].c_str()) > 0)
+    {
+        // Enemy ships present - trigger combat check
+        CombatEngine ce(m_game_id);
+        ce.check_for_combat_triggers();  // Creates combat if not exists
+
+        Logger::instance().info("[MOVE] Contact - enemy ships in " + finalHex);
+
+        // Notify both players
+        std::string sysName = finalSystem.empty() ? finalHex : finalSystem;
+        std::string alertMsg =
+            "TACTICAL ALERT: Contact! Enemy forces detected in " + sysName +
+            "!\n>> Combat will resolve when movement phase ends.";
+
+        Telemetry::getInstance().write(alertMsg);
+        Telemetry::getInstance().tell(PlayerTarget::THEM, alertMsg);
+    }
 
     return true;
 }
