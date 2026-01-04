@@ -14,6 +14,7 @@
 #include "logger.h"
 #include "ships.h"
 #include "telemetry.h"
+#include "turn_end.h"
 #include "util.h"
 
 // Methods doing work do NOT move state.
@@ -1038,6 +1039,9 @@ void StateMachine::advance_next(GameState& s)
     {
         s.active_player = "A";
         s.round++;
+
+        // Trigger round-end processing (market, facilities, resources, income)
+        TurnEndProcessor::on_round_complete(s.game_id, s.round - 1);
     }
     s.phase_index = PH_BUILD_SHIPS;
     apply_start_of_turn(s);

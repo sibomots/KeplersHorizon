@@ -59,6 +59,7 @@ src/fabricate_command.cpp
 src/constraints.cpp
 src/salvage_command.cpp
 src/facilities.cpp
+src/turn_end.cpp
 src/init.cpp
 src/json.cpp
 src/logger.cpp
@@ -121,6 +122,7 @@ inc/fabricate_command.h
 inc/constraints.h
 inc/salvage_command.h
 inc/facilities.h
+inc/turn_end.h
 inc/state.h
 inc/statemachine.h
 inc/telemetry.h

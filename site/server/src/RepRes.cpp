@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "db.h"
+#include "facilities.h"
 #include "repair_command.h"
 #include "resupply_command.h"
 #include "statemachine.h"
@@ -57,21 +58,44 @@ bool RepairCommand::invoke(void)
         return true;
     }
 
-    // Validate ship exists and is at player's base star
+    // Validate ship exists and is at player's base star OR controlled repair facility
     auto shipRow = db.query(
         "SELECT s.at_hex, s.pd, s.beam, s.screen, s.tube, s.missiles, "
-        "s.pd_orig, s.beam_orig, s.screen_orig, s.tube_orig, s.missiles_orig "
+        "s.pd_orig, s.beam_orig, s.screen_orig, s.tube_orig, s.missiles_orig, "
+        "ss.name "
         "FROM ships s "
-        "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
+        "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.map_id = 1 "
         "WHERE s.game_id=" +
         std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
-        "' AND s.ship_code='" + db.esc(m_ship_code) + "' AND bs.owner='" +
-        std::string(1, owner) + "' AND s.destroyed_at IS NULL");
+        "' AND s.ship_code='" + db.esc(m_ship_code) + "' AND s.destroyed_at IS NULL");
 
     if (shipRow.empty())
     {
+        Telemetry::getInstance().write("Ship not found.");
+        return false;
+    }
+
+    std::string system_name = shipRow[0][11];
+    std::string at_hex = shipRow[0][0];
+
+    // Check if at base star
+    auto base_check = db.query(
+        "SELECT 1 FROM base_stars WHERE game_id=" + std::to_string(s.game_id) +
+        " AND hex_id='" + db.esc(at_hex) + "' AND owner='" +
+        std::string(1, owner) + "'");
+
+    bool can_repair = !base_check.empty();
+
+    // Also check for controlled repair facility
+    if (!can_repair && !system_name.empty())
+    {
+        can_repair = FacilityEngine::can_repair_at(s.game_id, system_name, owner);
+    }
+
+    if (!can_repair)
+    {
         Telemetry::getInstance().write(
-            "Ship not found or not at your base star.");
+            "Ship must be at your base star or a controlled repair facility.");
         return false;
     }
 

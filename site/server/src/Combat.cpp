@@ -18,6 +18,7 @@
 #include "combat_commit_command.h"
 #include "combat_drafts_command.h"
 #include "combat_order_command.h"
+#include "constraints.h"
 #include "db.h"
 #include "logger.h"
 #include "maputil.h"
@@ -484,6 +485,13 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
     }
 
+    // Lookup system name for constraint check
+    std::string combat_system;
+    auto sys_row = db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" +
+                            db.esc(hex_id) + "' LIMIT 1");
+    if (!sys_row.empty())
+        combat_system = sys_row[0][0];
+
     std::ostringstream log;
     log << "\\n=====\\n";
     log << "       COMBAT ROUND " << cs.round << " RESOLUTION\\n";
@@ -523,6 +531,15 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 if (mod != -999)
                 {
                     int dmg = ship.ord.power_b + ship.tech + mod;
+
+                    // Apply combat constraint modifier for attacker
+                    if (!combat_system.empty())
+                    {
+                        int constraint_mod = ConstraintEngine::get_combat_modifier(
+                            game_id, combat_system, ship.owner);
+                        dmg += constraint_mod;
+                    }
+
                     if (dmg > 0)
                     {
                         target->damage_received += dmg;
@@ -590,11 +607,23 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         if (mod != -999)
                         {
                             int dmg = 3 + ship.tech + mod; // Base warhead 3?
-                            target->damage_received += dmg;
-                            log << ship.code << " '" << ship.name
-                                << "' missile hits " << target->code << " '"
-                                << target->name << "' for " << dmg
-                                << " dmg!\\n";
+
+                            // Apply combat constraint modifier for attacker
+                            if (!combat_system.empty())
+                            {
+                                int constraint_mod = ConstraintEngine::get_combat_modifier(
+                                    game_id, combat_system, ship.owner);
+                                dmg += constraint_mod;
+                            }
+
+                            if (dmg > 0)
+                            {
+                                target->damage_received += dmg;
+                                log << ship.code << " '" << ship.name
+                                    << "' missile hits " << target->code << " '"
+                                    << target->name << "' for " << dmg
+                                    << " dmg!\\n";
+                            }
                         }
                         else
                         {

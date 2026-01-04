@@ -131,3 +131,11 @@ Ctrl-a d
 screen -r long_job
 ```
 
+## Tagging
+
+```
+git submodule foreach --recursive 'git tag -a v1.0.0 -m "Version 1.0.0 tag"'
+git tag -a v1.0.0 -m "Version 1.0.0 tag"
+```
+
+

@@ -270,6 +270,55 @@ bool MoveCommand::invoke(void)
     // Save game state to persist changes
     StateMachine::getInstance().save_game(s);
 
+    // Auto-update Grimoire knowledge if entering a new system
+    if (!finalSystem.empty())
+    {
+        // Check current knowledge level
+        auto know = db.query(
+            "SELECT knowledge_level FROM grimoire_entries "
+            "WHERE game_id=" +
+            std::to_string(m_game_id) + " AND player='" +
+            std::string(1, active_player) + "' AND system_name='" +
+            db.esc(finalSystem) + "'");
+
+        std::string current_level = know.empty() ? "Unknown" : know[0][0];
+
+        // Upgrade if Unknown - check for LRS
+        if (current_level == "Unknown")
+        {
+            auto lrs_check = db.query("SELECT lrs FROM ships WHERE game_id=" +
+                                      std::to_string(m_game_id) + " AND owner='" +
+                                      std::string(1, active_player) +
+                                      "' AND ship_code='" + db.esc(sh.code) + "'");
+
+            int lrs = lrs_check.empty() ? 0 : std::atoi(lrs_check[0][0].c_str());
+            std::string new_level = (lrs > 0) ? "Charted" : "Rumored";
+
+            if (know.empty())
+            {
+                db.exec("INSERT INTO grimoire_entries(game_id, player, "
+                        "system_name, knowledge_level, last_updated_turn) "
+                        "VALUES(" +
+                        std::to_string(m_game_id) + ",'" +
+                        std::string(1, active_player) + "','" +
+                        db.esc(finalSystem) + "','" + new_level + "'," +
+                        std::to_string(s.round) + ")");
+            }
+            else
+            {
+                db.exec("UPDATE grimoire_entries SET knowledge_level='" +
+                        new_level + "', last_updated_turn=" +
+                        std::to_string(s.round) + " WHERE game_id=" +
+                        std::to_string(m_game_id) + " AND player='" +
+                        std::string(1, active_player) + "' AND system_name='" +
+                        db.esc(finalSystem) + "'");
+            }
+
+            Telemetry::getInstance().write("GRIMOIRE: " + finalSystem +
+                                           " now " + new_level + ".");
+        }
+    }
+
     std::ostringstream o;
     o << "NAV: " << sh.name << " (" << sh.code << ") transit to "
       << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex

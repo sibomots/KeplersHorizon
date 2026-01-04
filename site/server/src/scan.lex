@@ -39,7 +39,6 @@
 "crt"      { return TOK_CRT; }
 "status"   { return TOK_STATUS; }
 "drafts"   { return TOK_DRAFTS; }
-"list"     { return TOK_LIST; }
 
 "online"   { return TOK_ONLINE; }
 "stats"    { return TOK_STATS; }
