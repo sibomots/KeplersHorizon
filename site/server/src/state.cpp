@@ -8,9 +8,8 @@
 #include "app.h"
 #include "comms.h"
 #include "db.h"
-#include "statemachine.h"
-// BUGBUG #include "game.h"
 #include "json.h"
+#include "statemachine.h"
 #include "telemetry.h"
 #include "typedefs.h"
 #include "util.h"
@@ -30,10 +29,11 @@ void handle_state(const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    // Set StateMachine context so Telemetry::get_queued_messages works correctly
+    // Set StateMachine context so Telemetry::get_queued_messages works
+    // correctly
     StateMachine::getInstance().set_game_id(a.game_id);
     StateMachine::getInstance().set_current_player(a.player);
-    
+
     // Telemetry::status() accesses StateMachine singleton and builds complete
     // JSON, including queued messages for this player
     Telemetry::getInstance().status(a.player, resp);

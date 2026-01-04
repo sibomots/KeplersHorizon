@@ -12,8 +12,9 @@
 #include <vector>
 
 std::string trim(const std::string& s);
-char owner_for_username(const std::string& u);  // Legacy fallback
-char seat_for_user(int game_id, int user_id);   // Dynamic seat lookup from game_seats table
+char owner_for_username(const std::string& u); // Legacy fallback
+char seat_for_user(int game_id,
+                   int user_id); // Dynamic seat lookup from game_seats table
 std::string now_iso();
 bool starts_with(const std::string& s, const std::string& p);
 std::string to_lower(std::string s);

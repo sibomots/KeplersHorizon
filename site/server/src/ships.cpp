@@ -24,7 +24,8 @@
     return rows[0][0];
 }
 
-/* CP */ void set_current_draft(int game_id, char owner, const std::string& code_or_null)
+/* CP */ void set_current_draft(int game_id, char owner,
+                                const std::string& code_or_null)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string col = (owner == 'A') ? "current_draft_A" : "current_draft_B";
@@ -132,7 +133,8 @@
     db.exec(q);
 }
 
-/* CP */ void update_draft_attrs(int game_id, char owner, const std::string& code, const DraftRow& d)
+/* CP */ void update_draft_attrs(int game_id, char owner,
+                                 const std::string& code, const DraftRow& d)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string q = "UPDATE drafts SET pd=" + std::to_string(d.attr.PD) +
@@ -198,7 +200,8 @@
         "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
         "FROM ships WHERE game_id=" +
         std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
-        "' AND ship_code='" + db.esc(code) + "' AND destroyed_at IS NULL LIMIT 1");
+        "' AND ship_code='" + db.esc(code) +
+        "' AND destroyed_at IS NULL LIMIT 1");
     if (rows.empty())
         throw std::runtime_error("ship not found");
     auto& r = rows[0];
@@ -221,7 +224,8 @@
     return s;
 }
 
-/* CP */ int count_racked_in(int game_id, char owner, const std::string& warpship_code)
+/* CP */ int count_racked_in(int game_id, char owner,
+                             const std::string& warpship_code)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     auto rows = db.query(
@@ -257,7 +261,11 @@
     db.exec(q);
 }
 
-/* CP */ void update_ship_location(int game_id, char owner, const std::string& code, const std::string& at_system, const std::string& at_hex, const std::string& racked_in)
+/* CP */ void update_ship_location(int game_id, char owner,
+                                   const std::string& code,
+                                   const std::string& at_system,
+                                   const std::string& at_hex,
+                                   const std::string& racked_in)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string q =

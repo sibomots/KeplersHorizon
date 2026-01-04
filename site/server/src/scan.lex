@@ -51,33 +51,51 @@
 "next"     { return TOK_NEXT; }
 "n"        { return TOK_NEXT; }
 "done"     { return TOK_DONE; }
+"ZZ"       { return TOK_DONE; }
 
 "cancel"   { return TOK_CANCEL; }
 "commit"   { return TOK_COMMIT; }
 
 "combat"   { return TOK_COMBAT; }
+"c"        { return TOK_COMBAT; }
+"cd"       { return TOK_COMBAT_DRAFTS; }
 "order"    { return TOK_ORDER; }
+"co"       { return TOK_COMBAT_ORDER; }
 "apply"    { return TOK_APPLY; }
+"ca"       { return TOK_COMBAT_APPLY; }
+"cc"       { return TOK_COMBAT_COMMIT; }
+"cx"       { return TOK_COMBAT_CANCEL; }
 "attack"   { return TOK_ATTACK;}
 "a"        { return TOK_ATTACK; }
 "dodge"    { return TOK_DODGE; }
+"d"        { return TOK_DODGE; }
 "escape"   { return TOK_ESCAPE; }
 "e"        { return TOK_ESCAPE; }
 
 "build"    { return TOK_BUILD; }
+"b"        { return TOK_BUILD; }
+"bc"       { return TOK_BUILD_COMMIT; }
 "new"      { return TOK_NEW; }
+"bn"       { return TOK_BUILD_NEW; }
+"bd"       { return TOK_BUILD_DRAFTS; }
+"bx"       { return TOK_BUILD_CANCEL; }
 "set"      { return TOK_SET_ATTR; }
+"bs"       { return TOK_BUILD_SET_ATTR; }
 
 "deploy"   { return TOK_DEPLOY; }
+"ds"       { return TOK_DEPLOY; }
 
 "move"     { return TOK_MOVE; }
+"m"        { return TOK_MOVE; }
 "pick"     { return TOK_PICK; }
+"p"        { return TOK_PICK; }
 "drop"     { return TOK_DROP; }
+"dd"       { return TOK_DROP; }
 
 "repair"   { return TOK_REPAIR; }
+"rp"       { return TOK_REPAIR; }
 "resupply" { return TOK_RESUPPLY; }
-
-
+"rs"       { return TOK_RESUPPLY; }
 
 "pd"[ \t]*"="[ \t]*[0-9]+   { 
     char* eq = strchr(yytext, '=');
@@ -134,19 +152,6 @@
     yylval.ival = std::atoi(eq + 1);
     return TOK_SR_ASSIGN; 
 }
-
-"pd"       { return TOK_POWER_DRIVE; }
-"d"        { return TOK_POWER_DRIVE; }
-"beam"     { return TOK_BEAM; }
-"b"        { return TOK_BEAM; }
-"screen"   { return TOK_SCREEN; }
-"s"        { return TOK_SCREEN; }
-"tube"     { return TOK_TUBE; }
-"t"        { return TOK_TUBE; }
-"missile"  { return TOK_MISSILE; }
-"m"        { return TOK_MISSILE; }
-
-
 
 [a-zA-Z][a-zA-Z0-9]* {
         yylval.sval = new std::string(yytext);

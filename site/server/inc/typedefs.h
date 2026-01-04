@@ -52,11 +52,12 @@ typedef struct DataConfig
     bool schema;
     bool seed;
 
-    DataConfig() {
-         clean = false;
-         schema = false;
-         seed = false;
-         // strings are already initialized to empty strings.
+    DataConfig()
+    {
+        clean = false;
+        schema = false;
+        seed = false;
+        // strings are already initialized to empty strings.
     }
 } DataConfig;
 
@@ -70,7 +71,6 @@ enum PhaseIndex
     PH_SYSTEM_PICKDROP = 3,
     PH_END_TURN = 4
 };
-
 
 // Ship attribute identifiers
 enum class AttributeID : int
@@ -140,17 +140,24 @@ typedef struct
     std::string destination;
 } MoveParams_t;
 
-typedef struct { /* empty - no parameters */ } NextParams_t;
-typedef struct { /* empty - no parameters */ } DoneParams_t;
-typedef struct { /* empty - no parameters */ } StatusParams_t;
-typedef struct { /* empty - no parameters */ } HelpParams_t;
+typedef struct
+{ /* empty - no parameters */
+} NextParams_t;
+typedef struct
+{ /* empty - no parameters */
+} DoneParams_t;
+typedef struct
+{ /* empty - no parameters */
+} StatusParams_t;
+typedef struct
+{ /* empty - no parameters */
+} HelpParams_t;
 
 typedef struct
 {
     std::string ship_code;
     int order_type;
 } CombatOrderParams_t;
-
 
 // end typedefs
 #endif

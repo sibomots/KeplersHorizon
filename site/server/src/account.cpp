@@ -86,11 +86,11 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         resp->body = json_error("method");
         return;
     }
-    
+
     std::string username = json_get_string(req->body, "username");
     std::string password = json_get_string(req->body, "password");
     std::string email = json_get_string(req->body, "email");
-    
+
     // Validate required fields
     if (username.empty() || password.empty())
     {
@@ -98,7 +98,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         resp->body = json_error("username and password required");
         return;
     }
-    
+
     // Validate username length and format
     if (username.length() < 3 || username.length() > 32)
     {
@@ -106,7 +106,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         resp->body = json_error("username must be 3-32 characters");
         return;
     }
-    
+
     // Validate password length
     if (password.length() < 4)
     {
@@ -114,11 +114,11 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         resp->body = json_error("password must be at least 4 characters");
         return;
     }
-    
+
     DatabaseManager& db = DatabaseManager::getInstance();
-    
+
     // Check if username already exists
-    auto existing = db.query("SELECT id FROM users WHERE username='" + 
+    auto existing = db.query("SELECT id FROM users WHERE username='" +
                              db.esc(username) + "'");
     if (!existing.empty())
     {
@@ -126,11 +126,11 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         resp->body = json_error("username already taken");
         return;
     }
-    
+
     // Check if email already exists (if provided)
     if (!email.empty())
     {
-        auto email_check = db.query("SELECT id FROM users WHERE email='" + 
+        auto email_check = db.query("SELECT id FROM users WHERE email='" +
                                     db.esc(email) + "'");
         if (!email_check.empty())
         {
@@ -139,16 +139,18 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
             return;
         }
     }
-    
+
     // Insert new user (using password_plain for now, bcrypt to be added)
     std::string sql = "INSERT INTO users(username, password_plain";
-    if (!email.empty()) sql += ", email";
+    if (!email.empty())
+        sql += ", email";
     sql += ") VALUES('" + db.esc(username) + "','" + db.esc(password) + "'";
-    if (!email.empty()) sql += ",'" + db.esc(email) + "'";
+    if (!email.empty())
+        sql += ",'" + db.esc(email) + "'";
     sql += ")";
-    
+
     db.exec(sql);
-    
+
     // Get the new user's ID
     auto id_rows = db.query("SELECT LAST_INSERT_ID()");
     if (id_rows.empty())
@@ -158,13 +160,13 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         return;
     }
     int user_id = std::stoi(id_rows[0][0]);
-    
+
     // Auto-login: create session
     std::string token = rand_hex_64();
-    db.exec("INSERT INTO sessions(token, user_id) VALUES('" + 
-            db.esc(token) + "'," + std::to_string(user_id) + ")");
-    
-    resp->body = "{\"ok\":true,\"token\":\"" + token + 
-                 "\",\"username\":\"" + json_escape(username) + 
+    db.exec("INSERT INTO sessions(token, user_id) VALUES('" + db.esc(token) +
+            "'," + std::to_string(user_id) + ")");
+
+    resp->body = "{\"ok\":true,\"token\":\"" + token + "\",\"username\":\"" +
+                 json_escape(username) +
                  "\",\"user_id\":" + std::to_string(user_id) + "}";
 }

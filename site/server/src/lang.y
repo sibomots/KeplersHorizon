@@ -45,14 +45,9 @@ extern "C" FILE *yyin;
 
 void yyerror(const char *s);
 
-// Globals to inject context into the parser actions
-//BUGBUG extern int g_game_id;
-//BUGBUG extern StateMachine& g_statemachine;
-
 // BUGBUG
 // Global builder for accumulating build set attributes
 BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder();
-
 // Global builders for combat commands (accumulate power/damage specs from sub-rules)
 CombatOrderCommand::Builder* g_combat_order_builder = new CombatOrderCommand::Builder();
 CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
@@ -86,8 +81,21 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_BASIC
 %token TOK_BEAM
 %token TOK_BUILD
+%token TOK_BUILD_COMMIT
+%token TOK_BUILD_NEW
+%token TOK_BUILD_DRAFTS
+%token TOK_BUILD_CANCEL
+%token TOK_BUILD_SET_ATTR
+
 %token TOK_CANCEL
+
 %token TOK_COMBAT
+%token TOK_COMBAT_DRAFTS
+%token TOK_COMBAT_ORDER
+%token TOK_COMBAT_APPLY
+%token TOK_COMBAT_COMMIT
+%token TOK_COMBAT_CANCEL
+
 %token TOK_COMMIT
 %token TOK_CRT
 %token TOK_DELETE
@@ -298,60 +306,56 @@ turn_cmd:
   }
   ;
 
-combat_order_commitment_cmd:
-   TOK_CANCEL {
-      Logger::instance().info("Cancel whatever the current operation "
-                "of the current operation in progress. Example:  "
-                "build cancel, combat cancel. Doesn't advance the phase, "
-                " just undo everything that was proposed IN THE PHASE.");
-   }
-   | TOK_COMMIT {
-      Logger::instance().info("Commit whatever the current operation "
-                "of the current operation in progress. Example: "
-                "build commit, combat commit. The operation is "
-                "effective upon the commit. REMAIN IN PHASE. ");
-   }
-   ;
-
-damage_allotment_commitment_cmd:
-   TOK_CANCEL {
-      Logger::instance().info("Cancel whatever the current operation "
-                "of the current operation in progress. Example:  "
-                "build cancel, combat cancel. Doesn't advance the phase, "
-                " just undo everything that was proposed IN THE PHASE.");
-   }
-   | TOK_COMMIT {
-      Logger::instance().info("Commit whatever the current operation "
-                "of the current operation in progress. Example: "
-                "build commit, combat commit. The operation is "
-                "effective upon the commit. REMAIN IN PHASE. ");
-   }
-   ;
-
-// combat and combat sub-commands
-// "combat" { return TOK_COMBAT; }
-// "order" { return TOK_ORDER; }
-// "apply" { return TOK_APPLY; }
-
 combat_cmd:
+   // combat
+   // c
    TOK_COMBAT {
       Logger::instance().info("Status of combat situation");
    }
+
+   // combat drafts
    | TOK_COMBAT TOK_DRAFTS {
        ICmd* pCmd = CombatDraftsCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
+   //  cd
+   | TOK_COMBAT_DRAFTS {
+       ICmd* pCmd = CombatDraftsCommand::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+
+
+   // combat commit
    | TOK_COMBAT TOK_COMMIT {
        ICmd* pCmd = CombatCommitCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
+
+   // cc
+   | TOK_COMBAT_COMMIT {
+       ICmd* pCmd = CombatCommitCommand::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+
+   // combat cancel
    | TOK_COMBAT TOK_CANCEL {
        ICmd* pCmd = CombatCancelCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
+
+   // cx
+   | TOK_COMBAT_CANCEL {
+       ICmd* pCmd = CombatCancelCommand::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+
+   // combat order ...
    | TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship combat_order_spec {
        // Build and invoke combat order command
        ICmd* pCmd = g_combat_order_builder->build();
@@ -361,7 +365,31 @@ combat_cmd:
        delete g_combat_order_builder;
        g_combat_order_builder = new CombatOrderCommand::Builder();
    }
+
+   // co
+   | TOK_COMBAT_ORDER combat_initiator_ship combat_tactic combat_target_ship combat_order_spec {
+       // Build and invoke combat order command
+       ICmd* pCmd = g_combat_order_builder->build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+       // Reset builder for next command
+       delete g_combat_order_builder;
+       g_combat_order_builder = new CombatOrderCommand::Builder();
+   }
+
+   // combat apply ...
    | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_application_spec {
+       // Build and invoke combat apply command
+       ICmd* pCmd = g_combat_apply_builder->build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+       // Reset builder for next command
+       delete g_combat_apply_builder;
+       g_combat_apply_builder = new CombatApplyCommand::Builder();
+   }
+
+   // ca ...
+   | TOK_COMBAT_APPLY combat_damaged_ship combat_application_spec {
        // Build and invoke combat apply command
        ICmd* pCmd = g_combat_apply_builder->build();
        if (pCmd && pCmd->invoke()) { /* success */ }
@@ -461,18 +489,6 @@ additional_combat_order_spec:
   }
   ;
 
-// Ship Attribute labels
-// "pd" { return TOK_POWER_DRIVE; }
-// "d" { return TOK_POWER_DRIVE; }
-// "beam" { return TOK_BEAM; }
-// "b" { return TOK_BEAM; }
-// "screen" { return TOK_SCREEN; }
-// "s" { return TOK_SCREEN; }
-// "tube" { return TOK_TUBE; }
-// "t" { return TOK_TUBE; }
-// "missile" { return TOK_MISSILE; }
-// "m" { return TOK_MISSILE; }
-
 combat_application_spec:
   TOK_PD_ASSIGN additional_combat_application_spec {
       g_combat_apply_builder->assign("D", $1);
@@ -510,28 +526,20 @@ additional_combat_application_spec:
   }
   ;
 
-// building and building sub-commands
-// "build" { return TOK_BUILD; }
-// "new" { return TOK_NEW; }
-// "set" { return TOK_SET_ATTR; }
-
-// Ship Attribute labels
-// "pd" { return TOK_POWER_DRIVE; }
-// "d" { return TOK_POWER_DRIVE; }
-// "beam" { return TOK_BEAM; }
-// "b" { return TOK_BEAM; }
-// "screen" { return TOK_SCREEN; }
-// "s" { return TOK_SCREEN; }
-// "tube" { return TOK_TUBE; }
-// "t" { return TOK_TUBE; }
-// "missile" { return TOK_MISSILE; }
-// "m" { return TOK_MISSILE; }
-
 build_cmd:
+  // build
+  // b
   TOK_BUILD {
       Logger::instance().info("Without arguments, shows "
                               "current build state");
+      Logger::instance().info("List all pending build drafts");
+      ICmd *pCmd = BuildListDraftsCommand::Builder()
+                  .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
   }
+
+  // build new ...
   | TOK_BUILD TOK_NEW TOK_STRING TOK_STRING {
       std::string code(*$3);
       std::string name(*$4);
@@ -543,6 +551,21 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
+
+  // bn ...
+  | TOK_BUILD_NEW TOK_STRING TOK_STRING {
+      std::string code(*$2);
+      std::string name(*$3);
+      Logger::instance().info("Create new draft: " + code + " '" + name + "'");
+      ICmd *pCmd = BuildNewCommand::Builder()
+                  .set_ship_code(code)
+                  .set_ship_name(name)
+                  .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+  }
+
+  // build drafts
   | TOK_BUILD TOK_DRAFTS {
       Logger::instance().info("List all pending build drafts");
       ICmd *pCmd = BuildListDraftsCommand::Builder()
@@ -550,6 +573,17 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
+
+  // bd
+  | TOK_BUILD_DRAFTS {
+      Logger::instance().info("List all pending build drafts");
+      ICmd *pCmd = BuildListDraftsCommand::Builder()
+                  .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+  }
+
+  // build drafts ...
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
       std::string ship_code = *$3;
       Logger::instance().info("Show draft details: " + ship_code);
@@ -559,14 +593,40 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
+
+  // bd ...
+  | TOK_BUILD_DRAFTS building_draft_ship {
+      std::string ship_code = *$2;
+      Logger::instance().info("Show draft details: " + ship_code);
+      ICmd *pCmd = BuildShowDraftCommand::Builder()
+                  .set_draft_code(ship_code)
+                  .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+  }
+
+
+  // build set ...
   | TOK_BUILD TOK_SET_ATTR build_attr_spec {
       Logger::instance().info("Set attributes on current draft");
       ICmd *pCmd = g_build_set_builder->build();
       pCmd->invoke();
       SafeDelete(pCmd);
       delete g_build_set_builder;
-      g_build_set_builder = new BuildSetAttributeCommand::Builder(); // Reset
+      g_build_set_builder = new BuildSetAttributeCommand::Builder();
   }
+
+  // bs ...
+  | TOK_BUILD_SET_ATTR build_attr_spec {
+      Logger::instance().info("Set attributes on current draft");
+      ICmd *pCmd = g_build_set_builder->build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+      delete g_build_set_builder;
+      g_build_set_builder = new BuildSetAttributeCommand::Builder();
+  }
+
+  // build commit
   | TOK_BUILD TOK_COMMIT {
       Logger::instance().info("Build commit - committing current draft");
       ICmd *pCmd = BuildCommitCommand::Builder()
@@ -574,6 +634,16 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
+
+  // bc
+  | TOK_BUILD_COMMIT {
+      Logger::instance().info("Build commit - committing current draft");
+      ICmd *pCmd = BuildCommitCommand::Builder()
+                  .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+  }
+
   | TOK_BUILD TOK_CANCEL {
       Logger::instance().info("Build cancel - canceling current draft");
       ICmd *pCmd = BuildCancelCommand::Builder()
@@ -581,6 +651,16 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
+
+  // bx
+  | TOK_BUILD_CANCEL {
+      Logger::instance().info("Build cancel - canceling current draft");
+      ICmd *pCmd = BuildCancelCommand::Builder()
+                  .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+  }
+
   ;
 
 
@@ -639,6 +719,8 @@ deployable_ship:
   ;
 
 deploy_cmd:
+   // deploy
+   // ds
    TOK_DEPLOY {
        Logger::instance().info("Show current self deployment");
        Logger::instance().info("Show opponent deployment");
@@ -672,31 +754,40 @@ target_systemship:
   ;
 
 // Movement
-// "move" { return TOK_MOVE; }
 chain_move_location:
-   /* empty - no more waypoints */ {
+   // empty - no more waypoints
+   {
        $$ = new std::vector<std::string>;
    }
    | TOK_STRING chain_move_location {
        std::string waypoint(*$1);
-       Logger::instance().info("Additional waypoint on chain: >" + waypoint + "<");
-       $$ = $2;  // Take the vector from the recursive call
-       $$->insert($$->begin(), waypoint);  // Prepend this waypoint
+       Logger::instance().info("Additional waypoint on chain: >"
+                                + waypoint + "<");
+       $$ = $2;
+       $$->insert($$->begin(), waypoint);
        delete $1;
    }
    ;
 
 
 move_cmd:
+  // move
+  // m
   TOK_MOVE {
        Logger::instance().info("Show move status");
   }
+
+  // move
+  // m
   | TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
        std::string ship(*$2);
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
        
-       Logger::instance().info("Moving ship >" + ship + "< to >" + first_dest + "<");
+       Logger::instance().info("Moving ship >" 
+                               + ship 
+                               + "< to >" 
+                               + first_dest + "<");
        
        // Build move command with all destinations
        ICmd* pCmd = MoveCommand::Builder()
@@ -733,22 +824,30 @@ warpship_drop_source:
   }
   ;
 pickdrop_cmd:
+  // pick
+  // p
   TOK_PICK TOK_STRING {
      std::string location(*$2);
      Logger::instance().info("Status of what can be picked up at hex "
                  ">" + location + "<");
   }
   // syntax: drop WARPSHIP_ID
+  // pick ...
+  // p ...
   | TOK_DROP warpship_drop_source {
      Logger::instance().info("Only list what may be dropped from "
                              "target WarpShip");
   }
   // syntax: pick SOURCE DESTINATION */
+  // pick ...
+  // p ...
   | TOK_PICK target_systemship warpship_pick_destination {
      Logger::instance().info("Picking up SystemShip to rack "
                              "in target WarpShip");
 
   }
+  // drop ...
+  // d ...
   | TOK_DROP target_systemship warpship_drop_source {
      Logger::instance().info("Dropping target SystemShipship from "
                              "target WarpShip");
@@ -757,11 +856,15 @@ pickdrop_cmd:
 
 
 rep_cmd:
+  // repair
+  // rp
   TOK_REPAIR {
      ICmd* pCmd = RepairCommand::Builder().build();
      if (pCmd && pCmd->invoke()) { /* success */ }
      SafeDelete(pCmd);
   }
+  // repair ...
+  // rp ...
   | TOK_REPAIR TOK_STRING repair_attr_spec {
      // g_repair_builder populated by repair_attr_spec
      g_repair_builder->set_ship_code(*$2);
@@ -771,11 +874,15 @@ rep_cmd:
      delete g_repair_builder;
      g_repair_builder = new RepairCommand::Builder();
   }
+  // resupply
+  // rs
   | TOK_RESUPPLY {
      ICmd* pCmd = ResupplyCommand::Builder().build();
      if (pCmd && pCmd->invoke()) { /* success */ }
      SafeDelete(pCmd);
   }
+  // resupply ...
+  // rs ...
   | TOK_RESUPPLY TOK_STRING TOK_INT {
      std::string ship(*$2);
      int qty = (int) $3;
@@ -786,10 +893,22 @@ rep_cmd:
   ;
 
 repair_attr_spec:
-  TOK_PD_ASSIGN { g_repair_builder->set_attribute("pd"); g_repair_builder->set_amount($1); }
-  | TOK_B_ASSIGN { g_repair_builder->set_attribute("b"); g_repair_builder->set_amount($1); }
-  | TOK_S_ASSIGN { g_repair_builder->set_attribute("s"); g_repair_builder->set_amount($1); }
-  | TOK_T_ASSIGN { g_repair_builder->set_attribute("t"); g_repair_builder->set_amount($1); }
+  TOK_PD_ASSIGN {
+      g_repair_builder->set_attribute("pd");
+      g_repair_builder->set_amount($1);
+  }
+  | TOK_B_ASSIGN {
+      g_repair_builder->set_attribute("b");
+      g_repair_builder->set_amount($1);
+  }
+  | TOK_S_ASSIGN {
+      g_repair_builder->set_attribute("s");
+      g_repair_builder->set_amount($1);
+  }
+  | TOK_T_ASSIGN {
+      g_repair_builder->set_attribute("t");
+      g_repair_builder->set_amount($1);
+  }
   ; 
  
  

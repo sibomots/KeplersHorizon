@@ -13,7 +13,7 @@
 #include "srvmgr.h"
 #include "util.h"
 
-static DataConfig  dataconfig;
+static DataConfig dataconfig;
 
 void init(void)
 {
@@ -24,25 +24,17 @@ void init(void)
 void license(void)
 {
     std::cout
-        << std::endl
-        << std::endl
         << "Kepler's Horizion is licensed under the BSD 3-Clause License\n"
            "Copyright (c) 2025, sibomots\n\n"
-           "https://github.com/sibomots/KeplersHorizon\n"
-        << std::endl
+           "https://github.com/sibomots/KeplersHorizon"
         << std::endl;
 }
 
-// BUGBUG
 void advice(void)
 {
-    std::cout << std::endl
-              << std::endl
-              << "Have fun!" << std::endl
-              << std::endl;
+    std::cout << "Have fun!" << std::endl;
 }
 
-// BUGBUG
 void banner(void)
 {
     license();
@@ -67,7 +59,8 @@ void apply_arguments(int argc, char** argv)
 
         auto next_flag = [&](bool& out) {
             // the fact the flag was used, it's true.
-            // no need to look at i+1 argv.  the flag is just a flag. No arguments to it.
+            // no need to look at i+1 argv.  the flag is just a flag. No
+            // arguments to it.
             out = true;
         };
 
@@ -87,7 +80,7 @@ void apply_arguments(int argc, char** argv)
         {
             next(dbconfig.dbname);
         }
-        else if (k == "--clean") 
+        else if (k == "--clean")
         {
             next_flag(dataconfig.clean);
         }
@@ -120,7 +113,6 @@ void create_db()
     }
     catch (const std::exception& ex)
     {
-        // BUGBUG
         std::fprintf(stderr, "fatal: %s\n", ex.what());
         return;
     }
@@ -128,74 +120,67 @@ void create_db()
 
 void test_db(void)
 {
-    std::cout << "[test_db] Starting database validation..." << std::endl;
-    
+    std::cout << "[TEST] Starting database validation..." << std::endl;
+
     DatabaseManager& db = DatabaseManager::getInstance();
-    
+
     // Test 1: Connection test (already connected by create_db)
     try
     {
         auto ping = db.query("SELECT 1");
         if (ping.empty())
         {
-            std::cerr << "[test_db] FAIL: Connection test returned no rows" << std::endl;
+            std::cerr << "[TEST] FAIL: Connection test returned no rows"
+                      << std::endl;
             return;
         }
-        std::cout << "[test_db] PASS: Database connection OK" << std::endl;
+        std::cout << "[TEST] PASS: Database connection OK" << std::endl;
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "[test_db] FAIL: Connection test: " << ex.what() << std::endl;
+        std::cerr << "[TEST] FAIL: Connection test: " << ex.what() << std::endl;
         return;
     }
-    
+
     // Test 2: Required tables exist
     const char* required_tables[] = {
-        "users",
-        "sessions",
-        "rooms",
-        "games",
-        "game_seats",
-        "game_events",
-        "drafts",
-        "ships",
-        "star_systems",
-        "warplines",
-        "hexes",
-        "combat_state",
-        "combat_orders",
-        "telemetry_queue"
-    };
-    
+        "users",         "sessions",       "rooms",  "games",
+        "game_seats",    "game_events",    "drafts", "ships",
+        "star_systems",  "warplines",      "hexes",  "combat_state",
+        "combat_orders", "telemetry_queue"};
+
     bool all_tables_ok = true;
     for (const char* table : required_tables)
     {
         try
         {
-            auto check = db.query(
-                "SELECT COUNT(*) FROM information_schema.tables "
-                "WHERE table_schema = DATABASE() AND table_name = '" +
-                std::string(table) + "'");
-            
+            auto check =
+                db.query("SELECT COUNT(*) FROM information_schema.tables "
+                         "WHERE table_schema = DATABASE() AND table_name = '" +
+                         std::string(table) + "'");
+
             if (check.empty() || check[0][0] == "0")
             {
-                std::cerr << "[test_db] FAIL: Table '" << table << "' does not exist" << std::endl;
+                std::cerr << "[TEST] FAIL: Table '" << table
+                          << "' does not exist" << std::endl;
                 all_tables_ok = false;
             }
         }
         catch (const std::exception& ex)
         {
-            std::cerr << "[test_db] FAIL: Error checking table '" << table << "': " << ex.what() << std::endl;
+            std::cerr << "[TEST] FAIL: Error checking table '" << table
+                      << "': " << ex.what() << std::endl;
             all_tables_ok = false;
         }
     }
-    
+
     if (all_tables_ok)
     {
-        std::cout << "[test_db] PASS: All " << (sizeof(required_tables)/sizeof(required_tables[0])) 
+        std::cout << "[TEST] PASS: All "
+                  << (sizeof(required_tables) / sizeof(required_tables[0]))
                   << " required tables exist" << std::endl;
     }
-    
+
     // Test 3: Insert/delete test row in sessions (verify write access)
     try
     {
@@ -204,39 +189,46 @@ void test_db(void)
         if (!userCheck.empty())
         {
             int user_id = std::stoi(userCheck[0][0]);
-            std::string test_token = "__test_token_" + std::to_string(std::time(nullptr));
-            
+            std::string test_token =
+                "__test_token_" + std::to_string(std::time(nullptr));
+
             // Insert test session
-            db.exec("INSERT INTO sessions(token, user_id) VALUES('" + 
+            db.exec("INSERT INTO sessions(token, user_id) VALUES('" +
                     db.esc(test_token) + "', " + std::to_string(user_id) + ")");
-            
+
             // Verify it exists
-            auto verify = db.query("SELECT token FROM sessions WHERE token='" + 
+            auto verify = db.query("SELECT token FROM sessions WHERE token='" +
                                    db.esc(test_token) + "'");
             if (verify.empty())
             {
-                std::cerr << "[test_db] FAIL: Test insert verification failed" << std::endl;
+                std::cerr << "[TEST] FAIL: Test insert verification failed"
+                          << std::endl;
             }
             else
             {
-                std::cout << "[test_db] PASS: Write access OK (insert verified)" << std::endl;
+                std::cout << "[TEST] PASS: Write access OK (insert verified)"
+                          << std::endl;
             }
-            
+
             // Cleanup: delete test row
-            db.exec("DELETE FROM sessions WHERE token='" + db.esc(test_token) + "'");
-            std::cout << "[test_db] PASS: Cleanup OK (test row deleted)" << std::endl;
+            db.exec("DELETE FROM sessions WHERE token='" + db.esc(test_token) +
+                    "'");
+            std::cout << "[TEST] PASS: Cleanup OK (test row deleted)"
+                      << std::endl;
         }
         else
         {
-            std::cout << "[test_db] SKIP: Write test skipped (no users in database)" << std::endl;
+            std::cout
+                << "[TEST] SKIP: Write test skipped (no users in database)"
+                << std::endl;
         }
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "[test_db] FAIL: Write test: " << ex.what() << std::endl;
+        std::cerr << "[TEST] FAIL: Write test: " << ex.what() << std::endl;
     }
-    
-    std::cout << "[test_db] Database validation complete." << std::endl;
+
+    std::cout << "[TEST] Database validation complete." << std::endl;
 }
 
 void load_db()
@@ -250,13 +242,11 @@ void load_services()
     //////////////////////
     create_db();
     load_db();
-    // Optional: validate database schema
     test_db();
 
-    // This creates the server and descritpr for listening on port for REST-ful
-    // transactions
+    // This creates the server and descritpr for
+    // listening on port for REST-ful  transactions
     ServerManager::getInstance().connect();
-
 
     // Front-end Services
     /////////////////////

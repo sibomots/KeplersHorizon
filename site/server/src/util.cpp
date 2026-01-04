@@ -49,19 +49,20 @@ char owner_for_username(const std::string& u)
     return 0;
 }
 
-// Dynamic seat lookup - returns 'A' or 'B' based on game_seats table, or 0 if not in game
+// Dynamic seat lookup - returns 'A' or 'B' based on game_seats table, or 0 if
+// not in game
 char seat_for_user(int game_id, int user_id)
 {
     if (game_id == 0 || user_id == 0)
         return 0;
-    
+
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query("SELECT seat FROM game_seats WHERE game_id=" + 
-                         std::to_string(game_id) + " AND user_id=" + 
-                         std::to_string(user_id) + " LIMIT 1");
+    auto rows = db.query(
+        "SELECT seat FROM game_seats WHERE game_id=" + std::to_string(game_id) +
+        " AND user_id=" + std::to_string(user_id) + " LIMIT 1");
     if (!rows.empty() && !rows[0].empty() && !rows[0][0].empty())
     {
-        return rows[0][0][0];  // Return 'A' or 'B'
+        return rows[0][0][0]; // Return 'A' or 'B'
     }
     return 0;
 }
@@ -168,7 +169,6 @@ std::string escape_json(const std::string& s)
     return o.str();
 }
 
-// BUGBUG
 std::string upper_ascii(const std::string& s)
 {
     std::string r = s;

@@ -8,9 +8,8 @@
 #include "app.h"
 #include "comms.h"
 #include "db.h"
-#include "statemachine.h"
-// BUGBUG #include "game.h"
 #include "json.h"
+#include "statemachine.h"
 
 void handle_events(const HttpRequest* req, HttpResponse* resp)
 {

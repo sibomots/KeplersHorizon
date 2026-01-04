@@ -9,6 +9,7 @@
 #define __COMBAT_ORDER_COMMAND_H__
 
 #include <string>
+
 #include "icmd.h"
 
 class CombatOrderCommand : public ICmd
@@ -36,7 +37,9 @@ class CombatOrderCommand : public ICmd
         int _power_t = 0;
         std::string _missiles_json = "[]";
 
-        Builder() {}
+        Builder()
+        {
+        }
 
         Builder& ship_code(const std::string& code)
         {
@@ -97,12 +100,9 @@ class CombatOrderCommand : public ICmd
   private:
     CombatOrderCommand(Builder& builder)
         : m_ship_code(std::move(builder._ship_code)),
-          m_target_id(std::move(builder._target_id)),
-          m_tactic(builder._tactic),
-          m_power_d(builder._power_d),
-          m_power_b(builder._power_b),
-          m_power_s(builder._power_s),
-          m_power_t(builder._power_t),
+          m_target_id(std::move(builder._target_id)), m_tactic(builder._tactic),
+          m_power_d(builder._power_d), m_power_b(builder._power_b),
+          m_power_s(builder._power_s), m_power_t(builder._power_t),
           m_missiles_json(std::move(builder._missiles_json))
     {
     }

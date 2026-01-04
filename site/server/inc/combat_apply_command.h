@@ -8,8 +8,9 @@
 #ifndef __COMBAT_APPLY_COMMAND_H__
 #define __COMBAT_APPLY_COMMAND_H__
 
-#include <string>
 #include <map>
+#include <string>
+
 #include "icmd.h"
 
 class CombatApplyCommand : public ICmd
@@ -25,7 +26,9 @@ class CombatApplyCommand : public ICmd
         std::string _ship_code;
         std::map<std::string, int> _assignments;
 
-        Builder() {}
+        Builder()
+        {
+        }
 
         Builder& ship_code(const std::string& code)
         {

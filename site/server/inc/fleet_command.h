@@ -16,13 +16,18 @@ class FleetCommand : public ICmd
     class Builder
     {
       public:
-        ICmd* build() { return new FleetCommand(); }
+        ICmd* build()
+        {
+            return new FleetCommand();
+        }
     };
 
     bool invoke(void) override;
 
   private:
-    FleetCommand() {}
+    FleetCommand()
+    {
+    }
 };
 
 #endif

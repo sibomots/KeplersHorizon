@@ -16,14 +16,21 @@ class CombatDraftsCommand : public ICmd
     class Builder
     {
       public:
-        Builder() {}
-        ICmd* build() { return new CombatDraftsCommand(); }
+        Builder()
+        {
+        }
+        ICmd* build()
+        {
+            return new CombatDraftsCommand();
+        }
     };
 
     bool invoke(void) override;
 
   private:
-    CombatDraftsCommand() {}
+    CombatDraftsCommand()
+    {
+    }
 };
 
 #endif

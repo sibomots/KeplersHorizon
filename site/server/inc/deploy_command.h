@@ -9,6 +9,7 @@
 #define __DEPLOY_COMMAND_H__
 
 #include <string>
+
 #include "icmd.h"
 
 class DeployCommand : public ICmd
@@ -49,8 +50,8 @@ class DeployCommand : public ICmd
     bool invoke(void) override;
 
   private:
-    DeployCommand(Builder& builder): 
-          m_ship_code(std::move(builder._ship_code)),
+    DeployCommand(Builder& builder)
+        : m_ship_code(std::move(builder._ship_code)),
           m_system_name(std::move(builder._system_name))
     {
     }

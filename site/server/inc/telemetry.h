@@ -27,19 +27,19 @@ class Telemetry
 {
   private:
     std::vector<std::string> write_buffer;
-    
+
     // Singleton
     Telemetry() = default;
     Telemetry(const Telemetry&) = delete;
     Telemetry& operator=(const Telemetry&) = delete;
-    
+
   public:
     static Telemetry& getInstance()
     {
         static Telemetry instance;
         return instance;
     }
-    
+
     // Core methods - return complete JSON response
     std::string write(const std::string& msg);
     std::string tell(PlayerTarget target, const std::string& msg);
@@ -47,17 +47,19 @@ class Telemetry
 
     // Status response - called by heartbeat handler
     void status(char player, HttpResponse* resp);
-    
+
     // Message accumulation for write() - used during command execution
     void clear_messages();
     void add_message(const std::string& msg);
     std::vector<std::string> get_messages();
-    
+
     // Message queuing for tell/broadcast - delivered via heartbeat (DB-backed)
     void add_tell(char player, const std::string& msg);
-    void add_tell(int game_id, char player, const std::string& msg);  // Explicit game context
+    void add_tell(int game_id, char player,
+                  const std::string& msg); // Explicit game context
     void add_broadcast(const std::string& msg);
-    void add_broadcast(int game_id, const std::string& msg);  // Explicit game context
+    void add_broadcast(int game_id,
+                       const std::string& msg); // Explicit game context
     std::vector<std::string> get_queued_messages(char player);
 };
 

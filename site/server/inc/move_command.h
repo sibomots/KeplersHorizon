@@ -27,7 +27,9 @@ class MoveCommand : public ICmd
         std::string _ship_code;
         std::vector<std::string> _destinations;
 
-        Builder() {}
+        Builder()
+        {
+        }
         Builder& ship_code(const std::string& code)
         {
             _ship_code = code;
@@ -40,13 +42,12 @@ class MoveCommand : public ICmd
         }
         Builder& add_waypoints(std::vector<std::string>* waypoints)
         {
-            if (waypoints != NULL && waypoints->size() > 0) 
+            if (waypoints != NULL && waypoints->size() > 0)
             {
                 // Add chained waypoints
-                for (std::vector<std::string>::const_iterator 
-                        itr = waypoints->begin();
-                        itr != waypoints->end();
-                        ++itr)
+                for (std::vector<std::string>::const_iterator itr =
+                         waypoints->begin();
+                     itr != waypoints->end(); ++itr)
                 {
                     _destinations.push_back(*itr);
                 }

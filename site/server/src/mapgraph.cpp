@@ -87,7 +87,8 @@ void MapGraph::load_state(char owner)
     std::vector<std::vector<std::string>> blocks =
         db.query("SELECT DISTINCT ss.hex_id FROM ships s "
                  "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.map_id=" +
-                 std::to_string(DEFAULT_MAP_ID) + " "
+                 std::to_string(DEFAULT_MAP_ID) +
+                 " "
                  "WHERE s.game_id=" +
                  std::to_string(game_id) + " AND s.owner='" +
                  std::string(1, enemy) + "' AND s.destroyed_at IS NULL");

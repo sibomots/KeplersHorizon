@@ -3,10 +3,10 @@
 #include <map>
 #include <string>
 
-#include "typedefs.h"
 #include "app.h"
-#include "db.h"
 #include "combat.h"
+#include "db.h"
+#include "typedefs.h"
 
 class ShipAttributes
 {
@@ -84,18 +84,23 @@ class ShipRow
 };
 
 std::string get_current_draft(int game_id, char owner);
-void set_current_draft(int game_id, char owner, const std::string& code_or_null);
+void set_current_draft(int game_id, char owner,
+                       const std::string& code_or_null);
 bool draft_exists(int game_id, char owner, const std::string& code);
 bool ship_exists(int game_id, char owner, const std::string& code);
 std::vector<DraftRow> load_drafts(int game_id, char owner);
 DraftRow load_draft(int game_id, char owner, const std::string& code);
 void insert_draft(int game_id, char owner, const DraftRow& d);
-void update_draft_attrs(int game_id, char owner, const std::string& code, const DraftRow& d);
+void update_draft_attrs(int game_id, char owner, const std::string& code,
+                        const DraftRow& d);
 void delete_draft(int game_id, char owner, const std::string& code);
 std::vector<ShipRow> load_ships(int game_id, char owner);
 ShipRow load_ship(int game_id, char owner, const std::string& code);
 int count_racked_in(int game_id, char owner, const std::string& warpship_code);
 void insert_ship(int game_id, char owner, const ShipRow& s);
-void update_ship_location(int game_id, char owner, const std::string& code, const std::string& at_system, const std::string& at_hex, const std::string& racked_in);
+void update_ship_location(int game_id, char owner, const std::string& code,
+                          const std::string& at_system,
+                          const std::string& at_hex,
+                          const std::string& racked_in);
 
 #endif

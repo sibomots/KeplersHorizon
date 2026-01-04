@@ -12,10 +12,10 @@
 
 /**
  * StarSystemConstraints - Environmental modifiers per star system.
- * 
+ *
  * Provides modifiers that affect combat, movement, repair effectiveness
  * based on star system properties (gravity, radiation, asteroids, etc.)
- * 
+ *
  * Returns: -N (weaker), 0 (no effect), +N (stronger)
  */
 class StarSystemConstraints

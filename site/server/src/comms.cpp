@@ -205,10 +205,10 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
         return a;
     }
 
-    std::string q =
-        "SELECT s.user_id,u.username,COALESCE(s.game_id,0) FROM sessions s JOIN users u ON "
-        "u.id=s.user_id WHERE s.token='" +
-        db.esc(tok) + "'";
+    std::string q = "SELECT s.user_id,u.username,COALESCE(s.game_id,0) FROM "
+                    "sessions s JOIN users u ON "
+                    "u.id=s.user_id WHERE s.token='" +
+                    db.esc(tok) + "'";
     auto rows = db.query(q);
     if (rows.empty())
     {
@@ -218,20 +218,21 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     }
     a.user_id = std::atoi(rows[0][0].c_str());
     a.username = rows[0][1];
-    a.game_id = std::atoi(rows[0][2].c_str()); // Load game_id from session (set by room flow)
+    a.game_id = std::atoi(
+        rows[0][2].c_str()); // Load game_id from session (set by room flow)
     a.token = tok;
 
     // Look up player's seat from game_seats table
     // Room flow already set up game_id and game_seats properly
     a.player = seat_for_user(a.game_id, a.user_id);
-    
-    // If no seat found (user not in a game yet), that's okay for lobby/room operations
-    // Commands that require a game will check for valid game state
+
+    // If no seat found (user not in a game yet), that's okay for lobby/room
+    // operations Commands that require a game will check for valid game state
     if (a.game_id != 0 && a.player == 0)
     {
-        Logger::instance().debug("[require_auth] User " + a.username + 
-                                " has game_id=" + std::to_string(a.game_id) + 
-                                " but no seat (may be stale session)");
+        Logger::instance().debug("[require_auth] User " + a.username +
+                                 " has game_id=" + std::to_string(a.game_id) +
+                                 " but no seat (may be stale session)");
     }
 
     // heartbeat

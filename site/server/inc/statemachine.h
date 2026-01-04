@@ -102,7 +102,8 @@ class GameState
     {
         std::ostringstream o;
         o << "{";
-        // NOTE: gameId is NOT included in state_json - it's the database primary key
+        // NOTE: gameId is NOT included in state_json - it's the database
+        // primary key
         o << "\"scenario\":\"" << json_escape(scenario) << "\",";
         o << "\"round\":" << round << ",";
         o << "\"activePlayer\":\"" << active_player << "\",";
@@ -159,7 +160,8 @@ class GameState
                 return "";
             return js.substr(p, e - p);
         };
-        // NOTE: gameId is NOT parsed from JSON - it comes from database primary key
+        // NOTE: gameId is NOT parsed from JSON - it comes from database primary
+        // key
         s.scenario = get_str("scenario");
         s.round = std::max(1, get_num("round"));
         s.active_player = get_str("activePlayer");
@@ -198,8 +200,8 @@ class StateMachine
         // Game lifecycle
         READY_GAME_START,
         GAME_START,
-        IN_GAME,  // Active gameplay - turn phases tracked via PhaseIndex
-        
+        IN_GAME, // Active gameplay - turn phases tracked via PhaseIndex
+
     } ServerState;
 
     typedef struct
@@ -268,7 +270,7 @@ class StateMachine
     {
         return data.game_id;
     }
-    
+
     void set_current_player(char player)
     {
         data.current_player = player;
