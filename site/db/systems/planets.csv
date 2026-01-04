@@ -1,0 +1,106 @@
+id,system_name,star_id,orbital_position,designation,common_name,planet_type,atmosphere,hydrosphere,biosphere,habitability,notes
+1,SONAL,1,1,Sonal I,Crucible,Rocky,Thin,None,None,Hostile,Tidally locked. Mining outposts on dark side extract metals from ancient impact craters.
+2,SONAL,1,2,Sonal II,Verdance,Rocky,Standard,Ocean,Complex,Garden,Temperate garden world. Capital of Western Alliance. Breadbasket of the frontier.
+3,SONAL,1,3,Sonal III,The Anvil,Rocky,Thin,Trace,None,Marginal,Industrial world. Vast shipyards orbit above strip-mined surface.
+4,SONAL,1,4,Sonal IV,Shepherd,GasGiant,Exotic,None,None,Hostile,Massive hydrogen giant. Extraction platforms harvest fuel and volatiles.
+5,SONAL,1,5,Sonal V,Far Watch,IceGiant,Dense,Ice,None,Hostile,Distant ice giant. Naval academy and deep-space sensor arrays.
+6,UR,2,1,Ur I,Cinder,Rocky,None,None,None,Hostile,Scorched rock too close to Ur Alpha. Minimal atmosphere blown away.
+7,UR,2,2,Ur II,Threshold,Rocky,Standard,Trace,Microbial,Marginal,Heavy industrial world. Ancient terraforming partially successful.
+8,UR,2,3,Ur III,Haven,Rocky,Standard,Ocean,Complex,Garden,Garden world. Population center and cultural heart of UR system.
+9,UR,2,4,Ur IV,Bastion,Rocky,Thin,Trace,None,Marginal,Fortress world. Military headquarters of Western Defense Command.
+10,UR,2,5,Ur V,Cloud Marshal,GasGiant,Exotic,None,None,Hostile,Helium-3 harvesting. Critical fuel source for Western fleets.
+11,UR,2,6,Ur VI,Drift,Dwarf,None,Ice,None,Hostile,Distant ice dwarf. Research station studies outer reaches.
+12,LARSU,4,1,Larsu I,Glare,Rocky,None,None,None,Hostile,Radiation-scorched. No permanent habitation possible.
+13,LARSU,4,2,Larsu II,Copper Gate,Rocky,Thin,Trace,None,Marginal,Mining world and trade hub. Gateway commerce center.
+14,LARSU,4,3,Larsu III,Meridian,Rocky,Standard,Moderate,Primitive,Comfortable,Capital world. Domed cities protect from UV radiation.
+15,LARSU,4,5,Larsu V,Mammoth,GasGiant,Exotic,None,None,Hostile,Storm-wracked giant. Scientific research into atmospheric dynamics.
+16,LARSU,4,6,Larsu VI,Outrider,IceGiant,Dense,Ice,None,Hostile,Distant ice giant. Moons largely unmapped.
+17,NINEVEH,5,1,Nineveh I,Glass,Rocky,None,None,None,Hostile,Surface fused by stellar radiation. Uninhabitable.
+18,NINEVEH,5,2,Nineveh II,Gilded Throne,Rocky,Standard,Trace,Complex,Comfortable,Capital world. Ancient ruins predate Ninevite colonization.
+19,NINEVEH,5,3,Nineveh III,Servitor,Rocky,Thin,None,None,Marginal,Automated industrial world. Machine intelligence runs operations.
+20,NINEVEH,5,4,Nineveh IV,Archive,Rocky,Standard,Moderate,Primitive,Comfortable,Library world. Vast data vaults preserve knowledge of ages.
+21,NINEVEH,5,6,Nineveh VI,Leviathan,GasGiant,Exotic,None,None,Hostile,Massive gas giant. 74 moons orbit this behemoth.
+22,NINEVEH,5,7,Nineveh VII,Specter,IceGiant,Dense,Ice,None,Hostile,Dark and cold. Largely unexplored outer reaches.
+23,BABYLON,6,1,Babylon I,Hearth,Rocky,Thin,None,None,Hostile,Volcanic world. Rich in metals but dangerous to work.
+24,BABYLON,6,2,Babylon II,Hanging Gardens,Rocky,Standard,Ocean,Complex,Garden,Garden world. Capital of Eastern powers. Legendary beauty.
+25,BABYLON,6,3,Babylon III,Ziggurat,Rocky,Standard,Moderate,Complex,Comfortable,Temple world. Cultural and religious center.
+26,BABYLON,6,4,Babylon IV,Commerce,Rocky,Standard,Trace,Primitive,Comfortable,Neutral trading world by ancient treaty. All welcome.
+27,BABYLON,6,5,Babylon V,Sentinel,GasGiant,Exotic,None,None,Hostile,Military staging area. Fortress moons guard approaches.
+28,BABYLON,6,6,Babylon VI,Wanderer,IceGiant,Dense,Ice,None,Hostile,Eccentric orbit. Seasons last centuries.
+29,UGARIT,7,1,Ugarit I,Ember,Rocky,Thin,None,None,Hostile,Cooling world. Once molten surface now solidifying.
+30,UGARIT,7,2,Ugarit II,Dagans Rest,Rocky,Standard,Moderate,Complex,Comfortable,Agricultural world. Breadbasket of Eastern territories.
+31,UGARIT,7,3,Ugarit III,The Foundry,Rocky,Thin,None,None,Marginal,Heavy industrial. Strip-mined for millennia.
+32,UGARIT,7,4,Ugarit IV,Saltpan,Rocky,Thin,Trace,Microbial,Marginal,Dry world. Chemical processing facilities.
+33,UGARIT,7,6,Ugarit VI,Remnant,Dwarf,None,Ice,None,Hostile,Distant listening post. Monitors outer approaches.
+34,SIPPUR,8,1,Sippur I,Sunder,Rocky,Thin,None,None,Hostile,Volcanic. Mining operations extract rare metals.
+35,SIPPUR,8,2,Sippur II,Waypoint,Rocky,Standard,Trace,Microbial,Marginal,Colony world. First stop from Sonal.
+36,SIPPUR,8,3,Sippur III,Quiet,Rocky,Thin,Trace,None,Marginal,Sparse population. Agricultural development ongoing.
+37,ERECH,9,1,Erech I,Scorch,Rocky,None,None,None,Hostile,Too close to star. Minimal value.
+38,ERECH,9,2,Erech II,Crossroad,Rocky,Standard,Moderate,Primitive,Comfortable,Junction world. Trade and transit hub.
+39,ERECH,9,3,Erech III,Lowlands,Rocky,Standard,Ocean,Complex,Comfortable,Ocean world. Fishing and aquaculture.
+40,ERECH,9,4,Erech IV,Giant Step,GasGiant,Exotic,None,None,Hostile,Fuel harvesting. Minor refinery operations.
+41,CALAH,10,1,Calah I,Stone,Rocky,None,None,None,Hostile,Airless rock. Minimal resources.
+42,CALAH,10,2,Calah II,Outreach,Rocky,Thin,Trace,Microbial,Marginal,Frontier colony. Sparse population.
+43,CALAH,10,3,Calah III,Stalwart,Rocky,Standard,Moderate,Primitive,Comfortable,Main colony. Military outpost guards approaches.
+44,BYBLOS,11,1,Byblos I,Flash,Rocky,None,None,None,Hostile,Blinding close orbit. Uninhabitable.
+45,BYBLOS,11,2,Byblos II,Ring View,Rocky,Thin,Trace,None,Marginal,Colony with spectacular view of asteroid rings.
+46,BYBLOS,11,4,Byblos IV,Outer Ring,GasGiant,Exotic,None,None,Hostile,Gas giant with prominent ring system.
+47,ADAB,12,1,Adab I,Core,Rocky,Thin,None,None,Hostile,Dense metallic core. Heavy mining.
+48,ADAB,12,2,Adab II,Junction,Rocky,Standard,Trace,Primitive,Comfortable,Transit hub. Three warplines connect here.
+49,ADAB,12,3,Adab III,Green Belt,Rocky,Standard,Moderate,Complex,Comfortable,Agricultural world. Feeds the junction populations.
+50,ADAB,12,4,Adab IV,Titan,GasGiant,Exotic,None,None,Hostile,Major gas giant. Fuel harvesting operations.
+51,SUSA,13,1,Susa I,Ancient,Rocky,None,None,None,Hostile,Airless ancient world. Geological interest only.
+52,SUSA,13,2,Susa II,Keeper,Rocky,Thin,Trace,Microbial,Marginal,Old colony. Conservative population resists change.
+53,SUSA,13,3,Susa III,Tradition,Rocky,Standard,Moderate,Primitive,Comfortable,Cultural center. Preserves ancient ways.
+54,UBAID,14,1,Ubaid I,Pale Light,Rocky,Thin,None,None,Hostile,Dim world far from weak star.
+55,UBAID,14,2,Ubaid II,Endurance,Rocky,Thin,Trace,Microbial,Marginal,Hardy colony. Inhabitants adapted to harsh light.
+56,UBAID,14,3,Ubaid III,Last Light,Rocky,Standard,Moderate,Primitive,Marginal,Outer habitable zone. Cold but livable.
+57,NIPPUR,15,1,Nippur I,First Light,Rocky,Thin,None,None,Hostile,Mining colony. Heavy metal extraction.
+58,NIPPUR,15,2,Nippur II,Confluence,Rocky,Standard,Trace,Primitive,Comfortable,Trade world. Heavily contested between factions.
+59,NIPPUR,15,3,Nippur III,Brokers Seat,Rocky,Standard,Moderate,Primitive,Comfortable,Neutral trading post. Merchants from all territories.
+60,NIPPUR,15,5,Nippur V,Tribute,GasGiant,Exotic,None,None,Hostile,Major fuel depot. Critical strategic resource.
+61,KHAFA,16,1,Khafa I,Frozen,Rocky,Thin,Ice,None,Hostile,Ice world despite proximity to ADAB warpline.
+62,KHAFA,16,2,Khafa II,Dim,Rocky,Thin,Trace,Microbial,Marginal,Sparse colony. Red dwarf provides little warmth.
+63,MARI,17,1,Mari I,Slag,Rocky,None,None,None,Hostile,Molten surface. Uninhabitable inferno.
+64,MARI,17,2,Mari II,Furnace,Rocky,Thin,None,None,Hostile,Barely cooled. Mining robots only.
+65,MARI,17,3,Mari III,Tempered,Rocky,Thin,Trace,Microbial,Marginal,First habitable zone. Mining and refining.
+66,MARI,17,4,Mari IV,Forge,Rocky,Standard,Trace,Primitive,Marginal,Industrial world. Weapons manufacturing.
+67,MARI,17,5,Mari V,Relief,GasGiant,Exotic,None,None,Hostile,Cooler giant. Fuel operations.
+68,LAGASH,18,1,Lagash I,Mercury,Rocky,None,None,None,Hostile,Close orbit. Dense metallic composition.
+69,LAGASH,18,2,Lagash II,Center,Rocky,Standard,Moderate,Complex,Comfortable,Major crossroads world. Cosmopolitan population.
+70,LAGASH,18,3,Lagash III,Stable,Rocky,Standard,Moderate,Primitive,Comfortable,Agricultural support for Center.
+71,LAGASH,18,4,Lagash IV,Distant,GasGiant,Exotic,None,None,Hostile,Fuel processing. Standard operations.
+72,ASSUR,19,1,Assur I,Close Watch,Rocky,Thin,None,None,Hostile,Inner mining world.
+73,ASSUR,19,2,Assur II,Vigilance,Rocky,Standard,Trace,Primitive,Comfortable,Colony world. Watches the crossroads.
+74,ASSUR,19,3,Assur III,Outer Reach,Rocky,Thin,Trace,Microbial,Marginal,Frontier settlement.
+75,SUMARRA,20,1,Sumarra I,Dim Shore,Rocky,Thin,None,None,Hostile,Cold and dark. Red dwarf barely warms.
+76,SUMARRA,20,2,Sumarra II,Persistence,Rocky,Thin,Ice,Microbial,Marginal,Hardy colony survives on determination.
+77,ELAM,21,1,Elam I,Tideland,Rocky,Thin,Trace,Complex,Marginal,Tidally locked. Habitable terminator zone. Lithoid homeworld.
+78,ELAM,21,3,Elam III,Deep Red,Dwarf,None,Ice,None,Hostile,Distant ice dwarf. Unexplored.
+79,JARMO,22,1,Jarmo I,Bright,Rocky,Thin,None,None,Hostile,Close orbit. Intense radiation.
+80,JARMO,22,2,Jarmo II,Gateway,Rocky,Standard,Trace,Primitive,Comfortable,Gateway world to eastern territories.
+81,JARMO,22,3,Jarmo III,Promise,Rocky,Standard,Moderate,Primitive,Comfortable,Developing colony. Growing population.
+82,JARMO,22,4,Jarmo IV,Giant,GasGiant,Exotic,None,None,Hostile,Standard gas giant. Fuel operations.
+83,UMMA,23,1,Umma I,Char,Rocky,None,None,None,Hostile,Burned out. Abandoned after ancient war.
+84,UMMA,23,2,Umma II,Contested,Rocky,Thin,Trace,Microbial,Marginal,War-torn world. Multiple claims. Ruined cities.
+85,UMMA,23,3,Umma III,Bounty,Rocky,Standard,Moderate,Complex,Comfortable,Agricultural world. Fought over for resources.
+86,UMMA,23,5,Umma V,Giants Toll,GasGiant,Exotic,None,None,Hostile,Fuel source. Dangerous approach vectors.
+87,GIRSU,24,1,Girsu I,Hive,Rocky,Dense,Trace,Sapient,Marginal,Vesh homeworld. Dense atmosphere suits their biology.
+88,GIRSU,24,2,Girsu II,Colony,Rocky,Dense,Trace,Complex,Marginal,Secondary Vesh world. Expanding hive territory.
+89,ISIN,25,1,Isin I,Pale,Rocky,Thin,None,None,Hostile,Dim world. Sparse mineral deposits.
+90,ISIN,25,2,Isin II,Path,Rocky,Thin,Trace,Microbial,Marginal,Gateway to Nineveh. Strategic importance.
+91,SUMER,26,1,Sumer I,Legacy,Rocky,Thin,None,None,Hostile,Ancient mining operations. Long exhausted.
+92,SUMER,26,2,Sumer II,Eternal,Rocky,Standard,Trace,Complex,Comfortable,Remnant homeworld. Machine civilization center.
+93,SUMER,26,3,Sumer III,Archive,Rocky,Thin,Trace,Primitive,Marginal,Data storage. Remnant memory banks.
+94,AKKAD,27,1,Akkad I,Jewel,Rocky,Standard,Ocean,Complex,Garden,Kethrani homeworld. Vast oceans teem with life.
+95,AKKAD,27,2,Akkad II,Pearl,Rocky,Standard,Ocean,Complex,Comfortable,Secondary ocean world. Kethrani colonies.
+96,AKKAD,27,3,Akkad III,Atoll,Rocky,Standard,Moderate,Primitive,Comfortable,Island world. Mixed populations.
+97,AKKAD,27,4,Akkad IV,Deep,GasGiant,Exotic,None,None,Hostile,Gas giant with water-rich moons.
+98,KISH,28,1,Kish I,Glassine,Rocky,Thin,None,None,Hostile,Crystal formations cover surface. Mining operations.
+99,KISH,28,2,Kish II,Pilgrims End,Rocky,Thin,Trace,Primitive,Marginal,Religious colony. Ancient shrine draws faithful.
+100,KISH,28,3,Kish III,Nexus,Rocky,Standard,Moderate,Complex,Comfortable,Free port. True cosmopolitan melting pot.
+101,KISH,28,4,Kish IV,Rampart,GasGiant,Exotic,None,None,Hostile,Fortress moons. Mercenary stronghold.
+102,KISH,28,5,Kish V,Twilight,IceGiant,Dense,Ice,None,Hostile,Research outpost on outer edge.
+103,ERIDU,29,1,Eridu I,Warm,Rocky,Thin,None,None,Hostile,Close orbit. Minimal resources.
+104,ERIDU,29,2,Eridu II,Passage,Rocky,Standard,Trace,Primitive,Comfortable,Gateway to Ugarit. Trade center.
+105,ERIDU,29,3,Eridu III,Setting,Rocky,Standard,Moderate,Primitive,Comfortable,Colony world. Growing population.

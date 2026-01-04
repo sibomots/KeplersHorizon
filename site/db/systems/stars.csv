@@ -1,0 +1,30 @@
+id,system_name,designation,star_class,luminosity,color,age_gy,notes
+1,SONAL,Sonal Prime,G,Main,Yellow,4.2,Sol-like star. Stable and life-giving. The heart of the Western Alliance.
+2,UR,Ur Alpha,K,Main,Orange,6.8,Primary of ancient binary pair. Warm light bathes the inner worlds.
+3,UR,Ur Beta,M,Dwarf,Red,6.8,Companion star. Small and distant. Stable L4 colonies orbit between.
+4,LARSU,Larsu Sol,F,Main,Yellow-White,2.1,Young and energetic. Intense UV output scorches inner planets.
+5,NINEVEH,Nineveh Ascendant,A,Main,White,0.8,Brilliant young star. Harsh radiation but immense energy output.
+6,BABYLON,Babylon Prima,G,Main,Yellow,5.1,Mature and stable. Extensive habitable zone supports dense populations.
+7,UGARIT,Ugarit Dusk,K,Main,Orange,8.2,Ancient star entering late life. Amber light speaks of long history.
+8,SIPPUR,Sippur Flame,K,Main,Orange,5.4,Steady orange glow. First waypoint from Sonal.
+9,ERECH,Erech Wanderer,G,Main,Yellow,3.8,Standard yellow star. Junction between UR and ADAB.
+10,CALAH,Calah Distant,K,Main,Orange,7.1,Cool orange star at edge of contested space.
+11,BYBLOS,Byblos Shimmer,F,Main,Yellow-White,1.8,Young bright star. Belts form prominent rings visible to naked eye.
+12,ADAB,Adab Nexus,G,Main,Yellow,4.5,Central star. Three warplines make this a crucial waypoint.
+13,SUSA,Susa Ancient,K,Main,Orange,8.9,One of the oldest stars in charted space. Slow and steady.
+14,UBAID,Ubaid Pale,K,Subgiant,Orange,9.2,Slightly expanded. Beginning transition to later stellar phases.
+15,NIPPUR,Nippur Axis,G,Main,Yellow-Orange,3.4,Strategic hub. Four warplines connect here.
+16,KHAFA,Khafa Ember,M,Dwarf,Red,10.2,Dim red dwarf. Cold outer reaches despite proximity to ADAB.
+17,MARI,Mari Torch,F,Main,Yellow-White,2.3,Bright and hot. Inner planets are scorched wastelands.
+18,LAGASH,Lagash Beacon,G,Main,Yellow,4.1,Clear and steady. Major crossroads of central space.
+19,ASSUR,Assur Vigil,K,Main,Orange,6.2,Steady orange star. Close neighbor to Lagash.
+20,SUMARRA,Sumarra Fade,M,Dwarf,Red,11.1,Ancient red dwarf. Minimal energy. Harsh living conditions.
+21,ELAM,Elam Vermillion,M,Dwarf,Red,9.1,Ancient stable red dwarf. Source of exotic Keplerite deposits.
+22,JARMO,Jarmo Spark,G,Main,Yellow,3.1,Young yellow star. Gateway from central space to eastern territories.
+23,UMMA,Umma Hearth,K,Main,Orange,5.6,Warm orange. Four warplines make this heavily contested.
+24,GIRSU,Girsu Drone,M,Dwarf,Red,8.4,Dim red light. Homeworld of the Vesh hive collective.
+25,ISIN,Isin Pale,K,Dwarf,Orange,7.8,Small orange dwarf. Direct route to Nineveh.
+26,SUMER,Sumer Eternal,G,Subgiant,Yellow,6.1,Slightly expanded. Home to the mysterious Remnant machines.
+27,AKKAD,Akkad Jewel,F,Main,Yellow-White,2.8,Bright star with extensive liquid water worlds. Kethrani homeworld.
+28,KISH,Kish Beacon,F,Main,Yellow-White,1.9,Brilliant young star. Three-way junction near eastern territories.
+29,ERIDU,Eridu Setting,K,Main,Orange,7.4,Warm orange light. Gateway to Ugarit.
