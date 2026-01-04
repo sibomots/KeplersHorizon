@@ -1,13 +1,45 @@
-.TH KEPLER'S_HORIZON 1 "2025-12-31" "Version 1.0" "Kepler's Horizon Command Reference"
+.TH KEPLERS_HORIZON 1 "2025-12-31" "Version 1.0" "Kepler's Horizon Command Reference"
 .SH NAME
-kepler \- two-player tactical space combat game command interface
+kh \- two-player tactical space combat game command interface
 .SH SYNOPSIS
-.B kepler
-[\fIcommand\fR [\fIarguments\fR...]]
+.B kh
+.br
+.B kh \-\^\-help
+.br
+.B kh \-\^\-version
+.br
+.B kh \-\^\-dbusr " U" \-\^\-dbpass " P" \-\^\-dbname " D" \-\^\-port " P"
+.br
+
 .SH DESCRIPTION
 Kepler's Horizon is a two-player tactical game of space combat where players build individualized ships, move them across a hex-based star map, and resolve combat without dice. The objective is to occupy opponent base star hexes and accumulate victory points.
 
 This manual describes all available commands in the Kepler's Horizon command language as defined by the game grammar.
+
+.SH OPTIONS
+.SS "Generic Program Information"
+.TP
+.B --help
+Output a usage message and exit.
+.TP
+.BR \-V ", " \-\^\-version
+Output the version number of
+.B kh
+and exit.
+.SS "Database Connection"
+.TP
+.BR \-U ", " \-\^\-dbusr " USER"
+Access the underlying database as \fIUSER\fR
+.TP
+.BR \-D ", " \-\^\-dbname  " DB_NAME"
+The name of the underlying database.
+.TP
+.BR \-P ", " \-\^\-dbpass " PASSWORD"
+The password for \fIUSER\fR.
+.SS "Database Connection"
+.TP
+.BR \-T ", " \-\^\-port " PORT"
+The port number the server listens to for requests via REST.  The default is 8080.
 
 .SH GAME OVERVIEW
 .SS Map Components
@@ -221,16 +253,19 @@ Random outcome: 90% chance of recovering 2-5 units of random resources, 10% chan
 .B build, b
 Show current build state (active drafts, available BP)
 .TP
-.B build new \fIcode\fR \fIname\fR,  bn \fIcode\fR \fIname\fR
+.B build new \fIcode\fR \fIname\fR
+.B bn \fIcode\fR \fIname\fR
 Create a new ship draft with the specified code (e.g., W1, S01) and name
 .TP
-.B build drafts, bd
+.B build drafts
+.B bd
 List all pending build drafts
 .TP
 .B build drafts \fIship_code\fR
+.B bd \fIship_code\fR
 Show detailed attributes of a specific draft ship
 .TP
-.B build set \fIattributes\fR,  bs \fIattributes\fR
+.B build set \fIattributes\fR,  \fBbs\fR \fIattributes\fR
 Set attributes on the current draft ship. Attributes are specified as:
 .RS
 .TP
@@ -257,20 +292,24 @@ Example: build set pd=7 b=3 s=2 t=1 m=6
 Note: Warp Generator costs 5 BP (automatically added for WarpShips)
 .RE
 .TP
-.B build commit, bc
+.B build commit
+.B bc
 Commit the current draft, spending BP and adding ship to your fleet
 .TP
-.B build cancel, bx
+.B build cancel
+.B bx
 Cancel the current draft without spending BP
 
 .SS Deployment Commands
 .TP
-.B deploy \fIship_code\fR \fIsystem_name\fR,  ds \fIship_code\fR \fIsystem_name\fR
+.B deploy \fIship_code\fR \fIsystem_name\fR
+.B ds \fIship_code\fR \fIsystem_name\fR
 Deploy the specified ship to the specified base star hex (must be your base star)
 
 .SS Movement Commands
 .TP
-.B move \fIship_code\fR \fIdestination\fR,  m \fIship_code\fR \fIdestination\fR
+.B move \fIship_code\fR \fIdestination\fR
+.B m \fIship_code\fR \fIdestination\fR
 Move the specified ship to destination, optionally through waypoints. Movement costs:
 .RS
 .IP \(bu 2
@@ -291,10 +330,12 @@ Ships may freely move through space hexes with enemy ships.
 
 .SS Combat Commands
 .TP
-.B combat, c
+.B combat
+.B c
 Show status of current combat situation
 .TP
-.B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR,  co \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
+.B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
+.B co \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
 Issue combat orders for a ship. Components:
 .RS
 .TP
@@ -332,37 +373,46 @@ Note: Cannot use Beams/Screens and Missiles in same round
 .RE
 .RE
 .TP
-.B combat commit, cc
+.B combat commit
+.B cc
 Commit all combat orders for this round
 .TP
-.B combat cancel, cx
+.B combat cancel
+.B cx
 Cancel all combat orders and re-issue
 .TP
-.B combat drafts, cd
+.B combat drafts
+.B cd
 List pending combat orders
 .TP
-.B combat apply \fIship\fR \fIdamage_allocation\fR,  ca \fIship\fR \fIdamage_allocation\fR
+.B combat apply \fIship\fR \fIdamage_allocation\fR
+.B ca \fIship\fR \fIdamage_allocation\fR
 Apply damage hits to ship attributes (defender chooses where hits are taken)
 
 .SS Pick and Drop Commands
 .TP
-.B pick \fIsystemship\fR \fIwarpship\fR,  p \fIsystemship\fR \fIwarpship\fR
+.B pick \fIsystemship\fR \fIwarpship\fR
+.B p \fIsystemship\fR \fIwarpship\fR
 Pick up the specified SystemShip into the specified WarpShip's rack
 .TP
-.B drop \fIsystemship\fR \fIwarpship\fR,  dd \fIsystemship\fR \fIwarpship\fR
+.B drop \fIsystemship\fR \fIwarpship\fR
+.B dd \fIsystemship\fR \fIwarpship\fR
 Drop the specified SystemShip from the specified WarpShip at current location
 
 .SS Repair and Resupply Commands
 .TP
-.B repair \fIship_code\fR \fIattribute\fR \fIN\fR,  rp \fIship_code\fR \fIattribute\fR \fIN\fR
+.B repair \fIship_code\fR \fIattribute\fR \fIN\fR
+.B rp \fIship_code\fR \fIattribute\fR \fIN\fR
 Repair the specified ship using BP (1 BP repairs 1 unit of any attribute up to original max). Must be at your base star hex.
 .TP
-.B resupply \fIship_code\fR \fIquantity\fR,  rs \fIship_code\fR \fIquantity\fR
+.B resupply \fIship_code\fR \fIquantity\fR
+.B rs \fIship_code\fR \fIquantity\fR
 Resupply the specified ship with missiles (1 BP per 3 missiles, up to original max)
 
 .SS Help Commands
 .TP
-.B help, ?
+.B help
+.B ?
 Show help screen and list all help topics
 
 .SH SHIP ATTRIBUTES
@@ -510,10 +560,20 @@ SystemShip Rack (SR)|1 BP per rack
 .SH EXAMPLES
 .SS Building a WarpShip
 .nf
-> build new W2 Destroyer
-> build set pd=5 b=3 s=2 t=1 m=3
-> build commit
+> \fBbuild new\fR W2 Destroyer
+> \fBbuild set\fR pd=5 b=3 s=2 t=1 m=3
+> \fBbuild commit\fR
 .fi
+.PP
+The same commands with aliased versions:
+.nf
+> \fBbn\fR w Falcon
+> \fBbs\fR pd=5 b=3 s=2 t=1 m=3
+> \fBbc\fR
+.fi
+.PP
+Note: If the player doesn't care, the game will generate a numeric ID. Entering
+\fIW2\fR is not necessary --  unless you want your ship numberd \fIW2\fR.
 .PP
 Total cost: 5+3+2+1+1+5(WG) = 17 BP
 .br
@@ -521,35 +581,65 @@ Tech level 0 (if built turns 1-4)
 
 .SS Building a SystemShip Fighter
 .nf
-> build new S55 Fighter
-> build set pd=1 t=1 m=6
-> build commit
+> \fBbuild new\fR S55 Fighter
+> \fBbuild set\fR pd=1 t=1 m=6
+> \fBbuild commit\fR
 .fi
 .PP
+Or use:
+.PP
+.nf
+> \fBbn\fR S55 Avenger 
+> \fBbs\fR pd=1 t=1 m=6
+> \fBbc\fR
+.fi
+.PP
+
+
 Total cost: 1+1+2 = 4 BP
 .br
 No Warp Generator (SystemShip)
 
 .SS Movement Example
 .nf
-> move W6 Girsu Kish
+> \fBmove\fR W6 Girsu Kish
 .fi
 .PP
+Or the short hand:
+.PP
+.nf
+> \fBm\fR W6 Girsu Kish
+.fi
+.PP
+
 W6 moves from current hex to Girsu (1 PD), along warpline to next star (1 PD), then 3 hexes to Kish (3 PD) = 5 PD total
 
 .SS Combat Order Example
 .nf
-> combat order W3 attack S25 d=0 b=3 s=2
+> \fBcombat order\fR W3 \fBattack\fR S25 d=0 b=3 s=2
 .fi
 .PP
+Or use with same result:
+.nf
+> \fBco\fR W3 \fBa\fR S25 d=0 b=3 s=2
+.fi
+.PP
+
 W3 attacks S25, allocating 0 to drive, 3 to beam, 2 to screen (requires PD≥5)
 
 .SS Missile Fire Example
 .nf
-> combat order S25 dodge W3 d=4 t=1 m=1
+> \fBcombat order\fR S25 \fBdodge\fR W3 d=4 t=1 m=1
 > (missile drive setting: 3)
 .fi
 .PP
+Or use:
+.nf
+> \fBco\fR S25 \fBd\fR W3 d=4 t=1 m=1
+> (missile drive setting: 3)
+.fi
+.PP
+
 S25 dodges while firing 1 missile at W3 with drive=3 (requires PD≥5)
 
 .SH CONSTRAINTS AND INVARIANTS
@@ -615,10 +705,10 @@ Active player only
 
 .SH FILES
 .TP
-.I ~/.kepler/saves/
+.I ~/.kh/saves/
 Directory containing saved game files
 .TP
-.I ~/.kepler/lastgame
+.I ~/.kh/lastgame
 Automatically saved game when quitting
 
 .SH SEE ALSO
@@ -651,6 +741,7 @@ Systems are organized by territory:
 
 Each system entry includes celestial bodies, notable moons, resources, populations, infrastructure, and anomalies.
 
+.PB
 .SH RESOURCES
 Eight types of raw materials can be extracted and traded:
 .TS
