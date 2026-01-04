@@ -114,7 +114,7 @@
     setText("stVP", st ? (S.playerNames.A + ":" + st.vp.A + "  " + S.playerNames.B + ":" + st.vp.B) : "-");
 
     const selfOwner = (S.self && S.self.owner) ? S.self.owner : "A";
-    const selfBp = st ? (selfOwner === "A" ? st.bp.A : st.bp.B) : "-";
+    const selfBp = st ? (selfOwner === "A" ? st.credits.A : st.credits.B) : "-";
     setText("stBP", st ? String(selfBp) : "-");
 
     // Bug 5: Update console title with player and scenario

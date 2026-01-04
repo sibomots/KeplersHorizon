@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "combat.h"
+#include "constraints.h"
 #include "db.h"
 #include "deploy_command.h"
 #include "logger.h"
@@ -212,6 +213,23 @@ bool MoveCommand::invoke(void)
                            " (No path or Blocked).";
             }
             break;
+        }
+
+        // Apply system constraint modifiers
+        if (!stepSys.empty())
+        {
+            if (ConstraintEngine::is_movement_blocked(m_game_id, stepSys))
+            {
+                errorMsg = "Movement to " + stepSys +
+                           " is blocked by environmental hazards.";
+                break;
+            }
+
+            int modifier =
+                ConstraintEngine::get_movement_modifier(m_game_id, stepSys);
+            stepCost += modifier;
+            if (stepCost < 1)
+                stepCost = 1;  // Minimum 1 PD
         }
 
         totalCost += stepCost;

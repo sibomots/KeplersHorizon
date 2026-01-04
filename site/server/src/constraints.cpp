@@ -1,0 +1,262 @@
+//////////////////////////////////////////////////////////////////////////////////
+// This file is part of Kepler's Horizon
+//
+// Licensed under BSD 3-Clause License
+//
+// Copyright (c) 2025, sibomots
+/////////////////////////////////////////////////////////////////////////////////
+#include "constraints.h"
+
+#include <cstdlib>
+
+#include "db.h"
+#include "logger.h"
+
+int ConstraintEngine::get_movement_modifier(int game_id,
+                                            const std::string& system)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    // Check for movement constraints
+    auto rows = db.query(
+        "SELECT modifier_type, modifier_value FROM system_constraints "
+        "WHERE system_name='" +
+        db.esc(system) + "' AND constraint_type='MOVEMENT'");
+
+    int total_modifier = 0;
+    for (const auto& row : rows)
+    {
+        std::string mod_type = row[0];
+        int value = std::atoi(row[1].c_str());
+
+        if (mod_type == "PENALTY")
+        {
+            total_modifier += value;
+        }
+        else if (mod_type == "BONUS")
+        {
+            total_modifier -= value;
+        }
+        // BLOCK is handled separately
+    }
+
+    return total_modifier;
+}
+
+bool ConstraintEngine::is_movement_blocked(int game_id,
+                                           const std::string& system)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    auto rows = db.query(
+        "SELECT COUNT(*) FROM system_constraints "
+        "WHERE system_name='" +
+        db.esc(system) +
+        "' AND constraint_type='MOVEMENT' AND modifier_type='BLOCK'");
+
+    return (!rows.empty() && std::atoi(rows[0][0].c_str()) > 0);
+}
+
+int ConstraintEngine::get_combat_modifier(int game_id,
+                                          const std::string& system,
+                                          char player)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    int total_modifier = 0;
+
+    // General system combat modifiers
+    auto rows = db.query(
+        "SELECT modifier_type, modifier_value, source FROM system_constraints "
+        "WHERE system_name='" +
+        db.esc(system) + "' AND constraint_type='COMBAT'");
+
+    for (const auto& row : rows)
+    {
+        std::string mod_type = row[0];
+        int value = std::atoi(row[1].c_str());
+        std::string source = row[2];
+
+        // Check if it's a facility-based bonus (only for controller)
+        if (source == "FORTRESS")
+        {
+            // Check facility ownership
+            auto owner_check = db.query(
+                "SELECT controller FROM system_facilities "
+                "WHERE system_name='" +
+                db.esc(system) + "' AND facility_type='FORTRESS'");
+
+            if (!owner_check.empty() && owner_check[0][0][0] == player)
+            {
+                if (mod_type == "BONUS")
+                    total_modifier += value;
+            }
+        }
+        else
+        {
+            // Environmental modifier applies to all
+            if (mod_type == "BONUS")
+                total_modifier += value;
+            else if (mod_type == "PENALTY")
+                total_modifier -= value;
+        }
+    }
+
+    return total_modifier;
+}
+
+int ConstraintEngine::get_extraction_modifier(int game_id,
+                                              const std::string& system)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    auto rows = db.query(
+        "SELECT modifier_type, modifier_value FROM system_constraints "
+        "WHERE system_name='" +
+        db.esc(system) + "' AND constraint_type='HARVEST'");
+
+    int total_modifier = 0;
+    for (const auto& row : rows)
+    {
+        std::string mod_type = row[0];
+        int value = std::atoi(row[1].c_str());
+
+        if (mod_type == "BONUS")
+            total_modifier += value;
+        else if (mod_type == "PENALTY")
+            total_modifier -= value;
+    }
+
+    return total_modifier;
+}
+
+bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
+                                       const std::string& resource)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    // Check for hazardous extraction conditions
+    auto rows = db.query(
+        "SELECT COUNT(*) FROM system_constraints "
+        "WHERE system_name='" +
+        db.esc(system) +
+        "' AND constraint_type='HARVEST' AND "
+        "condition_text LIKE '%hazardous%'");
+
+    if (!rows.empty() && std::atoi(rows[0][0].c_str()) > 0)
+        return true;
+
+    // Also check resource-specific difficulty
+    auto res_rows = db.query(
+        "SELECT extraction_difficulty FROM system_resources sr "
+        "JOIN system_planets sp ON sr.location_type='Planet' AND "
+        "sr.location_id=sp.id "
+        "WHERE sp.system_name='" +
+        db.esc(system) + "' AND sr.resource_type='" + db.esc(resource) +
+        "' "
+        "UNION "
+        "SELECT extraction_difficulty FROM system_resources sr "
+        "JOIN system_asteroid_belts ab ON sr.location_type='Belt' AND "
+        "sr.location_id=ab.id "
+        "WHERE ab.system_name='" +
+        db.esc(system) + "' AND sr.resource_type='" + db.esc(resource) + "'");
+
+    for (const auto& r : res_rows)
+    {
+        if (r[0] == "Extreme" || r[0] == "Difficult")
+            return true;
+    }
+
+    return false;
+}
+
+std::vector<SystemConstraint> ConstraintEngine::get_constraints(
+    int game_id, const std::string& system)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    std::vector<SystemConstraint> result;
+
+    auto rows = db.query(
+        "SELECT system_name, constraint_type, modifier_type, modifier_value, "
+        "condition_text, source FROM system_constraints "
+        "WHERE system_name='" +
+        db.esc(system) + "'");
+
+    for (const auto& row : rows)
+    {
+        SystemConstraint c;
+        c.system_name = row[0];
+
+        std::string type_str = row[1];
+        if (type_str == "MOVEMENT")
+            c.type = CONSTRAINT_MOVEMENT;
+        else if (type_str == "COMBAT")
+            c.type = CONSTRAINT_COMBAT;
+        else if (type_str == "TRADE")
+            c.type = CONSTRAINT_TRADE;
+        else if (type_str == "HARVEST")
+            c.type = CONSTRAINT_HARVEST;
+        else
+            c.type = CONSTRAINT_BUILD;
+
+        std::string mod_str = row[2];
+        if (mod_str == "BONUS")
+            c.modifier = MODIFIER_BONUS;
+        else if (mod_str == "PENALTY")
+            c.modifier = MODIFIER_PENALTY;
+        else
+            c.modifier = MODIFIER_BLOCK;
+
+        c.value = std::atoi(row[3].c_str());
+        c.condition = row[4];
+        c.source = row[5];
+
+        result.push_back(c);
+    }
+
+    return result;
+}
+
+void ConstraintEngine::initialize_constraints(int game_id)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    Logger::instance().info("[CONSTRAINTS] Initializing constraints for game " +
+                            std::to_string(game_id));
+
+    // Clear existing game-specific constraints
+    // (system_constraints table is global, not per-game for now)
+
+    // Add constraint from anomalies
+    // Axis Marker at NIPPUR - movement bonus
+    db.exec(
+        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
+        "modifier_type,modifier_value,condition_text,source) VALUES"
+        "('NIPPUR','MOVEMENT','BONUS',1,'Axis Marker beacon','ANOMALY')");
+
+    // Keplerite Vein at ELAM - extraction bonus for EXOTIC
+    db.exec(
+        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
+        "modifier_type,modifier_value,condition_text,source) VALUES"
+        "('ELAM','HARVEST','BONUS',2,'Keplerite deposits','ANOMALY')");
+
+    // The Veil at CALAH - combat penalty (sensor blocking)
+    db.exec(
+        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
+        "modifier_type,modifier_value,condition_text,source) VALUES"
+        "('CALAH','COMBAT','PENALTY',1,'Sensor-blocking dust','ANOMALY')");
+
+    // The Scrapyard at UMMA - movement penalty
+    db.exec(
+        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
+        "modifier_type,modifier_value,condition_text,source) VALUES"
+        "('UMMA','MOVEMENT','PENALTY',1,'Dense debris field','SCRAPYARD')");
+
+    // The Shimmer at BYBLOS - hazardous extraction
+    db.exec(
+        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
+        "modifier_type,modifier_value,condition_text,source) VALUES"
+        "('BYBLOS','HARVEST','PENALTY',1,'Radiation hazardous','ANOMALY')");
+
+    Logger::instance().info("[CONSTRAINTS] Constraints initialized");
+}

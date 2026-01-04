@@ -25,8 +25,8 @@ class GameState
     int phase_index;
     int vpA = 0;
     int vpB = 0;
-    int bpA = 0;
-    int bpB = 0;
+    int creditsA = 0;  // Stellar Credits (formerly Build Points)
+    int creditsB = 0;
     bool game_over = false;
     std::string winner = "";
 
@@ -48,8 +48,8 @@ class GameState
         round = 1;
         active_player = "A";
         phase_index = PH_BUILD_SHIPS;
-        bpA = 0;
-        bpB = 0;
+        creditsA = 0;
+        creditsB = 0;
         game_over = false;
         winner = "";
     }
@@ -63,8 +63,8 @@ class GameState
         phase_index = PH_BUILD_SHIPS;
         vpA = 0;
         vpB = 0;
-        bpA = 0;
-        bpB = 0;
+        creditsA = 0;
+        creditsB = 0;
         game_over = false;
         winner = "";
     }
@@ -110,7 +110,7 @@ class GameState
         o << "\"phaseIndex\":" << phase_index << ",";
         o << "\"phase\":\"" << json_escape(phase_name()) << "\",";
         o << "\"vp\":{\"A\":" << vpA << ",\"B\":" << vpB << "},";
-        o << "\"bp\":{\"A\":" << bpA << ",\"B\":" << bpB << "},";
+        o << "\"credits\":{\"A\":" << creditsA << ",\"B\":" << creditsB << "},";
         if (!combat_summary_json.empty())
         {
             o << "\"combat\":" << combat_summary_json << ",";

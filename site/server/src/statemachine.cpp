@@ -228,10 +228,10 @@ bool StateMachine::transition()
                 cost += (d.attr.M + 2) / 3;
                 if (d.attr.type == 'W') cost += 5; // Warp generator
                 
-                int& bp = (s.active_player == "A") ? s.bpA : s.bpB;
+                int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
                 
                 if (cost > bp) {
-                    Logger::instance().error("Insufficient BP. Need " + std::to_string(cost) + 
+                    Logger::instance().error("Insufficient CR. Need " + std::to_string(cost) + 
                                            ", have " + std::to_string(bp));
                     data.pending_build_commit = false;
                     return false;
@@ -473,11 +473,11 @@ bool StateMachine::transition()
             if (d.attr.type == 'W')
                 cost += 5; // Warp generator
 
-            int& bp = (s.active_player == "A") ? s.bpA : s.bpB;
+            int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
 
             if (cost > bp)
             {
-                Logger::instance().error("Insufficient BP. Need " +
+                Logger::instance().error("Insufficient CR. Need " +
                                          std::to_string(cost) + ", have " +
                                          std::to_string(bp));
                 data.pending_build_commit = false;
@@ -749,8 +749,8 @@ GameState StateMachine::load_game(int game_id)
             }
             return (int)v;
         };
-        s.bpA = getv("A");
-        s.bpB = getv("B");
+        s.creditsA = getv("A");
+        s.creditsB = getv("B");
     }
 
     // Load Combat Summary
@@ -801,18 +801,18 @@ GameState StateMachine::new_game_state_for_scenario(const std::string& scenario)
 
     if (scenario == "learning")
     {
-        s.bpA = 40;
-        s.bpB = 40;
+        s.creditsA = 40;
+        s.creditsB = 40;
     }
     else if (scenario == "basic")
     {
-        s.bpA = 50;
-        s.bpB = 50;
+        s.creditsA = 50;
+        s.creditsB = 50;
     }
     else if (scenario == "advanced")
     {
-        s.bpA = 20;
-        s.bpB = 20; // start of first turn
+        s.creditsA = 20;
+        s.creditsB = 20; // start of first turn
     }
 
     return s;
@@ -882,9 +882,9 @@ void StateMachine::apply_start_of_turn(GameState& s)
         if (!is_first_player_first_turn)
         {
             if (me == 'A')
-                s.bpA += 10;
+                s.creditsA += 10;
             else
-                s.bpB += 10;
+                s.creditsB += 10;
         }
     }
 

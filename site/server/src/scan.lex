@@ -49,6 +49,17 @@
 "sy"       { return TOK_SYSTEM; }
 "survey"   { return TOK_SURVEY; }
 "sv"       { return TOK_SURVEY; }
+"score"    { return TOK_SCORE; }
+"extract"  { return TOK_EXTRACT; }
+"market"   { return TOK_MARKET; }
+"trade"    { return TOK_TRADE; }
+"fabricate" { return TOK_FABRICATE; }
+"list"     { return TOK_LIST; }
+"scan"     { return TOK_SCAN; }
+"buy"      { return TOK_BUY; }
+"sell"     { return TOK_SELL; }
+"transfer" { return TOK_TRANSFER; }
+"salvage"  { return TOK_SALVAGE; }
 "galaxy"   { return TOK_GALAXY; }
 
 "next"     { return TOK_NEXT; }

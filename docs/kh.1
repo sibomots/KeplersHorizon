@@ -156,6 +156,65 @@ Show environmental information about the specified star system
 .TP
 .B galaxy
 Complete overview of all systems and all ships in the game
+.TP
+.B score
+Show current game status: whose turn, phase, credits, tech level, and victory points
+
+.SS Economy Commands
+.TP
+.B extract scan
+Scan current system for harvestable resources. Requires ship with LRS (Long Range Scanner).
+.TP
+.B extract \fIship\fR \fIresource\fR
+Extract resource from current system into ship's cargo hold. Requires TB (Transporter Beam) or DR (Drones).
+.RS
+.PP
+\fBResources:\fR FERROUS, RARE_EARTH, RADIOACTIVE, CRYSTALLINE, VOLATILE, WATER, ORGANIC, EXOTIC
+.RE
+.TP
+.B market
+Display current market prices with trend indicators (▲ rising, ─ stable, ▼ falling).
+.RS
+.PP
+Prices fluctuate each round based on supply/demand and market forces.
+.RE
+.TP
+.B market \fIresource\fR
+Show price history for the specified resource over recent turns.
+.TP
+.B trade list
+Show base trade prices for all resources.
+.TP
+.B trade buy \fIresource\fR \fIquantity\fR
+Purchase resources at current market price, deducting credits.
+.TP
+.B trade sell \fIresource\fR \fIquantity\fR
+Sell resources from cargo at 75% of market price.
+.TP
+.B trade transfer \fIfrom_ship\fR \fIto_ship\fR \fIresource\fR \fIquantity\fR
+Move resources between ships at the same location.
+.TP
+.B fabricate list
+Show available manufacturing recipes and their costs.
+.TP
+.B fabricate \fIrecipe\fR \fIquantity\fR
+Manufacture items from raw materials in cargo. Recipes include:
+.RS
+.IP \fBmissiles\fR
+Basic missiles (4 per batch). Cost: 2 Fe, 1 Rd, 1 Vo. Time: 1 round.
+.IP \fBtubes\fR
+Tube upgrade (+1 capacity). Cost: 5 Fe, 3 Re, 2 Cr. Time: 3 rounds.
+.IP \fBbeams\fR
+Beam upgrade (+1 rating). Cost: 8 Fe, 4 Re, 3 Cr. Time: 3 rounds.
+.IP \fBscreens\fR
+Screen upgrade (+1 rating). Cost: 6 Fe, 2 Re, 4 Cr. Time: 3 rounds.
+.IP \fBtech\fR
+Tech research (+1 level). Cost: 10 Re, 5 Cr, 2 Ex. Time: 5 rounds.
+.RE
+.TP
+.B salvage \fIship\fR
+Salvage wreckage at anomaly sites like The Graveyard (UMMA). Requires Drones (DR).
+Random outcome: 90% chance of recovering 2-5 units of random resources, 10% chance of hazard encounter dealing hull damage.
 
 .SS Build Commands
 .TP
@@ -327,7 +386,20 @@ Missile launchers. Each tube fires 1 missile/round. Requires 1 PD to power. Cost
 Projectile weapons. Damage = 2 + tech level. Cost: 1 BP per 3 missiles.
 .TP
 .B SystemShip Racks (SR)
-Carries SystemShips (WarpShips only). 1 SystemShip per rack. Cost: 1 BP per rack.
+Carries SystemShips (WarpShips only). 1 SystemShip per rack. Cost: 1 CR per rack.
+
+.SS Extraction Equipment
+.TP
+.B Long Range Scanner (LRS)
+Detects resources in current system. Required for extract scan. Cost: 3 CR per unit.
+.TP
+.B Transporter Beam (TB)
+Extracts resources from standard locations. Required for extract. Cost: 5 CR per unit.
+.TP
+.B Drones (DR)
+Extracts resources from hazardous locations. Required for extract in dangerous zones. Cost: 4 CR per unit.
+.PP
+Note: LRS, TB, and DR do not affect ship destruction. Only PD, B, S, T, M, SR reaching zero destroys the ship.
 
 .SH TECHNOLOGY LEVELS
 In Advanced scenario, tech level increases every 4 turns:
@@ -565,6 +637,51 @@ In Advanced scenario, track BP received and expended
 Combat orders are written simultaneously and revealed together
 .IP \(bu 2
 Fractions of BP from missile resupply are not saved
+
+.SH THE GRIMOIRE
+The Grimoire of Stars is the compendium of known space, containing detailed information about each star system. Knowledge levels range from Unknown (name only) to Intimate (complete secrets).
+
+Systems are organized by territory:
+.IP \(bu 2
+\fBWestern Alliance\fR: SONAL (capital), UR, LARSU
+.IP \(bu 2
+\fBEastern Powers\fR: NINEVEH, BABYLON, UGARIT
+.IP \(bu 2
+\fBContested Reach\fR: NIPPUR, ELAM, UMMA, SUMER, AKKAD, KISH, GIRSU, and others
+
+Each system entry includes celestial bodies, notable moons, resources, populations, infrastructure, and anomalies.
+
+.SH RESOURCES
+Eight types of raw materials can be extracted and traded:
+.TS
+tab(|);
+l l l.
+Resource|Abbrev|Primary Uses
+_
+FERROUS|Fe|Hull construction
+RARE_EARTH|Re|Electronics, screens
+RADIOACTIVE|Rd|Power, weapons
+CRYSTALLINE|Cr|Beams, warp drives
+VOLATILE|Vo|Fuel, missiles
+WATER|H2O|Life support
+ORGANIC|Or|Food, medicine
+EXOTIC|Ex|Special technology
+.TE
+
+.SH MARKET DYNAMICS
+The commodity market fluctuates based on supply and demand:
+.IP \(bu 2
+Prices update each round after both players complete turns
+.IP \(bu 2
+Buying increases demand, pushing prices up
+.IP \(bu 2
+Selling increases supply, pushing prices down
+.IP \(bu 2
+Random market forces also affect prices
+.IP \(bu 2
+Prices clamped to 50%-200% of base value
+.PP
+Use \fBmarket\fR to view current prices and trends, then \fBtrade buy/sell\fR to act.
 
 .SH BUGS
 Report bugs to the Kepler's Horizon issue tracker.

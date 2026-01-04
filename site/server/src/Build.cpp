@@ -114,13 +114,13 @@ bool BuildCommitCommand::invoke(void)
         cost += 5; // Warp generator
 
     // Check BP availability
-    int& bp = (s.active_player == "A") ? s.bpA : s.bpB;
+    int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
     if (cost > bp)
     {
-        Logger::instance().error("Insufficient BP. Need " +
+        Logger::instance().error("Insufficient CR. Need " +
                                  std::to_string(cost) + ", have " +
                                  std::to_string(bp));
-        Telemetry::getInstance().write("Error: Insufficient BP. Need " +
+        Telemetry::getInstance().write("Error: Insufficient CR. Need " +
                                        std::to_string(cost) + ", have " +
                                        std::to_string(bp));
         return false;
@@ -223,7 +223,7 @@ bool BuildNewCommand::invoke(void)
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
     // Check BP availability
-    int& bp = (s.active_player == "A") ? s.bpA : s.bpB;
+    int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
     if (bp <= 0)
     {
         Logger::instance().error("No Build Points available");

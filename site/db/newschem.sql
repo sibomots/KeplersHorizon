@@ -132,11 +132,26 @@ screen INT NOT NULL DEFAULT 0,
 tube INT NOT NULL DEFAULT 0,
 missiles INT NOT NULL DEFAULT 0,
 sr INT NOT NULL DEFAULT 0,
+-- Extraction equipment (don't affect destruction)
+lrs INT NOT NULL DEFAULT 0,   -- Long Range Scanner
+tb INT NOT NULL DEFAULT 0,    -- Transporter Beam
+dr INT NOT NULL DEFAULT 0,    -- Drones
 pd_spent INT NOT NULL DEFAULT 0,
 at_system VARCHAR(16) DEFAULT NULL,
 at_hex VARCHAR(8) DEFAULT NULL,
 racked_in VARCHAR(4) DEFAULT NULL,
 destroyed_at TIMESTAMP NULL DEFAULT NULL,
+-- Cargo holds for resources
+cargo_ferrous INT NOT NULL DEFAULT 0,
+cargo_rare_earth INT NOT NULL DEFAULT 0,
+cargo_radioactive INT NOT NULL DEFAULT 0,
+cargo_crystalline INT NOT NULL DEFAULT 0,
+cargo_volatile INT NOT NULL DEFAULT 0,
+cargo_water INT NOT NULL DEFAULT 0,
+cargo_organic INT NOT NULL DEFAULT 0,
+cargo_exotic INT NOT NULL DEFAULT 0,
+cargo_missiles INT NOT NULL DEFAULT 0,
+cargo_capacity INT NOT NULL DEFAULT 10,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 UNIQUE KEY uniq_ship (game_id, owner, ship_code),
 FOREIGN KEY (game_id) REFERENCES games(id)
@@ -242,4 +257,122 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 sent_at TIMESTAMP NULL DEFAULT NULL,
 FOREIGN KEY (game_id) REFERENCES games(id),
 INDEX (game_id, target_player, sent_at)
+);
+
+-- Economy Tables
+
+CREATE TABLE IF NOT EXISTS harvest_operations (
+game_id INT NOT NULL,
+ship_code VARCHAR(4) NOT NULL,
+owner CHAR(1) NOT NULL,
+location_type VARCHAR(16) NOT NULL,
+location_id INT NOT NULL,
+resource_type VARCHAR(16) NOT NULL,
+started_turn INT NOT NULL,
+completed BOOLEAN DEFAULT FALSE,
+yield INT DEFAULT 0,
+PRIMARY KEY (game_id, owner, ship_code, started_turn),
+FOREIGN KEY (game_id) REFERENCES games(id),
+INDEX (game_id, owner)
+);
+
+CREATE TABLE IF NOT EXISTS fabrication_queue (
+id INT AUTO_INCREMENT PRIMARY KEY,
+game_id INT NOT NULL,
+player ENUM('A','B') NOT NULL,
+ship_code VARCHAR(4) DEFAULT NULL,
+recipe VARCHAR(32) NOT NULL,
+quantity INT DEFAULT 1,
+started_turn INT NOT NULL,
+completion_turn INT NOT NULL,
+materials_consumed TEXT,
+status ENUM('QUEUED','IN_PROGRESS','COMPLETED','CANCELLED') DEFAULT 'QUEUED',
+FOREIGN KEY (game_id) REFERENCES games(id),
+INDEX (game_id, player)
+);
+
+CREATE TABLE IF NOT EXISTS system_constraints (
+id INT AUTO_INCREMENT PRIMARY KEY,
+system_name VARCHAR(64) NOT NULL,
+constraint_type ENUM('MOVEMENT', 'COMBAT', 'TRADE', 'HARVEST', 'BUILD') NOT NULL,
+modifier_type ENUM('BONUS', 'PENALTY', 'BLOCK') NOT NULL,
+modifier_value INT DEFAULT 0,
+condition_text TEXT,
+source VARCHAR(64),
+INDEX (system_name)
+);
+
+-- Market dynamic pricing
+CREATE TABLE IF NOT EXISTS market_prices (
+game_id INT NOT NULL,
+resource_type VARCHAR(16) NOT NULL,
+current_price INT NOT NULL,
+base_price INT NOT NULL,
+price_trend ENUM('RISING','STABLE','FALLING') DEFAULT 'STABLE',
+total_bought INT NOT NULL DEFAULT 0,
+total_sold INT NOT NULL DEFAULT 0,
+last_updated_turn INT NOT NULL DEFAULT 1,
+PRIMARY KEY (game_id, resource_type),
+FOREIGN KEY (game_id) REFERENCES games(id)
+);
+
+CREATE TABLE IF NOT EXISTS market_history (
+id INT AUTO_INCREMENT PRIMARY KEY,
+game_id INT NOT NULL,
+resource_type VARCHAR(16) NOT NULL,
+price INT NOT NULL,
+turn INT NOT NULL,
+FOREIGN KEY (game_id) REFERENCES games(id),
+INDEX (game_id, resource_type, turn)
+);
+
+-- Resource depletion and regeneration
+CREATE TABLE IF NOT EXISTS resource_state (
+game_id INT NOT NULL,
+resource_id INT NOT NULL,
+current_supply INT NOT NULL,
+max_supply INT NOT NULL,
+regen_rate INT NOT NULL DEFAULT 1,
+last_extracted_turn INT DEFAULT NULL,
+PRIMARY KEY (game_id, resource_id),
+FOREIGN KEY (game_id) REFERENCES games(id)
+);
+
+-- Facility ownership (per game, copied from global facilities)
+CREATE TABLE IF NOT EXISTS facility_control (
+game_id INT NOT NULL,
+system_name VARCHAR(64) NOT NULL,
+facility_type VARCHAR(32) NOT NULL,
+controller CHAR(1) DEFAULT NULL,   -- NULL = neutral, A or B = player
+occupied_since INT DEFAULT NULL,   -- Turn when occupation began
+capture_progress INT DEFAULT 0,    -- Turns of continuous occupation
+PRIMARY KEY (game_id, system_name, facility_type),
+FOREIGN KEY (game_id) REFERENCES games(id)
+);
+
+-- Anomaly events
+CREATE TABLE IF NOT EXISTS anomaly_events (
+id INT AUTO_INCREMENT PRIMARY KEY,
+game_id INT NOT NULL,
+system_name VARCHAR(64) NOT NULL,
+anomaly_name VARCHAR(64) NOT NULL,
+event_type VARCHAR(32) NOT NULL,   -- SALVAGE, SCAN, DISCOVER, etc.
+player CHAR(1) NOT NULL,
+ship_code VARCHAR(4) NOT NULL,
+turn INT NOT NULL,
+result_json TEXT,                  -- What was found/gained
+FOREIGN KEY (game_id) REFERENCES games(id),
+INDEX (game_id, system_name)
+);
+
+-- Salvage records from Graveyard-type anomalies
+CREATE TABLE IF NOT EXISTS salvage_operations (
+id INT AUTO_INCREMENT PRIMARY KEY,
+game_id INT NOT NULL,
+system_name VARCHAR(64) NOT NULL,
+ship_code VARCHAR(4) NOT NULL,
+turn INT NOT NULL,
+resources_found TEXT,              -- JSON of resources gained
+hazard_encountered BOOLEAN DEFAULT FALSE,
+FOREIGN KEY (game_id) REFERENCES games(id)
 );

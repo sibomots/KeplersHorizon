@@ -37,6 +37,12 @@
 #include "survey_command.h"
 #include "repair_command.h"
 #include "resupply_command.h"
+#include "score_command.h"
+#include "extract_command.h"
+#include "market_command.h"
+#include "trade_command.h"
+#include "fabricate_command.h"
+#include "salvage_command.h"
 #include "statemachine.h"
 // #include "game.h"
 #include "db.h"
@@ -129,6 +135,16 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_RESUPPLY
 %token TOK_SAVE
 %token TOK_SCREEN
+%token TOK_SCORE
+%token TOK_EXTRACT
+%token TOK_MARKET
+%token TOK_TRADE
+%token TOK_FABRICATE
+%token TOK_SCAN
+%token TOK_BUY
+%token TOK_SELL
+%token TOK_TRANSFER
+%token TOK_SALVAGE
 %token TOK_SET_ATTR
 %token TOK_START_GAME
 %token TOK_STATS
@@ -303,6 +319,86 @@ looking_cmd:
   | TOK_SURVEY TOK_STRING {
       std::string identifier(*$2);
       ICmd* pCmd = SurveyCommand::Builder().setSystem(identifier).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SCORE {
+      ICmd* pCmd = ScoreCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_EXTRACT TOK_SCAN {
+      ICmd* pCmd = ExtractCommand::Builder().scanMode().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_EXTRACT TOK_STRING TOK_STRING {
+      std::string ship(*$2);
+      std::string res(*$3);
+      ICmd* pCmd = ExtractCommand::Builder().ship(ship).resource(res).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_MARKET {
+      ICmd* pCmd = MarketCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_MARKET TOK_STRING {
+      std::string res(*$2);
+      ICmd* pCmd = MarketCommand::Builder().resource(res).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_TRADE TOK_LIST {
+      ICmd* pCmd = TradeCommand::Builder().listMode().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_TRADE TOK_BUY TOK_STRING TOK_INT {
+      std::string res(*$3);
+      int qty = $4;
+      ICmd* pCmd = TradeCommand::Builder().buyMode().resource(res).quantity(qty).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_TRADE TOK_SELL TOK_STRING TOK_INT {
+      std::string res(*$3);
+      int qty = $4;
+      ICmd* pCmd = TradeCommand::Builder().sellMode().resource(res).quantity(qty).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_TRADE TOK_TRANSFER TOK_STRING TOK_STRING TOK_STRING TOK_INT {
+      std::string ship1(*$3);
+      std::string ship2(*$4);
+      std::string res(*$5);
+      int qty = $6;
+      ICmd* pCmd = TradeCommand::Builder().transferMode().from_ship(ship1).to_ship(ship2).resource(res).quantity(qty).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_FABRICATE TOK_LIST {
+      ICmd* pCmd = FabricateCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_FABRICATE TOK_STRING {
+      std::string rec(*$2);
+      ICmd* pCmd = FabricateCommand::Builder().recipe(rec).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_FABRICATE TOK_STRING TOK_INT {
+      std::string rec(*$2);
+      int qty = $3;
+      ICmd* pCmd = FabricateCommand::Builder().recipe(rec).quantity(qty).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SALVAGE TOK_STRING {
+      std::string ship(*$2);
+      ICmd* pCmd = SalvageCommand::Builder().ship(ship).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }

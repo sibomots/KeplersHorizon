@@ -10,7 +10,8 @@
 :root {
   --bg: #050508;
   --panel: #0a0a12;
-  --text: #3f3;  /* Bright phosphor green */
+  --text: #3f3;
+  /* Bright phosphor green */
   --muted: #2a2;
   --accent: #4f4;
   --border: #1a3a1a;
@@ -22,7 +23,8 @@
 }
 
 /* Base Reset */
-html, body {
+html,
+body {
   height: 100%;
 }
 
@@ -132,6 +134,48 @@ button:hover {
   position: relative;
 }
 
+/* --- Custom Scrollbar (WebKit/Blink Browsers) --- */
+
+/* Scrollbar width */
+#consoleLog::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+  background: transparent;
+}
+
+/* Draggable scrollbar thumb */
+#consoleLog::-webkit-scrollbar-thumb {
+  background: var(--text);
+  box-shadow: 0 0 5px var(--glow);
+  border-radius: 0px;
+}
+
+/* Scrollbar track */
+#consoleLog::-webkit-scrollbar-track {
+  background: var(--bg);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Corner between scrollbars */
+#consoleLog::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+
+/* Status Body scrollbar */
+.statusBody::-webkit-scrollbar {
+  width: 10px;
+  background: transparent;
+}
+
+.statusBody::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  box-shadow: 0 0 4px rgba(34, 170, 34, 0.5);
+}
+
+.statusBody::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
 /* Scanline Overlay */
 .viewport::before {
   content: "";
@@ -162,13 +206,33 @@ button:hover {
 }
 
 @keyframes crt-flicker {
-  0%   { opacity: 0.20; }
-  5%   { opacity: 0.42; }
-  10%  { opacity: 0.58; }
-  15%  { opacity: 0.65; }
-  20%  { opacity: 0.85; }
-  50%  { opacity: 0.85; }
-  100% { opacity: 0.80; }
+  0% {
+    opacity: 0.20;
+  }
+
+  5% {
+    opacity: 0.42;
+  }
+
+  10% {
+    opacity: 0.58;
+  }
+
+  15% {
+    opacity: 0.65;
+  }
+
+  20% {
+    opacity: 0.85;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+
+  100% {
+    opacity: 0.80;
+  }
 }
 
 /* Text Variants */

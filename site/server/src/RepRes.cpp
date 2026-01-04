@@ -145,10 +145,10 @@ bool RepairCommand::invoke(void)
     int cost = repairAmt; // 1 BP per unit
 
     // Check BP
-    int availBP = (owner == 'A') ? s.bpA : s.bpB;
+    int availBP = (owner == 'A') ? s.creditsA : s.creditsB;
     if (cost > availBP)
     {
-        Telemetry::getInstance().write("Insufficient BP. Need " +
+        Telemetry::getInstance().write("Insufficient CR. Need " +
                                        std::to_string(cost) + ", have " +
                                        std::to_string(availBP));
         return false;
@@ -161,7 +161,7 @@ bool RepairCommand::invoke(void)
             db.esc(m_ship_code) + "'");
 
     // Deduct BP
-    std::string bpCol = (owner == 'A') ? "bpA" : "bpB";
+    std::string bpCol = (owner == 'A') ? "creditsA" : "creditsB";
     db.exec("UPDATE game_state SET " + bpCol + "=" + bpCol + "-" +
             std::to_string(cost) +
             " WHERE game_id=" + std::to_string(s.game_id));
@@ -254,10 +254,10 @@ bool ResupplyCommand::invoke(void)
     int cost = (addAmt + 2) / 3; // 1 BP per 3 missiles, round up
 
     // Check BP
-    int availBP = (owner == 'A') ? s.bpA : s.bpB;
+    int availBP = (owner == 'A') ? s.creditsA : s.creditsB;
     if (cost > availBP)
     {
-        Telemetry::getInstance().write("Insufficient BP. Need " +
+        Telemetry::getInstance().write("Insufficient CR. Need " +
                                        std::to_string(cost) + ", have " +
                                        std::to_string(availBP));
         return false;
@@ -270,7 +270,7 @@ bool ResupplyCommand::invoke(void)
             db.esc(m_ship_code) + "'");
 
     // Deduct BP
-    std::string bpCol = (owner == 'A') ? "bpA" : "bpB";
+    std::string bpCol = (owner == 'A') ? "creditsA" : "creditsB";
     db.exec("UPDATE game_state SET " + bpCol + "=" + bpCol + "-" +
             std::to_string(cost) +
             " WHERE game_id=" + std::to_string(s.game_id));

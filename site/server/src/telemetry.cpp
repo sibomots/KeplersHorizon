@@ -233,7 +233,7 @@ void Telemetry::status(char player, HttpResponse* resp)
     status_json << "\"phaseIndex\":" << s.phase_index << ",";
     status_json << "\"phase\":\"" << json_escape(s.phase_name()) << "\",";
     status_json << "\"vp\":{\"A\":" << s.vpA << ",\"B\":" << s.vpB << "},";
-    status_json << "\"bp\":{\"A\":" << s.bpA << ",\"B\":" << s.bpB << "},";
+    status_json << "\"bp\":{\"A\":" << s.creditsA << ",\"B\":" << s.creditsB << "},";
 
     if (!s.combat_summary_json.empty())
     {
