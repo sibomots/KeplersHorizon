@@ -82,10 +82,11 @@ The room creator selects the scenario:
 .SH SCENARIOS
 
 .SH COMMANDS
+Commands are case-insensitive. Aliases are shown after commas.
 
 .SS Turn Management Commands
 .TP
-.B next
+.B next, n
 Advance the active player to the next phase.
 .RS
 .PP
@@ -98,7 +99,7 @@ Phase advanced to: Movement
 .fi
 .RE
 .TP
-.B done
+.B done, ZZ
 Complete current player's turn and advance to opponent's first phase.
 .RS
 .PP
@@ -156,29 +157,21 @@ Show environmental information about the specified star system
 .B galaxy
 Complete overview of all systems and all ships in the game
 
-.SS Turn Management Commands
-.TP
-.B next
-Advance the active player to the next phase
-.TP
-.B done
-Complete current player's turn and advance to opponent's first phase
-
 .SS Build Commands
 .TP
-.B build
+.B build, b
 Show current build state (active drafts, available BP)
 .TP
-.B build new \fIcode\fR \fIname\fR
+.B build new \fIcode\fR \fIname\fR,  bn \fIcode\fR \fIname\fR
 Create a new ship draft with the specified code (e.g., W1, S01) and name
 .TP
-.B build drafts
+.B build drafts, bd
 List all pending build drafts
 .TP
 .B build drafts \fIship_code\fR
 Show detailed attributes of a specific draft ship
 .TP
-.B build set \fIattributes\fR
+.B build set \fIattributes\fR,  bs \fIattributes\fR
 Set attributes on the current draft ship. Attributes are specified as:
 .RS
 .TP
@@ -205,26 +198,20 @@ Example: build set pd=7 b=3 s=2 t=1 m=6
 Note: Warp Generator costs 5 BP (automatically added for WarpShips)
 .RE
 .TP
-.B build commit
+.B build commit, bc
 Commit the current draft, spending BP and adding ship to your fleet
 .TP
-.B build cancel
+.B build cancel, bx
 Cancel the current draft without spending BP
 
 .SS Deployment Commands
 .TP
-.B deploy
-Show current deployment status for both players
-.TP
-.B deploy \fIship_code\fR \fIsystem_name\fR
+.B deploy \fIship_code\fR \fIsystem_name\fR,  ds \fIship_code\fR \fIsystem_name\fR
 Deploy the specified ship to the specified base star hex (must be your base star)
 
 .SS Movement Commands
 .TP
-.B move
-Show current movement status for all ships
-.TP
-.B move \fIship_code\fR \fIdestination\fR [\fIwaypoint\fR...]
+.B move \fIship_code\fR \fIdestination\fR,  m \fIship_code\fR \fIdestination\fR
 Move the specified ship to destination, optionally through waypoints. Movement costs:
 .RS
 .IP \(bu 2
@@ -245,10 +232,10 @@ Ships may freely move through space hexes with enemy ships.
 
 .SS Combat Commands
 .TP
-.B combat
+.B combat, c
 Show status of current combat situation
 .TP
-.B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
+.B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR,  co \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
 Issue combat orders for a ship. Components:
 .RS
 .TP
@@ -286,56 +273,38 @@ Note: Cannot use Beams/Screens and Missiles in same round
 .RE
 .RE
 .TP
-.B combat order commit
+.B combat commit, cc
 Commit all combat orders for this round
 .TP
-.B combat order cancel
+.B combat cancel, cx
 Cancel all combat orders and re-issue
 .TP
-.B combat apply \fIship\fR \fIdamage_allocation\fR
+.B combat drafts, cd
+List pending combat orders
+.TP
+.B combat apply \fIship\fR \fIdamage_allocation\fR,  ca \fIship\fR \fIdamage_allocation\fR
 Apply damage hits to ship attributes (defender chooses where hits are taken)
-.TP
-.B combat apply commit
-Commit damage allocation
-.TP
-.B combat apply cancel
-Cancel damage allocation and re-apply
 
 .SS Pick and Drop Commands
 .TP
-.B pick \fIlocation\fR
-Show status of what can be picked up at the specified hex
-.TP
-.B pick \fIsystemship\fR \fIwarpship\fR
+.B pick \fIsystemship\fR \fIwarpship\fR,  p \fIsystemship\fR \fIwarpship\fR
 Pick up the specified SystemShip into the specified WarpShip's rack
 .TP
-.B drop \fIwarpship\fR
-List what may be dropped from the specified WarpShip
-.TP
-.B drop \fIsystemship\fR \fIwarpship\fR
+.B drop \fIsystemship\fR \fIwarpship\fR,  dd \fIsystemship\fR \fIwarpship\fR
 Drop the specified SystemShip from the specified WarpShip at current location
 
 .SS Repair and Resupply Commands
 .TP
-.B repair
-List ships that can be repaired (must be at your base star hex)
+.B repair \fIship_code\fR \fIattribute\fR \fIN\fR,  rp \fIship_code\fR \fIattribute\fR \fIN\fR
+Repair the specified ship using BP (1 BP repairs 1 unit of any attribute up to original max). Must be at your base star hex.
 .TP
-.B repair \fIship_code\fR
-Repair the specified ship using BP (1 BP repairs 1 unit of any attribute up to original max)
-.TP
-.B resupply
-Show available BP and resupply capabilities (missiles only)
-.TP
-.B resupply \fIship_code\fR \fIquantity\fR
+.B resupply \fIship_code\fR \fIquantity\fR,  rs \fIship_code\fR \fIquantity\fR
 Resupply the specified ship with missiles (1 BP per 3 missiles, up to original max)
 
 .SS Help Commands
 .TP
-.B help
+.B help, ?
 Show help screen and list all help topics
-.TP
-.B help \fItopic\fR
-Show help about a specific topic or command
 
 .SH SHIP ATTRIBUTES
 .TP
