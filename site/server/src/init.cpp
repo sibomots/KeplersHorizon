@@ -88,9 +88,13 @@ void apply_arguments(int argc, char** argv)
         {
             next_flag(dataconfig.schema);
         }
-        else if (k == "--seed")
+        else if (k == "--seed-game")
         {
-            next_flag(dataconfig.seed);
+            next(dataconfig.seed_game_path);
+        }
+        else if (k == "--seed-milieu")
+        {
+            next(dataconfig.seed_milieu_path);
         }
         else if (k == "--port")
         {

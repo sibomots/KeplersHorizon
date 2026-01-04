@@ -48,16 +48,16 @@ typedef struct
 
 typedef struct DataConfig
 {
-    bool clean;
-    bool schema;
-    bool seed;
+    bool clean;   // Drop all tables (game + milieu)
+    bool schema;  // Create all tables (game + milieu)
+    std::string seed_game_path;    // Path to game seed CSVs (empty = skip)
+    std::string seed_milieu_path;  // Path to milieu seed CSVs (empty = skip)
 
     DataConfig()
     {
         clean = false;
         schema = false;
-        seed = false;
-        // strings are already initialized to empty strings.
+        // Paths are empty by default (no seeding)
     }
 } DataConfig;
 

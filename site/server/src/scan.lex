@@ -46,6 +46,9 @@
 "fleet"    { return TOK_FLEET; }
 "hex"      { return TOK_HEX; }
 "system"   { return TOK_SYSTEM; }
+"sy"       { return TOK_SYSTEM; }
+"survey"   { return TOK_SURVEY; }
+"sv"       { return TOK_SURVEY; }
 "galaxy"   { return TOK_GALAXY; }
 
 "next"     { return TOK_NEXT; }

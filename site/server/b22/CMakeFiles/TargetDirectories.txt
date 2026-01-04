@@ -1,0 +1,3 @@
+/home/jdw/gh/KeplersHorizon/site/server/b22/CMakeFiles/kh.dir
+/home/jdw/gh/KeplersHorizon/site/server/b22/CMakeFiles/edit_cache.dir
+/home/jdw/gh/KeplersHorizon/site/server/b22/CMakeFiles/rebuild_cache.dir

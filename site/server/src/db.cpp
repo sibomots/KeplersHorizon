@@ -11,6 +11,7 @@
 
 #include "app.h"
 #include "combat.h"
+#include "csv_loader.h"
 #include "load.h"
 #include "logger.h"
 #include "typedefs.h"
@@ -41,11 +42,20 @@ void DatabaseManager::load(void* param)
         return;
     }
 
-    // Part 1: If --clean flag is set, drop all schema tables
+    // Part 1: If --clean flag is set, drop ALL tables (game + milieu)
     if (pconf->clean)
     {
-        Logger::instance().info("[DB] CLEAN: Dropping schema tables...");
+        Logger::instance().info("[DB] CLEAN: Dropping all tables...");
         int dropped = 0;
+
+        // Drop milieu tables first (they may reference game tables)
+        for (const auto& stmt : MILIEU_DROP_STATEMENTS)
+        {
+            mysql_query(driver, stmt.c_str());
+            dropped++;
+        }
+
+        // Drop game tables
         for (const auto& stmt : DROP_STATEMENTS)
         {
             if (mysql_query(driver, stmt.c_str()))
@@ -64,14 +74,13 @@ void DatabaseManager::load(void* param)
         Logger::instance().info(notice.str());
     }
 
-    // Part 2: If --schema flag is set, create all schema tables
+    // Part 2: If --schema flag is set, create ALL tables (game + milieu)
     if (pconf->schema)
     {
-        std::ostringstream notice;
-        notice << "[DB] SCHEMA: Creating tables...";
-        Logger::instance().info(notice.str());
-
+        Logger::instance().info("[DB] SCHEMA: Creating all tables...");
         int created = 0;
+
+        // Create game tables first
         for (const auto& stmt : SCHEMA_STATEMENTS)
         {
             if (mysql_query(driver, stmt.c_str()))
@@ -88,68 +97,53 @@ void DatabaseManager::load(void* param)
                 created++;
             }
         }
+
+        // Create milieu tables
+        for (const auto& stmt : MILIEU_SCHEMA_STATEMENTS)
+        {
+            if (mysql_query(driver, stmt.c_str()))
+            {
+                std::ostringstream err;
+                err << "[DB] SQL Error: " << mysql_error(driver);
+                Logger::instance().error(err.str());
+            }
+            else
+            {
+                created++;
+            }
+        }
+
         std::ostringstream msg;
-        msg << "[DB] SCHEMA: Executed " << (int)created << " statements";
+        msg << "[DB] SCHEMA: Created " << (int)created << " tables";
         Logger::instance().info(msg.str());
     }
 
-    // Part 3: If --seed flag is set, insert seed data
-    if (pconf->seed)
+    // Part 3: If --seed-game <path> is set, load game seed data from CSVs
+    if (!pconf->seed_game_path.empty())
     {
-        std::ostringstream msg;
-        msg << "[DB] SEED: Inserting seed data...";
-        Logger::instance().info(msg.str());
-        int inserted = 0;
+        Logger::instance().info("[DB] SEED-GAME: Loading game data from " +
+                                pconf->seed_game_path);
 
-        // Star systems, warplines
-        for (const auto& stmt : SEED_STATEMENTS)
+        int loaded = CSVLoader::load_game_data(pconf->seed_game_path);
+        if (loaded < 0)
         {
-            if (mysql_query(driver, stmt.c_str()))
-            {
-                std::ostringstream err;
-                err << "[DB] SQL Error: " << mysql_error(driver);
-                Logger::instance().error(err.str());
-            }
-            else
-            {
-                inserted++;
-            }
+            Logger::instance().error(
+                "[DB] SEED-GAME: Failed to load CSV files");
         }
+    }
 
-        // Hexes
-        for (const auto& stmt : HEXES_SEED)
+    // Part 4: If --seed-milieu <path> is set, load milieu seed data from CSVs
+    if (!pconf->seed_milieu_path.empty())
+    {
+        Logger::instance().info("[DB] SEED-MILIEU: Loading milieu data from " +
+                                pconf->seed_milieu_path);
+
+        int loaded = CSVLoader::load_milieu_data(pconf->seed_milieu_path);
+        if (loaded < 0)
         {
-            if (mysql_query(driver, stmt.c_str()))
-            {
-                std::ostringstream err;
-                err << "[DB] SQL Error: " << mysql_error(driver);
-                Logger::instance().error(err.str());
-            }
-            else
-            {
-                inserted++;
-            }
+            Logger::instance().error(
+                "[DB] SEED-MILIEU: Failed to load CSV files");
         }
-
-        // Warpline hexes
-        for (const auto& stmt : WARPLINE_HEXES_SEED)
-        {
-            if (mysql_query(driver, stmt.c_str()))
-            {
-                std::ostringstream err;
-                err << "[DB] SQL Error: " << mysql_error(driver);
-                Logger::instance().error(err.str());
-            }
-            else
-            {
-                inserted++;
-            }
-        }
-
-        std::ostringstream summary_msg;
-        summary_msg << "[DB] SEED: Executed " << (int)inserted
-                    << " insert statements";
-        Logger::instance().info(summary_msg.str());
     }
 }
 

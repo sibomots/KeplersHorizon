@@ -46,9 +46,12 @@ src/Turn.cpp
 src/account.cpp
 src/cmd.cpp
 src/comms.cpp
+src/csv_loader.cpp
 src/db.cpp
 src/events.cpp
 src/fleet_command.cpp
+src/system_command.cpp
+src/survey_command.cpp
 src/init.cpp
 src/json.cpp
 src/logger.cpp
@@ -81,6 +84,7 @@ inc/build_show_draft_command.h
 inc/cmd.h
 inc/combat.h
 inc/comms.h
+inc/csv_loader.h
 inc/db.h
 inc/deploy_command.h
 inc/done_command.h
@@ -101,6 +105,8 @@ inc/roommanager.h
 inc/ships.h
 inc/srvmgr.h
 inc/start_command.h
+inc/system_command.h
+inc/survey_command.h
 inc/state.h
 inc/statemachine.h
 inc/telemetry.h

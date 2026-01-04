@@ -33,6 +33,8 @@
 #include "combat_commit_command.h"
 #include "combat_cancel_command.h"
 #include "fleet_command.h"
+#include "system_command.h"
+#include "survey_command.h"
 #include "repair_command.h"
 #include "resupply_command.h"
 #include "statemachine.h"
@@ -132,6 +134,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_STATS
 %token TOK_STATUS
 %token TOK_SYSTEM
+%token TOK_SURVEY
 %token TOK_TUBE
 
 /* Attribute assignment tokens - value in yylval.ival */
@@ -281,8 +284,27 @@ looking_cmd:
   }
   | TOK_SYSTEM TOK_STRING {
       std::string identifier(*$2);
-      Logger::instance().info("Environmental information about "
-                              "system named >" + identifier + "<");
+      ICmd* pCmd = SystemCommand::Builder().setName(identifier).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SYSTEM TOK_STRING TOK_STRING {
+      std::string identifier(*$2);
+      std::string subcmd(*$3);
+      ICmd* pCmd = SystemCommand::Builder().setName(identifier).setSubcommand(subcmd).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SURVEY {
+      ICmd* pCmd = SurveyCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SURVEY TOK_STRING {
+      std::string identifier(*$2);
+      ICmd* pCmd = SurveyCommand::Builder().setSystem(identifier).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
   | TOK_GALAXY {
       Logger::instance().info("Complete run-down of all systems, "
