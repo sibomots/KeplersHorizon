@@ -174,7 +174,7 @@ commands:
   ;
 
 command:
-  help_cmd
+    help_cmd
   | session_cmd
   | info_cmd
   | looking_cmd
@@ -1032,28 +1032,22 @@ repair_attr_spec:
   }
   ; 
  
- 
 help_cmd:
-  TOK_HELP
-  {
-       ICmd *pCmd = HelpCommand::Builder().build();
-       pCmd->invoke();
-       SafeDelete(pCmd);
-  }
-  | TOK_DEMO
-  {
+  TOK_DEMO {
        ICmd *pCmd = HelpCommand::Builder().set_demo().build();
        pCmd->invoke();
        SafeDelete(pCmd);
   }
-  | help_composite
-  ;
-
-help_composite:
-  TOK_HELP TOK_STRING
-  {
+  |
+  TOK_HELP TOK_STRING {
        std::string topic(*$2);
        ICmd *pCmd = HelpCommand::Builder().set_topic(topic).build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
+  }
+  |
+  TOK_HELP {
+       ICmd *pCmd = HelpCommand::Builder().build();
        pCmd->invoke();
        SafeDelete(pCmd);
   }

@@ -11,6 +11,7 @@ DELETE FROM help_topics;
 LOAD DATA LOCAL INFILE 'help/help_topics.csv'
 INTO TABLE help_topics
 FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 (help_topic_id, topic_info);
 

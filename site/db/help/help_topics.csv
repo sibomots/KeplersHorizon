@@ -1,11 +1,11 @@
-1,KEPLER'S HORIZON - COMMAND REFERENCE
+1,"KEPLER'S HORIZON - COMMAND REFERENCE
 
 Type HELP TOPICS for a list of available topics.
 Type HELP {topic} for detailed help on a specific topic.
 
 For complete documentation, see:
-github.com/sibomots/KeplersHorizon/wiki
-2,BUILD COMMANDS
+github.com/sibomots/KeplersHorizon/wiki"
+2,"BUILD COMMANDS
 
   BN W/S {NAME}       Build New Warpship (W) or Systemship (S)
   BS {SHIP} {SPECS}   Set ship specifications
@@ -17,8 +17,8 @@ SPECS format: PD=# B=# S=# T=# M=#
   PD = PowerDrive, B = Beams, S = Screens, T = Tubes, M = Missiles
 
 Warpships can travel between star systems.
-Systemships operate within a single system.
-3,MOVE COMMANDS
+Systemships operate within a single system."
+3,"MOVE COMMANDS
 
   M {SHIP} {HEX/SYSTEM}   Move ship to hex or system
   PICK {SHIP}             Rack systemship into warpship
@@ -26,8 +26,8 @@ Systemships operate within a single system.
   DEPLOY {SHIP} {SYSTEM}  Deploy ship to star system
 
 Warpships move along warp lines between systems.
-Systemships move within hex grids in systems.
-4,COMBAT COMMANDS
+Systemships move within hex grids in systems."
+4,"COMBAT COMMANDS
 
   C                       Show active combat status
   CO {SHIP} A {TARGET}    Order ship to ATTACK target
@@ -38,8 +38,8 @@ Systemships move within hex grids in systems.
   CD {SHIP} {SPECS}       Assign damage to ship
 
 Combat occurs when opposing ships occupy the same hex.
-Use CRT command to view the Combat Results Table.
-5,ECONOMY COMMANDS
+Use CRT command to view the Combat Results Table."
+5,"ECONOMY COMMANDS
 
   EXTRACT      Extract resources from current location
   MARKET       View market prices and inventory
@@ -47,8 +47,8 @@ Use CRT command to view the Combat Results Table.
   FABRICATE    Convert resources into components
 
 Resources: ORE, GAS, RARE
-Components: ALLOY, FUEL, ELECTRONICS
-6,INFORMATION COMMANDS
+Components: ALLOY, FUEL, ELECTRONICS"
+6,"INFORMATION COMMANDS
 
   STATUS           Display current game state
   FLEET            List your ships and their status
@@ -56,8 +56,8 @@ Components: ALLOY, FUEL, ELECTRONICS
   SYSTEM {NAME}    Show details for a star system
   SURVEY           Scan for resources/anomalies
   CRT              Display Combat Results Table
-  DEMO             Run demonstration sequence
-7,TURN COMMANDS
+  DEMO             Run demonstration sequence"
+7,"TURN COMMANDS
 
   FF    Fast-forward (end your turn)
   N     Advance to next game phase
@@ -67,8 +67,8 @@ Game Phases:
   2. Movement
   3. Combat
   4. Economy
-  5. Victory Check
-8,SHIP TYPES
+  5. Victory Check"
+8,"SHIP TYPES
 
 WARPSHIP (W)
   Can travel between star systems via warp lines
@@ -85,8 +85,8 @@ SHIP SPECS:
   B  = Beams (attack power)
   S  = Screens (defense)
   T  = Tubes (missile launchers)
-  M  = Missiles (ammunition)
-9,COMBAT RESULTS TABLE (CRT)
+  M  = Missiles (ammunition)"
+9,"COMBAT RESULTS TABLE (CRT)
 
 Attack vs Defense ratio determines outcome:
   3:1 or better = Attacker advantage
@@ -98,8 +98,8 @@ Damage is applied to ship systems:
   Then: Systems destroyed (B/T/PD)
   Finally: Ship destroyed
 
-Type CRT in-game to see the full table.
-10,MISSILES
+Type CRT in-game to see the full table."
+10,"MISSILES
 
 Missiles are ammunition for Tubes (T).
 Each Tube can fire one missile per combat round.
@@ -109,4 +109,4 @@ Each Tube can fire one missile per combat round.
 
 Missiles provide long-range attack capability.
 Once fired, missiles are consumed.
-Resupply at bases or via FABRICATE command.
+Resupply at bases or via FABRICATE command."
