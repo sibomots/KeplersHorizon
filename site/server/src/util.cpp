@@ -36,6 +36,7 @@ std::string trim(const std::string& s)
     return std::string(start, end + 1);
 }
 
+#if 0
 // Dynamic seat lookup - checks game_seats table for the user's seat in a game
 // Falls back to legacy alice=A, bob=B for backward compatibility
 char owner_for_username(const std::string& u)
@@ -48,6 +49,7 @@ char owner_for_username(const std::string& u)
         return 'B';
     return 0;
 }
+#endif
 
 // Dynamic seat lookup - returns 'A' or 'B' based on game_seats table, or 0 if
 // not in game
@@ -124,49 +126,6 @@ std::vector<std::string> split(const std::string& s, char delim)
         elems.push_back(item);
     }
     return elems;
-}
-
-std::string escape_json(const std::string& s)
-{
-    std::ostringstream o;
-    for (auto c : s)
-    {
-        switch (c)
-        {
-        case '"':
-            o << "\\\"";
-            break;
-        case '\\':
-            o << "\\\\";
-            break;
-        case '\b':
-            o << "\\b";
-            break;
-        case '\f':
-            o << "\\f";
-            break;
-        case '\n':
-            o << "\\n";
-            break;
-        case '\r':
-            o << "\\r";
-            break;
-        case '\t':
-            o << "\\t";
-            break;
-        default:
-            if ('\x00' <= c && c <= '\x1f')
-            {
-                o << "\\u" << std::hex << std::setw(4) << std::setfill('0')
-                  << (int)c;
-            }
-            else
-            {
-                o << c;
-            }
-        }
-    }
-    return o.str();
 }
 
 std::string upper_ascii(const std::string& s)

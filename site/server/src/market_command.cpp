@@ -46,11 +46,11 @@ void MarketCommand::show_all_prices()
     DatabaseManager& db = DatabaseManager::getInstance();
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\\n";
-    out << "          MARKET EXCHANGE (Round " << s.round << ")\\n";
-    out << "═══════════════════════════════════════════\\n";
-    out << "Resource      Price   Trend\\n";
-    out << "----------    -----   -----\\n";
+    out << "═══════════════════════════════════════════\n"
+        << "          MARKET EXCHANGE (Round " << s.round << ")\n"
+        << "═══════════════════════════════════════════\n"
+        << "Resource      Price   Trend\n"
+        << "----------    -----   -----\n";
 
     for (int i = 0; i < NUM_RESOURCES; i++)
     {
@@ -88,10 +88,11 @@ void MarketCommand::show_all_prices()
 
         // Format output
         std::string name = res;
-        if (name.length() < 12)
+        if (name.length() < 12) {
             name += std::string(12 - name.length(), ' ');
+        }
 
-        out << name << "  " << price << " CR   " << trend_char << "\\n";
+        out << name << "  " << price << " CR   " << trend_char << "\n";
     }
 
     out << "═══════════════════════════════════════════";
@@ -115,21 +116,21 @@ void MarketCommand::show_price_history()
         "' ORDER BY turn DESC LIMIT 10");
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\\n";
-    out << "     " << res_upper << " PRICE HISTORY\\n";
-    out << "═══════════════════════════════════════════\\n";
+    out << "═══════════════════════════════════════════\n";
+    out << "     " << res_upper << " PRICE HISTORY\n";
+    out << "═══════════════════════════════════════════\n";
 
     if (history.empty())
     {
-        out << "No trading history for " << res_upper << "\\n";
+        out << "No trading history for " << res_upper << "\n";
     }
     else
     {
-        out << "Round   Price\\n";
-        out << "-----   -----\\n";
+        out << "Round   Price\n"
+            << "-----   -----\n";
         for (const auto& row : history)
         {
-            out << row[0] << "       " << row[1] << " CR\\n";
+            out << row[0] << "       " << row[1] << " CR\n";
         }
     }
 

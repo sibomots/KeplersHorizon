@@ -26,7 +26,7 @@ bool ExtractCommand::invoke(void)
     if (m_ship_code.empty())
     {
         Telemetry::getInstance().write(
-            "Usage: extract scan\\n"
+            "Usage: extract scan\n"
             "       extract <ship> <resource>");
         return true;
     }
@@ -56,9 +56,9 @@ void ExtractCommand::do_scan()
     }
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\\n";
-    out << "         HARVESTABLE RESOURCES\\n";
-    out << "═══════════════════════════════════════════\\n";
+    out << "═══════════════════════════════════════════\n";
+    out << "         HARVESTABLE RESOURCES\n";
+    out << "═══════════════════════════════════════════\n";
 
     for (const auto& ship : ships)
     {
@@ -90,20 +90,20 @@ void ExtractCommand::do_scan()
 
         if (resources.empty())
         {
-            out << code << " at " << sys << ": No resources\\n";
+            out << code << " at " << sys << ": No resources\n";
         }
         else
         {
-            out << code << " at " << sys << ":\\n";
+            out << code << " at " << sys << ":\n";
             for (const auto& r : resources)
             {
                 out << "  " << r[0] << " (" << r[1] << "/" << r[2] << ") - "
-                    << r[3] << "\\n";
+                    << r[3] << "\n";
             }
         }
     }
 
-    out << "═══════════════════════════════════════════\\n";
+    out << "═══════════════════════════════════════════\n";
     out << "Use: extract <ship> <resource_type>";
     Telemetry::getInstance().write(out.str());
 }

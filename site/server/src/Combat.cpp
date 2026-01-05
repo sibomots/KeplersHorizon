@@ -493,9 +493,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         combat_system = sys_row[0][0];
 
     std::ostringstream log;
-    log << "\\n=====\\n";
-    log << "       COMBAT ROUND " << cs.round << " RESOLUTION\\n";
-    log << "========\\n";
+    log << "\n=====\n";
+    log << "       COMBAT ROUND " << cs.round << " RESOLUTION\n";
+    log << "========\n";
 
     // 3. Resolve Fire
     // Beams
@@ -545,7 +545,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         target->damage_received += dmg;
                         log << ship.code << " '" << ship.name << "' beams "
                             << target->code << " '" << target->name << "' for "
-                            << dmg << " dmg!\\n";
+                            << dmg << " dmg!\n";
                     }
                 }
                 else
@@ -553,15 +553,15 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     if (escaped)
                         log << target->code << " '" << target->name
                             << "' outruns " << ship.code << " '" << ship.name
-                            << "' beams.\\n";
+                            << "' beams.\n";
                     else
                         log << ship.code << " '" << ship.name << "' misses "
-                            << target->code << " '" << target->name << "'.\\n";
+                            << target->code << " '" << target->name << "'.\n";
                 }
             }
             else
             {
-                log << ship.code << " has no target '" << tid << "'\\n";
+                log << ship.code << " has no target '" << tid << "'\n";
             }
         }
         else if (ship.ord.tactic == 'R')
@@ -622,7 +622,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                                 log << ship.code << " '" << ship.name
                                     << "' missile hits " << target->code << " '"
                                     << target->name << "' for " << dmg
-                                    << " dmg!\\n";
+                                    << " dmg!\n";
                             }
                         }
                         else
@@ -630,11 +630,11 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             if (escaped)
                                 log << target->code << " '" << target->name
                                     << "' outruns " << ship.code << " '"
-                                    << ship.name << "' missile.\\n";
+                                    << ship.name << "' missile.\n";
                             else
                                 log << ship.code << " '" << ship.name
                                     << "' missile misses " << target->code
-                                    << " '" << target->name << "'.\\n";
+                                    << " '" << target->name << "'.\n";
                         }
                     }
                     // Deduct ammo? Need to update ships table?
@@ -669,7 +669,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             total_net_damage += net;
             first = false;
             log << ship.code << " '" << ship.name << "' takes " << net
-                << " net damage (Absorbed " << absorb << ").\\n";
+                << " net damage (Absorbed " << absorb << ").\n";
         }
 
         // Retreat Logic
@@ -684,7 +684,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             if (escape)
             {
                 log << ship.code << " '" << ship.name
-                    << "' successfully retreats!\\n";
+                    << "' successfully retreats!\n";
                 // Execute Retreat immediately? Or at end of round?
                 // Rules: "Retreat Resolution".
                 // We can mark them. For now, strict damage focus.
@@ -692,7 +692,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             else
             {
                 log << ship.code << " '" << ship.name
-                    << "' failed to retreat.\\n";
+                    << "' failed to retreat.\n";
             }
         }
     }
@@ -707,10 +707,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     {
         next_stage = 2;     // DAMAGE_PENDING
         next_stalemate = 0; // Reset stalemate counter
-        log << "-----\\n"
-            << "RESULT:\\n"
-            << "Critical Damage!\\n"
-            << "Assign Damage Now.\\n";
+        log << "-----\n"
+            << "RESULT:\n"
+            << "Critical Damage!\n"
+            << "Assign Damage Now.\n";
 
         // Build per-player damage summaries
         std::ostringstream dmgA;
@@ -730,13 +730,13 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 if (ship.owner == 'A')
                 {
                     dmgA << "  " << ship.code << " '" << ship.name
-                         << "': " << net << " DAMAGE\\n";
+                         << "': " << net << " DAMAGE\n";
                     dmgA_total += net;
                 }
                 else
                 {
                     dmgB << "  " << ship.code << " '" << ship.name
-                         << "': " << net << " DAMAGE\\n";
+                         << "': " << net << " DAMAGE\n";
                     dmgB_total += net;
                 }
             }
@@ -748,8 +748,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             Telemetry::getInstance().add_tell(
                 game_id, 'A',
                 "TACTICAL: ROUND " + std::to_string(cs.round) +
-                    " DAMAGE REPORT\\n" + dmgA.str() + "TOTAL: " +
-                    std::to_string(dmgA_total) + " DAMAGE TO ASSIGN\\n" +
+                    " DAMAGE REPORT\n" + dmgA.str() + "TOTAL: " +
+                    std::to_string(dmgA_total) + " DAMAGE TO ASSIGN\n" +
                     ">> Use 'combat apply <ship> pd=N b=N...' to assign "
                     "damage.");
         }
@@ -766,8 +766,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             Telemetry::getInstance().add_tell(
                 game_id, 'B',
                 "TACTICAL: ROUND " + std::to_string(cs.round) +
-                    " DAMAGE REPORT\\n" + dmgB.str() + "TOTAL: " +
-                    std::to_string(dmgB_total) + " DAMAGE TO ASSIGN\\n" +
+                    " DAMAGE REPORT\n" + dmgB.str() + "TOTAL: " +
+                    std::to_string(dmgB_total) + " DAMAGE TO ASSIGN\n" +
                     ">> Use 'combat apply <ship> pd=N b=N...' to assign "
                     "damage.");
         }
@@ -782,17 +782,17 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     else
     {
         next_stalemate++;
-        log << "----------------------------------------\\n";
-        log << "RESULT: Stalemate (No Hull Damage).\\n";
+        log << "----------------------------------------\n";
+        log << "RESULT: Stalemate (No Hull Damage).\n";
 
         // Check for 3 consecutive stalemates - per rules, initiative player
         // must retreat
         if (next_stalemate >= 3)
         {
             next_stage = 3; // RETREAT_PENDING
-            log << "STALEMATE: 3 rounds with no damage!\\n";
+            log << "STALEMATE: 3 rounds with no damage!\n";
             log << "Initiative player must withdraw all ships from this "
-                   "hex.\\n";
+                   "hex.\n";
 
             // Notify initiative player they must retreat
             char initiative = StateMachine::getInstance().get_current_player();
@@ -804,10 +804,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else
         {
-            log << "STATUS: Beginning Round " << (next_round + 1) << "\\n";
+            log << "STATUS: Beginning Round " << (next_round + 1) << "\n";
             log << "ACTION: Submit Orders for Round " << (next_round + 1)
-                << "\\n";
-            log << "========================================\\n";
+                << "\n";
+            log << "========================================\n";
             next_round++;
 
             // Notify both players next round begins

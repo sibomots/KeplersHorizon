@@ -103,11 +103,11 @@ bool TradeCommand::invoke(void)
 void TradeCommand::show_prices()
 {
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\\n";
-    out << "         TRADE EXCHANGE RATES\\n";
-    out << "═══════════════════════════════════════════\\n";
-    out << "Resource      Buy    Sell\\n";
-    out << "----------    ---    ----\\n";
+    out << "═══════════════════════════════════════════\n";
+    out << "         TRADE EXCHANGE RATES\n";
+    out << "═══════════════════════════════════════════\n";
+    out << "Resource      Buy    Sell\n";
+    out << "----------    ---    ----\n";
 
     for (int i = 0; i < NUM_PRICES; i++)
     {
@@ -115,10 +115,10 @@ void TradeCommand::show_prices()
         if (name.length() < 12)
             name += std::string(12 - name.length(), ' ');
         out << name << "  " << PRICES[i].buy_price << " CR   "
-            << PRICES[i].sell_price << " CR\\n";
+            << PRICES[i].sell_price << " CR\n";
     }
 
-    out << "═══════════════════════════════════════════\\n";
+    out << "═══════════════════════════════════════════\n";
     out << "Trade requires ship at TRADE_HUB facility.";
     Telemetry::getInstance().write(out.str());
 }

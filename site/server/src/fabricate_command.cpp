@@ -64,15 +64,15 @@ bool FabricateCommand::invoke(void)
 void FabricateCommand::show_recipes()
 {
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\\n";
-    out << "         FABRICATION RECIPES\\n";
-    out << "═══════════════════════════════════════════\\n";
+    out << "═══════════════════════════════════════════\n";
+    out << "         FABRICATION RECIPES\n";
+    out << "═══════════════════════════════════════════\n";
 
     for (int i = 0; i < NUM_RECIPES; i++)
     {
         const Recipe& r = RECIPES[i];
         out << r.name << " - " << r.description << " [" << r.time_rounds
-            << " rounds]\\n";
+            << " rounds]\n";
         out << "  Cost: ";
         bool first = true;
         for (int j = 0; j < 8; j++)
@@ -85,11 +85,11 @@ void FabricateCommand::show_recipes()
                 first = false;
             }
         }
-        out << "\\n";
+        out << "\n";
     }
 
-    out << "═══════════════════════════════════════════\\n";
-    out << "Use: fabricate <recipe> [qty]\\n";
+    out << "═══════════════════════════════════════════\n";
+    out << "Use: fabricate <recipe> [qty]\n";
     out << "Requires ship at SHIPYARD or REFINERY.";
     Telemetry::getInstance().write(out.str());
 }

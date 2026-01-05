@@ -9,7 +9,6 @@
 
 #include <sstream>
 
-//#include "game.h"
 #include "db.h"
 #include "json.h"
 #include "logger.h"
@@ -169,7 +168,7 @@ static std::string getShipsJson(int game_id, char player)
     
     // Friendly ships (owned by current player) - include specs for tooltip
     auto friendly = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, tube, missiles, sr FROM ships "
+        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, tube, missiles, sr, ship_name FROM ships "
         "WHERE game_id=" + std::to_string(game_id) + 
         " AND owner='" + std::string(1, player) + "'"
         " AND destroyed_at IS NULL");
@@ -187,13 +186,14 @@ static std::string getShipsJson(int game_id, char player)
             << ",\"t\":" << friendly[i][7]
             << ",\"m\":" << friendly[i][8]
             << ",\"sr\":" << friendly[i][9]
+            << ",\"name\":\"" << json_escape(friendly[i][10]) << "\""
             << "}";
     }
     out << "]";
     
     // Enemy ships (owned by opponent)
     auto enemy = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+        "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
         "WHERE game_id=" + std::to_string(game_id) + 
         " AND owner='" + std::string(1, opponent) + "'"
         " AND destroyed_at IS NULL");
@@ -204,7 +204,9 @@ static std::string getShipsJson(int game_id, char player)
         out << "{\"code\":\"" << json_escape(enemy[i][0]) << "\""
             << ",\"type\":\"" << json_escape(enemy[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(enemy[i][2]) << "\""
-            << ",\"system\":\"" << json_escape(enemy[i][3]) << "\"}";
+            << ",\"system\":\"" << json_escape(enemy[i][3]) << "\""
+            << ",\"name\":\"" << json_escape(enemy[i][4]) << "\""
+            << "}";
     }
     out << "]";
     

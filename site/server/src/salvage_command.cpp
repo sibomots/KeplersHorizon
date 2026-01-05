@@ -33,7 +33,7 @@ bool SalvageCommand::invoke(void)
     if (m_ship_code.empty())
     {
         Telemetry::getInstance().write(
-            "Usage: salvage <ship>\\n"
+            "Usage: salvage <ship>\n"
             "Ship must be at a system with salvageable wreckage (e.g., UMMA).");
         return true;
     }

@@ -58,12 +58,12 @@ void ScoreCommand::show_overview()
     int tech_level = tech_row.empty() ? 0 : std::atoi(tech_row[0][0].c_str());
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\\n";
+    out << "═══════════════════════════════════════════\n";
     out << "TURN: " << active_username << "  PHASE: " << s.phase_name()
-        << "  ROUND: " << s.round << "\\n";
-    out << "CREDITS: " << my_credits << " CR  TECH: L" << tech_level << "\\n";
+        << "  ROUND: " << s.round << "\n";
+    out << "CREDITS: " << my_credits << " CR  TECH: L" << tech_level << "\n";
     out << "VICTORY: You " << my_vp << ", Enemy " << enemy_vp << " (need "
-        << vp_needed << " to win)\\n";
+        << vp_needed << " to win)\n";
     out << "═══════════════════════════════════════════";
 
     Telemetry::getInstance().write(out.str());

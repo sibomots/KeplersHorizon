@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "db.h"
-//#include "game.h"
 #include "icmd.h"
 #include "typedefs.h"
 

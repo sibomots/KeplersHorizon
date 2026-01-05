@@ -454,8 +454,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         const title = document.createElementNS(NS, 'title');
         let tooltipLines = [];
 
-        // Line 1: Ship code and type (W or S capitalized)
-        tooltipLines.push(`${ship.code.toUpperCase()} (${ship.type})`);
+        // Line 1: Ship code and name (e.g. "W1 - ENTERPRISE")
+        const shipName = ship.name || '';
+        tooltipLines.push(`${ship.code.toUpperCase()} - ${shipName}`);
 
         // Line 2: System OR Hex (not both)
         // If system has a value (star hex), show system; otherwise show hex
