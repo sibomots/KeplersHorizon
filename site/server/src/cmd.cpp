@@ -107,7 +107,7 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
             combined << messages[i];
         }
         std::string event_msg =
-            combined.str().empty() ? "Command executed" : combined.str();
+            combined.str().empty() ? "Command executed\n" : combined.str();
 
         resp->body = Telemetry::getInstance().write(event_msg);
 
