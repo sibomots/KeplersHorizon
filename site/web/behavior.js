@@ -315,8 +315,8 @@
     const j = await apiJson("command", "POST", { command: cmd }, true);
 
     if (j && typeof j.event === "string" && j.event.length > 0) {
-      // Handle escaped newlines from backend
-      const parts = j.event.replace(/\\n/g, "\n").split("\n");
+      // Split on newlines (JSON.parse already unescsapes \n to actual newlines)
+      const parts = j.event.split("\n");
       for (let i = 0; i < parts.length; i++) {
         const line = parts[i];
         if (line.length) {
