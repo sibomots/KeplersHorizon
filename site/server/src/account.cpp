@@ -80,6 +80,12 @@ void handle_logout(const HttpRequest* req, HttpResponse* resp)
 
 void handle_register(const HttpRequest* req, HttpResponse* resp)
 {
+    // Registration disabled - admin adds users manually
+    resp->status = 403;
+    resp->body = json_error("Registration is disabled. Contact administrator.");
+    return;
+
+    // --- Original registration code preserved below (disabled) ---
     if (req->method != "POST")
     {
         resp->status = 405;

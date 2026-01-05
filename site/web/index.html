@@ -62,32 +62,6 @@
             margin-top: 0.5rem;
         }
 
-        .nav-tabs {
-            border-bottom: 1px solid var(--border);
-        }
-
-        .nav-tabs .nav-link {
-            color: var(--muted);
-            border: none;
-            border-bottom: 2px solid transparent;
-            border-radius: 0;
-            font-size: 1.3rem;
-            text-transform: uppercase;
-        }
-
-        .nav-tabs .nav-link.active {
-            background: transparent;
-            color: var(--text);
-            border-bottom-color: var(--text);
-            text-shadow: 0 0 8px var(--glow);
-        }
-
-        .nav-tabs .nav-link:hover {
-            color: var(--accent);
-            border-color: transparent;
-            border-bottom-color: var(--muted);
-        }
-
         .form-control {
             background: var(--bg);
             border: 1px solid var(--border);
@@ -151,63 +125,21 @@
             <div class="subtitle">Space Fleet Tactics</div>
         </div>
 
-        <ul class="nav nav-tabs nav-fill" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login"
-                    type="button" role="tab">Login</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button"
-                    role="tab">Register</button>
-            </li>
-        </ul>
-
         <div class="card-body p-4">
             <div id="alertBox" class="alert d-none" role="alert"></div>
 
-            <div class="tab-content">
-                <!-- Login Form -->
-                <div class="tab-pane fade show active" id="login" role="tabpanel">
-                    <form id="loginForm">
-                        <div class="mb-3">
-                            <label for="loginUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="loginUsername" required autocomplete="username">
-                        </div>
-                        <div class="mb-3">
-                            <label for="loginPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" required
-                                autocomplete="current-password">
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="loginUsername" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="loginUsername" required autocomplete="username">
                 </div>
-
-                <!-- Register Form -->
-                <div class="tab-pane fade" id="register" role="tabpanel">
-                    <form id="registerForm">
-                        <div class="mb-3">
-                            <label for="regUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="regUsername" required minlength="3"
-                                maxlength="32" autocomplete="username">
-                        </div>
-                        <div class="mb-3">
-                            <label for="regEmail" class="form-label">Email (optional)</label>
-                            <input type="email" class="form-control" id="regEmail" autocomplete="email">
-                        </div>
-                        <div class="mb-3">
-                            <label for="regPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="regPassword" required minlength="4"
-                                autocomplete="new-password">
-                        </div>
-                        <div class="mb-3">
-                            <label for="regConfirm" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="regConfirm" required
-                                autocomplete="new-password">
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Create Account</button>
-                    </form>
+                <div class="mb-3">
+                    <label for="loginPassword" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" required
+                        autocomplete="current-password">
                 </div>
-            </div>
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+            </form>
         </div>
     </div>
 

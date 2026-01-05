@@ -1,4 +1,4 @@
-// Portal page JavaScript - handles login and registration
+// Portal page JavaScript - handles login only
 (function () {
     'use strict';
 
@@ -64,40 +64,6 @@
                 setTimeout(() => window.location.href = 'lobby.html', 500);
             } else {
                 showAlert(data.error || 'Login failed', 'danger');
-            }
-        } catch (err) {
-            showAlert('Connection error: ' + err.message, 'danger');
-        }
-    });
-
-    // Register form handler
-    document.getElementById('registerForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        hideAlert();
-
-        const username = document.getElementById('regUsername').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const password = document.getElementById('regPassword').value;
-        const confirm = document.getElementById('regConfirm').value;
-
-        if (password !== confirm) {
-            showAlert('Passwords do not match', 'danger');
-            return;
-        }
-
-        try {
-            const body = { username, password };
-            if (email) body.email = email;
-
-            const data = await apiCall('/register', body);
-
-            if (data.ok) {
-                localStorage.setItem('kh_token', data.token);
-                localStorage.setItem('kh_username', data.username);
-                showAlert('Account created! Redirecting...', 'success');
-                setTimeout(() => window.location.href = 'lobby.html', 500);
-            } else {
-                showAlert(data.error || 'Registration failed', 'danger');
             }
         } catch (err) {
             showAlert('Connection error: ' + err.message, 'danger');
