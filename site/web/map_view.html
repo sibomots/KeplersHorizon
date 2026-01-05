@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     }
 
     body {
-      background: #ffffff;
+      background: #0a0f14;
       overflow: hidden;
     }
 
@@ -53,30 +53,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       width: 100%;
       height: 100%;
       display: block;
-      background: #ffffff;
+      background: #0a0f14;
       user-select: none;
       touch-action: none;
     }
 
     .hex-id {
       font-size: 8pt;
-      fill: indigo;
+      fill: #4a6670;
       font-family: ui-monospace, Menlo, Consolas, monospace;
       pointer-events: none;
     }
 
     .warpline {
-      stroke: indigo;
+      stroke: #2a5070;
       stroke-width: 2;
     }
 
     .star-icon {
-      fill: #111;
+      fill: #d4af37;
     }
 
     .star-name {
       font-size: 14pt;
-      fill: indigo;
+      fill: #88ccff;
       font-family: ui-sans-serif, system-ui, Arial;
       font-weight: 700;
       text-anchor: middle;
@@ -85,9 +85,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     .base-ring {
       fill: none;
-      stroke: indigo;
+      stroke: #d4af37;
       stroke-width: 2;
-      opacity: .7;
+      opacity: .8;
     }
 
     @keyframes combat-pulse {
@@ -118,7 +118,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       60,69.2820323028
       20,69.2820323028
       0,34.6410161514
-    " fill="none" stroke="black" stroke-width="1" stroke-linejoin="miter" />
+    " fill="none" stroke="#1a3040" stroke-width="1" stroke-linejoin="miter" />
+
+      <!-- Drop shadow filter for ship icons -->
+      <filter id="ship-shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#000" flood-opacity="0.8" />
+      </filter>
     </defs>
 
     <g id="layer-warplines"></g>
@@ -438,16 +443,34 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         };
       }
 
-      function renderShip(ship, cx, cy, colors, zoom) {
+      function renderShip(ship, cx, cy, colors, zoom, category) {
         const g = document.createElementNS(NS, 'g');
         g.setAttribute('transform', `translate(${cx},${cy})`);
         g.setAttribute('data-ship', ship.code);
         g.setAttribute('style', 'cursor: pointer');
+        g.setAttribute('filter', 'url(#ship-shadow)');
 
-        // Add tooltip via SVG title element
+        // Build tooltip text
         const title = document.createElementNS(NS, 'title');
-        const shipType = ship.type === 'W' ? 'Warpship' : 'Systemship';
-        title.textContent = `${ship.code} (${shipType})\nHex: ${ship.hex || 'N/A'}\nSystem: ${ship.system || 'N/A'}`;
+        let tooltipLines = [];
+
+        // Line 1: Ship code and type (W or S capitalized)
+        tooltipLines.push(`${ship.code.toUpperCase()} (${ship.type})`);
+
+        // Line 2: System OR Hex (not both)
+        // If system has a value (star hex), show system; otherwise show hex
+        if (ship.system && ship.system.length > 0) {
+          tooltipLines.push(`System: ${ship.system}`);
+        } else if (ship.hex && ship.hex.length > 0) {
+          tooltipLines.push(`Hex: ${ship.hex}`);
+        }
+
+        // Line 3+: Stats (only for friendly ships)
+        if (category === 'friendly' && ship.pd !== undefined) {
+          tooltipLines.push(`PD=${ship.pd} B=${ship.b} S=${ship.s} T=${ship.t} M=${ship.m} SR=${ship.sr}`);
+        }
+
+        title.textContent = tooltipLines.join('\n');
         g.appendChild(title);
 
         if (zoom === 'low') {
@@ -524,7 +547,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             shipsInHex.forEach((ship, idx) => {
               const offset = stackOffset(idx, shipsInHex.length);
               const el = renderShip(ship, pos.cx + offset.dx,
-                pos.cy + offset.dy, colors, zoom);
+                pos.cy + offset.dy, colors, zoom, category);
               layer.appendChild(el);
             });
           }

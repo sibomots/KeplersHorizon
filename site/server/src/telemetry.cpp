@@ -167,9 +167,9 @@ static std::string getShipsJson(int game_id, char player)
     std::ostringstream out;
     out << "{";
     
-    // Friendly ships (owned by current player)
+    // Friendly ships (owned by current player) - include specs for tooltip
     auto friendly = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, tube, missiles, sr FROM ships "
         "WHERE game_id=" + std::to_string(game_id) + 
         " AND owner='" + std::string(1, player) + "'"
         " AND destroyed_at IS NULL");
@@ -180,7 +180,14 @@ static std::string getShipsJson(int game_id, char player)
         out << "{\"code\":\"" << json_escape(friendly[i][0]) << "\""
             << ",\"type\":\"" << json_escape(friendly[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(friendly[i][2]) << "\""
-            << ",\"system\":\"" << json_escape(friendly[i][3]) << "\"}";
+            << ",\"system\":\"" << json_escape(friendly[i][3]) << "\""
+            << ",\"pd\":" << friendly[i][4]
+            << ",\"b\":" << friendly[i][5]
+            << ",\"s\":" << friendly[i][6]
+            << ",\"t\":" << friendly[i][7]
+            << ",\"m\":" << friendly[i][8]
+            << ",\"sr\":" << friendly[i][9]
+            << "}";
     }
     out << "]";
     
