@@ -195,6 +195,43 @@
             color: var(--muted);
             font-size: 1.1rem;
         }
+
+        /* Scenario Radio Buttons */
+        .scenario-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .scenario-radio {
+            display: none;
+        }
+
+        .scenario-btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-shadow: 0 0 3px var(--glow-soft);
+        }
+
+        .scenario-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .scenario-radio:checked+.scenario-btn {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(50, 255, 50, 0.15);
+            box-shadow: 0 0 15px var(--glow-soft);
+            text-shadow: 0 0 8px var(--glow);
+        }
     </style>
 </head>
 
@@ -221,12 +258,17 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Scenario</label>
-            <select class="form-select" id="scenarioSelect">
-                <option value="learning">Learning</option>
-                <option value="basic" selected>Basic</option>
-                <option value="advanced">Advanced</option>
-            </select>
+            <label class="form-label text-center d-block">Scenario</label>
+            <div class="scenario-group">
+                <input type="radio" name="scenario" value="learning" id="scnLearn" class="scenario-radio">
+                <label for="scnLearn" class="scenario-btn">LEARNING</label>
+
+                <input type="radio" name="scenario" value="basic" id="scnBasic" class="scenario-radio" checked>
+                <label for="scnBasic" class="scenario-btn">BASIC</label>
+
+                <input type="radio" name="scenario" value="advanced" id="scnAdv" class="scenario-radio">
+                <label for="scnAdv" class="scenario-btn">ADVANCED</label>
+            </div>
         </div>
 
         <div class="status-text" id="statusText">

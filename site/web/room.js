@@ -88,9 +88,10 @@
             seatBEl.classList.remove('filled', 'you');
         }
 
-        // Scenario
+        // Scenario - use radio buttons
         if (room.scenario) {
-            document.getElementById('scenarioSelect').value = room.scenario;
+            const radio = document.querySelector(`input[name="scenario"][value="${room.scenario}"]`);
+            if (radio) radio.checked = true;
         }
 
         // Status and start button
@@ -127,12 +128,14 @@
     }
 
     async function setScenario() {
-        const scenario = document.getElementById('scenarioSelect').value;
+        const selected = document.querySelector('input[name="scenario"]:checked');
+        const scenario = selected ? selected.value : 'basic';
         await apiCall('/rooms/' + roomCode + '/scenario', 'POST', { scenario });
     }
 
     async function startGame() {
-        const scenario = document.getElementById('scenarioSelect').value;
+        const selected = document.querySelector('input[name="scenario"]:checked');
+        const scenario = selected ? selected.value : 'basic';
         const data = await apiCall('/rooms/' + roomCode + '/start', 'POST', { scenario });
 
         if (data && data.ok) {
@@ -172,7 +175,10 @@
         }
 
         document.getElementById('roomCode').addEventListener('click', copyRoomCode);
-        document.getElementById('scenarioSelect').addEventListener('change', setScenario);
+        // Scenario radio buttons
+        document.querySelectorAll('input[name="scenario"]').forEach(radio => {
+            radio.addEventListener('change', setScenario);
+        });
         document.getElementById('btnStart').addEventListener('click', startGame);
         document.getElementById('btnLeave').addEventListener('click', leaveRoom);
 

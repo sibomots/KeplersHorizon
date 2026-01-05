@@ -47,18 +47,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <div class="app">
     <header>
       <div class="title">Kepler's Horizon</div>
+      <a href="https://github.com/sibomots/KeplersHorizon/wiki/How-to-Play" target="_blank"
+        style="color:var(--accent); font-size:20px; text-decoration:none; margin-left:20px;">HOW TO PLAY</a>
       <div class="right">
         <span id="loginBadge" class="pill">loading...</span>
-        <button id="btnMap">Show Map</button>
-        <button id="btnLobby">Exit to Lobby</button>
+        <button id="btnMap" style="text-transform:uppercase; font-size:18px;">SHOW MAP</button>
+        <button id="btnLobby">EXIT</button>
       </div>
     </header>
 
     <div class="main">
-      <section class="panel">
+      <section class="panel" style="flex:1;">
         <h2>
           <span id="consoleTitle">Main Console</span>
-          <span id="turnStatus" style="padding:2px 10px; border-radius:6px; font-size:12px;">--</span>
+          <span id="turnStatus" style="padding:2px 10px; border-radius:6px; font-size:14px;">--</span>
         </h2>
 
         <div class="viewport">
@@ -73,48 +75,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           <input id="commandInput" style="text-transform: uppercase;" type="text" placeholder="ENTER COMMAND..."
             autocomplete="off" spellcheck="false">
         </div>
-        <div style="padding:2px 12px 8px; text-align:center;">
-          <a href="https://github.com/sibomots/KeplersHorizon/wiki/How-to-Play" target="_blank"
-            style="color:var(--muted); font-size:20px; text-decoration:none;">How to Play</a>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>
-          <span>Telemetry</span>
-          <span id="peerOnlineStatus" style="padding:2px 10px; border-radius:6px; font-size:20px;">--</span>
-        </h2>
-        <div class="statusBody">
-          <div class="kv">
-            <div class="k" style="display:none;">GameId</div>
-            <div class="v" id="stGameId" style="display:none;">-</div>
-            <div class="k">Round</div>
-            <div class="v" id="stRound">-</div>
-            <div class="k">Phase</div>
-            <div class="v" id="stPhase">-</div>
-            <div class="k">VP</div>
-            <div class="v" id="stVP">-</div>
-            <div class="k">BP</div>
-            <div class="v" id="stBP">-</div>
-          </div>
-
-          <div id="statusCombat" class="kv"
-            style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-            <div class="k" style="color:var(--bad);">COMBAT</div>
-            <div class="v" id="stCmbCount" style="color:var(--bad); font-weight:bold;">-</div>
-            <div class="k">Hexes</div>
-            <div class="v" id="stCmbHexes">-</div>
-          </div>
-        </div>
-        <div id="sensorStatus"
-          style="padding:8px 12px; border-top:1px solid var(--border); font-size:18px; font-weight:700; text-align:center;">
-          <!-- Content populated by behavior.js -->
-        </div>
-        <div style="padding:10px 12px;border-top:1px solid var(--border);color:var(--muted);font-size:18px;">
-          TBD - Status for Combat Area - TBD
-        </div>
       </section>
     </div>
+  </div>
+
+  <!-- Hidden elements for JS state tracking -->
+  <div style="display:none;">
+    <span id="stGameId">-</span>
+    <span id="stRound">-</span>
+    <span id="stPlayer">-</span>
+    <span id="stPhase">-</span>
+    <span id="stVP">-</span>
+    <span id="stBP">-</span>
+    <span id="peerOnlineStatus">-</span>
+    <div id="statusCombat">
+      <span id="stCmbCount">-</span>
+      <span id="stCmbHexes">-</span>
+    </div>
+    <div id="sensorStatus"></div>
   </div>
 
   <script src="constraints.js?v=3"></script>

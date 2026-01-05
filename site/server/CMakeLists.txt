@@ -53,6 +53,7 @@ src/system_command.cpp
 src/survey_command.cpp
 src/score_command.cpp
 src/extract_command.cpp
+src/help_command.cpp
 src/market_command.cpp
 src/trade_command.cpp
 src/fabricate_command.cpp
@@ -116,6 +117,7 @@ inc/system_command.h
 inc/survey_command.h
 inc/score_command.h
 inc/extract_command.h
+inc/help_command.h
 inc/market_command.h
 inc/trade_command.h
 inc/fabricate_command.h

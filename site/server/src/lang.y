@@ -43,7 +43,9 @@
 #include "trade_command.h"
 #include "fabricate_command.h"
 #include "salvage_command.h"
+#include "help_command.h"
 #include "statemachine.h"
+#include "telemetry.h"
 // #include "game.h"
 #include "db.h"
 
@@ -1038,10 +1040,9 @@ repair_attr_spec:
 help_cmd:
   TOK_HELP
   {
-       // show help screen
-       // show all topics
-      Logger::instance().info("Show help screen");
-      Logger::instance().info("List all help topics");
+       ICmd *pCmd = HelpCommand::Builder().build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
   }
   | help_composite
   ;
