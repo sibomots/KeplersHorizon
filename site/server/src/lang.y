@@ -84,6 +84,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type  <sval> deployable_ship
 %type  <sval> building_draft_ship
 %type  <vec_sval> chain_move_location
+%type  <sval> help_topic
 
 %token TOK_ADVANCED
 %token TOK_APPLY
@@ -1039,11 +1040,12 @@ help_cmd:
        SafeDelete(pCmd);
   }
   |
-  TOK_HELP TOK_STRING {
+  TOK_HELP help_topic {
        std::string topic(*$2);
        ICmd *pCmd = HelpCommand::Builder().set_topic(topic).build();
        pCmd->invoke();
        SafeDelete(pCmd);
+       delete $2;
   }
   |
   TOK_HELP {
@@ -1051,6 +1053,47 @@ help_cmd:
        pCmd->invoke();
        SafeDelete(pCmd);
   }
+  ;
+
+/* Help topic can be a string OR any keyword that might be a topic name */
+help_topic:
+    TOK_STRING              { $$ = $1; }
+  | TOK_BUILD_COMMIT        { $$ = new std::string("bc"); }
+  | TOK_BUILD_DRAFTS        { $$ = new std::string("bd"); }
+  | TOK_BUILD_NEW           { $$ = new std::string("bn"); }
+  | TOK_BUILD_CANCEL        { $$ = new std::string("bx"); }
+  | TOK_BUILD_SET_ATTR      { $$ = new std::string("bs"); }
+  | TOK_BUILD               { $$ = new std::string("build"); }
+  | TOK_COMBAT              { $$ = new std::string("combat"); }
+  | TOK_COMBAT_DRAFTS       { $$ = new std::string("cd"); }
+  | TOK_COMBAT_ORDER        { $$ = new std::string("co"); }
+  | TOK_COMBAT_APPLY        { $$ = new std::string("ca"); }
+  | TOK_COMBAT_COMMIT       { $$ = new std::string("cc"); }
+  | TOK_COMBAT_CANCEL       { $$ = new std::string("cx"); }
+  | TOK_MOVE                { $$ = new std::string("move"); }
+  | TOK_NEXT                { $$ = new std::string("next"); }
+  | TOK_DONE                { $$ = new std::string("done"); }
+  | TOK_DEPLOY              { $$ = new std::string("deploy"); }
+  | TOK_PICK                { $$ = new std::string("pick"); }
+  | TOK_DROP                { $$ = new std::string("drop"); }
+  | TOK_REPAIR              { $$ = new std::string("repair"); }
+  | TOK_RESUPPLY            { $$ = new std::string("resupply"); }
+  | TOK_SCORE               { $$ = new std::string("score"); }
+  | TOK_FLEET               { $$ = new std::string("fleet"); }
+  | TOK_SYSTEM              { $$ = new std::string("system"); }
+  | TOK_SURVEY              { $$ = new std::string("survey"); }
+  | TOK_STATUS              { $$ = new std::string("status"); }
+  | TOK_DRAFTS              { $$ = new std::string("drafts"); }
+  | TOK_CRT                 { $$ = new std::string("crt"); }
+  | TOK_EXTRACT             { $$ = new std::string("extract"); }
+  | TOK_MARKET              { $$ = new std::string("market"); }
+  | TOK_TRADE               { $$ = new std::string("trade"); }
+  | TOK_FABRICATE           { $$ = new std::string("fabricate"); }
+  | TOK_SALVAGE             { $$ = new std::string("salvage"); }
+  | TOK_ATTACK              { $$ = new std::string("attack"); }
+  | TOK_DODGE               { $$ = new std::string("dodge"); }
+  | TOK_ESCAPE              { $$ = new std::string("escape"); }
+  | TOK_HEX                 { $$ = new std::string("hex"); }
   ;
 
 %%

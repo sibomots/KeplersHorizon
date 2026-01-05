@@ -14,6 +14,7 @@
 #include "lang.hpp"
 
 #define YY_DECL extern "C" int yylex()
+
 %}
 
 %option noyywrap
