@@ -110,7 +110,7 @@ class GameState
         o << "\"phaseIndex\":" << phase_index << ",";
         o << "\"phase\":\"" << json_escape(phase_name()) << "\",";
         o << "\"vp\":{\"A\":" << vpA << ",\"B\":" << vpB << "},";
-        o << "\"credits\":{\"A\":" << creditsA << ",\"B\":" << creditsB << "},";
+        o << "\"bp\":{\"A\":" << creditsA << ",\"B\":" << creditsB << "},";
         if (!combat_summary_json.empty())
         {
             o << "\"combat\":" << combat_summary_json << ",";
