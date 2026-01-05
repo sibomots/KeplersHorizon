@@ -150,12 +150,16 @@ bool BuildCommitCommand::invoke(void)
                             ") cost=" + std::to_string(cost) +
                             " BP. Remaining BP=" + std::to_string(bp));
 
-    Telemetry::getInstance().write("Committed: " + sh.name + " - " + sh.code +
-                                   " (L" + std::to_string(sh.attr.tech) + ")");
-    Telemetry::getInstance().write("Cost: " + std::to_string(cost) +
-                                   " BP, Remaining: " + std::to_string(bp) +
-                                   " BP");
+    std::ostringstream bcmsg;
+    bcmsg
+        << "Committed: "
+        << sh.name << " - " << sh.code << " (Tech Level "
+        << std::to_string(sh.attr.tech) << ")\n"
+        << "Cost: "
+        << std::to_string(cost) << " BP, Remaining: " << std::to_string(bp)
+        << " BP";
 
+    Telemetry::getInstance().write(bcmsg.str());
     return true;
 }
 
@@ -288,11 +292,14 @@ bool BuildNewCommand::invoke(void)
 
     Logger::instance().info("Draft created: " + m_ship_name + " - " +
                             ship_code);
-    Telemetry::getInstance().write("SHIPYARD: Hull " + ship_code +
-                                   " laid down. Designation: " + m_ship_name);
-    Telemetry::getInstance().write(
-        "  >> Configure with: build set PD|B|S|T|M|SR <n>");
 
+    std::ostringstream bmes;
+    bmes << "SHIPYARD: Hull "
+         << ship_code
+         << " laid down. Designation: "
+         << m_ship_name;
+
+    Telemetry::getInstance().write(bmes.str());
     return true;
 }
 
