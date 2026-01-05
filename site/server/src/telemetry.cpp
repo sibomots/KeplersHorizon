@@ -158,6 +158,70 @@ std::string Telemetry::broadcast(const std::string& msg)
     return write(msg); // Also return immediate response
 }
 
+// Helper: Build ships JSON for map rendering
+static std::string getShipsJson(int game_id, char player)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    char opponent = (player == 'A') ? 'B' : 'A';
+    
+    std::ostringstream out;
+    out << "{";
+    
+    // Friendly ships (owned by current player)
+    auto friendly = db.query(
+        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+        "WHERE game_id=" + std::to_string(game_id) + 
+        " AND owner='" + std::string(1, player) + "'"
+        " AND destroyed_at IS NULL");
+    
+    out << "\"friendly\":[";
+    for (size_t i = 0; i < friendly.size(); ++i) {
+        if (i > 0) out << ",";
+        out << "{\"code\":\"" << json_escape(friendly[i][0]) << "\""
+            << ",\"type\":\"" << json_escape(friendly[i][1]) << "\""
+            << ",\"hex\":\"" << json_escape(friendly[i][2]) << "\""
+            << ",\"system\":\"" << json_escape(friendly[i][3]) << "\"}";
+    }
+    out << "]";
+    
+    // Enemy ships (owned by opponent)
+    auto enemy = db.query(
+        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+        "WHERE game_id=" + std::to_string(game_id) + 
+        " AND owner='" + std::string(1, opponent) + "'"
+        " AND destroyed_at IS NULL");
+    
+    out << ",\"enemy\":[";
+    for (size_t i = 0; i < enemy.size(); ++i) {
+        if (i > 0) out << ",";
+        out << "{\"code\":\"" << json_escape(enemy[i][0]) << "\""
+            << ",\"type\":\"" << json_escape(enemy[i][1]) << "\""
+            << ",\"hex\":\"" << json_escape(enemy[i][2]) << "\""
+            << ",\"system\":\"" << json_escape(enemy[i][3]) << "\"}";
+    }
+    out << "]";
+    
+    // Neutral ships (owner N or X for xeno/third-party)
+    auto neutral = db.query(
+        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+        "WHERE game_id=" + std::to_string(game_id) + 
+        " AND owner NOT IN ('A','B')"
+        " AND destroyed_at IS NULL");
+    
+    out << ",\"neutral\":[";
+    for (size_t i = 0; i < neutral.size(); ++i) {
+        if (i > 0) out << ",";
+        out << "{\"code\":\"" << json_escape(neutral[i][0]) << "\""
+            << ",\"type\":\"" << json_escape(neutral[i][1]) << "\""
+            << ",\"hex\":\"" << json_escape(neutral[i][2]) << "\""
+            << ",\"system\":\"" << json_escape(neutral[i][3]) << "\"}";
+    }
+    out << "]";
+    
+    out << "}";
+    return out.str();
+}
+
 void Telemetry::status(char player, HttpResponse* resp)
 {
     int game_id = StateMachine::getInstance().get_game_id();
@@ -314,6 +378,9 @@ void Telemetry::status(char player, HttpResponse* resp)
         }
         out << "]";
     }
+
+    // Include ships for map rendering
+    out << ",\"ships\":" << getShipsJson(game_id, player);
 
     out << "}";
 

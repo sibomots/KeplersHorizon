@@ -109,6 +109,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_COMMIT
 %token TOK_CRT
 %token TOK_DELETE
+%token TOK_DEMO
 %token TOK_DEPLOY
 %token TOK_DODGE
 %token TOK_DONE
@@ -1032,15 +1033,16 @@ repair_attr_spec:
   ; 
  
  
-// Cellar -- things that are misc
-
-// "help" { return TOK_HELP; }
-// "?" { return TOK_HELP; }
-
 help_cmd:
   TOK_HELP
   {
        ICmd *pCmd = HelpCommand::Builder().build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
+  }
+  | TOK_DEMO
+  {
+       ICmd *pCmd = HelpCommand::Builder().set_demo().build();
        pCmd->invoke();
        SafeDelete(pCmd);
   }
@@ -1050,151 +1052,12 @@ help_cmd:
 help_composite:
   TOK_HELP TOK_STRING
   {
-      Logger::instance().info("Help about topic");
-      std::string topic(*$2);
-
-      Logger::instance().info(topic);
+       std::string topic(*$2);
+       ICmd *pCmd = HelpCommand::Builder().set_topic(topic).build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
   }
-  | help_command
   ;
-
-help_command:
-    TOK_HELP TOK_SET_ATTR
-    {
-        Logger::instance().info("Help about TOK_SET_ATTR");
-    }
-    | TOK_HELP TOK_APPLY
-    {
-        Logger::instance().info("Help about TOK_APPLY");
-    }
-    | TOK_HELP TOK_BEAM
-    {
-        Logger::instance().info("Help about TOK_BEAM");
-    }
-    | TOK_HELP TOK_BUILD
-    {
-        Logger::instance().info("Help about TOK_BUILD");
-    }
-    | TOK_HELP TOK_CANCEL
-    {
-        Logger::instance().info("Help about TOK_CANCEL");
-    }
-    | TOK_HELP TOK_COMBAT
-    {
-        Logger::instance().info("Help about TOK_COMBAT");
-    }
-    | TOK_HELP TOK_COMMIT
-    {
-        Logger::instance().info("Help about TOK_COMMIT");
-    }
-    | TOK_HELP TOK_DEPLOY
-    {
-        Logger::instance().info("Help about TOK_DEPLOY");
-    }
-    | TOK_HELP TOK_DONE
-    {
-        Logger::instance().info("Help about TOK_DONE");
-    }
-    | TOK_HELP TOK_DRAFTS
-    {
-        Logger::instance().info("Help about TOK_DRAFTS");
-    }
-    | TOK_HELP TOK_DROP
-    {
-        Logger::instance().info("Help about TOK_DROP");
-    }
-    | TOK_HELP TOK_FLEET
-    {
-        Logger::instance().info("Help about TOK_FLEET");
-    }
-    | TOK_HELP TOK_GALAXY
-    {
-        Logger::instance().info("Help about TOK_GALAXY");
-    }
-    | TOK_HELP TOK_HELP
-    {
-        Logger::instance().info("Help about TOK_HELP");
-    }
-    | TOK_HELP TOK_HEX
-    {
-        Logger::instance().info("Help about TOK_HEX");
-    }
-    | TOK_HELP TOK_LIST
-    {
-        Logger::instance().info("Help about TOK_LIST");
-    }
-    | TOK_HELP TOK_MISSILE
-    {
-        Logger::instance().info("Help about TOK_MISSILE");
-    }
-    | TOK_HELP TOK_MOVE
-    {
-        Logger::instance().info("Help about TOK_MOVE");
-    }
-    | TOK_HELP TOK_NEW
-    {
-        Logger::instance().info("Help about TOK_NEW");
-    }
-    | TOK_HELP TOK_NEXT
-    {
-        Logger::instance().info("Help about TOK_NEXT");
-    }
-    | TOK_HELP TOK_NEXT_SHORT
-    {
-        Logger::instance().info("Help about TOK_NEXT_SHORT");
-    }
-    | TOK_HELP TOK_ONLINE
-    {
-        Logger::instance().info("Help about TOK_ONLINE");
-    }
-    | TOK_HELP TOK_ORDER
-    {
-        Logger::instance().info("Help about TOK_ORDER");
-    }
-    | TOK_HELP TOK_PICK
-    {
-        Logger::instance().info("Help about TOK_PICK");
-    }
-    | TOK_HELP TOK_POWER_DRIVE
-    {
-        Logger::instance().info("Help about TOK_POWER_DRIVE");
-    }
-    | TOK_HELP TOK_RESET
-    {
-        Logger::instance().info("Help about TOK_RESET");
-    }
-    | TOK_HELP TOK_SCREEN
-    {
-        Logger::instance().info("Help about TOK_SCREEN");
-    }
-    | TOK_HELP TOK_START_GAME
-    {
-        Logger::instance().info("Help about TOK_START_GAME");
-    }
-    | TOK_HELP TOK_STATS
-    {
-        Logger::instance().info("Help about TOK_STATS");
-    }
-    | TOK_HELP TOK_STATUS
-    {
-        Logger::instance().info("Help about TOK_STATUS");
-    }
-    | TOK_HELP TOK_SYSTEM
-    {
-        Logger::instance().info("Help about TOK_SYSTEM");
-    }
-    | TOK_HELP TOK_TUBE
-    {
-        Logger::instance().info("Help about TOK_TUBE");
-    }
-    | TOK_HELP TOK_UNKNOWN
-    {
-        Logger::instance().info("Help about TOK_UNKNOWN");
-    }
-    ;
-
-
-
 
 %%
 void yyerror(const char* s)

@@ -118,6 +118,7 @@ button:hover {
 .viewport {
   min-height: 0;
   position: relative;
+  overflow: hidden;
 }
 
 /* Console Log */
@@ -347,4 +348,38 @@ a {
 a:hover {
   color: var(--text);
   text-shadow: 0 0 5px var(--glow);
+}
+
+/* Typewriter Effect (#15) */
+@keyframes typewriter {
+  from {
+    max-width: 0;
+  }
+
+  to {
+    max-width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.typewriter {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  animation: typewriter 0.4s steps(40, end) forwards;
+}
+
+/* Tunable speed via CSS custom property */
+.typewriter-slow {
+  animation-duration: 0.8s;
+}
+
+.typewriter-fast {
+  animation-duration: 0.2s;
 }

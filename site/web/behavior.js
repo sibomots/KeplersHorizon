@@ -79,7 +79,7 @@
       return;
     }
     const div = document.createElement("div");
-    div.className = cls || "";
+    div.className = (cls || "") + " typewriter";
     div.textContent = text;
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;
@@ -246,6 +246,11 @@
 
     renderStatus();
 
+    // Forward ship data to map iframe
+    if (j.ships) {
+      updateMapShips(j.ships);
+    }
+
     // Display queued messages (tell/broadcast notifications)
     if (j.messages && Array.isArray(j.messages)) {
       for (let i = 0; i < j.messages.length; i++) {
@@ -322,6 +327,14 @@
 
     await apiFetchState();
     return j;
+  }
+
+  // Forward ship data to map iframe for rendering
+  function updateMapShips(shipData) {
+    const frame = $("mapFrame");
+    if (frame && frame.contentWindow && shipData) {
+      frame.contentWindow.postMessage({ type: 'ships', data: { ships: shipData } }, '*');
+    }
   }
 
   function toggleMapView() {

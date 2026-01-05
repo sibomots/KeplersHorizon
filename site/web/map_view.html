@@ -32,312 +32,497 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Kepler's Horizon Map View</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  html, body { height: 100%; margin: 0; }
-  body { background: #ffffff; overflow: hidden; }
-  svg { width: 100%; height: 100%; display: block; background: #ffffff; user-select: none; touch-action: none; }
 
-  .hex-id { font-size: 8pt; fill: indigo; font-family: ui-monospace, Menlo, Consolas, monospace; pointer-events: none; }
-  .warpline { stroke: indigo; stroke-width: 2; }
-  .star-icon { fill: #111; }
-  .star-name { font-size: 14pt; fill: indigo; font-family: ui-sans-serif, system-ui, Arial; font-weight: 700; text-anchor: middle; pointer-events: none; }
-  .base-ring { fill: none; stroke: indigo; stroke-width: 2; opacity: .7; }
-</style>
+<head>
+  <meta charset="utf-8">
+  <title>Kepler's Horizon Map View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #ffffff;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .hex-id {
+      font-size: 8pt;
+      fill: indigo;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      pointer-events: none;
+    }
+
+    .warpline {
+      stroke: indigo;
+      stroke-width: 2;
+    }
+
+    .star-icon {
+      fill: #111;
+    }
+
+    .star-name {
+      font-size: 14pt;
+      fill: indigo;
+      font-family: ui-sans-serif, system-ui, Arial;
+      font-weight: 700;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .base-ring {
+      fill: none;
+      stroke: indigo;
+      stroke-width: 2;
+      opacity: .7;
+    }
+  </style>
 </head>
+
 <body>
 
-<svg id="map"
-     xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 1180 1560">
+  <svg id="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1560">
 
-  <defs>
-    <polygon id="hex" points="
+    <defs>
+      <polygon id="hex" points="
       20,0
       60,0
       80,34.6410161514
       60,69.2820323028
       20,69.2820323028
       0,34.6410161514
-    "
-    fill="none"
-    stroke="black"
-    stroke-width="1"
-    stroke-linejoin="miter"/>
-  </defs>
+    " fill="none" stroke="black" stroke-width="1" stroke-linejoin="miter" />
+    </defs>
 
-  <g id="layer-warplines"></g>
-  <g id="layer-grid"></g>
-  <g id="layer-stars"></g>
-</svg>
+    <g id="layer-warplines"></g>
+    <g id="layer-grid"></g>
+    <g id="layer-stars"></g>
 
-<script>
-(function () {
-  const svg = document.getElementById("map");
-  const NS = "http://www.w3.org/2000/svg";
+    <!-- Dynamic ship layers -->
+    <g id="layer-ships-neutral"></g>
+    <g id="layer-ships-enemy"></g>
+    <g id="layer-ships-friendly"></g>
+    <g id="layer-combat-markers"></g>
+  </svg>
 
-  const STAR_HEXES = [
-    { hex: "0307", type: "base", name: "SONAL" },
-    { hex: "0606", type: "base", name: "UR" },
-    { hex: "0804", type: "base", name: "LARSU" },
+  <script>
+    (function () {
+      const svg = document.getElementById("map");
+      const NS = "http://www.w3.org/2000/svg";
 
-    { hex: "0611", type: "star", name: "SIPPUR" },
-    { hex: "0710", type: "star", name: "ERECH" },
-    { hex: "0908", type: "star", name: "CALAH" },
+      const STAR_HEXES = [
+        { hex: "0307", type: "base", name: "SONAL" },
+        { hex: "0606", type: "base", name: "UR" },
+        { hex: "0804", type: "base", name: "LARSU" },
 
-    { hex: "0813", type: "star", name: "BYBLOS" },
-    { hex: "1011", type: "star", name: "ADAB" },
-    { hex: "1207", type: "star", name: "SUSA" },
+        { hex: "0611", type: "star", name: "SIPPUR" },
+        { hex: "0710", type: "star", name: "ERECH" },
+        { hex: "0908", type: "star", name: "CALAH" },
 
-    { hex: "1014", type: "star", name: "UBAID" },
-    { hex: "1310", type: "star", name: "NIPPUR" },
+        { hex: "0813", type: "star", name: "BYBLOS" },
+        { hex: "1011", type: "star", name: "ADAB" },
+        { hex: "1207", type: "star", name: "SUSA" },
 
-    { hex: "1313", type: "star", name: "KHAFA" },
+        { hex: "1014", type: "star", name: "UBAID" },
+        { hex: "1310", type: "star", name: "NIPPUR" },
 
-    { hex: "1415", type: "star", name: "MARI" },
-    { hex: "1614", type: "star", name: "LAGASH" },
-    { hex: "1712", type: "star", name: "ASSUR" },
+        { hex: "1313", type: "star", name: "KHAFA" },
 
-    { hex: "1419", type: "star", name: "SUMARRA" },
-    { hex: "1616", type: "star", name: "ELAM" },
-    { hex: "1814", type: "star", name: "JARMO" },
+        { hex: "1415", type: "star", name: "MARI" },
+        { hex: "1614", type: "star", name: "LAGASH" },
+        { hex: "1712", type: "star", name: "ASSUR" },
 
-    { hex: "1719", type: "star", name: "UMMA" },
-    { hex: "1817", type: "star", name: "GIRSU" },
+        { hex: "1419", type: "star", name: "SUMARRA" },
+        { hex: "1616", type: "star", name: "ELAM" },
+        { hex: "1814", type: "star", name: "JARMO" },
 
-    { hex: "1622", type: "star", name: "ISIN" },
-    { hex: "1922", type: "star", name: "SUMER" },
-    { hex: "2020", type: "star", name: "AKKAD" },
-    { hex: "2118", type: "star", name: "KISH" },
+        { hex: "1719", type: "star", name: "UMMA" },
+        { hex: "1817", type: "star", name: "GIRSU" },
 
-    { hex: "2318", type: "star", name: "ERIDU" },
+        { hex: "1622", type: "star", name: "ISIN" },
+        { hex: "1922", type: "star", name: "SUMER" },
+        { hex: "2020", type: "star", name: "AKKAD" },
+        { hex: "2118", type: "star", name: "KISH" },
 
-    { hex: "2125", type: "base", name: "NINEVEH" },
-    { hex: "2223", type: "base", name: "BABYLON" },
-    { hex: "2622", type: "base", name: "UGARIT" },
-  ];
+        { hex: "2318", type: "star", name: "ERIDU" },
 
-  const WARPLINES = [
-    ["0307", "0611"],
-    ["0710", "0606"],
-    ["0710", "1011"],
-    ["1011", "0813"],
-    ["1011", "1313"],
-    ["0804", "1207"],
-    ["0908", "1310"],
-    ["1207", "1310"],
-    ["1310", "1712"],
-    ["1310", "1614"],
-    ["1614", "1616"],
-    ["1614", "1712"],
-    ["1814", "2118"],
-    ["2118", "2318"],
-    ["2318", "2622"],
-    ["2118", "2020"],
-    ["1014", "1415"],
-    ["1415", "1719"],
-    ["1014", "1419"],
-    ["1419", "1719"],
-    ["1719", "1817"],
-    ["1719", "1922"],
-    ["2223", "1922"],
-    ["1622", "2125"],
-  ];
+        { hex: "2125", type: "base", name: "NINEVEH" },
+        { hex: "2223", type: "base", name: "BABYLON" },
+        { hex: "2622", type: "base", name: "UGARIT" },
+      ];
 
-  const ROW_STEP_Y = 34.6410161514;
-  const BASE_Y     = 20;
-  const X_ODD      = 100;
-  const X_EVEN     = 40;
-  const X_STEP     = 120;
-  const TOTAL_ROWS = 43;
+      const WARPLINES = [
+        ["0307", "0611"],
+        ["0710", "0606"],
+        ["0710", "1011"],
+        ["1011", "0813"],
+        ["1011", "1313"],
+        ["0804", "1207"],
+        ["0908", "1310"],
+        ["1207", "1310"],
+        ["1310", "1712"],
+        ["1310", "1614"],
+        ["1614", "1616"],
+        ["1614", "1712"],
+        ["1814", "2118"],
+        ["2118", "2318"],
+        ["2318", "2622"],
+        ["2118", "2020"],
+        ["1014", "1415"],
+        ["1415", "1719"],
+        ["1014", "1419"],
+        ["1419", "1719"],
+        ["1719", "1817"],
+        ["1719", "1922"],
+        ["2223", "1922"],
+        ["1622", "2125"],
+      ];
 
-  const HEX_CX_LOCAL = 40;
-  const HEX_CY_LOCAL = 34.6410161514;
-  const HEX_ID_Y_LOCAL = 63;
-  const STAR_NAME_DY = -18;
+      const ROW_STEP_Y = 34.6410161514;
+      const BASE_Y = 20;
+      const X_ODD = 100;
+      const X_EVEN = 40;
+      const X_STEP = 120;
+      const TOTAL_ROWS = 43;
 
-  const STAR_OUTER_BASE = 12;
-  const STAR_INNER_BASE = 5;
-  const STAR_OUTER_STAR = 8;
-  const STAR_INNER_STAR = 3.5;
+      const HEX_CX_LOCAL = 40;
+      const HEX_CY_LOCAL = 34.6410161514;
+      const HEX_ID_Y_LOCAL = 63;
+      const STAR_NAME_DY = -18;
 
-  function pad2(n) { return String(n).padStart(2, "0"); }
+      const STAR_OUTER_BASE = 12;
+      const STAR_INNER_BASE = 5;
+      const STAR_OUTER_STAR = 8;
+      const STAR_INNER_STAR = 3.5;
 
-  const layerWarplines = document.getElementById("layer-warplines");
-  const layerGrid      = document.getElementById("layer-grid");
-  const layerStars     = document.getElementById("layer-stars");
+      function pad2(n) { return String(n).padStart(2, "0"); }
 
-  const hexCenters = new Map();
+      const layerWarplines = document.getElementById("layer-warplines");
+      const layerGrid = document.getElementById("layer-grid");
+      const layerStars = document.getElementById("layer-stars");
 
-  function star8Points(cx, cy, R, r) {
-    const pts = [];
-    const start = -Math.PI / 2;
-    for (let i = 0; i < 16; i++) {
-      const ang = start + i * (Math.PI / 8);
-      const rad = (i % 2 === 0) ? R : r;
-      const x = cx + rad * Math.cos(ang);
-      const y = cy + rad * Math.sin(ang);
-      pts.push(`${x},${y}`);
-    }
-    return pts.join(" ");
-  }
+      const hexCenters = new Map();
 
-  // grid
-  for (let r = 1; r <= TOTAL_ROWS; r++) {
-    const isOdd = (r % 2) === 1;
-    const hexCount = isOdd ? 7 : 8;
+      function star8Points(cx, cy, R, r) {
+        const pts = [];
+        const start = -Math.PI / 2;
+        for (let i = 0; i < 16; i++) {
+          const ang = start + i * (Math.PI / 8);
+          const rad = (i % 2 === 0) ? R : r;
+          const x = cx + rad * Math.cos(ang);
+          const y = cy + rad * Math.sin(ang);
+          pts.push(`${x},${y}`);
+        }
+        return pts.join(" ");
+      }
 
-    const rowX = isOdd ? X_ODD : X_EVEN;
-    const rowY = BASE_Y + (r - 1) * ROW_STEP_Y;
+      // grid
+      for (let r = 1; r <= TOTAL_ROWS; r++) {
+        const isOdd = (r % 2) === 1;
+        const hexCount = isOdd ? 7 : 8;
 
-    const g = document.createElementNS(NS, "g");
-    g.setAttribute("transform", `translate(${rowX},${rowY})`);
+        const rowX = isOdd ? X_ODD : X_EVEN;
+        const rowY = BASE_Y + (r - 1) * ROW_STEP_Y;
 
-    const S = r + 7;
-    const XX_start = Math.floor((r + 1) / 2);
+        const g = document.createElementNS(NS, "g");
+        g.setAttribute("transform", `translate(${rowX},${rowY})`);
 
-    for (let c = 0; c < hexCount; c++) {
-      const XX = XX_start + c;
-      const YY = S - XX;
-      const label = pad2(XX) + pad2(YY);
+        const S = r + 7;
+        const XX_start = Math.floor((r + 1) / 2);
 
-      const u = document.createElementNS(NS, "use");
-      u.setAttribute("href", "#hex");
-      u.setAttribute("x", c * X_STEP);
-      u.setAttribute("id", `h${label}`);
-      u.setAttribute("data-hex", label);
-      g.appendChild(u);
+        for (let c = 0; c < hexCount; c++) {
+          const XX = XX_start + c;
+          const YY = S - XX;
+          const label = pad2(XX) + pad2(YY);
 
-      const t = document.createElementNS(NS, "text");
-      t.setAttribute("class", "hex-id");
-      t.setAttribute("x", c * X_STEP + HEX_CX_LOCAL);
-      t.setAttribute("y", HEX_ID_Y_LOCAL);
-      t.textContent = label;
-      g.appendChild(t);
+          const u = document.createElementNS(NS, "use");
+          u.setAttribute("href", "#hex");
+          u.setAttribute("x", c * X_STEP);
+          u.setAttribute("id", `h${label}`);
+          u.setAttribute("data-hex", label);
+          g.appendChild(u);
 
-      const cx = rowX + c * X_STEP + HEX_CX_LOCAL;
-      const cy = rowY + HEX_CY_LOCAL;
-      hexCenters.set(label, { cx, cy });
-    }
+          const t = document.createElementNS(NS, "text");
+          t.setAttribute("class", "hex-id");
+          t.setAttribute("x", c * X_STEP + HEX_CX_LOCAL);
+          t.setAttribute("y", HEX_ID_Y_LOCAL);
+          t.textContent = label;
+          g.appendChild(t);
 
-    layerGrid.appendChild(g);
-  }
+          const cx = rowX + c * X_STEP + HEX_CX_LOCAL;
+          const cy = rowY + HEX_CY_LOCAL;
+          hexCenters.set(label, { cx, cy });
+        }
 
-  // warplines
-  for (const [a, b] of WARPLINES) {
-    const A = hexCenters.get(a);
-    const B = hexCenters.get(b);
-    if (!A || !B) continue;
+        layerGrid.appendChild(g);
+      }
 
-    const line = document.createElementNS(NS, "line");
-    line.setAttribute("class", "warpline");
-    line.setAttribute("x1", A.cx);
-    line.setAttribute("y1", A.cy);
-    line.setAttribute("x2", B.cx);
-    line.setAttribute("y2", B.cy);
-    layerWarplines.appendChild(line);
-  }
+      // warplines
+      for (const [a, b] of WARPLINES) {
+        const A = hexCenters.get(a);
+        const B = hexCenters.get(b);
+        if (!A || !B) continue;
 
-  // stars
-  for (const star of STAR_HEXES) {
-    const P = hexCenters.get(star.hex);
-    if (!P) continue;
+        const line = document.createElementNS(NS, "line");
+        line.setAttribute("class", "warpline");
+        line.setAttribute("x1", A.cx);
+        line.setAttribute("y1", A.cy);
+        line.setAttribute("x2", B.cx);
+        line.setAttribute("y2", B.cy);
+        layerWarplines.appendChild(line);
+      }
 
-    const isBase = (star.type === "base");
-    const R = isBase ? STAR_OUTER_BASE : STAR_OUTER_STAR;
-    const r = isBase ? STAR_INNER_BASE : STAR_INNER_STAR;
+      // stars
+      for (const star of STAR_HEXES) {
+        const P = hexCenters.get(star.hex);
+        if (!P) continue;
 
-    const poly = document.createElementNS(NS, "polygon");
-    poly.setAttribute("class", "star-icon");
-    poly.setAttribute("points", star8Points(P.cx, P.cy, R, r));
-    layerStars.appendChild(poly);
+        const isBase = (star.type === "base");
+        const R = isBase ? STAR_OUTER_BASE : STAR_OUTER_STAR;
+        const r = isBase ? STAR_INNER_BASE : STAR_INNER_STAR;
 
-    if (isBase) {
-      const ring = document.createElementNS(NS, "circle");
-      ring.setAttribute("class", "base-ring");
-      ring.setAttribute("cx", P.cx);
-      ring.setAttribute("cy", P.cy);
-      ring.setAttribute("r", 18);
-      layerStars.appendChild(ring);
-    }
+        const poly = document.createElementNS(NS, "polygon");
+        poly.setAttribute("class", "star-icon");
+        poly.setAttribute("points", star8Points(P.cx, P.cy, R, r));
+        layerStars.appendChild(poly);
 
-    const name = document.createElementNS(NS, "text");
-    name.setAttribute("class", "star-name");
-    name.setAttribute("x", P.cx);
-    name.setAttribute("y", P.cy + STAR_NAME_DY);
-    name.textContent = star.name;
-    layerStars.appendChild(name);
-  }
+        if (isBase) {
+          const ring = document.createElementNS(NS, "circle");
+          ring.setAttribute("class", "base-ring");
+          ring.setAttribute("cx", P.cx);
+          ring.setAttribute("cy", P.cy);
+          ring.setAttribute("r", 18);
+          layerStars.appendChild(ring);
+        }
 
-  // initial viewBox: ~10x10 hex region centered on KHAFA (1313)
-  const focus = hexCenters.get("1313");
-  if (focus) {
-    const W = 1200; // ~10 columns * 120 step
-    const H = 450;  // ~10 rows span
-    svg.viewBox.baseVal.x = focus.cx - W / 2;
-    svg.viewBox.baseVal.y = focus.cy - H / 2;
-    svg.viewBox.baseVal.width = W;
-    svg.viewBox.baseVal.height = H;
-  }
+        const name = document.createElementNS(NS, "text");
+        name.setAttribute("class", "star-name");
+        name.setAttribute("x", P.cx);
+        name.setAttribute("y", P.cy + STAR_NAME_DY);
+        name.textContent = star.name;
+        layerStars.appendChild(name);
+      }
 
-  // pan/zoom
-  let dragging = false;
-  let lastX = 0, lastY = 0;
+      // initial viewBox: ~10x10 hex region centered on KHAFA (1313)
+      const focus = hexCenters.get("1313");
+      if (focus) {
+        const W = 1200; // ~10 columns * 120 step
+        const H = 450;  // ~10 rows span
+        svg.viewBox.baseVal.x = focus.cx - W / 2;
+        svg.viewBox.baseVal.y = focus.cy - H / 2;
+        svg.viewBox.baseVal.width = W;
+        svg.viewBox.baseVal.height = H;
+      }
 
-  function onDown(e) {
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    svg.setPointerCapture(e.pointerId);
-  }
-  function onMove(e) {
-    if (!dragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
+      // pan/zoom
+      let dragging = false;
+      let lastX = 0, lastY = 0;
 
-    const vb = svg.viewBox.baseVal;
-    // convert screen delta to viewBox delta
-    const scaleX = vb.width / svg.clientWidth;
-    const scaleY = vb.height / svg.clientHeight;
-    vb.x -= dx * scaleX;
-    vb.y -= dy * scaleY;
-  }
-  function onUp(e) {
-    dragging = false;
-    try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
-  }
-  function onWheel(e) {
-    e.preventDefault();
-    const vb = svg.viewBox.baseVal;
-    const zoom = (e.deltaY < 0) ? 0.9 : 1.1;
+      function onDown(e) {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        svg.setPointerCapture(e.pointerId);
+      }
+      function onMove(e) {
+        if (!dragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
 
-    const mx = e.offsetX / svg.clientWidth;
-    const my = e.offsetY / svg.clientHeight;
+        const vb = svg.viewBox.baseVal;
+        // convert screen delta to viewBox delta
+        const scaleX = vb.width / svg.clientWidth;
+        const scaleY = vb.height / svg.clientHeight;
+        vb.x -= dx * scaleX;
+        vb.y -= dy * scaleY;
+      }
+      function onUp(e) {
+        dragging = false;
+        try { svg.releasePointerCapture(e.pointerId); } catch (_) { }
+      }
+      function onWheel(e) {
+        e.preventDefault();
+        const vb = svg.viewBox.baseVal;
+        const zoom = (e.deltaY < 0) ? 0.9 : 1.1;
 
-    const nx = vb.x + vb.width * mx;
-    const ny = vb.y + vb.height * my;
+        const mx = e.offsetX / svg.clientWidth;
+        const my = e.offsetY / svg.clientHeight;
 
-    const newW = vb.width * zoom;
-    const newH = vb.height * zoom;
+        const nx = vb.x + vb.width * mx;
+        const ny = vb.y + vb.height * my;
 
-    vb.x = nx - newW * mx;
-    vb.y = ny - newH * my;
-    vb.width = newW;
-    vb.height = newH;
-  }
+        const newW = vb.width * zoom;
+        const newH = vb.height * zoom;
 
-  svg.addEventListener("pointerdown", onDown);
-  svg.addEventListener("pointermove", onMove);
-  svg.addEventListener("pointerup", onUp);
-  svg.addEventListener("pointercancel", onUp);
-  svg.addEventListener("wheel", onWheel, { passive: false });
+        vb.x = nx - newW * mx;
+        vb.y = ny - newH * my;
+        vb.width = newW;
+        vb.height = newH;
+      }
 
-})();
-</script>
+      svg.addEventListener("pointerdown", onDown);
+      svg.addEventListener("pointermove", onMove);
+      svg.addEventListener("pointerup", onUp);
+      svg.addEventListener("pointercancel", onUp);
+      svg.addEventListener("wheel", onWheel, { passive: false });
+
+      // ========== SHIP RENDERING ==========
+
+      const SHIP_COLORS = {
+        friendly: { fill: '#4488ff', stroke: '#2266cc' },
+        enemy: { fill: '#ff4444', stroke: '#cc2222' },
+        neutral: { fill: '#44ff44', stroke: '#22cc22' }
+      };
+
+      let currentShipData = null;
+      let lastZoomLevel = getZoomLevel();
+
+      function getZoomLevel() {
+        const vb = svg.viewBox.baseVal;
+        if (vb.width > 2000) return 'low';
+        if (vb.width > 800) return 'medium';
+        return 'high';
+      }
+
+      function clearShipLayers() {
+        for (const id of ['layer-ships-friendly', 'layer-ships-enemy',
+          'layer-ships-neutral', 'layer-combat-markers']) {
+          const layer = document.getElementById(id);
+          if (layer) layer.innerHTML = '';
+        }
+      }
+
+      function stackOffset(index, total) {
+        if (total === 1) return { dx: 0, dy: 0 };
+        const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+        const r = 15;
+        return { dx: r * Math.cos(angle), dy: r * Math.sin(angle) };
+      }
+
+      function renderShip(ship, cx, cy, colors, zoom) {
+        const g = document.createElementNS(NS, 'g');
+        g.setAttribute('transform', `translate(${cx},${cy})`);
+        g.setAttribute('data-ship', ship.code);
+
+        if (zoom === 'low') {
+          // Dot only
+          const c = document.createElementNS(NS, 'circle');
+          c.setAttribute('r', 4);
+          c.setAttribute('fill', colors.fill);
+          g.appendChild(c);
+        } else if (zoom === 'medium') {
+          // Dot + label
+          const c = document.createElementNS(NS, 'circle');
+          c.setAttribute('r', 5);
+          c.setAttribute('fill', colors.fill);
+          g.appendChild(c);
+
+          const t = document.createElementNS(NS, 'text');
+          t.setAttribute('dy', -8);
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('fill', colors.fill);
+          t.setAttribute('font-size', '8pt');
+          t.setAttribute('font-family', 'ui-monospace, monospace');
+          t.textContent = ship.code;
+          g.appendChild(t);
+        } else {
+          // Full icon with different shapes for W vs S
+          const pts = ship.type === 'W'
+            ? '0,-10 8,0 0,10 -8,0'   // Diamond for warpship
+            : '0,-6 5,4 -5,4';        // Triangle for systemship
+          const p = document.createElementNS(NS, 'polygon');
+          p.setAttribute('points', pts);
+          p.setAttribute('fill', colors.fill);
+          p.setAttribute('stroke', colors.stroke);
+          p.setAttribute('stroke-width', '1');
+          g.appendChild(p);
+
+          const t = document.createElementNS(NS, 'text');
+          t.setAttribute('dy', 18);
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('fill', colors.fill);
+          t.setAttribute('font-size', '10pt');
+          t.setAttribute('font-family', 'ui-monospace, monospace');
+          t.textContent = ship.code;
+          g.appendChild(t);
+        }
+
+        return g;
+      }
+
+      function renderShips(data) {
+        clearShipLayers();
+        if (!data || !data.ships) return;
+
+        const zoom = getZoomLevel();
+
+        for (const category of ['neutral', 'enemy', 'friendly']) {
+          const ships = data.ships[category] || [];
+          const layer = document.getElementById(`layer-ships-${category}`);
+          const colors = SHIP_COLORS[category];
+          if (!layer || !colors) continue;
+
+          // Group ships by hex
+          const byHex = new Map();
+          for (const ship of ships) {
+            const hex = ship.hex || '';
+            if (!hex) continue;
+            if (!byHex.has(hex)) byHex.set(hex, []);
+            byHex.get(hex).push(ship);
+          }
+
+          for (const [hex, shipsInHex] of byHex) {
+            const pos = hexCenters.get(hex);
+            if (!pos) continue;
+
+            shipsInHex.forEach((ship, idx) => {
+              const offset = stackOffset(idx, shipsInHex.length);
+              const el = renderShip(ship, pos.cx + offset.dx,
+                pos.cy + offset.dy, colors, zoom);
+              layer.appendChild(el);
+            });
+          }
+        }
+      }
+
+      // Re-render on zoom change
+      const origOnWheel = onWheel;
+      function onWheelWithShips(e) {
+        origOnWheel(e);
+        const newZoom = getZoomLevel();
+        if (newZoom !== lastZoomLevel) {
+          lastZoomLevel = newZoom;
+          if (currentShipData) renderShips(currentShipData);
+        }
+      }
+      svg.removeEventListener("wheel", onWheel, { passive: false });
+      svg.addEventListener("wheel", onWheelWithShips, { passive: false });
+
+      // Listen for ship data from parent frame
+      window.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'ships') {
+          currentShipData = e.data.data;
+          renderShips(currentShipData);
+        }
+      });
+
+    })();
+  </script>
 </body>
+
 </html>

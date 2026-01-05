@@ -376,3 +376,17 @@ resources_found TEXT,              -- JSON of resources gained
 hazard_encountered BOOLEAN DEFAULT FALSE,
 FOREIGN KEY (game_id) REFERENCES games(id)
 );
+
+-- Help Topics System
+CREATE TABLE IF NOT EXISTS help_topics (
+help_topic_id INT AUTO_INCREMENT PRIMARY KEY,
+topic_info TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS help_lookup (
+help_lookup_id INT AUTO_INCREMENT PRIMARY KEY,
+topic_keyword VARCHAR(64) NOT NULL,
+help_topic_id INT NOT NULL,
+FOREIGN KEY (help_topic_id) REFERENCES help_topics(help_topic_id),
+INDEX (topic_keyword)
+);

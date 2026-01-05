@@ -24,6 +24,7 @@
 [ \t\n]	; 
 
 "help"     { return TOK_HELP; }
+"demo"     { return TOK_DEMO; }
 "?"        { return TOK_HELP; }
 
 "start"    { return TOK_START_GAME; }
