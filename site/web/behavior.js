@@ -79,7 +79,7 @@
       return;
     }
     const div = document.createElement("div");
-    div.className = (cls || "") + " typewriter";
+    div.className = cls || "";
     div.textContent = text;
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;
@@ -251,6 +251,11 @@
       updateMapShips(j.ships);
     }
 
+    // Forward combat hexes to map for highlighting
+    if (j.state && j.state.combat && j.state.combat.active_hexes) {
+      updateMapCombat(j.state.combat.active_hexes);
+    }
+
     // Display queued messages (tell/broadcast notifications)
     if (j.messages && Array.isArray(j.messages)) {
       for (let i = 0; i < j.messages.length; i++) {
@@ -334,6 +339,14 @@
     const frame = $("mapFrame");
     if (frame && frame.contentWindow && shipData) {
       frame.contentWindow.postMessage({ type: 'ships', data: { ships: shipData } }, '*');
+    }
+  }
+
+  // Forward combat hex data to map iframe for highlighting
+  function updateMapCombat(combatHexes) {
+    const frame = $("mapFrame");
+    if (frame && frame.contentWindow && combatHexes) {
+      frame.contentWindow.postMessage({ type: 'combat', hexes: combatHexes }, '*');
     }
   }
 

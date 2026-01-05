@@ -177,8 +177,8 @@ button:hover {
   background: var(--bg);
 }
 
-/* Scanline Overlay */
-.viewport::before {
+/* Scanline Overlay - Console Only */
+#consoleLog::before {
   content: "";
   position: absolute;
   top: 0;
@@ -191,8 +191,8 @@ button:hover {
   pointer-events: none;
 }
 
-/* Flicker Overlay */
-.viewport::after {
+/* Flicker Overlay - Console Only */
+#consoleLog::after {
   content: "";
   position: absolute;
   top: 0;

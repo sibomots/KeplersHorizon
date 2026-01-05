@@ -89,6 +89,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       stroke-width: 2;
       opacity: .7;
     }
+
+    @keyframes combat-pulse {
+
+      0%,
+      100% {
+        opacity: 0.4;
+        stroke-width: 2;
+      }
+
+      50% {
+        opacity: 0.9;
+        stroke-width: 4;
+      }
+    }
   </style>
 </head>
 
@@ -408,16 +422,33 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       }
 
       function stackOffset(index, total) {
-        if (total === 1) return { dx: 0, dy: 0 };
-        const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-        const r = 15;
-        return { dx: r * Math.cos(angle), dy: r * Math.sin(angle) };
+        // Base offset: place ships to LEFT of hex center
+        // Avoids: hex ID (bottom), star name (top), star icon (center)
+        const baseX = -25;  // offset left
+        const baseY = 0;    // vertically centered
+
+        if (total === 1) return { dx: baseX, dy: baseY };
+
+        // For multiple ships, arrange vertically along the left side
+        const spacing = 14;
+        const startY = -((total - 1) * spacing) / 2;
+        return {
+          dx: baseX,
+          dy: startY + index * spacing
+        };
       }
 
       function renderShip(ship, cx, cy, colors, zoom) {
         const g = document.createElementNS(NS, 'g');
         g.setAttribute('transform', `translate(${cx},${cy})`);
         g.setAttribute('data-ship', ship.code);
+        g.setAttribute('style', 'cursor: pointer');
+
+        // Add tooltip via SVG title element
+        const title = document.createElementNS(NS, 'title');
+        const shipType = ship.type === 'W' ? 'Warpship' : 'Systemship';
+        title.textContent = `${ship.code} (${shipType})\nHex: ${ship.hex || 'N/A'}\nSystem: ${ship.system || 'N/A'}`;
+        g.appendChild(title);
 
         if (zoom === 'low') {
           // Dot only
@@ -513,11 +544,45 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       svg.removeEventListener("wheel", onWheel, { passive: false });
       svg.addEventListener("wheel", onWheelWithShips, { passive: false });
 
-      // Listen for ship data from parent frame
+      // Combat hex highlighting
+      function renderCombatMarkers(combatHexes) {
+        const layer = document.getElementById('layer-combat-markers');
+        if (!layer) return;
+        layer.innerHTML = '';
+
+        if (!combatHexes || !Array.isArray(combatHexes)) return;
+
+        for (const hex of combatHexes) {
+          const pos = hexCenters.get(hex);
+          if (!pos) continue;
+
+          // Pulsing red ring around hex
+          const ring = document.createElementNS(NS, 'circle');
+          ring.setAttribute('cx', pos.cx);
+          ring.setAttribute('cy', pos.cy);
+          ring.setAttribute('r', 30);
+          ring.setAttribute('fill', 'none');
+          ring.setAttribute('stroke', '#ff4444');
+          ring.setAttribute('stroke-width', '3');
+          ring.setAttribute('opacity', '0.7');
+          ring.setAttribute('style', 'animation: combat-pulse 1s infinite');
+
+          const title = document.createElementNS(NS, 'title');
+          title.textContent = `Combat at ${hex}`;
+          ring.appendChild(title);
+
+          layer.appendChild(ring);
+        }
+      }
+
+      // Listen for data from parent frame
       window.addEventListener('message', (e) => {
         if (e.data && e.data.type === 'ships') {
           currentShipData = e.data.data;
           renderShips(currentShipData);
+        }
+        if (e.data && e.data.type === 'combat') {
+          renderCombatMarkers(e.data.hexes);
         }
       });
 
