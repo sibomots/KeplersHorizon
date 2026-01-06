@@ -69,6 +69,7 @@ src/mapgraph.cpp
 src/maputil.cpp
 src/roommanager.cpp
 src/rooms_api.cpp
+src/save_api.cpp
 src/ships.cpp
 src/srvmgr.cpp
 src/star_system_constraints.cpp

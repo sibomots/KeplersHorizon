@@ -149,13 +149,15 @@ bool RoomManager::leaveRoom(const std::string& code, int user_id)
         return false; // User not in room
     }
 
-    // If room now empty, delete it
-    auto check = db.query("SELECT seat_a, seat_b FROM rooms WHERE id=" +
-                          std::to_string(room_id));
-    if (!check.empty() && check[0][0].empty() && check[0][1].empty())
-    {
-        db.exec("DELETE FROM rooms WHERE id=" + std::to_string(room_id));
-    }
+    // Room persistence: Keep empty rooms instead of deleting
+    // Users can return to rooms later to resume or start new games
+    // Old comment: "If room now empty, delete it" - now disabled for room resumption
+    // auto check = db.query("SELECT seat_a, seat_b FROM rooms WHERE id=" +
+    //                       std::to_string(room_id));
+    // if (!check.empty() && check[0][0].empty() && check[0][1].empty())
+    // {
+    //     db.exec("DELETE FROM rooms WHERE id=" + std::to_string(room_id));
+    // }
 
     return true;
 }

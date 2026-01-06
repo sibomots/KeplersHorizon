@@ -53,6 +53,12 @@ void dispatch_request(const HttpRequest* req, HttpResponse* resp)
         handle_rooms(req, resp);
         return;
     }
+    else if (req->path == "/api/saved" || starts_with(req->path, "/api/saved/") ||
+             (starts_with(req->path, "/api/games/") && req->path.find("/save") != std::string::npos))
+    {
+        handle_saves(req, resp);
+        return;
+    }
     else
     {
         resp->status = 404;

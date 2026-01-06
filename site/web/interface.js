@@ -57,6 +57,31 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     window.location.href = 'lobby.html';
   }
 
+  async function saveGame() {
+    try {
+      const saveName = prompt("Enter save name:", "Save " + new Date().toLocaleString());
+      if (!saveName) return;
+
+      const resp = await fetch('/kh/api/games/' + S.game_id + '/save', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + S.token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: saveName })
+      });
+      const data = await resp.json();
+
+      if (data.ok) {
+        B.appendLine("Game saved: " + saveName + " (Round " + data.round + ")", "line-good");
+      } else {
+        B.appendLine("Save failed: " + (data.error || "unknown error"), "line-bad");
+      }
+    } catch (e) {
+      B.appendLine("Save error: " + e.message, "line-bad");
+    }
+  }
+
   function wire() {
     // Check authentication first
     if (!checkAuth()) return;
@@ -81,9 +106,11 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     const inp = document.getElementById("commandInput");
     const btnLobby = document.getElementById("btnLobby");
     const btnMap = document.getElementById("btnMap");
+    const btnSave = document.getElementById("btnSave");
 
     if (btnLobby) btnLobby.addEventListener("click", exitToLobby);
     if (btnMap) btnMap.addEventListener("click", () => B.toggleMapView());
+    if (btnSave) btnSave.addEventListener("click", saveGame);
 
     async function runCmd() {
       const cmd = inp.value.trim();
