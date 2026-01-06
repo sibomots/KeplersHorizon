@@ -166,7 +166,7 @@ bool RepairCommand::invoke(void)
     }
 
     int repairAmt = std::min(m_amount, maxRepair);
-    int cost = repairAmt; // 1 BP per unit
+    int cost = repairAmt * 20; // 20 CR per unit (inflated ×20)
 
     // Check BP
     int availBP = (owner == 'A') ? s.creditsA : s.creditsB;
@@ -275,7 +275,7 @@ bool ResupplyCommand::invoke(void)
     }
 
     int addAmt = std::min(m_missiles, canAdd);
-    int cost = (addAmt + 2) / 3; // 1 BP per 3 missiles, round up
+    int cost = ((addAmt + 2) / 3) * 20; // 20 CR per 3 missiles (inflated ×20)
 
     // Check BP
     int availBP = (owner == 'A') ? s.creditsA : s.creditsB;

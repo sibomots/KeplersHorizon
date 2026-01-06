@@ -319,18 +319,18 @@ GameState StateMachine::new_game_state_for_scenario(const std::string& scenario)
 
     if (scenario == "learning")
     {
-        s.creditsA = 40;
-        s.creditsB = 40;
+        s.creditsA = 800;  // 40 × 20 (inflated)
+        s.creditsB = 800;
     }
     else if (scenario == "basic")
     {
-        s.creditsA = 50;
-        s.creditsB = 50;
+        s.creditsA = 1000;  // 50 × 20 (inflated)
+        s.creditsB = 1000;
     }
     else if (scenario == "advanced")
     {
-        s.creditsA = 20;
-        s.creditsB = 20; // start of first turn
+        s.creditsA = 400;  // 20 × 20 (inflated)
+        s.creditsB = 400; // start of first turn
     }
 
     return s;
@@ -400,9 +400,9 @@ void StateMachine::apply_start_of_turn(GameState& s)
         if (!is_first_player_first_turn)
         {
             if (me == 'A')
-                s.creditsA += 10;
+                s.creditsA += 200;  // 10 × 20 (inflated)
             else
-                s.creditsB += 10;
+                s.creditsB += 200;  // 10 × 20 (inflated)
         }
     }
 

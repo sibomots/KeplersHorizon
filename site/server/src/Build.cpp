@@ -107,11 +107,11 @@ bool BuildCommitCommand::invoke(void)
         return false;
     }
 
-    // Calculate cost
-    int cost = d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR;
-    cost += (d.attr.M + 2) / 3;
+    // Calculate cost (inflated ×20: each stat = 20 CR, warp = 100 CR)
+    int cost = (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
+    cost += ((d.attr.M + 2) / 3) * 20;  // 20 CR per 3 missiles
     if (d.attr.type == 'W')
-        cost += 5; // Warp generator
+        cost += 100; // Warp generator
 
     // Check BP availability
     int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
@@ -185,11 +185,11 @@ bool BuildListDraftsCommand::invoke(void)
         msg << "Draft ships (" << drafts.size() << "):\n";
         for (const auto& d : drafts)
         {
-            // Calculate cost
-            int cost = d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR;
-            cost += (d.attr.M + 2) / 3;
+            // Calculate cost (inflated ×20)
+            int cost = (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
+            cost += ((d.attr.M + 2) / 3) * 20;
             if (d.attr.type == 'W')
-                cost += 5;
+                cost += 100;
 
             msg << "  " << d.code << " '" << d.name << "' cost=" << cost
                 << " BP\n";
