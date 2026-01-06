@@ -126,7 +126,7 @@ button:hover {
   gap: 8px;
 }
 
-/* Console Log */
+/* Console Log - scrollbar on left via rtl direction */
 #consoleLog {
   xxheight: 100%;
   height: calc(100% - 70px);
@@ -144,6 +144,13 @@ button:hover {
   color: #5f5;
   text-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow), 0 0 40px rgba(50, 255, 50, 0.3);
   position: relative;
+  direction: rtl;
+  /* Moves scrollbar to left */
+}
+
+/* Restore left-to-right text inside console */
+#consoleLog>* {
+  direction: ltr;
 }
 
 /* --- Custom Scrollbar (WebKit/Blink Browsers) --- */

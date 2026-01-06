@@ -310,11 +310,11 @@ Copyright (c) 2025, sibomots
         layerStars.appendChild(name);
       }
 
-      // initial viewBox: ~10x10 hex region centered on LYRIS (1313)
+      // initial viewBox: zoomed in on LYRIS (1313)
       const focus = hexCenters.get("1313");
       if (focus) {
-        const W = 1200; // ~10 columns * 120 step
-        const H = 450;  // ~10 rows span
+        const W = 800;  // zoomed in more for split view
+        const H = 350;  // zoomed in more for split view
         svg.viewBox.baseVal.x = focus.cx - W / 2;
         svg.viewBox.baseVal.y = focus.cy - H / 2;
         svg.viewBox.baseVal.width = W;

@@ -12,9 +12,9 @@ Copyright (c) 2025, sibomots
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kepler's Horizon - Login</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
@@ -38,10 +38,10 @@ Copyright (c) 2025, sibomots
             align-items: center;
             justify-content: center;
 
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  font-style: normal;
+            font-family: "Fira Code", monospace;
+            font-optical-sizing: auto;
+            font-weight: 500;
+            font-style: normal;
 
 
             text-transform: uppercase;
@@ -81,10 +81,10 @@ Copyright (c) 2025, sibomots
             background: var(--bg);
             border: 1px solid var(--border);
             color: var(--text);
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  font-style: normal;
+            font-family: "Fira Code", monospace;
+            font-optical-sizing: auto;
+            font-weight: 500;
+            font-style: normal;
             font-size: 1.3rem;
             text-shadow: 0 0 5px var(--glow);
         }
@@ -105,10 +105,10 @@ Copyright (c) 2025, sibomots
             background: transparent;
             border: 1px solid var(--text);
             color: var(--text);
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  font-style: normal;
+            font-family: "Fira Code", monospace;
+            font-optical-sizing: auto;
+            font-weight: 500;
+            font-style: normal;
             font-size: 1.3rem;
             text-shadow: 0 0 5px var(--glow);
         }
@@ -161,6 +161,14 @@ Copyright (c) 2025, sibomots
                 </div>
                 <button type="submit" class="btn btn-primary w-100">Login</button>
             </form>
+
+            <hr style="border-color: var(--border); margin: 1.5rem 0;">
+
+            <button type="button" class="btn btn-primary w-100" id="btnBridgeCheck"
+                style="font-size: 1rem; padding: 0.6rem;">
+                Check Settings on the Command Bridge
+            </button>
+            <div id="bridgeStatus" style="text-align: center; margin-top: 0.75rem; font-size: 0.9rem;"></div>
         </div>
     </div>
 

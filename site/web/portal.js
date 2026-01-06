@@ -70,6 +70,25 @@
         }
     });
 
+    // Bridge settings check - minimum window dimensions
+    document.getElementById('btnBridgeCheck').addEventListener('click', function () {
+        const minW = 1200, minH = 800;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const status = document.getElementById('bridgeStatus');
+
+        if (w >= minW && h >= minH) {
+            status.style.color = 'var(--good)';
+            status.innerHTML = '✓ BRIDGE SYSTEMS NOMINAL<br>' +
+                'Viewport: ' + w + ' × ' + h + ' px';
+        } else {
+            status.style.color = 'var(--bad)';
+            status.innerHTML = '⚠ VIEWPORT INSUFFICIENT<br>' +
+                'Current: ' + w + ' × ' + h + ' px<br>' +
+                'Required: ' + minW + ' × ' + minH + ' px minimum';
+        }
+    });
+
     // Check session on load
     checkSession();
 })();
