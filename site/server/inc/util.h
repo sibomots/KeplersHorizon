@@ -12,7 +12,6 @@
 #include <vector>
 
 std::string trim(const std::string& s);
-//BUGBUG char owner_for_username(const std::string& u); // Legacy fallback
 char seat_for_user(int game_id,
                    int user_id); // Dynamic seat lookup from game_seats table
 std::string now_iso();
@@ -21,6 +20,5 @@ std::string to_lower(std::string s);
 std::string rand_hex_64();
 std::vector<std::string> split_ws(const std::string& s);
 std::vector<std::string> split(const std::string& s, char delim);
-//BUGBUG std::string escape_json(const std::string& s);
 std::string upper_ascii(const std::string& s);
 #endif

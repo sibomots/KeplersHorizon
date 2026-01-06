@@ -73,7 +73,6 @@ void ServerManager::run(void)
         }
         catch (const std::exception& ex)
         {
-            // BUGBUG  magic number
             resp.status = 500;
             resp.body = json_error(std::string("server error: ") + ex.what());
         }

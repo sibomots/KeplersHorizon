@@ -219,44 +219,10 @@ std::vector<SystemConstraint> ConstraintEngine::get_constraints(
 
 void ConstraintEngine::initialize_constraints(int game_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
-
-    Logger::instance().info("[CONSTRAINTS] Initializing constraints for game " +
-                            std::to_string(game_id));
-
-    // Clear existing game-specific constraints
-    // (system_constraints table is global, not per-game for now)
-
-    // Add constraint from anomalies
-    // Axis Marker at KORAL - movement bonus
-    db.exec(
-        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
-        "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('KORAL','MOVEMENT','BONUS',1,'Axis Marker beacon','ANOMALY')");
-
-    // Keplerite Vein at QUELL - extraction bonus for EXOTIC
-    db.exec(
-        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
-        "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('QUELL','HARVEST','BONUS',2,'Keplerite deposits','ANOMALY')");
-
-    // The Veil at FEXON - combat penalty (sensor blocking)
-    db.exec(
-        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
-        "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('FEXON','COMBAT','PENALTY',1,'Sensor-blocking dust','ANOMALY')");
-
-    // The Scrapyard at SYDRA - movement penalty
-    db.exec(
-        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
-        "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('SYDRA','MOVEMENT','PENALTY',1,'Dense debris field','SCRAPYARD')");
-
-    // The Shimmer at GALEN - hazardous extraction
-    db.exec(
-        "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
-        "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('GALEN','HARVEST','PENALTY',1,'Radiation hazardous','ANOMALY')");
-
-    Logger::instance().info("[CONSTRAINTS] Constraints initialized");
+    // BUGBUG: This function is atrophied. Constraint initialization data
+    // has been moved to: site/db/milieu/system_constraints.csv
+    // The system_constraints table is global (not per-game) and should be
+    // pre-loaded from CSV during database setup.
+    
+    Logger::instance().info("[CONSTRAINTS] Constraints initialized (loaded from CSV)");
 }

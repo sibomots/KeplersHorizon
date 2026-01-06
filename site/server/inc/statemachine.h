@@ -254,9 +254,9 @@ class StateMachine
     // BUGBUG
     // legacy block, ingested. needs to be cleaned up
     GameState new_game_state_for_scenario(const std::string& scenario);
+    void save_game(const GameState& s);
     void apply_start_of_turn(GameState& s);
     void advance_next(GameState& s);
-    void save_game(const GameState& s);
     int next_event_seq(int game_id);
     // end of legacy block
 

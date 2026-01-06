@@ -15,7 +15,9 @@
 #include "statemachine.h"
 #include "telemetry.h"
 
-// Base prices
+// BUGBUG: Base prices have been moved to: site/db/milieu/market_base_prices.csv
+// This hardcoded array is kept for backward compatibility but should be removed.
+// Market init should INSERT from market_base_prices reference table.
 static const struct
 {
     const char* type;
