@@ -192,8 +192,10 @@ void handle_saves_list(const HttpRequest* req, HttpResponse* resp)
 void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
 {
     std::string token = pick_bearer(req);
-    int user_id = get_user_id_from_token(token);
-    if (user_id == 0)
+    int user_id = 0;
+    int game_id = 0;
+    
+    if (!get_session_from_token(token, user_id, game_id))
     {
         resp->status = 401;
         resp->body = json_error("not authenticated");
@@ -285,8 +287,10 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
 void handle_save_delete(int save_id, const HttpRequest* req, HttpResponse* resp)
 {
     std::string token = pick_bearer(req);
-    int user_id = get_user_id_from_token(token);
-    if (user_id == 0)
+    int user_id = 0;
+    int game_id = 0;
+    
+    if (!get_session_from_token(token, user_id, game_id))
     {
         resp->status = 401;
         resp->body = json_error("not authenticated");
