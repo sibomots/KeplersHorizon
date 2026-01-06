@@ -127,13 +127,12 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     auto id_rows = db.query("SELECT LAST_INSERT_ID()");
     int save_id = id_rows.empty() ? 0 : std::stoi(id_rows[0][0]);
 
-    // Save ships
+    // Save ships - columns must match 0-schema.sql ships table
     auto ships = db.query(
         "SELECT ship_code, ship_name, owner, "
         "CONCAT('{\"pd\":', pd, ',\"beam\":', beam, ',\"screen\":', screen, ',\"tube\":', tube, "
-        "',\"missiles\":', missiles, ',\"hull\":', hull, ',\"at_hex\":\"', "
-        "IFNULL(at_hex,''), '\",\"at_system\":\"', IFNULL(at_system,''), "
-        "'\",\"deployed_at\":\"', IFNULL(deployed_at,''), '\"}') "
+        "',\"missiles\":', missiles, ',\"sr\":', sr, ',\"pd_spent\":', pd_spent, "
+        "',\"at_hex\":\"', IFNULL(at_hex,''), '\",\"at_system\":\"', IFNULL(at_system,''), '\"}') "
         "FROM ships WHERE game_id=" + std::to_string(game_id) +
         " AND destroyed_at IS NULL");
     

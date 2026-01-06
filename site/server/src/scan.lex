@@ -32,6 +32,8 @@
 "reset"    { return TOK_RESET; }
 "save"     { return TOK_SAVE; }
 "load"     { return TOK_LOAD; }
+"accept"   { return TOK_ACCEPT; }
+"reject"   { return TOK_REJECT; }
 "delete"   { return TOK_DELETE; }
 "quit"     { return TOK_QUIT; }
 "basic"    { return TOK_BASIC; }

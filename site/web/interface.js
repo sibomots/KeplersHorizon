@@ -57,31 +57,7 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     window.location.href = 'lobby.html';
   }
 
-  async function saveGame() {
-    try {
-      const saveName = prompt("Enter save name:", "Save " + new Date().toLocaleString());
-      if (!saveName) return;
-
-      // Use session-based save endpoint - server knows game_id from session
-      const resp = await fetch('/kh/api/save', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + S.token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name: saveName })
-      });
-      const data = await resp.json();
-
-      if (data.ok) {
-        B.appendLine("Game saved: " + saveName + " (Round " + data.round + ")", "line-good");
-      } else {
-        B.appendLine("Save failed: " + (data.error || "unknown error"), "line-bad");
-      }
-    } catch (e) {
-      B.appendLine("Save error: " + e.message, "line-bad");
-    }
-  }
+  // saveGame() removed - use 'save <name>' console command instead
 
   function wire() {
     // Check authentication first
@@ -107,11 +83,10 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     const inp = document.getElementById("commandInput");
     const btnLobby = document.getElementById("btnLobby");
     const btnMap = document.getElementById("btnMap");
-    const btnSave = document.getElementById("btnSave");
 
     if (btnLobby) btnLobby.addEventListener("click", exitToLobby);
     if (btnMap) btnMap.addEventListener("click", () => B.toggleMapView());
-    if (btnSave) btnSave.addEventListener("click", saveGame);
+    // btnSave removed - use 'save <name>' console command instead
 
     async function runCmd() {
       const cmd = inp.value.trim();

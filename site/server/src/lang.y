@@ -43,6 +43,7 @@
 #include "trade_command.h"
 #include "fabricate_command.h"
 #include "salvage_command.h"
+#include "save_command.h"
 #include "help_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -138,6 +139,8 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_RESET
 %token TOK_RESUPPLY
 %token TOK_SAVE
+%token TOK_ACCEPT
+%token TOK_REJECT
 %token TOK_SCREEN
 %token TOK_SCORE
 %token TOK_EXTRACT
@@ -224,28 +227,50 @@ session_cmd:
         Logger::instance().info("Reset the current game, wiping everything");
    }
    |
+   TOK_SAVE
+   {
+        ICmd *pCmd = SaveCommand::Builder().set_show_usage().build();
+        pCmd->invoke();
+        SafeDelete(pCmd);
+   }
+   |
    TOK_SAVE TOK_STRING
    {
-        // the name of the 'thing' to save is supplied by the user.
-        // it's  in the same vein as a filename.. just a-zA-Z0-9
-        std::string save_record(*$2);
-        Logger::instance().info("Save game with id >"
-                                + save_record + "<");
+        std::string save_name(*$2);
+        ICmd *pCmd = SaveCommand::Builder().set_name(save_name).build();
+        pCmd->invoke();
+        SafeDelete(pCmd);
    }
    |
    TOK_LOAD
    {
-        Logger::instance().info("List the games that are saved, if any");
+        ICmd *pCmd = LoadCommand::Builder().set_list_saves().build();
+        pCmd->invoke();
+        SafeDelete(pCmd);
    }
    |
    TOK_LOAD TOK_STRING
    {
-        // the user can learn the filenames (they aren't files, they are
-        // records in the DB) that are loadable by the name used when
-        // the game was saved.
-        std::string load_record(*$2);
-        Logger::instance().info("Load game >"
-                     + load_record + "<");
+        std::string load_name(*$2);
+        ICmd *pCmd = LoadCommand::Builder().set_name(load_name).build();
+        pCmd->invoke();
+        SafeDelete(pCmd);
+   }
+   |
+   TOK_ACCEPT TOK_STRING
+   {
+        std::string accept_name(*$2);
+        ICmd *pCmd = AcceptCommand::Builder().set_name(accept_name).build();
+        pCmd->invoke();
+        SafeDelete(pCmd);
+   }
+   |
+   TOK_REJECT TOK_STRING
+   {
+        std::string reject_name(*$2);
+        ICmd *pCmd = RejectCommand::Builder().set_name(reject_name).build();
+        pCmd->invoke();
+        SafeDelete(pCmd);
    }
    | TOK_DELETE {
         // deleting the most recent game saved, if any

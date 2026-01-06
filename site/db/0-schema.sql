@@ -393,38 +393,31 @@ INDEX (topic_keyword)
 
 
 -- Saved Games Schema
--- Allows players to save and load game states
+-- Bookmark model: saved game is just a pointer to an existing game_id
+-- No state copying - all data remains in DB under the original game_id
 
 CREATE TABLE IF NOT EXISTS saved_games (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    save_name VARCHAR(128) NOT NULL,
     user_id INT NOT NULL,
-    original_game_id INT NOT NULL,
-    room_code VARCHAR(6),
-    scenario VARCHAR(32) DEFAULT 'basic',
-    
-    -- Snapshot of game state JSON
-    state_json TEXT NOT NULL,
-    
-    -- Metadata
-    round INT DEFAULT 1,
-    player_a_name VARCHAR(64),
-    player_b_name VARCHAR(64),
-    
+    save_name VARCHAR(64) NOT NULL,
+    game_id INT NOT NULL,
     saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+    UNIQUE KEY uniq_user_save (user_id, save_name),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
     INDEX idx_user_saves (user_id, saved_at DESC)
 );
 
--- Also store ship snapshots
-CREATE TABLE IF NOT EXISTS saved_ships (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    save_id INT NOT NULL,
-    ship_code VARCHAR(10) NOT NULL,
-    ship_name VARCHAR(64),
-    owner CHAR(1) NOT NULL,
-    ship_json TEXT NOT NULL,
-    
-    FOREIGN KEY (save_id) REFERENCES saved_games(id) ON DELETE CASCADE
+-- Pending load requests for two-factor confirmation
+-- Only one pending request per active game
+CREATE TABLE IF NOT EXISTS load_requests (
+    game_id INT NOT NULL PRIMARY KEY,
+    requester CHAR(1) NOT NULL,
+    requester_user_id INT NOT NULL,
+    target_game_id INT NOT NULL,
+    save_name VARCHAR(64) NOT NULL,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    FOREIGN KEY (requester_user_id) REFERENCES users(id),
+    FOREIGN KEY (target_game_id) REFERENCES games(id)
 );

@@ -107,6 +107,10 @@ enum class CommandID
     HELP,
     COMBAT_ORDER,
     COMBAT_FIRE,
+    SAVE,
+    LOAD,
+    ACCEPT,
+    REJECT,
     // Add more as needed
 };
 

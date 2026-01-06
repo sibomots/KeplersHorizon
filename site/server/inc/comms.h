@@ -53,7 +53,4 @@ void handle_register(const HttpRequest* req, HttpResponse* resp);
 // Room handlers (rooms_api.cpp)
 void handle_rooms(const HttpRequest* req, HttpResponse* resp);
 
-// Save/Load handlers (save_api.cpp)
-void handle_saves(const HttpRequest* req, HttpResponse* resp);
-
 #endif

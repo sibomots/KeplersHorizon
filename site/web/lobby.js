@@ -110,49 +110,7 @@
         }
     }
 
-    async function loadSaves() {
-        const container = document.getElementById('savedGames');
-        if (!container) return;
-
-        const data = await apiCall('/saved');
-        if (!data || !data.ok) {
-            container.innerHTML = '<div class="text-center" style="color: var(--muted);">Could not load saves</div>';
-            return;
-        }
-
-        if (data.saves.length === 0) {
-            container.innerHTML = '<div class="text-center" style="color: var(--muted);">No saved games</div>';
-            return;
-        }
-
-        let html = '';
-        for (const save of data.saves) {
-            html += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border);">
-                    <div>
-                        <div style="color: var(--text);">${escapeHtml(save.name)}</div>
-                        <div style="font-size: 0.9rem; color: var(--muted);">Round ${save.round} • ${save.scenario}</div>
-                    </div>
-                    <button class="btn btn-sm btn-primary btn-load-save" data-id="${save.id}">Load</button>
-                </div>
-            `;
-        }
-        container.innerHTML = html;
-
-        // Attach load handlers
-        container.querySelectorAll('.btn-load-save').forEach(btn => {
-            btn.addEventListener('click', () => loadSavedGame(btn.dataset.id));
-        });
-    }
-
-    async function loadSavedGame(saveId) {
-        const data = await apiCall('/saved/' + saveId + '/load', 'POST');
-        if (data && data.ok) {
-            window.location.href = 'room.html?code=' + data.room_code;
-        } else {
-            alert(data?.error || 'Failed to load game');
-        }
-    }
+    // loadSaves() and loadSavedGame() removed - use 'save', 'load' console commands in-game
 
     async function createRoom() {
         const name = document.getElementById('roomName').value.trim() || 'Game Room';
@@ -224,7 +182,7 @@
 
         // Initial load
         loadRooms();
-        loadSaves();
+        // loadSaves() removed - use console commands in-game
 
         // Poll for updates
         pollTimer = setInterval(loadRooms, 3000);
