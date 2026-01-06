@@ -97,7 +97,6 @@ inc/db.h
 inc/deploy_command.h
 inc/done_command.h
 inc/events.h
-inc/flavor_events.h
 inc/ships.h
 inc/icmd.h
 inc/init.h

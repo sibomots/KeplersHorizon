@@ -46,9 +46,8 @@ void MarketCommand::show_all_prices()
     DatabaseManager& db = DatabaseManager::getInstance();
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\n"
-        << "          MARKET EXCHANGE (Round " << s.round << ")\n"
-        << "═══════════════════════════════════════════\n"
+    out << "          MARKET EXCHANGE (Round " << s.round << ")\n"
+        << "-------------------------------------------\n"
         << "Resource      Price   Trend\n"
         << "----------    -----   -----\n";
 
@@ -95,7 +94,7 @@ void MarketCommand::show_all_prices()
         out << name << "  " << price << " CR   " << trend_char << "\n";
     }
 
-    out << "═══════════════════════════════════════════";
+    out << "-------------------------------------------";
     Telemetry::getInstance().write(out.str());
 }
 
@@ -116,9 +115,8 @@ void MarketCommand::show_price_history()
         "' ORDER BY turn DESC LIMIT 10");
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\n";
-    out << "     " << res_upper << " PRICE HISTORY\n";
-    out << "═══════════════════════════════════════════\n";
+    out << "     " << res_upper << " PRICE HISTORY\n"
+        << "-------------------------------------------\n";
 
     if (history.empty())
     {
@@ -134,7 +132,7 @@ void MarketCommand::show_price_history()
         }
     }
 
-    out << "═══════════════════════════════════════════";
+    out << "-------------------------------------------";
     Telemetry::getInstance().write(out.str());
 }
 

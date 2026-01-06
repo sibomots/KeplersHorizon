@@ -56,9 +56,8 @@ void ExtractCommand::do_scan()
     }
 
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\n";
     out << "         HARVESTABLE RESOURCES\n";
-    out << "═══════════════════════════════════════════\n";
+    out << "-------------------------------------------\n";
 
     for (const auto& ship : ships)
     {
@@ -103,7 +102,7 @@ void ExtractCommand::do_scan()
         }
     }
 
-    out << "═══════════════════════════════════════════\n";
+    out << "-------------------------------------------\n";
     out << "Use: extract <ship> <resource_type>";
     Telemetry::getInstance().write(out.str());
 }

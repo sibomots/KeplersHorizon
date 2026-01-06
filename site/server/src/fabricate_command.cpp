@@ -64,9 +64,8 @@ bool FabricateCommand::invoke(void)
 void FabricateCommand::show_recipes()
 {
     std::ostringstream out;
-    out << "═══════════════════════════════════════════\n";
-    out << "         FABRICATION RECIPES\n";
-    out << "═══════════════════════════════════════════\n";
+    out << "         FABRICATION RECIPES\n"
+        << "-------------------------------------------\n";
 
     for (int i = 0; i < NUM_RECIPES; i++)
     {
@@ -88,9 +87,9 @@ void FabricateCommand::show_recipes()
         out << "\n";
     }
 
-    out << "═══════════════════════════════════════════\n";
-    out << "Use: fabricate <recipe> [qty]\n";
-    out << "Requires ship at SHIPYARD or REFINERY.";
+    out << "-------------------------------------------\n"
+        << "Use: fabricate <recipe> [qty]\n"
+        << "Requires ship at SHIPYARD or REFINERY.";
     Telemetry::getInstance().write(out.str());
 }
 

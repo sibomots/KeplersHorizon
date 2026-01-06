@@ -168,7 +168,7 @@ bool NextCommand::invoke(void)
     if (before_player != s.active_player)
     {
         Telemetry::getInstance().tell(PlayerTarget::THEM,
-                                      "⏰ It's YOUR turn! " + s.phase_name());
+                                      "It's YOUR turn! " + s.phase_name());
     }
 
     return true;

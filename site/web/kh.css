@@ -32,7 +32,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'VT323', ui-monospace, monospace;
+  font-family: "Fira Code", monospace;
+  font-weight: 500;
+  font-style: normal;
   text-transform: uppercase;
   text-shadow: 0 0 5px var(--glow), 0 0 15px var(--glow-soft);
 }
@@ -105,7 +107,7 @@ button:hover {
 .panel h2 {
   margin: 0;
   padding: 10px 12px;
-  font-size: 20px;
+  font-size: 18px;
   color: var(--muted);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -124,18 +126,20 @@ button:hover {
 /* Console Log */
 #consoleLog {
   xxheight: 100%;
-  height: calc(100% - 120px);
+  height: calc(100% - 70px);
   overflow-y: auto;
   padding: 10px 12px;
   padding-bottom: 2em;
   /* Extra space to prevent overlap with input */
-  font-family: 'VT323', ui-monospace, Consolas, monospace;
-  font-size: 22px;
+  font-family: "Fira Code", monospace;
+  font-weight: 500;
+  font-style: normal;
+  font-size: 18px;
   line-height: 1.0;
   /* Tighter line spacing */
   white-space: pre-wrap;
   color: #5f5;
-  text-shadow: 0 0 8px var(--glow), 0 0 20px var(--glow), 0 0 40px rgba(50, 255, 50, 0.3);
+  text-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow), 0 0 40px rgba(50, 255, 50, 0.3);
   position: relative;
 }
 
@@ -270,8 +274,10 @@ input[type="text"] {
   background: #0a100a;
   color: var(--text);
   outline: none;
-  font-family: 'VT323', ui-monospace, monospace;
-  font-size: 20px;
+  font-family: "Fira Code", monospace;
+  font-weight: 500;
+  font-style: normal;
+  font-size: 18px;
   text-shadow: 0 0 5px var(--glow);
 }
 
@@ -289,7 +295,7 @@ input[type="text"]:focus {
 .statusBody {
   padding: 10px 12px;
   overflow: auto;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.4;
   color: var(--text);
   text-shadow: 0 0 5px var(--glow);
@@ -319,7 +325,7 @@ input[type="text"]:focus {
   background: rgba(122, 92, 255, .12);
   color: var(--text);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 18px;
   text-shadow: 0 0 5px var(--glow);
 }
 

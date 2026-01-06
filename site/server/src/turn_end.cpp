@@ -62,9 +62,9 @@ void TurnEndProcessor::update_market_prices(int game_id, int round)
 
         // Calculate demand pressure: net bought = price up, net sold = price down
         int net_demand = bought - sold;
-        int demand_delta = (net_demand / 10) * 5;  // ±5% per 10 net units
+        int demand_delta = (net_demand / 10) * 5;  // +/- 5% per 10 net units
 
-        // Random market variance ±2%
+        // Random market variance +/- 2%
         int variance = (rand() % 5) - 2;  // -2 to +2
 
         // Calculate new price
