@@ -87,16 +87,16 @@ bool RoomManager::joinRoom(const std::string& code, int user_id)
     if (seat_a == user_id || seat_b == user_id)
         return false;
 
-    // Join appropriate seat
+    // Join appropriate seat (don't change status yet)
     if (seat_a == 0)
     {
         db.exec("UPDATE rooms SET seat_a=" + std::to_string(user_id) +
-                ", status='ready' WHERE room_code='" + db.esc(code) + "'");
+                " WHERE room_code='" + db.esc(code) + "'");
     }
     else if (seat_b == 0)
     {
         db.exec("UPDATE rooms SET seat_b=" + std::to_string(user_id) +
-                ", status='ready' WHERE room_code='" + db.esc(code) + "'");
+                " WHERE room_code='" + db.esc(code) + "'");
     }
     else
     {
