@@ -12,7 +12,7 @@
 
 #include "icmd.h"
 
-// SalvageCommand - Salvage wreckage at The Graveyard (UMMA) or similar sites
+// SalvageCommand - Salvage wreckage at The Graveyard (SYDRA) or similar sites
 // Usage: salvage <ship>
 class SalvageCommand : public ICmd
 {

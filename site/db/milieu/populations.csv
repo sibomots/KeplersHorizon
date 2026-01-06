@@ -16,40 +16,40 @@ id,location_type,location_id,species_id,pop_class,population_millions,tech_level
 15,Planet,30,1,Metropolis,1600.00,7,Agricultural Synod,Allied,Dagans Rest. Farmers.
 16,Planet,31,1,City,280.00,8,Industrial Council,Allied,The Foundry. Factory workers.
 17,Planet,32,2,Colony,45.00,7,Corporate Authority,Allied,Saltpan. Ninevite offshoots.
-18,Planet,35,1,Settlement,8.00,6,Colonial Administration,Allied,Sippur Waypoint. Frontier settlers.
-19,Planet,36,1,Outpost,2.00,5,Pioneer Council,Allied,Sippur Quiet. Early development.
-20,Planet,38,1,Colony,35.00,7,Trade Council,Neutral,Erech Crossroad. Junction merchants.
-21,Planet,39,1,Colony,28.00,6,Fishing Collective,Neutral,Erech Lowlands. Ocean communities.
-22,Planet,43,1,Colony,22.00,7,Military Garrison,Neutral,Calah Stalwart. Frontier defense.
-23,Planet,45,1,Settlement,5.00,6,Mining Corporation,Neutral,Byblos Ring View. Miners.
-24,Planet,48,1,City,150.00,7,Trade Federation,Neutral,Adab Junction. Transit hub.
-25,Planet,49,1,Colony,80.00,6,Agricultural Council,Neutral,Adab Green Belt. Farmers.
-26,Planet,52,1,Settlement,12.00,6,Elder Council,Neutral,Susa Keeper. Traditionalists.
-27,Planet,53,1,Colony,35.00,6,Cultural Preservation,Neutral,Susa Tradition. Conservatives.
-28,Planet,55,1,Settlement,8.00,5,Survival Council,Neutral,Ubaid Endurance. Hardy settlers.
-29,Planet,58,1,City,220.00,7,Contested,Contested,Nippur Confluence. Multiple claims.
+18,Planet,35,1,Settlement,8.00,6,Colonial Administration,Allied,Dorsai Waypoint. Frontier settlers.
+19,Planet,36,1,Outpost,2.00,5,Pioneer Council,Allied,Dorsai Quiet. Early development.
+20,Planet,38,1,Colony,35.00,7,Trade Council,Neutral,Elyr Crossroad. Junction merchants.
+21,Planet,39,1,Colony,28.00,6,Fishing Collective,Neutral,Elyr Lowlands. Ocean communities.
+22,Planet,43,1,Colony,22.00,7,Military Garrison,Neutral,Fexon Stalwart. Frontier defense.
+23,Planet,45,1,Settlement,5.00,6,Mining Corporation,Neutral,Galen Ring View. Miners.
+24,Planet,48,1,City,150.00,7,Trade Federation,Neutral,Havor Junction. Transit hub.
+25,Planet,49,1,Colony,80.00,6,Agricultural Council,Neutral,Havor Green Belt. Farmers.
+26,Planet,52,1,Settlement,12.00,6,Elder Council,Neutral,Ithra Keeper. Traditionalists.
+27,Planet,53,1,Colony,35.00,6,Cultural Preservation,Neutral,Ithra Tradition. Conservatives.
+28,Planet,55,1,Settlement,8.00,5,Survival Council,Neutral,Jexel Endurance. Hardy settlers.
+29,Planet,58,1,City,220.00,7,Contested,Contested,Koral Confluence. Multiple claims.
 30,Planet,59,7,Colony,80.00,6,Merchant Clans,Neutral,Brokers Seat. Wanderer traders.
-31,Planet,62,1,Settlement,3.00,5,Frontier Authority,Neutral,Khafa Dim. Sparse population.
-32,Planet,65,1,Colony,45.00,7,Industrial Combine,Neutral,Mari Tempered. Miners and refiners.
-33,Planet,66,1,City,120.00,8,Arms Consortium,Neutral,Mari Forge. Weapons makers.
-34,Planet,69,1,City,280.00,7,Trade Republic,Neutral,Lagash Center. Crossroads melting pot.
-35,Planet,70,1,Colony,95.00,6,Agricultural Synod,Neutral,Lagash Stable. Support farmers.
-36,Planet,73,1,Colony,40.00,7,Watch Council,Neutral,Assur Vigilance. Border watchers.
-37,Planet,76,1,Settlement,5.00,5,Survival Collective,Neutral,Sumarra Persistence. Determined settlers.
+31,Planet,62,1,Settlement,3.00,5,Frontier Authority,Neutral,Lyris Dim. Sparse population.
+32,Planet,65,1,Colony,45.00,7,Industrial Combine,Neutral,Mavik Tempered. Miners and refiners.
+33,Planet,66,1,City,120.00,8,Arms Consortium,Neutral,Mavik Forge. Weapons makers.
+34,Planet,69,1,City,280.00,7,Trade Republic,Neutral,Norex Center. Crossroads melting pot.
+35,Planet,70,1,Colony,95.00,6,Agricultural Synod,Neutral,Norex Stable. Support farmers.
+36,Planet,73,1,Colony,40.00,7,Watch Council,Neutral,Ophir Vigilance. Border watchers.
+37,Planet,76,1,Settlement,5.00,5,Survival Collective,Neutral,Pryon Persistence. Determined settlers.
 38,Planet,77,3,Colony,35.00,6,Tribal Confederation,Wary,Tideland. Lithoid native population.
-39,Planet,80,1,Colony,55.00,7,Gateway Authority,Neutral,Jarmo Gateway. Transit administration.
-40,Planet,81,1,Settlement,18.00,6,Pioneer Council,Neutral,Jarmo Promise. Growing colony.
-41,Planet,84,1,Settlement,85.00,5,Militia Coalitions,Hostile,Umma Contested. Refugees and fighters.
-42,Planet,85,1,Colony,120.00,4,Guerrilla Councils,Wary,Umma Bounty. Farmers under siege.
-43,Planet,87,5,City,450.00,7,Hive Consensus,Neutral,Girsu Hive. Vesh capital.
-44,Planet,88,5,Colony,180.00,6,Hive Extension,Neutral,Girsu Colony. Expanding hive.
-45,Planet,90,2,Settlement,15.00,6,Path Council,Neutral,Isin Path. Gateway administration.
-46,Planet,92,6,City,85.00,9,Machine Council,Neutral,Sumer Eternal. Remnant core.
-47,Planet,94,4,Metropolis,1200.00,7,Tidal Congress,Neutral,Akkad Jewel. Kethrani homeworld.
-48,Planet,95,4,City,380.00,7,Colonial Congress,Neutral,Akkad Pearl. Kethrani colonies.
-49,Planet,96,1,Colony,65.00,6,Island Federation,Neutral,Akkad Atoll. Mixed population.
+39,Planet,80,1,Colony,55.00,7,Gateway Authority,Neutral,Raxen Gateway. Transit administration.
+40,Planet,81,1,Settlement,18.00,6,Pioneer Council,Neutral,Raxen Promise. Growing colony.
+41,Planet,84,1,Settlement,85.00,5,Militia Coalitions,Hostile,Sydra Contested. Refugees and fighters.
+42,Planet,85,1,Colony,120.00,4,Guerrilla Councils,Wary,Sydra Bounty. Farmers under siege.
+43,Planet,87,5,City,450.00,7,Hive Consensus,Neutral,Tavon Hive. Vesh capital.
+44,Planet,88,5,Colony,180.00,6,Hive Extension,Neutral,Tavon Colony. Expanding hive.
+45,Planet,90,2,Settlement,15.00,6,Path Council,Neutral,Ulex Path. Gateway administration.
+46,Planet,92,6,City,85.00,9,Machine Council,Neutral,Varyn Eternal. Remnant core.
+47,Planet,94,4,Metropolis,1200.00,7,Tidal Congress,Neutral,Wexar Jewel. Kethrani homeworld.
+48,Planet,95,4,City,380.00,7,Colonial Congress,Neutral,Wexar Pearl. Kethrani colonies.
+49,Planet,96,1,Colony,65.00,6,Island Federation,Neutral,Wexar Atoll. Mixed population.
 50,Planet,99,1,Settlement,45.00,5,Religious Order,Neutral,Pilgrims End. The faithful.
-51,Planet,100,1,City,320.00,7,Free Council,Neutral,Kish Nexus. True cosmopolitan.
+51,Planet,100,1,City,320.00,7,Free Council,Neutral,Xylen Nexus. True cosmopolitan.
 52,Moon,24,1,Colony,12.00,8,Mercenary Guild,Neutral,Rampart Prime. Armed station.
-53,Planet,104,1,Colony,75.00,7,Trade Council,Neutral,Eridu Passage. Gateway merchants.
-54,Planet,105,1,Settlement,22.00,6,Colonial Authority,Neutral,Eridu Setting. Developing colony.
+53,Planet,104,1,Colony,75.00,7,Trade Council,Neutral,Yorin Passage. Gateway merchants.
+54,Planet,105,1,Settlement,22.00,6,Colonial Authority,Neutral,Yorin Setting. Developing colony.

@@ -19,10 +19,10 @@ Knowledge levels are indicated:
 
 # Part I: Western Alliance Territory
 
-## SONAL 📖
+## ARVEN 📖
 **Hex 0307 | Star: G2V Yellow Main Sequence | Age: 4.2 Gy**
 
-The heart of the Western Alliance. Sonal Prime burns with the steady light of a mature yellow star, nurturing life across multiple worlds.
+The heart of the Western Alliance. Arven Prime burns with the steady light of a mature yellow star, nurturing life across multiple worlds.
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -50,7 +50,7 @@ The heart of the Western Alliance. Sonal Prime burns with the steady light of a 
 
 ### Infrastructure
 - The Anvil Shipyards (Capacity 4)
-- Sonal Fleet Base (Repair Dock)
+- Arven Fleet Base (Repair Dock)
 - Forge Station Refinery
 - Far Watch Beacon Array
 
@@ -59,16 +59,16 @@ None. This is a mature, well-explored system.
 
 ---
 
-## UR 📖
+## BELIX 📖
 **Hex 0606 | Binary: K1V + M4V | Age: 6.8 Gy**
 
-Ancient binary star system. Ur Alpha and Ur Beta have danced together for nearly seven billion years, their gravitational embrace defining the orbital mechanics of the entire system.
+Ancient binary star system. Belix Alpha and Belix Beta have danced together for nearly seven billion years, their gravitational embrace defining the orbital mechanics of the entire system.
 
 ### Stars
 | Designation | Class | Notes |
 |-------------|-------|-------|
-| Ur Alpha | K1V Orange | Primary. Warm light. |
-| Ur Beta | M4V Red Dwarf | Companion. Distant. |
+| Belix Alpha | K1V Orange | Primary. Warm light. |
+| Belix Beta | M4V Red Dwarf | Companion. Distant. |
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -98,17 +98,17 @@ Ancient binary star system. Ur Alpha and Ur Beta have danced together for nearly
 ### Infrastructure
 - Threshold Industries (Shipyard Capacity 3)
 - Bastion Command (Fortress)
-- Ur Fleet Yards (Repair Dock)
+- Belix Fleet Yards (Repair Dock)
 
 ### Anomalies
 **The Whisper Gate** — Between the binary stars hangs an ancient structure of impossible geometry. Non-functional but energy readings persist when ships pass.
 
 ---
 
-## LARSU 📖
+## CAYRU 📖
 **Hex 0804 | Star: F8V Yellow-White | Age: 2.1 Gy**
 
-Young and energetic, Larsu Sol blazes with intense UV output. The inner planets are scorched wastelands, but further out humanity has adapted.
+Young and energetic, Cayru Sol blazes with intense UV output. The inner planets are scorched wastelands, but further out humanity has adapted.
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -141,10 +141,10 @@ Young and energetic, Larsu Sol blazes with intense UV output. The inner planets 
 
 # Part II: Eastern Powers Territory
 
-## NINEVEH 📖
+## ZAREK 📖
 **Hex 2125 | Star: A3V White | Age: 0.8 Gy**
 
-Brilliant young star. The Ninevites evolved under its harsh radiation, becoming the tall, pale near-humans who now rule an interstellar civilization.
+Brilliant young star. The Zarekites evolved under its harsh radiation, becoming the tall, pale near-humans who now rule an interstellar civilization.
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -164,7 +164,7 @@ Brilliant young star. The Ninevites evolved under its harsh radiation, becoming 
 - EXOTIC: Trace (Gilded Throne ruins)
 
 ### Population
-- **Gilded Throne**: 2.8 billion Ninevites | Tech 9 | Theocratic Hierarchy
+- **Gilded Throne**: 2.8 billion Zarekites | Tech 9 | Theocratic Hierarchy
 - **Servitor**: 12 million Machines | Tech 10 | Machine Logic
 - **Archive**: 45 million Mixed | Tech 8 | Scholarly Council
 
@@ -178,10 +178,10 @@ Brilliant young star. The Ninevites evolved under its harsh radiation, becoming 
 
 ---
 
-## BABYLON 📖
+## ASTREX 📖
 **Hex 2223 | Star: G5V Yellow | Age: 5.1 Gy**
 
-The legendary Hanging Gardens. Babylon Prima's mature yellow light nurtures one of the most beautiful worlds in known space.
+The legendary Hanging Gardens. Astrex Prima's mature yellow light nurtures one of the most beautiful worlds in known space.
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -217,10 +217,10 @@ The legendary Hanging Gardens. Babylon Prima's mature yellow light nurtures one 
 
 ---
 
-## UGARIT 📖
+## BRION 📖
 **Hex 2622 | Star: K5V Orange | Age: 8.2 Gy**
 
-The dying star. Ugarit Dusk's amber light speaks of long ages and deep history. Once rich, now depleted, but still vital.
+The dying star. Brion Dusk's amber light speaks of long ages and deep history. Once rich, now depleted, but still vital.
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -247,16 +247,16 @@ The dying star. Ugarit Dusk's amber light speaks of long ages and deep history. 
 - Dagan's Rest Agridomes
 
 ### Anomalies
-**The Dying Light** — Ugarit Dusk's light carries harmonics that should not exist. Spectral analysis reveals patterns that seem almost intentional.
+**The Dying Light** — Brion Dusk's light carries harmonics that should not exist. Spectral analysis reveals patterns that seem almost intentional.
 
 ---
 
 # Part III: The Contested Reach
 
-## NIPPUR ⬜
+## KORAL ⬜
 **Hex 1310 | Star: G8V Yellow-Orange | Age: 3.4 Gy**
 
-The Axis. Four warplines converge at this strategic crossroads. Whoever controls Nippur controls the flow of traffic across contested space.
+The Axis. Four warplines converge at this strategic crossroads. Whoever controls Koral controls the flow of traffic across contested space.
 
 ### Known Information
 - Four warpline connections (most of any system)
@@ -285,7 +285,7 @@ The Axis. Four warplines converge at this strategic crossroads. Whoever controls
 
 ---
 
-## ELAM ⬜
+## QUELL ⬜
 **Hex 1616 | Star: M2V Red Dwarf | Age: 9.1 Gy**
 
 The Vermillion. Isolated red dwarf with a single warpline connection. Home to the silicon-based Lithoids and source of the exotic Keplerite crystals.
@@ -318,7 +318,7 @@ The Vermillion. Isolated red dwarf with a single warpline connection. Home to th
 
 ---
 
-## UMMA ⬜
+## SYDRA ⬜
 **Hex 1719 | Star: K2V Orange | Age: 5.6 Gy**
 
 The Crossroads of Conflict. Four warplines meet here in a system scarred by centuries of warfare.
@@ -330,7 +330,7 @@ The Crossroads of Conflict. Four warplines meet here in a system scarred by cent
 - Agricultural world fought over for resources
 
 ### Rumors
-*"Umma has been contested since before anyone remembers. The Scrapyard holds hulks from a war so old the combatants' names are lost."*
+*"Sydra has been contested since before anyone remembers. The Scrapyard holds hulks from a war so old the combatants' names are lost."*
 
 ### Celestial Bodies
 | Position | Name | Type | Notes |
@@ -350,7 +350,7 @@ The Crossroads of Conflict. Four warplines meet here in a system scarred by cent
 
 ---
 
-## SUMER ⬜
+## VARYN ⬜
 **Hex 1922 | Star: G1V Yellow | Age: 6.1 Gy**
 
 Home of the Remnant. An ancient machine civilization whose directives predate human memory.
@@ -379,7 +379,7 @@ Home of the Remnant. An ancient machine civilization whose directives predate hu
 
 ---
 
-## AKKAD ⬜
+## WEXAR ⬜
 **Hex 2020 | Star: F7V Yellow-White | Age: 2.8 Gy**
 
 The Jewel of Waters. Ocean worlds where the Kethrani evolved and built their mercantile civilization.
@@ -410,7 +410,7 @@ The Jewel of Waters. Ocean worlds where the Kethrani evolved and built their mer
 
 ---
 
-## KISH ⬜
+## XYLEN ⬜
 **Hex 2118 | Star: F5V Yellow-White | Age: 1.9 Gy**
 
 The Free Port. Three warplines meet at a system famous for its cosmopolitan neutrality and mercenary strongholds.
@@ -442,7 +442,7 @@ The Free Port. Three warplines meet at a system famous for its cosmopolitan neut
 
 ---
 
-## GIRSU ⬜
+## TAVON ⬜
 **Hex 1817 | Star: M1V Red Dwarf | Age: 8.4 Gy**
 
 The Hive. Home of the Vesh, an insectoid collective consciousness that defies human understanding.
@@ -474,50 +474,50 @@ The Hive. Home of the Vesh, an insectoid collective consciousness that defies hu
 
 ## Systems with Limited Information
 
-### SIPPUR ⬜
-**Hex 0611** | First waypoint from Sonal. Undeveloped but strategic.
+### DORSAI ⬜
+**Hex 0611** | First waypoint from Arven. Undeveloped but strategic.
 
-### ERECH ⬜
-**Hex 0710** | Junction between Ur and contested zones. Trade colonies.
+### ELYR ⬜
+**Hex 0710** | Junction between Belix and contested zones. Trade colonies.
 
-### CALAH ⬜
+### FEXON ⬜
 **Hex 0908** | Edge of charted space. Military outpost. *Contains The Veil (sensor-blocking dust).*
 
-### BYBLOS ⬜
+### GALEN ⬜
 **Hex 0813** | Spectacular asteroid rings. *Contains The Shimmer (radiation zone).*
 
-### ADAB ⬜
+### HAVOR ⬜
 **Hex 1011** | Three-way junction. Transit hub. *Contains Junction Debris (ancient battle remnants).*
 
-### SUSA ⬜
+### ITHRA ⬜
 **Hex 1207** | One of oldest stars. Conservative population. *Contains Ancient Station (pre-colonization structure).*
 
-### UBAID ⬜
+### JEXEL ⬜
 **Hex 1014** | Dim star. Hardy colonists.
 
-### KHAFA ⬛
+### LYRIS ⬛
 **Hex 1313** | Cold red dwarf. Sparse information.
 
-### MARI ⬜
+### MAVIK ⬜
 **Hex 1415** | Hot star. Inner planets are furnaces. Industrial development.
 
-### LAGASH ⬜
+### NOREX ⬜
 **Hex 1614** | Major crossroads. Cosmopolitan.
 
-### ASSUR ⬛
-**Hex 1712** | Border watchers near Lagash.
+### OPHIR ⬛
+**Hex 1712** | Border watchers near Norex.
 
-### SUMARRA ⬛
+### PRYON ⬛
 **Hex 1419** | Dim ancient red dwarf. Survival colonies.
 
-### JARMO ⬜
+### RAXEN ⬜
 **Hex 1814** | Gateway to east. *Contains The Spark (ancient beacon).*
 
-### ISIN ⬜
-**Hex 1622** | Direct route to Nineveh. Strategic gateway.
+### ULEX ⬜
+**Hex 1622** | Direct route to Zarek. Strategic gateway.
 
-### ERIDU ⬜
-**Hex 2318** | Gateway to Ugarit. Growing trade center.
+### YORIN ⬜
+**Hex 2318** | Gateway to Brion. Growing trade center.
 
 ---
 
@@ -528,11 +528,11 @@ The Hive. Home of the Vesh, an insectoid collective consciousness that defies hu
 | Species | Type | Homeworld | Key Traits |
 |---------|------|-----------|------------|
 | Terran Human | Human | Multiple | Adaptable, ambitious |
-| Ninevite | Near-Human | NINEVEH | Light-adapted, hierarchical |
-| Lithoid | Xenoform | ELAM | Silicon-based, miners |
-| Kethrani | Xenoform | AKKAD | Aquatic, traders |
-| Vesh | Xenoform | GIRSU | Hive mind, builders |
-| The Remnant | Machine | SUMER | AI collective, ancient |
+| Zarekite | Near-Human | ZAREK | Light-adapted, hierarchical |
+| Lithoid | Xenoform | QUELL | Silicon-based, miners |
+| Kethrani | Xenoform | WEXAR | Aquatic, traders |
+| Vesh | Xenoform | TAVON | Hive mind, builders |
+| The Remnant | Machine | VARYN | AI collective, ancient |
 | Wanderers | Nomadic | Fleet-born | Traders, shiphandlers |
 | The Absent | Elder | Unknown | Extinct/departed |
 
@@ -541,13 +541,13 @@ The Hive. Home of the Vesh, an insectoid collective consciousness that defies hu
 | Resource | Uses | Notable Sources |
 |----------|------|-----------------|
 | FERROUS | Hull construction | The Anvil, The Shatter, The Quarry |
-| RARE_EARTH | Electronics, screens | Jewel (UR), The Shatter |
+| RARE_EARTH | Electronics, screens | Jewel (BELIX), The Shatter |
 | RADIOACTIVE | Power, weapons | Limited deposits |
-| CRYSTALLINE | Beams, warp drives | Glassine (KISH), Archive (NINEVEH) |
-| VOLATILE | Fuel, missiles | Shepherd (SONAL), Cloud Marshal (UR) |
-| WATER | Life support | Verdance, Hanging Gardens, Akkad |
+| CRYSTALLINE | Beams, warp drives | Glassine (XYLEN), Archive (ZAREK) |
+| VOLATILE | Fuel, missiles | Shepherd (ARVEN), Cloud Marshal (BELIX) |
+| WATER | Life support | Verdance, Hanging Gardens, Wexar |
 | ORGANIC | Food, medicine | Verdance, Hanging Gardens, Dagan's Rest |
-| EXOTIC | Special technology | Keplerite (ELAM), Gilded Throne ruins |
+| EXOTIC | Special technology | Keplerite (QUELL), Gilded Throne ruins |
 
 ## Appendix C: Facility Types
 

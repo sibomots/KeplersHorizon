@@ -143,44 +143,44 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       const NS = "http://www.w3.org/2000/svg";
 
       const STAR_HEXES = [
-        { hex: "0307", type: "base", name: "SONAL" },
-        { hex: "0606", type: "base", name: "UR" },
-        { hex: "0804", type: "base", name: "LARSU" },
+        { hex: "0307", type: "base", name: "ARVEN" },
+        { hex: "0606", type: "base", name: "BELIX" },
+        { hex: "0804", type: "base", name: "CAYRU" },
 
-        { hex: "0611", type: "star", name: "SIPPUR" },
-        { hex: "0710", type: "star", name: "ERECH" },
-        { hex: "0908", type: "star", name: "CALAH" },
+        { hex: "0611", type: "star", name: "DORSAI" },
+        { hex: "0710", type: "star", name: "ELYR" },
+        { hex: "0908", type: "star", name: "FEXON" },
 
-        { hex: "0813", type: "star", name: "BYBLOS" },
-        { hex: "1011", type: "star", name: "ADAB" },
-        { hex: "1207", type: "star", name: "SUSA" },
+        { hex: "0813", type: "star", name: "GALEN" },
+        { hex: "1011", type: "star", name: "HAVOR" },
+        { hex: "1207", type: "star", name: "ITHRA" },
 
-        { hex: "1014", type: "star", name: "UBAID" },
-        { hex: "1310", type: "star", name: "NIPPUR" },
+        { hex: "1014", type: "star", name: "JEXEL" },
+        { hex: "1310", type: "star", name: "KORAL" },
 
-        { hex: "1313", type: "star", name: "KHAFA" },
+        { hex: "1313", type: "star", name: "LYRIS" },
 
-        { hex: "1415", type: "star", name: "MARI" },
-        { hex: "1614", type: "star", name: "LAGASH" },
-        { hex: "1712", type: "star", name: "ASSUR" },
+        { hex: "1415", type: "star", name: "MAVIK" },
+        { hex: "1614", type: "star", name: "NOREX" },
+        { hex: "1712", type: "star", name: "OPHIR" },
 
-        { hex: "1419", type: "star", name: "SUMARRA" },
-        { hex: "1616", type: "star", name: "ELAM" },
-        { hex: "1814", type: "star", name: "JARMO" },
+        { hex: "1419", type: "star", name: "PRYON" },
+        { hex: "1616", type: "star", name: "QUELL" },
+        { hex: "1814", type: "star", name: "RAXEN" },
 
-        { hex: "1719", type: "star", name: "UMMA" },
-        { hex: "1817", type: "star", name: "GIRSU" },
+        { hex: "1719", type: "star", name: "SYDRA" },
+        { hex: "1817", type: "star", name: "TAVON" },
 
-        { hex: "1622", type: "star", name: "ISIN" },
-        { hex: "1922", type: "star", name: "SUMER" },
-        { hex: "2020", type: "star", name: "AKKAD" },
-        { hex: "2118", type: "star", name: "KISH" },
+        { hex: "1622", type: "star", name: "ULEX" },
+        { hex: "1922", type: "star", name: "VARYN" },
+        { hex: "2020", type: "star", name: "WEXAR" },
+        { hex: "2118", type: "star", name: "XYLEN" },
 
-        { hex: "2318", type: "star", name: "ERIDU" },
+        { hex: "2318", type: "star", name: "YORIN" },
 
-        { hex: "2125", type: "base", name: "NINEVEH" },
-        { hex: "2223", type: "base", name: "BABYLON" },
-        { hex: "2622", type: "base", name: "UGARIT" },
+        { hex: "2125", type: "base", name: "ZAREK" },
+        { hex: "2223", type: "base", name: "ASTREX" },
+        { hex: "2622", type: "base", name: "BRION" },
       ];
 
       const WARPLINES = [
@@ -335,7 +335,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         layerStars.appendChild(name);
       }
 
-      // initial viewBox: ~10x10 hex region centered on KHAFA (1313)
+      // initial viewBox: ~10x10 hex region centered on LYRIS (1313)
       const focus = hexCenters.get("1313");
       if (focus) {
         const W = 1200; // ~10 columns * 120 step

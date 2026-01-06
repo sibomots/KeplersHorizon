@@ -54,7 +54,7 @@ All metadata is stored in CSV format for database ingestion.
 |-------|------|----------|-------------|
 | id | INT | Yes | Unique identifier |
 | system_name | VARCHAR(64) | Yes | Parent system (FK to star_systems.name) |
-| designation | VARCHAR(32) | Yes | Star name, e.g., "Sonal Prime" |
+| designation | VARCHAR(32) | Yes | Star name, e.g., "Arven Prime" |
 | star_class | CHAR(1) | Yes | Spectral class: O, B, A, F, G, K, M, L, T, Y |
 | luminosity | VARCHAR(16) | Yes | Supergiant, Giant, Subgiant, Main, Dwarf |
 | color | VARCHAR(16) | No | Visual description |
@@ -68,7 +68,7 @@ All metadata is stored in CSV format for database ingestion.
 | system_name | VARCHAR(64) | Yes | Parent system |
 | star_id | INT | No | Orbiting star (for binaries) |
 | orbital_position | INT | Yes | 1-12, distance from star |
-| designation | VARCHAR(32) | Yes | Formal name, e.g., "Sonal III" |
+| designation | VARCHAR(32) | Yes | Formal name, e.g., "Arven III" |
 | common_name | VARCHAR(64) | No | Local name, e.g., "Verdance" |
 | planet_type | VARCHAR(16) | Yes | Rocky, GasGiant, IceGiant, Dwarf |
 | atmosphere | VARCHAR(16) | No | None, Thin, Standard, Dense, Toxic, Exotic |
@@ -82,7 +82,7 @@ All metadata is stored in CSV format for database ingestion.
 |-------|------|----------|-------------|
 | id | INT | Yes | Unique identifier |
 | planet_id | INT | Yes | Parent planet |
-| designation | VARCHAR(32) | Yes | Formal name, e.g., "Sonal II-a" |
+| designation | VARCHAR(32) | Yes | Formal name, e.g., "Arven II-a" |
 | common_name | VARCHAR(64) | No | Local name |
 | moon_type | VARCHAR(16) | Yes | Rocky, Ice, Captured, RingShepherd |
 | size | VARCHAR(16) | Yes | Asteroid, Small, Medium, Large |
@@ -202,14 +202,14 @@ Due to foreign key dependencies, load CSV files in this order:
 ### Stars
 - Primary stars: `[System] Prime`, `[System] Sol`
 - Binary components: `[System] Alpha`, `[System] Beta`
-- Unusual stars: Descriptive names like `Elam Vermillion`, `Ugarit Dusk`
+- Unusual stars: Descriptive names like `Quell Vermillion`, `Brion Dusk`
 
 ### Planets
-- Formal: `[System] [Roman Numeral]` (e.g., "Sonal III")
+- Formal: `[System] [Roman Numeral]` (e.g., "Arven III")
 - Common: Evocative names (e.g., "Verdance", "The Anvil", "Hanging Gardens")
 
 ### Moons
-- Formal: `[Planet]-[letter]` (e.g., "Sonal II-a")
+- Formal: `[Planet]-[letter]` (e.g., "Arven II-a")
 - Common: Evocative names (e.g., "Hope", "Citadel", "Shepherd")
 
 ### Asteroid Belts

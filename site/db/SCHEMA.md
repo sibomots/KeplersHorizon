@@ -292,7 +292,7 @@ LOAD DATA LOCAL INFILE 'grimoire_rumors.csv' INTO TABLE system_grimoire_rumors .
 
 ### Get all planets in a system
 ```sql
-SELECT * FROM system_planets WHERE system_name = 'NIPPUR' ORDER BY orbital_position;
+SELECT * FROM system_planets WHERE system_name = 'KORAL' ORDER BY orbital_position;
 ```
 
 ### Get resources for a planet
@@ -305,7 +305,7 @@ WHERE r.location_type = 'Planet' AND r.location_id = ?;
 ```sql
 SELECT p.designation, p.common_name, p.planet_type
 FROM system_planets p
-WHERE p.system_name = 'NIPPUR';
+WHERE p.system_name = 'KORAL';
 -- Detailed resources only if knowledge_level >= 'Surveyed'
 ```
 

@@ -34,7 +34,7 @@ bool SalvageCommand::invoke(void)
     {
         Telemetry::getInstance().write(
             "Usage: salvage <ship>\n"
-            "Ship must be at a system with salvageable wreckage (e.g., UMMA).");
+            "Ship must be at a system with salvageable wreckage (e.g., SYDRA).");
         return true;
     }
 
@@ -65,7 +65,7 @@ bool SalvageCommand::invoke(void)
     {
         Telemetry::getInstance().write("SALVAGE: No salvageable wreckage in " +
                                        ship.at_system +
-                                       ". Try UMMA (The Graveyard).");
+                                       ". Try SYDRA (The Graveyard).");
         return false;
     }
 
