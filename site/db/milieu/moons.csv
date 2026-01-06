@@ -1,26 +1,26 @@
 id,planet_id,designation,common_name,moon_type,size,notable_feature,notes
-1,2,Sonal II-a,Hope,Rocky,Medium,Agricultural domes,Breadbasket moon. Fertile volcanic soil from ancient eruptions.
-2,4,Sonal IV-a,Forge Station,Rocky,Small,Orbital refinery,Tidal heating. Refinery complex processes gas giant volatiles.
-3,4,Sonal IV-b,Anvil Minor,Ice,Small,Ice mining,Water ice extraction for life support systems.
-4,5,Sonal V-a,Watchtower,Rocky,Medium,Sensor arrays,Deep space monitoring. Fleet communications hub.
-5,8,Ur III-a,Jewel,Rocky,Medium,Rare earth deposits,Luxury resorts. Underground rare earth mining.
-6,9,Ur IV-a,Citadel,Rocky,Large,Defense command,Fortress moon. Western Defense Command headquarters.
-7,10,Ur V-a,Zephyr,Ice,Medium,Gas processing,Processes helium-3 from Cloud Marshal.
-8,14,Larsu III-a,Shade,Rocky,Small,UV shelter,Orbital habitats shielded from intense UV.
-9,21,Nineveh VI-a,Titan,Rocky,Large,Shipyard complex,Largest of 74 moons. Major construction facility.
-10,21,Nineveh VI-b,Forge,Ice,Medium,Ice harvesting,Water supply for Titan shipyards.
-11,21,Nineveh VI-c,Watch,Rocky,Small,Defense platform,Monitors approaches to Leviathan system.
-12,24,Babylon II-a,Ishtar,Rocky,Medium,Ancient ruins,Holy site. Dormant portal structure of unknown origin.
-13,27,Babylon V-a,Watchtower,Rocky,Medium,Naval command,Fleet staging and coordination.
-14,27,Babylon V-b,Armory,Rocky,Small,Weapons depot,Strategic reserve storage.
-15,33,Ugarit VI-a,Listener,Ice,Small,Listening post,Monitors outer approaches to system.
-16,40,Erech IV-a,Refuel,Ice,Small,Fuel depot,Minor refueling station.
-17,50,Adab IV-a,Depot,Rocky,Medium,Trade station,Commercial waystation.
-18,60,Nippur V-a,Toll,Rocky,Medium,Fuel tax station,Customs and tariff collection.
-19,71,Lagash IV-a,Rest,Rocky,Small,Traveler station,Way station for merchants.
-20,86,Umma V-a,Danger,Rocky,Small,Warning beacon,Marks hazardous approach vectors.
-21,87,Girsu I-a,Nursery,Rocky,Medium,Hive nursery,Vesh breeding facility.
-22,92,Sumer II-a,Memory,Rocky,Medium,Data archive,Remnant backup systems.
-23,94,Akkad I-a,Shallow,Ice,Medium,Aquaculture,Kethrani fish farming moon.
-24,101,Kish IV-a,Rampart Prime,Rocky,Large,Mercenary fortress,Armed station. Neutral territory.
-25,101,Kish IV-b,Armory,Rocky,Medium,Weapons cache,Mercenary equipment depot.
+1,2,Arven II-a,Hope,Rocky,Medium,Agricultural domes,Breadbasket moon. Fertile volcanic soil from ancient eruptions.
+2,4,Arven IV-a,Forge Station,Rocky,Small,Orbital refinery,Tidal heating. Refinery complex processes gas giant volatiles.
+3,4,Arven IV-b,Anvil Minor,Ice,Small,Ice mining,Water ice extraction for life support systems.
+4,5,Arven V-a,Watchtower,Rocky,Medium,Sensor arrays,Deep space monitoring. Fleet communications hub.
+5,8,Belix III-a,Jewel,Rocky,Medium,Rare earth deposits,Luxury resorts. Underground rare earth mining.
+6,9,Belix IV-a,Citadel,Rocky,Large,Defense command,Fortress moon. Western Defense Command headquarters.
+7,10,Belix V-a,Zephyr,Ice,Medium,Gas processing,Processes helium-3 from Cloud Marshal.
+8,14,Cayru III-a,Shade,Rocky,Small,UV shelter,Orbital habitats shielded from intense UV.
+9,21,Zarek VI-a,Titan,Rocky,Large,Shipyard complex,Largest of 74 moons. Major construction facility.
+10,21,Zarek VI-b,Forge,Ice,Medium,Ice harvesting,Water supply for Titan shipyards.
+11,21,Zarek VI-c,Watch,Rocky,Small,Defense platform,Monitors approaches to Leviathan system.
+12,24,Astrex II-a,Ishtar,Rocky,Medium,Ancient ruins,Holy site. Dormant portal structure of unknown origin.
+13,27,Astrex V-a,Watchtower,Rocky,Medium,Naval command,Fleet staging and coordination.
+14,27,Astrex V-b,Armory,Rocky,Small,Weapons depot,Strategic reserve storage.
+15,33,Brion VI-a,Listener,Ice,Small,Listening post,Monitors outer approaches to system.
+16,40,Elyr IV-a,Refuel,Ice,Small,Fuel depot,Minor refueling station.
+17,50,Havor IV-a,Depot,Rocky,Medium,Trade station,Commercial waystation.
+18,60,Koral V-a,Toll,Rocky,Medium,Fuel tax station,Customs and tariff collection.
+19,71,Norex IV-a,Rest,Rocky,Small,Traveler station,Way station for merchants.
+20,86,Sydra V-a,Danger,Rocky,Small,Warning beacon,Marks hazardous approach vectors.
+21,87,Tavon I-a,Nursery,Rocky,Medium,Hive nursery,Vesh breeding facility.
+22,92,Varyn II-a,Memory,Rocky,Medium,Data archive,Remnant backup systems.
+23,94,Wexar I-a,Shallow,Ice,Medium,Aquaculture,Kethrani fish farming moon.
+24,101,Xylen IV-a,Rampart Prime,Rocky,Large,Mercenary fortress,Armed station. Neutral territory.
+25,101,Xylen IV-b,Armory,Rocky,Medium,Weapons cache,Mercenary equipment depot.

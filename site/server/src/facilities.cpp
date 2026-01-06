@@ -63,42 +63,42 @@ void FacilityEngine::initialize_facilities(int game_id)
                             std::to_string(game_id));
 
     // Copy global facilities to game-specific control table
-    // Western Alliance base facilities (SONAL, UR, LARSU) start controlled by A
+    // Western Alliance base facilities (ARVEN, BELIX, CAYRU) start controlled by A
     db.exec(
         "INSERT IGNORE INTO facility_control(game_id,system_name,facility_type,"
         "controller) VALUES "
         "(" +
-        std::to_string(game_id) + ",'SONAL','SHIPYARD','A')," + "(" +
-        std::to_string(game_id) + ",'SONAL','REPAIR_DOCK','A')," + "(" +
-        std::to_string(game_id) + ",'SONAL','REFINERY','A')," + "(" +
-        std::to_string(game_id) + ",'UR','SHIPYARD','A')," + "(" +
-        std::to_string(game_id) + ",'UR','REPAIR_DOCK','A')," + "(" +
-        std::to_string(game_id) + ",'LARSU','SHIPYARD','A')," + "(" +
-        std::to_string(game_id) + ",'LARSU','TRADE_HUB','A')");
+        std::to_string(game_id) + ",'ARVEN','SHIPYARD','A')," + "(" +
+        std::to_string(game_id) + ",'ARVEN','REPAIR_DOCK','A')," + "(" +
+        std::to_string(game_id) + ",'ARVEN','REFINERY','A')," + "(" +
+        std::to_string(game_id) + ",'BELIX','SHIPYARD','A')," + "(" +
+        std::to_string(game_id) + ",'BELIX','REPAIR_DOCK','A')," + "(" +
+        std::to_string(game_id) + ",'CAYRU','SHIPYARD','A')," + "(" +
+        std::to_string(game_id) + ",'CAYRU','TRADE_HUB','A')");
 
-    // Eastern Powers base facilities (NINEVEH, BABYLON, UGARIT) controlled by B
+    // Eastern Powers base facilities (ZAREK, ASTREX, BRION) controlled by B
     db.exec(
         "INSERT IGNORE INTO facility_control(game_id,system_name,facility_type,"
         "controller) VALUES "
         "(" +
-        std::to_string(game_id) + ",'NINEVEH','SHIPYARD','B')," + "(" +
-        std::to_string(game_id) + ",'NINEVEH','REPAIR_DOCK','B')," + "(" +
-        std::to_string(game_id) + ",'NINEVEH','RESEARCH_LAB','B')," + "(" +
-        std::to_string(game_id) + ",'BABYLON','SHIPYARD','B')," + "(" +
-        std::to_string(game_id) + ",'BABYLON','TRADE_HUB','B')," + "(" +
-        std::to_string(game_id) + ",'BABYLON','FORTRESS','B')," + "(" +
-        std::to_string(game_id) + ",'UGARIT','SHIPYARD','B')");
+        std::to_string(game_id) + ",'ZAREK','SHIPYARD','B')," + "(" +
+        std::to_string(game_id) + ",'ZAREK','REPAIR_DOCK','B')," + "(" +
+        std::to_string(game_id) + ",'ZAREK','RESEARCH_LAB','B')," + "(" +
+        std::to_string(game_id) + ",'ASTREX','SHIPYARD','B')," + "(" +
+        std::to_string(game_id) + ",'ASTREX','TRADE_HUB','B')," + "(" +
+        std::to_string(game_id) + ",'ASTREX','FORTRESS','B')," + "(" +
+        std::to_string(game_id) + ",'BRION','SHIPYARD','B')");
 
     // Neutral facilities in contested reach
     db.exec(
         "INSERT IGNORE INTO facility_control(game_id,system_name,facility_type,"
         "controller) VALUES "
         "(" +
-        std::to_string(game_id) + ",'NIPPUR','TRADE_HUB',NULL)," + "(" +
-        std::to_string(game_id) + ",'KISH','TRADE_HUB',NULL)," + "(" +
-        std::to_string(game_id) + ",'AKKAD','TRADE_HUB',NULL)," + "(" +
-        std::to_string(game_id) + ",'SUMER','REPAIR_DOCK',NULL)," + "(" +
-        std::to_string(game_id) + ",'SUMER','RESEARCH_LAB',NULL)");
+        std::to_string(game_id) + ",'KORAL','TRADE_HUB',NULL)," + "(" +
+        std::to_string(game_id) + ",'XYLEN','TRADE_HUB',NULL)," + "(" +
+        std::to_string(game_id) + ",'WEXAR','TRADE_HUB',NULL)," + "(" +
+        std::to_string(game_id) + ",'VARYN','REPAIR_DOCK',NULL)," + "(" +
+        std::to_string(game_id) + ",'VARYN','RESEARCH_LAB',NULL)");
 
     Logger::instance().info("[FACILITIES] Facilities initialized");
 }

@@ -228,35 +228,35 @@ void ConstraintEngine::initialize_constraints(int game_id)
     // (system_constraints table is global, not per-game for now)
 
     // Add constraint from anomalies
-    // Axis Marker at NIPPUR - movement bonus
+    // Axis Marker at KORAL - movement bonus
     db.exec(
         "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
         "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('NIPPUR','MOVEMENT','BONUS',1,'Axis Marker beacon','ANOMALY')");
+        "('KORAL','MOVEMENT','BONUS',1,'Axis Marker beacon','ANOMALY')");
 
-    // Keplerite Vein at ELAM - extraction bonus for EXOTIC
+    // Keplerite Vein at QUELL - extraction bonus for EXOTIC
     db.exec(
         "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
         "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('ELAM','HARVEST','BONUS',2,'Keplerite deposits','ANOMALY')");
+        "('QUELL','HARVEST','BONUS',2,'Keplerite deposits','ANOMALY')");
 
-    // The Veil at CALAH - combat penalty (sensor blocking)
+    // The Veil at FEXON - combat penalty (sensor blocking)
     db.exec(
         "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
         "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('CALAH','COMBAT','PENALTY',1,'Sensor-blocking dust','ANOMALY')");
+        "('FEXON','COMBAT','PENALTY',1,'Sensor-blocking dust','ANOMALY')");
 
-    // The Scrapyard at UMMA - movement penalty
+    // The Scrapyard at SYDRA - movement penalty
     db.exec(
         "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
         "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('UMMA','MOVEMENT','PENALTY',1,'Dense debris field','SCRAPYARD')");
+        "('SYDRA','MOVEMENT','PENALTY',1,'Dense debris field','SCRAPYARD')");
 
-    // The Shimmer at BYBLOS - hazardous extraction
+    // The Shimmer at GALEN - hazardous extraction
     db.exec(
         "INSERT IGNORE INTO system_constraints(system_name,constraint_type,"
         "modifier_type,modifier_value,condition_text,source) VALUES"
-        "('BYBLOS','HARVEST','PENALTY',1,'Radiation hazardous','ANOMALY')");
+        "('GALEN','HARVEST','PENALTY',1,'Radiation hazardous','ANOMALY')");
 
     Logger::instance().info("[CONSTRAINTS] Constraints initialized");
 }
