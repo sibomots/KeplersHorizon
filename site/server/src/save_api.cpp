@@ -130,8 +130,8 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     // Save ships
     auto ships = db.query(
         "SELECT ship_code, ship_name, owner, "
-        "CONCAT('{\"pd\":', pd, ',\"b\":', b, ',\"s\":', s, ',\"t\":', t, "
-        "',\"m\":', missiles, ',\"hull\":', hull, ',\"at_hex\":\"', "
+        "CONCAT('{\"pd\":', pd, ',\"beam\":', beam, ',\"screen\":', screen, ',\"tube\":', tube, "
+        "',\"missiles\":', missiles, ',\"hull\":', hull, ',\"at_hex\":\"', "
         "IFNULL(at_hex,''), '\",\"at_system\":\"', IFNULL(at_system,''), "
         "'\",\"deployed_at\":\"', IFNULL(deployed_at,''), '\"}') "
         "FROM ships WHERE game_id=" + std::to_string(game_id) +
