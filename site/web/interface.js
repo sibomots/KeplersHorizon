@@ -111,8 +111,8 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
       if (e.key === "Enter") runCmd();
     });
 
-    B.appendLine("Kepler's Horizon client loaded.", "line-muted");
-    B.appendLine("Type 'help' for commands.", "line-muted");
+    B.appendLine("Kepler's Horizon client loaded.", "");
+    B.appendLine("Type 'help' for commands.", "");
 
     // Fetch initial state
     B.apiFetchState().catch(() => { });
