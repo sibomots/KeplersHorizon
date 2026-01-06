@@ -62,7 +62,8 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
       const saveName = prompt("Enter save name:", "Save " + new Date().toLocaleString());
       if (!saveName) return;
 
-      const resp = await fetch('/kh/api/games/' + S.game_id + '/save', {
+      // Use session-based save endpoint - server knows game_id from session
+      const resp = await fetch('/kh/api/save', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + S.token,

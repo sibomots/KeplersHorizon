@@ -12,17 +12,21 @@
 #include "json.h"
 #include "statemachine.h"
 
-// Helper to get user_id from token
-static int get_user_id_from_token(const std::string& token)
+// Helper to get user_id AND game_id from token (session is authoritative)
+static bool get_session_from_token(const std::string& token, int& user_id, int& game_id)
 {
+    user_id = 0;
+    game_id = 0;
     if (token.empty())
-        return 0;
+        return false;
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query("SELECT user_id FROM sessions WHERE token='" +
+    auto rows = db.query("SELECT user_id, COALESCE(game_id, 0) FROM sessions WHERE token='" +
                          db.esc(token) + "'");
     if (rows.empty())
-        return 0;
-    return std::stoi(rows[0][0]);
+        return false;
+    user_id = std::stoi(rows[0][0]);
+    game_id = std::stoi(rows[0][1]);
+    return true;
 }
 
 // Helper to get username
@@ -36,15 +40,24 @@ static std::string get_username(int user_id)
     return rows[0][0];
 }
 
-// POST /api/games/:id/save - Save current game state
-void handle_game_save(int game_id, const HttpRequest* req, HttpResponse* resp)
+// POST /api/save - Save current game state (game_id comes from session, not URL)
+void handle_game_save(const HttpRequest* req, HttpResponse* resp)
 {
     std::string token = pick_bearer(req);
-    int user_id = get_user_id_from_token(token);
-    if (user_id == 0)
+    int user_id = 0;
+    int game_id = 0;
+    
+    if (!get_session_from_token(token, user_id, game_id))
     {
         resp->status = 401;
         resp->body = json_error("not authenticated");
+        return;
+    }
+
+    if (game_id == 0)
+    {
+        resp->status = 400;
+        resp->body = json_error("no active game in session");
         return;
     }
 
@@ -142,8 +155,10 @@ void handle_game_save(int game_id, const HttpRequest* req, HttpResponse* resp)
 void handle_saves_list(const HttpRequest* req, HttpResponse* resp)
 {
     std::string token = pick_bearer(req);
-    int user_id = get_user_id_from_token(token);
-    if (user_id == 0)
+    int user_id = 0;
+    int game_id = 0;
+    
+    if (!get_session_from_token(token, user_id, game_id))
     {
         resp->status = 401;
         resp->body = json_error("not authenticated");
@@ -308,20 +323,20 @@ void handle_saves(const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    // POST /api/games/:id/save
+    // POST /api/save (session-based, no game_id in URL)
+    if (path == "/api/save" && req->method == "POST")
+    {
+        handle_game_save(req, resp);
+        return;
+    }
+
+    // LEGACY: POST /api/games/:id/save (redirect to session-based)
     if (path.rfind("/api/games/", 0) == 0 && path.find("/save") != std::string::npos)
     {
-        std::string id_str = path.substr(11);
-        size_t slash_pos = id_str.find('/');
-        if (slash_pos != std::string::npos)
-        {
-            id_str = id_str.substr(0, slash_pos);
-        }
-        int game_id = std::atoi(id_str.c_str());
-        
+        // Ignore the ID in URL, use session instead
         if (req->method == "POST")
         {
-            handle_game_save(game_id, req, resp);
+            handle_game_save(req, resp);
         }
         else
         {
