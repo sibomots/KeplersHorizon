@@ -65,7 +65,7 @@ bool RepairCommand::invoke(void)
         "s.pd_orig, s.beam_orig, s.screen_orig, s.tube_orig, s.missiles_orig, "
         "ss.name "
         "FROM ships s "
-        "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.map_id = 1 "
+        "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.module_id = 1 "
         "WHERE s.game_id=" +
         std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
         "' AND s.ship_code='" + db.esc(m_ship_code) +

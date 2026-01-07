@@ -510,7 +510,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     // Lookup system name for constraint check
     std::string combat_system;
     auto sys_row =
-        db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" +
+        db.query("SELECT name FROM star_systems WHERE module_id=1 AND hex_id='" +
                  db.esc(hex_id) + "' LIMIT 1");
     if (!sys_row.empty())
     {

@@ -351,11 +351,11 @@ void StateMachine::apply_start_of_turn(GameState& s)
 
     int vp_gain = 0;
     {
-        // star_systems uses map_id (shared map data), ships use game_id
+        // star_systems uses module_id (shared module data), ships use game_id
         std::string q =
             "SELECT COUNT(DISTINCT ss.name) "
             "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND "
-            "ss.map_id=1 "
+            "ss.module_id=1 "
             "WHERE sh.game_id=" +
             std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
             "' AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
@@ -465,7 +465,7 @@ void StateMachine::advance_next(GameState& s)
                     // Look up system name from hex
                     std::string sysName = combat.hex_id;
                     auto sysRow = db.query("SELECT name FROM star_systems "
-                                           "WHERE map_id=1 AND hex_id='" +
+                                           "WHERE module_id=1 AND hex_id='" +
                                            combat.hex_id + "' LIMIT 1");
                     if (!sysRow.empty())
                     {

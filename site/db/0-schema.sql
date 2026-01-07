@@ -63,16 +63,30 @@ last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Module = Complete universe definition
+-- All milieu tables are keyed by module_id
+CREATE TABLE IF NOT EXISTS modules (
+module_id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(64) NOT NULL,
+description TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert default module
+INSERT INTO modules (module_id, name, description)
+VALUES (1, 'Kepler''s Horizon', 'The original frontier universe - humanity''s expansion into the stars');
+
 CREATE TABLE IF NOT EXISTS games (
 id INT AUTO_INCREMENT PRIMARY KEY,
 room_id INT DEFAULT NULL,
-scenario VARCHAR(16) DEFAULT NULL,
+module_id INT NOT NULL DEFAULT 1,
 state_json MEDIUMTEXT NOT NULL,
 current_draft_A VARCHAR(4) DEFAULT NULL,
 current_draft_B VARCHAR(4) DEFAULT NULL,
 active_combat_hex VARCHAR(8) DEFAULT NULL,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (room_id) REFERENCES rooms(id)
+FOREIGN KEY (room_id) REFERENCES rooms(id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 CREATE TABLE IF NOT EXISTS game_seats (
@@ -173,48 +187,206 @@ FOREIGN KEY (game_id) REFERENCES games(id)
 );
 
 CREATE TABLE IF NOT EXISTS star_systems (
-map_id INT NOT NULL DEFAULT 1,
+module_id INT NOT NULL DEFAULT 1,
 hex_id VARCHAR(8) NOT NULL,
 name VARCHAR(64) NOT NULL,
 is_base TINYINT NOT NULL DEFAULT 0,
 base_owner CHAR(1) NULL,
 base_side CHAR(1) NULL,
 territory_name VARCHAR(64) NULL,
-PRIMARY KEY (map_id, name),
-INDEX (map_id, hex_id),
-INDEX (map_id, is_base),
-INDEX (map_id, base_owner),
-INDEX (map_id, base_side)
+PRIMARY KEY (module_id, name),
+INDEX (module_id, hex_id),
+INDEX (module_id, is_base),
+INDEX (module_id, base_owner),
+INDEX (module_id, base_side),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 CREATE TABLE IF NOT EXISTS warplines (
-map_id INT NOT NULL DEFAULT 1,
+module_id INT NOT NULL DEFAULT 1,
 id INT NOT NULL AUTO_INCREMENT,
 a_hex VARCHAR(8) NOT NULL,
 b_hex VARCHAR(8) NOT NULL,
 PRIMARY KEY (id),
-INDEX (map_id),
-INDEX (map_id, a_hex),
-INDEX (map_id, b_hex)
+INDEX (module_id),
+INDEX (module_id, a_hex),
+INDEX (module_id, b_hex),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 CREATE TABLE IF NOT EXISTS hexes (
-map_id INT NOT NULL DEFAULT 1,
+module_id INT NOT NULL DEFAULT 1,
 hex_id VARCHAR(8) NOT NULL,
 q INT NOT NULL,
 r INT NOT NULL,
-PRIMARY KEY (map_id, hex_id),
-INDEX (map_id, q),
-INDEX (map_id, r)
+PRIMARY KEY (module_id, hex_id),
+INDEX (module_id, q),
+INDEX (module_id, r),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 CREATE TABLE IF NOT EXISTS warpline_hexes (
-map_id INT NOT NULL DEFAULT 1,
+module_id INT NOT NULL DEFAULT 1,
 warpline_id INT NOT NULL,
 hex_id VARCHAR(8) NOT NULL,
-PRIMARY KEY (map_id, warpline_id, hex_id),
-INDEX (map_id, hex_id),
-INDEX (map_id, warpline_id)
+PRIMARY KEY (module_id, warpline_id, hex_id),
+INDEX (module_id, hex_id),
+INDEX (module_id, warpline_id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+-- Module content tables: planetary data
+CREATE TABLE IF NOT EXISTS system_planets (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+system_name VARCHAR(64) NOT NULL,
+star_id INT,
+orbital_position INT,
+designation VARCHAR(32),
+common_name VARCHAR(64),
+planet_type VARCHAR(16),
+atmosphere VARCHAR(16),
+hydrosphere VARCHAR(16),
+biosphere VARCHAR(16),
+habitability VARCHAR(16),
+notes TEXT,
+INDEX (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_moons (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+planet_id INT NOT NULL,
+designation VARCHAR(32),
+common_name VARCHAR(64),
+moon_type VARCHAR(16),
+size VARCHAR(16),
+notable_feature VARCHAR(64),
+notes TEXT,
+INDEX (module_id, planet_id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_stars (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+system_name VARCHAR(64) NOT NULL,
+designation VARCHAR(64),
+star_class CHAR(1),
+luminosity VARCHAR(16),
+color VARCHAR(16),
+age_gy DECIMAL(4,1),
+notes TEXT,
+INDEX (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_anomalies (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+system_name VARCHAR(64) NOT NULL,
+anomaly_type VARCHAR(32),
+name VARCHAR(64),
+effect TEXT,
+discovery_text TEXT,
+INDEX (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_facilities (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+location_type VARCHAR(16),
+location_id INT,
+facility_type VARCHAR(32),
+name VARCHAR(64),
+capacity INT DEFAULT 0,
+owner CHAR(1),
+operational TINYINT DEFAULT 1,
+notes TEXT,
+INDEX (module_id, location_type, location_id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_resources (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+location_type VARCHAR(16),
+location_id INT,
+resource_type VARCHAR(32),
+abundance VARCHAR(16),
+extraction_difficulty VARCHAR(16),
+notes TEXT,
+INDEX (module_id, location_type, location_id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_populations (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+location_type VARCHAR(16),
+location_id INT,
+species_id INT,
+pop_class VARCHAR(16),
+population_millions DECIMAL(10,2),
+tech_level INT,
+government VARCHAR(64),
+disposition VARCHAR(16),
+notes TEXT,
+INDEX (module_id, location_type, location_id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_species (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+name VARCHAR(64) NOT NULL,
+classification VARCHAR(16),
+homeworld_system VARCHAR(64),
+physiology TEXT,
+psychology TEXT,
+special_ability TEXT,
+INDEX (module_id, name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_grimoire_rumors (
+module_id INT NOT NULL DEFAULT 1,
+system_name VARCHAR(64) NOT NULL,
+rumor_text TEXT,
+knowledge_level VARCHAR(16),
+PRIMARY KEY (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS market_base_prices (
+module_id INT NOT NULL DEFAULT 1,
+resource_type VARCHAR(32) NOT NULL,
+base_price INT NOT NULL,
+PRIMARY KEY (module_id, resource_type),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS system_asteroid_belts (
+id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
+system_name VARCHAR(64) NOT NULL,
+designation VARCHAR(64),
+composition VARCHAR(32),
+density VARCHAR(16),
+notable_feature VARCHAR(64),
+notes TEXT,
+INDEX (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
+);
+
+CREATE TABLE IF NOT EXISTS facility_control_initial (
+module_id INT NOT NULL DEFAULT 1,
+facility_id INT NOT NULL,
+initial_owner CHAR(1),
+PRIMARY KEY (module_id, facility_id),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 CREATE TABLE IF NOT EXISTS combat_state (
@@ -296,13 +468,15 @@ INDEX (game_id, player)
 
 CREATE TABLE IF NOT EXISTS system_constraints (
 id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
 system_name VARCHAR(64) NOT NULL,
 constraint_type ENUM('MOVEMENT', 'COMBAT', 'TRADE', 'HARVEST', 'BUILD') NOT NULL,
 modifier_type ENUM('BONUS', 'PENALTY', 'BLOCK') NOT NULL,
 modifier_value INT DEFAULT 0,
 condition_text TEXT,
 source VARCHAR(64),
-INDEX (system_name)
+INDEX (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 -- Market dynamic pricing
@@ -373,6 +547,7 @@ INDEX (game_id, system_name)
 -- What can be salvaged (seeded milieu)
 CREATE TABLE IF NOT EXISTS salvageables (
 id INT AUTO_INCREMENT PRIMARY KEY,
+module_id INT NOT NULL DEFAULT 1,
 system_name VARCHAR(64) NOT NULL,
 name VARCHAR(64) NOT NULL,
 description TEXT,
@@ -381,7 +556,8 @@ hazard_chance INT DEFAULT 10,
 hazard_damage_min INT DEFAULT 1,
 hazard_damage_max INT DEFAULT 2,
 max_salvages INT DEFAULT NULL,
-INDEX (system_name)
+INDEX (module_id, system_name),
+FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 -- What each salvageable yields

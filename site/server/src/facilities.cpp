@@ -95,7 +95,7 @@ void FacilityEngine::update_control(int game_id, int round)
 
         // Get hex for this system
         auto hex_row =
-            db.query("SELECT hex_id FROM star_systems WHERE map_id=1 AND "
+            db.query("SELECT hex_id FROM star_systems WHERE module_id=1 AND "
                      "name='" +
                      db.esc(system) + "'");
         if (hex_row.empty())

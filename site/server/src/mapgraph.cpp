@@ -14,9 +14,9 @@
 #include "db.h"
 #include "util.h"
 
-// Map data uses map_id=1 (the default Kepler map)
-// Future: could support multiple maps by passing map_id from game state
-static const int DEFAULT_MAP_ID = 1;
+// Module data uses module_id=1 (the default Kepler's Horizon module)
+// Future: load module_id from game state for multi-module support
+static const int DEFAULT_MODULE_ID = 1;
 
 MapGraph::MapGraph(int gId) : game_id(gId)
 {
@@ -27,10 +27,10 @@ MapGraph::MapGraph(int gId) : game_id(gId)
 void MapGraph::load_hexes()
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    // Map hexes use map_id (shared across all games)
+    // Module hexes are shared across all games using same module
     std::vector<std::vector<std::string>> allHex =
-        db.query("SELECT hex_id,q,r FROM hexes WHERE map_id=" +
-                 std::to_string(DEFAULT_MAP_ID));
+        db.query("SELECT hex_id,q,r FROM hexes WHERE module_id=" +
+                 std::to_string(DEFAULT_MODULE_ID));
 
     for (size_t i = 0; i < allHex.size(); i++)
     {
@@ -47,17 +47,17 @@ void MapGraph::load_hexes()
 void MapGraph::load_warplines()
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    // Warplines use map_id (shared across all games)
+    // Warplines are shared across all games using same module
     std::vector<std::vector<std::string>> wh = db.query(
         "SELECT wh.hex_id,w.a_hex,w.b_hex "
         "FROM warpline_hexes wh "
-        "JOIN warplines w ON w.id=wh.warpline_id AND w.map_id=wh.map_id "
-        "WHERE wh.map_id=" +
-        std::to_string(DEFAULT_MAP_ID));
+        "JOIN warplines w ON w.id=wh.warpline_id AND w.module_id=wh.module_id "
+        "WHERE wh.module_id=" +
+        std::to_string(DEFAULT_MODULE_ID));
 
     std::vector<std::vector<std::string>> wlines =
-        db.query("SELECT a_hex,b_hex FROM warplines WHERE map_id=" +
-                 std::to_string(DEFAULT_MAP_ID));
+        db.query("SELECT a_hex,b_hex FROM warplines WHERE module_id=" +
+                 std::to_string(DEFAULT_MODULE_ID));
 
     for (size_t i = 0; i < wh.size(); i++)
     {
@@ -83,11 +83,11 @@ void MapGraph::load_state(char owner)
     enemy = (me == 'A') ? 'B' : 'A';
     enemyBlockades.clear();
 
-    // Ships are game-specific (use game_id), but star_systems uses map_id
+    // Ships are game-specific (use game_id), but star_systems uses module_id
     std::vector<std::vector<std::string>> blocks =
         db.query("SELECT DISTINCT ss.hex_id FROM ships s "
-                 "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.map_id=" +
-                 std::to_string(DEFAULT_MAP_ID) +
+                 "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
+                 std::to_string(DEFAULT_MODULE_ID) +
                  " "
                  "WHERE s.game_id=" +
                  std::to_string(game_id) + " AND s.owner='" +
@@ -142,9 +142,9 @@ std::string MapGraph::resolve_system(const std::string& token)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string u = upper_ascii(token);
-    // Star systems use map_id (shared across all games)
-    auto r = db.query("SELECT hex_id FROM star_systems WHERE map_id=" +
-                      std::to_string(DEFAULT_MAP_ID) + " AND UPPER(name)='" +
+    // Star systems use module_id (shared across all games using same module)
+    auto r = db.query("SELECT hex_id FROM star_systems WHERE module_id=" +
+                      std::to_string(DEFAULT_MODULE_ID) + " AND UPPER(name)='" +
                       db.esc(u) + "' LIMIT 1");
     if (!r.empty() && !r[0].empty())
     {

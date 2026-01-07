@@ -258,8 +258,8 @@ bool StartCommand::invoke(void)
                                 " is player A");
     }
 
-    // Note: Map data (star_systems, warplines, hexes) is shared across all
-    // games using map_id=1. No need to copy - map queries always use map_id=1.
+    // Note: Module data (star_systems, warplines, hexes) is shared across all
+    // games using module_id=1. No need to copy - queries always use module_id.
 
     // Clear any existing drafts and ships for this game
     db.exec("DELETE FROM drafts WHERE game_id=" + std::to_string(new_game_id));
