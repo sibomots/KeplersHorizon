@@ -25,7 +25,7 @@ struct RoomInfo
     std::string seat_b_name;
     int game_id;
     std::string status; // "waiting", "ready", "playing", "finished"
-    int module_id;  // Universe module (default 1 = Kepler's Horizon)
+    int module_id;      // Universe module (default 1 = Kepler's Horizon)
     std::string created_at;
 
     bool isFull() const

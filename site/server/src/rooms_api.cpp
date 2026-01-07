@@ -83,18 +83,19 @@ void handle_rooms_list(const HttpRequest* req, HttpResponse* resp)
 void handle_modules_list(const HttpRequest* /* req */, HttpResponse* resp)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    
+
     auto modules = db.query(
         "SELECT module_id, name, description FROM modules ORDER BY module_id");
-    
+
     std::ostringstream o;
     o << "{\"ok\":true,\"modules\":[";
     for (size_t i = 0; i < modules.size(); i++)
     {
-        if (i > 0) o << ",";
-        o << "{\"module_id\":" << modules[i][0] 
-          << ",\"name\":\"" << json_escape(modules[i][1]) << "\""
-          << ",\"description\":\"" << json_escape(modules[i][2]) << "\"}";
+        if (i > 0)
+            o << ",";
+        o << "{\"module_id\":" << modules[i][0] << ",\"name\":\""
+          << json_escape(modules[i][1]) << "\"" << ",\"description\":\""
+          << json_escape(modules[i][2]) << "\"}";
     }
     o << "]}";
     resp->body = o.str();
@@ -211,7 +212,8 @@ void handle_room_module(const std::string& code, const HttpRequest* req,
 
     std::string module_str = json_get_string(req->body, "module_id");
     int module_id = module_str.empty() ? 1 : std::atoi(module_str.c_str());
-    if (module_id <= 0) module_id = 1;
+    if (module_id <= 0)
+        module_id = 1;
 
     RoomManager& rm = RoomManager::getInstance();
     if (!rm.setModule(code, module_id))

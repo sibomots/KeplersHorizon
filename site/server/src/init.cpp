@@ -49,21 +49,24 @@ void apply_arguments(int argc, char** argv)
     for (int i = 1; i < argc; i++)
     {
         std::string k = argv[i];
-        auto next = [&](std::string& out) {
+        auto next = [&](std::string& out)
+        {
             if (i + 1 >= argc)
             {
                 throw std::runtime_error("Missing arg for " + k);
             }
             out = argv[++i];
         };
-        auto next_ushort = [&](unsigned short& out) {
+        auto next_ushort = [&](unsigned short& out)
+        {
             if (i + 1 >= argc)
             {
                 throw std::runtime_error("Missing arg for " + k);
             }
             out = std::atoi(argv[++i]);
         };
-        auto next_flag = [&](bool& out) {
+        auto next_flag = [&](bool& out)
+        {
             // the fact the flag was used, it's true.
             // no need to look at i+1 argv.  the flag is just a flag. No
             // arguments to it.
@@ -226,12 +229,12 @@ void test_db(void)
         auto moduleCheck = db.query("SELECT COUNT(*) FROM modules");
         if (!moduleCheck.empty() && moduleCheck[0][0] != "0")
         {
-            std::cout << "[TEST] PASS: " << moduleCheck[0][0] 
+            std::cout << "[TEST] PASS: " << moduleCheck[0][0]
                       << " module(s) defined" << std::endl;
         }
         else
         {
-            std::cerr << "[TEST] FAIL: No modules defined in database" 
+            std::cerr << "[TEST] FAIL: No modules defined in database"
                       << std::endl;
         }
     }

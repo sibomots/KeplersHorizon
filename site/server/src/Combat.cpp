@@ -289,32 +289,40 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
     {
         if (tactic_target == 'A')
         {
-            if (drive_diff <= -3) {
+            if (drive_diff <= -3)
+            {
                 return -999;
             }
-            if (drive_diff <= -1) {
+            if (drive_diff <= -1)
+            {
                 return 0; // Hit
             }
-            if (drive_diff <= 1) {
+            if (drive_diff <= 1)
+            {
                 return 2; // Hit+2
             }
-            if (drive_diff == 2) {
+            if (drive_diff == 2)
+            {
                 return 1; // Hit+1
             }
-            return -999;  // +3 or more Miss
+            return -999; // +3 or more Miss
         }
         if (tactic_target == 'D')
         {
-            if (drive_diff <= -3) {
+            if (drive_diff <= -3)
+            {
                 return -999;
             }
-            if (drive_diff <= 1) {
+            if (drive_diff <= 1)
+            {
                 return -999;
             }
-            if (drive_diff == 2) {
+            if (drive_diff == 2)
+            {
                 return 1; // Hit+1
             }
-            if (drive_diff <= 4) {
+            if (drive_diff <= 4)
+            {
                 return 0; // Hit
             }
             return -999;
@@ -332,7 +340,8 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
                 return -999;
             }
 
-            if (drive_diff <= 1) {
+            if (drive_diff <= 1)
+            {
                 return -999; // Miss (prevent escape?) Rules say "Miss", assumes
                              // blocked logic logic? Table says: <=-3 Esc, -1/-2
                              // Esc, 0/+1 Miss, +2 Miss, +3/+4 Hit, +5 Miss?
@@ -350,10 +359,12 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
                 escaped = true;
                 return -999;
             }
-            if (drive_diff <= 2) {
+            if (drive_diff <= 2)
+            {
                 return -999; // Miss (Pinned)
             }
-            if (drive_diff <= 4) {
+            if (drive_diff <= 4)
+            {
                 return 0; // Hit
             }
             return -999;
@@ -364,26 +375,32 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
         // DODGE firing
         if (tactic_target == 'A')
         {
-            if (drive_diff <= -4) {
+            if (drive_diff <= -4)
+            {
                 return -999;
             }
-            if (drive_diff <= -2) {
+            if (drive_diff <= -2)
+            {
                 return -999;
             }
-            if (drive_diff <= 2) {
+            if (drive_diff <= 2)
+            {
                 return 0; // Hit
             }
             return -999;
         }
         if (tactic_target == 'D')
         {
-            if (drive_diff <= -3) {
+            if (drive_diff <= -3)
+            {
                 return -999;
             }
-            if (drive_diff == -2) {
+            if (drive_diff == -2)
+            {
                 return 0; // Hit
             }
-            if (drive_diff <= 0) {
+            if (drive_diff <= 0)
+            {
                 return 0; // Hit (-1, 0)
             }
             return -999;
@@ -408,13 +425,16 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
         // RETREAT firing
         if (tactic_target == 'A')
         {
-            if (drive_diff <= -2) {
+            if (drive_diff <= -2)
+            {
                 return -999;
             }
-            else if (drive_diff <= 0) {
+            else if (drive_diff <= 0)
+            {
                 return 0; // Hit
             }
-            else {
+            else
+            {
                 return -999;
             }
         }
@@ -449,8 +469,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else
         {
-            return "Not ready to resolve (Stage "
-                   + std::to_string(cs.stage) + ")";
+            return "Not ready to resolve (Stage " + std::to_string(cs.stage) +
+                   ")";
         }
     }
 
@@ -511,10 +531,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     // Lookup system name for constraint check
     std::string combat_system;
     int mod = get_module_id_for_game(game_id);
-    auto sys_row =
-        db.query("SELECT name FROM star_systems WHERE module_id=" +
-                 std::to_string(mod) + " AND hex_id='" +
-                 db.esc(hex_id) + "' LIMIT 1");
+    auto sys_row = db.query(
+        "SELECT name FROM star_systems WHERE module_id=" + std::to_string(mod) +
+        " AND hex_id='" + db.esc(hex_id) + "' LIMIT 1");
     if (!sys_row.empty())
     {
         combat_system = sys_row[0][0];
@@ -553,7 +572,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 int mod = get_crt_mod(drive_diff, ship.ord.tactic,
                                       target->ord.tactic, escaped);
 
-                if (escaped) {
+                if (escaped)
+                {
                     target->escape_successes++;
                 }
 
@@ -580,12 +600,14 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 }
                 else
                 {
-                    if (escaped) {
+                    if (escaped)
+                    {
                         log << target->code << " '" << target->name
                             << "' outruns " << ship.code << " '" << ship.name
                             << "' beams.\n";
                     }
-                    else {
+                    else
+                    {
                         log << ship.code << " '" << ship.name << "' misses "
                             << target->code << " '" << target->name << "'.\n";
                     }
@@ -663,12 +685,14 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         }
                         else
                         {
-                            if (escaped) {
+                            if (escaped)
+                            {
                                 log << target->code << " '" << target->name
                                     << "' outruns " << ship.code << " '"
                                     << ship.name << "' missile.\n";
                             }
-                            else {
+                            else
+                            {
                                 log << ship.code << " '" << ship.name
                                     << "' missile misses " << target->code
                                     << " '" << target->name << "'.\n";
@@ -694,7 +718,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     for (auto& [key, ship] : ships)
     {
         int absorb = 0;
-        if (ship.ord.power_s > 0) {
+        if (ship.ord.power_s > 0)
+        {
             absorb = ship.ord.power_s +
                      ship.tech; // Tech adds to shields? Rules: "Screen Power +
                                 // Tech Level (if powered)"
@@ -703,7 +728,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         int net = std::max(0, ship.damage_received - absorb);
         if (net > 0)
         {
-            if (!first) {
+            if (!first)
+            {
                 dmgJson << ",";
             }
 
@@ -719,11 +745,13 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (ship.ord.tactic == 'R')
         {
             bool escape = false;
-            if (ship.escape_attempts == 0) {
+            if (ship.escape_attempts == 0)
+            {
                 // Unopposed retreat
                 escape = true;
             }
-            else if (ship.escape_successes == ship.escape_attempts) {
+            else if (ship.escape_successes == ship.escape_attempts)
+            {
                 // Eluded all fire
                 escape = true;
             }
@@ -772,7 +800,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         for (auto& [key, ship] : ships)
         {
             int absorb = 0;
-            if (ship.ord.power_s > 0) 
+            if (ship.ord.power_s > 0)
             {
                 absorb = ship.ord.power_s + ship.tech;
             }
@@ -917,7 +945,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     }
 
     auto cs = get_combat_state(hex);
-    if (cs.stage != 2) 
+    if (cs.stage != 2)
     {
         // 2=DAMAGE_PENDING
         return std::string("No pending damage for this hex");
@@ -991,7 +1019,8 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     std::string updateSql;
 
     // Helper to reduce
-    auto apply_attr = [&](const std::string& key, int& cur, std::string col) {
+    auto apply_attr = [&](const std::string& key, int& cur, std::string col)
+    {
         if (assignments.count(key))
         {
             int dmg = assignments.at(key);
@@ -1026,12 +1055,9 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     if (!updateSql.empty())
     {
         db.exec("UPDATE ships"
-                " SET " + updateSql 
-                + " WHERE game_id=" 
-                + std::to_string(game_id)
-                + " AND ship_code='"
-                + db.esc(ship_code)
-                + "'");
+                " SET " +
+                updateSql + " WHERE game_id=" + std::to_string(game_id) +
+                " AND ship_code='" + db.esc(ship_code) + "'");
     }
 
     // Check Destruction
@@ -1080,7 +1106,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
         char opponent = (owner == 'A') ? 'B' : 'A';
         Telemetry::getInstance().add_tell(game_id, opponent,
                                           "Player " + std::string(1, owner) +
-                                          " has assigned all damage.");
+                                              " has assigned all damage.");
     }
 
     // Reconstruct JSON
@@ -1132,8 +1158,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                                                    " controls the hex.");
 
             std::ostringstream cvic;
-            cvic << "Damage Applied. Combat ends - "
-                 << winner
+            cvic << "Damage Applied. Combat ends - " << winner
                  << " victorious!";
             return std::string(cvic.str());
         }
@@ -1288,11 +1313,18 @@ bool CombatCommitCommand::invoke(void)
             {
                 char t = ord[2][0];
                 std::string tactic;
-                switch(t) {
-                    case 'A': tactic = "Attack"; break;
-                    case 'D': tactic = "Attack"; break;
-                    case 'E': tactic = "Attack"; break;
-                } 
+                switch (t)
+                {
+                case 'A':
+                    tactic = "Attack";
+                    break;
+                case 'D':
+                    tactic = "Attack";
+                    break;
+                case 'E':
+                    tactic = "Attack";
+                    break;
+                }
                 reveal << "  " << ord[0] << ":" << ord[1] << " " << tactic
                        << " " << ord[3] << " [D=" << ord[4] << " B=" << ord[5]
                        << " S=" << ord[6] << " T=" << ord[7] << "]\n";
@@ -1355,8 +1387,9 @@ bool CombatDraftsCommand::invoke(void)
             lastHex = r[0];
         }
         char tactic = r[2].empty() ? 'A' : r[2][0];
-        std::string tacticName =
-            (tactic == 'A') ? "Attack" : (tactic == 'D') ? "Dodge" : "Escape";
+        std::string tacticName = (tactic == 'A')   ? "Attack"
+                                 : (tactic == 'D') ? "Dodge"
+                                                   : "Escape";
         out << "    " << r[1] << ": " << tacticName << " -> "
             << (r[3].empty() ? "(none)" : r[3]) << " [D=" << r[4]
             << " B=" << r[5] << " S=" << r[6] << " T=" << r[7];

@@ -18,7 +18,7 @@ class GameState
 {
   public:
     int game_id;
-    std::string scenario; // "", "learning","basic","advanced"
+
     int round;
     std::string active_player;
     int phase_index;
@@ -47,7 +47,7 @@ class GameState
     {
         clear();
         game_id = 0;
-        scenario = "";
+
         round = 1;
         active_player = "A";
         phase_index = PH_BUILD_SHIPS;
@@ -60,7 +60,7 @@ class GameState
     void clear()
     {
         game_id = 0;
-        scenario = "";
+
         round = 1;
         active_player = "A";
         phase_index = PH_BUILD_SHIPS;
@@ -86,8 +86,6 @@ class GameState
     {
         if (game_over)
             return "Game over. Use 'list' / 'list all' to review.";
-        if (scenario.empty())
-            return "Type: start learning|basic|advanced";
         if (phase_index == PH_BUILD_SHIPS)
             return "Build/repair/resupply. Use build/deploy/pickup/drop then "
                    "'next'.";
@@ -109,7 +107,7 @@ class GameState
         o << "{";
         // NOTE: gameId is NOT included in state_json - it's the database
         // primary key
-        o << "\"scenario\":\"" << json_escape(scenario) << "\",";
+
         o << "\"round\":" << round << ",";
         o << "\"activePlayer\":\"" << active_player << "\",";
         o << "\"phaseIndex\":" << phase_index << ",";
@@ -140,7 +138,8 @@ class GameState
         s.game_id = 0; // Will be set by load_game() from database primary key
         s.game_over = false;
         s.winner = "";
-        auto get_num = [&](const std::string& k) -> int {
+        auto get_num = [&](const std::string& k) -> int
+        {
             std::string pat = "\"" + k + "\":";
             size_t p = js.find(pat);
             if (p == std::string::npos)
@@ -162,7 +161,8 @@ class GameState
             }
             return (int)(v * sign);
         };
-        auto get_str = [&](const std::string& k) -> std::string {
+        auto get_str = [&](const std::string& k) -> std::string
+        {
             std::string pat = "\"" + k + "\":\"";
             size_t p = js.find(pat);
             if (p == std::string::npos)
@@ -175,7 +175,7 @@ class GameState
         };
         // NOTE: gameId is NOT parsed from JSON - it comes from database primary
         // key
-        s.scenario = get_str("scenario");
+
         s.round = std::max(1, get_num("round"));
         s.active_player = get_str("activePlayer");
         if (s.active_player != "A" && s.active_player != "B")
@@ -226,7 +226,7 @@ class StateMachine
         int game_id = 0;
         char current_player = 'A'; // Who is making the current request
         int current_user_id = 0;   // Database user_id of current requester
-        ScenarioType scenario = ScenarioType::UNDEFINED;
+
         int turn_number = 0; // For tech level calculation
 
         // Build Phase properties
@@ -269,7 +269,7 @@ class StateMachine
 
     // BUGBUG
     // legacy block, ingested. needs to be cleaned up
-    GameState new_game_state_for_scenario(const std::string& scenario);
+    GameState new_game_state();
     void save_game(const GameState& s);
     void apply_start_of_turn(GameState& s);
     void advance_next(GameState& s);
@@ -325,10 +325,6 @@ class StateMachine
     bool check_inhibits(CommandID cmd, void* params, std::string& error_msg);
 
     // Setters for state properties (used by Commands to set up Transitions)
-    void set_scenario(ScenarioType s)
-    {
-        data.scenario = s;
-    }
 
     void set_pending_build_commit(bool val)
     {
@@ -384,7 +380,7 @@ class StateMachine
         data.initiative = Player::NOPLAYER;
         data.game_id = 0;
         data.turn_number = 0;
-        data.scenario = ScenarioType::UNDEFINED;
+
         data.pending_build_commit = false;
         data.pending_build_cancel = false;
         data.pending_build_list_drafts = false;

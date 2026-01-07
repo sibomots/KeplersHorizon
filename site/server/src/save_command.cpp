@@ -92,7 +92,7 @@ bool LoadCommand::invoke()
     if (m_list_saves || m_name.empty())
     {
         auto saves = db.query(
-            "SELECT sg.save_name, sg.game_id, g.scenario, "
+            "SELECT sg.save_name, sg.game_id, g.module_id, "
             "JSON_UNQUOTE(JSON_EXTRACT(g.state_json, '$.round')) as round, "
             "sg.saved_at FROM saved_games sg "
             "JOIN games g ON sg.game_id = g.id "
@@ -129,7 +129,7 @@ bool LoadCommand::invoke()
 
     // Find the saved game
     auto saves = db.query(
-        "SELECT sg.game_id, g.scenario, "
+        "SELECT sg.game_id, g.module_id, "
         "JSON_UNQUOTE(JSON_EXTRACT(g.state_json, '$.round')) as round "
         "FROM saved_games sg "
         "JOIN games g ON sg.game_id = g.id "
@@ -144,8 +144,9 @@ bool LoadCommand::invoke()
     }
 
     int target_game_id = std::stoi(saves[0][0]);
-    std::string scenario = saves[0][1];
+    int module_id = std::atoi(saves[0][1].c_str());
     std::string round = saves[0][2];
+    (void)module_id;
 
     // Can't load the same game we're in
     if (target_game_id == game_id)

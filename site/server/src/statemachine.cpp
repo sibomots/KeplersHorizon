@@ -12,9 +12,9 @@
 #include "combat.h"
 #include "db.h"
 #include "logger.h"
+#include "moduleutil.h"
 #include "ships.h"
 #include "telemetry.h"
-#include "moduleutil.h"
 #include "turn_end.h"
 
 // Methods doing work do NOT move state.
@@ -55,52 +55,8 @@ bool StateMachine::transition()
     {
 
     case ServerState::READY_GAME_START:
-        // Check if we have a pending scenario from StartCommand
-        // The State Slate has been updated by the Agent (StartCommand) with the
-        // intent.
-        if (data.scenario != ScenarioType::UNDEFINED)
-        {
-            // Determine Scenario String
-            std::string sc_str = "";
-            switch (data.scenario)
-            {
-            case ScenarioType::LEARNING:
-                sc_str = "learning";
-                break;
-            case ScenarioType::BASIC:
-                sc_str = "basic";
-                break;
-            case ScenarioType::ADVANCED:
-                sc_str = "advanced";
-                break;
-            default:
-                break;
-            }
-
-            Logger::instance().info("Transition: initializing game scenario: " +
-                                    sc_str);
-
-            // Logic to Establish the Game (DB operations)
-            // At this point, we rely on the DB connection being valid
-            // (invariant).
-            GameState s = new_game_state_for_scenario(sc_str);
-
-            db.exec("DELETE FROM drafts WHERE game_id=" +
-                    std::to_string(data.game_id));
-            db.exec("DELETE FROM ships  WHERE game_id=" +
-                    std::to_string(data.game_id));
-            set_current_draft(data.game_id, 'A', "");
-            set_current_draft(data.game_id, 'B', "");
-            save_game(s);
-
-            Logger::instance().info(
-                "Transition: Game Initialized. Moving to IN_GAME.");
-            data.state = ServerState::IN_GAME;
-
-            // Game is now active:
-            // Turn phases tracked via PhaseIndex in GameState
-            return true;
-        }
+        // Game initialization happens through room flow (via
+        // RoomManager::startGame) - only one game mode exists
         break;
 
     case ServerState::IN_GAME:
@@ -138,29 +94,25 @@ bool StateMachine::nonactive_player_execute(ICmd* pICmd)
 GameState StateMachine::load_game(int game_id)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query("SELECT scenario,state_json FROM games WHERE id=" +
+    auto rows = db.query("SELECT module_id,state_json FROM games WHERE id=" +
                          std::to_string(game_id) + " LIMIT 1");
     if (rows.empty())
     {
         throw std::runtime_error("game not found");
     }
-    std::string scenario = rows[0][0];
+    int module_id = std::atoi(rows[0][0].c_str());
     std::string state_json = rows[0][1];
 
-    // state_json already includes scenario; trust it.
+    // load state from state_json
     GameState s = GameState::from_json_min(state_json);
     s.game_id = game_id;
 
-    // safer: extract scenario/activePlayer/phaseIndex/round/bp/vp from the
-    // authoritative stored JSON is omitted. We'll keep a minimal local parse +
-    // a fallback:
-    if (s.scenario.empty())
-    {
-        s.scenario = scenario;
-    }
+    // module_id used by queries for universe data
+    (void)module_id;
 
     // Quick re-sync by reading a few known fields with string search (simple).
-    auto find_int = [&](const std::string& key, int fallback) -> int {
+    auto find_int = [&](const std::string& key, int fallback) -> int
+    {
         std::string pat = "\"" + key + "\":";
         size_t p = state_json.find(pat);
         if (p == std::string::npos)
@@ -185,7 +137,8 @@ GameState StateMachine::load_game(int game_id)
         return (int)(v * sign);
     };
     auto find_str = [&](const std::string& key,
-                        const std::string& fallback) -> std::string {
+                        const std::string& fallback) -> std::string
+    {
         std::string pat = "\"" + key + "\":\"";
         size_t p = state_json.find(pat);
         if (p == std::string::npos)
@@ -200,11 +153,11 @@ GameState StateMachine::load_game(int game_id)
     s.round = std::max(1, find_int("round", s.round));
     s.active_player = find_str("activePlayer", s.active_player);
     s.phase_index = find_int("phaseIndex", s.phase_index);
-    s.scenario = find_str("scenario", s.scenario);
 
     // Parse bp/vp objects
     auto find_obj_int = [&](const std::string& objKey,
-                            const std::string& fieldKey, int fallback) -> int {
+                            const std::string& fieldKey, int fallback) -> int
+    {
         std::string op = "\"" + objKey + "\":{";
         size_t p = state_json.find(op);
         if (p == std::string::npos)
@@ -224,7 +177,8 @@ GameState StateMachine::load_game(int game_id)
     {
         size_t end = state_json.find("}", vpPos);
         std::string vpSub = state_json.substr(vpPos, end - vpPos + 1);
-        auto getv = [&](const std::string& k) -> int {
+        auto getv = [&](const std::string& k) -> int
+        {
             std::string pat = "\"" + k + "\":";
             size_t p = vpSub.find(pat);
             if (p == std::string::npos)
@@ -248,7 +202,8 @@ GameState StateMachine::load_game(int game_id)
     {
         size_t end = state_json.find("}", bpPos);
         std::string bpSub = state_json.substr(bpPos, end - bpPos + 1);
-        auto getv = [&](const std::string& k) -> int {
+        auto getv = [&](const std::string& k) -> int
+        {
             std::string pat = "\"" + k + "\":";
             size_t p = bpSub.find(pat);
             if (p == std::string::npos)
@@ -304,31 +259,18 @@ GameState StateMachine::load_game(int game_id)
     return s;
 }
 
-GameState StateMachine::new_game_state_for_scenario(const std::string& scenario)
+GameState StateMachine::new_game_state()
 {
     GameState s;
-    s.scenario = scenario;
     s.round = 1;
     s.active_player = "A";
     s.phase_index = PH_BUILD_SHIPS;
     s.vpA = 0;
     s.vpB = 0;
 
-    if (scenario == "learning")
-    {
-        s.creditsA = 800; // 40 × 20 (inflated)
-        s.creditsB = 800;
-    }
-    else if (scenario == "basic")
-    {
-        s.creditsA = 1000; // 50 × 20 (inflated)
-        s.creditsB = 1000;
-    }
-    else if (scenario == "advanced")
-    {
-        s.creditsA = 400; // 20 × 20 (inflated)
-        s.creditsB = 400; // start of first turn
-    }
+    // Starting credits (400 CR = 20 BP × 20 inflation factor)
+    s.creditsA = 400;
+    s.creditsB = 400;
 
     return s;
 }
@@ -338,11 +280,9 @@ void StateMachine::apply_start_of_turn(GameState& s)
     DatabaseManager& db = DatabaseManager::getInstance();
     // Called when a player begins their player-turn (phase 0 = Build Ships).
     // 1) Count victory points automatically.
-    // 2) In Advanced scenario, award BP (+10) at start of each player-turn
-    // after
-    //    the very first player-turn.
+    // 2) Award BP (+10) at start of each player-turn after the first.
 
-    if (s.scenario.empty() || s.game_over)
+    if (s.game_over)
         return;
 
     // VP: +1 for each enemy base system occupied at start of your turn.
@@ -356,7 +296,9 @@ void StateMachine::apply_start_of_turn(GameState& s)
         std::string q =
             "SELECT COUNT(DISTINCT ss.name) "
             "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND "
-            "ss.module_id=" + std::to_string(mod) + " "
+            "ss.module_id=" +
+            std::to_string(mod) +
+            " "
             "WHERE sh.game_id=" +
             std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
             "' AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
@@ -375,13 +317,8 @@ void StateMachine::apply_start_of_turn(GameState& s)
             s.vpB += vp_gain;
     }
 
+    // VP needed to win (advanced mode: 3 VP)
     int need = 3;
-    if (s.scenario == "learning")
-        need = 1;
-    else if (s.scenario == "basic")
-        need = 2;
-    else if (s.scenario == "advanced")
-        need = 3;
 
     int my_vp = (me == 'A') ? s.vpA : s.vpB;
     if (my_vp >= need)
@@ -391,17 +328,14 @@ void StateMachine::apply_start_of_turn(GameState& s)
         return;
     }
 
-    // Advanced scenario BP cadence.
-    if (s.scenario == "advanced")
+    // Advanced mode BP cadence: +10 BP at start of each player-turn after first
+    bool is_first_player_first_turn = (s.round == 1 && me == 'A');
+    if (!is_first_player_first_turn)
     {
-        bool is_first_player_first_turn = (s.round == 1 && me == 'A');
-        if (!is_first_player_first_turn)
-        {
-            if (me == 'A')
-                s.creditsA += 200; // 10 × 20 (inflated)
-            else
-                s.creditsB += 200; // 10 × 20 (inflated)
-        }
+        if (me == 'A')
+            s.creditsA += 200; // 10 × 20 (inflated)
+        else
+            s.creditsB += 200; // 10 × 20 (inflated)
     }
 
     // Reset movement points for active player's ships
@@ -412,7 +346,7 @@ void StateMachine::apply_start_of_turn(GameState& s)
 
 void StateMachine::advance_next(GameState& s)
 {
-    if (s.scenario.empty() || s.game_over)
+    if (s.game_over)
         return;
 
     if (s.phase_index < PH_END_TURN)
@@ -466,9 +400,11 @@ void StateMachine::advance_next(GameState& s)
                     // Look up system name from hex
                     std::string sysName = combat.hex_id;
                     int mod = get_module_id_for_game(s.game_id);
-                    auto sysRow = db.query("SELECT name FROM star_systems "
-                                           "WHERE module_id=" + std::to_string(mod) + " AND hex_id='" +
-                                           combat.hex_id + "' LIMIT 1");
+                    auto sysRow =
+                        db.query("SELECT name FROM star_systems "
+                                 "WHERE module_id=" +
+                                 std::to_string(mod) + " AND hex_id='" +
+                                 combat.hex_id + "' LIMIT 1");
                     if (!sysRow.empty())
                     {
                         sysName = sysRow[0][0];
@@ -564,19 +500,8 @@ void StateMachine::advance_next(GameState& s)
 void StateMachine::save_game(const GameState& s)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    std::string q = "UPDATE games SET scenario=";
-    if (s.scenario.empty())
-    {
-        q += "NULL";
-    }
-    else
-    {
-        q += "'" + db.esc(s.scenario) + "'";
-    }
-
-    q += ", state_json='" + db.esc(s.to_json()) +
-         "' WHERE id=" + std::to_string(s.game_id);
-
+    std::string q = "UPDATE games SET state_json='" + db.esc(s.to_json()) +
+                    "' WHERE id=" + std::to_string(s.game_id);
     db.exec(q);
 }
 

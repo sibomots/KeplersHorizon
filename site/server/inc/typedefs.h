@@ -25,13 +25,7 @@
 #endif
 // clang-format on
 
-typedef enum : int
-{
-    UNDEFINED,
-    LEARNING,
-    BASIC,
-    ADVANCED,
-} ScenarioType;
+// ScenarioType removed - only one game mode now (formerly "advanced")
 
 typedef struct
 {

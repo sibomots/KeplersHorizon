@@ -39,12 +39,8 @@ void ScoreCommand::show_overview()
     if (!active_seat.empty())
         active_username = active_seat[0][0];
 
-    // VP needed based on scenario
+    // VP needed to win (advanced mode default)
     int vp_needed = 3;
-    if (s.scenario == "learning")
-        vp_needed = 1;
-    else if (s.scenario == "basic")
-        vp_needed = 2;
 
     int my_vp = (me == 'A') ? s.vpA : s.vpB;
     int enemy_vp = (me == 'A') ? s.vpB : s.vpA;

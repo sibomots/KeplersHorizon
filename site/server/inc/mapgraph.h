@@ -50,7 +50,7 @@ class MapGraph
 
   private:
     int game_id;
-    int module_id;  // Loaded from games table based on game_id
+    int module_id; // Loaded from games table based on game_id
     char me = ' ';
     char enemy = ' ';
 

@@ -11,7 +11,7 @@
 /**
  * Get the module_id for a game from the games table.
  * Returns 1 (default Kepler's Horizon) if game not found.
- * 
+ *
  * @param game_id The game ID to lookup
  * @return The module_id associated with the game
  */

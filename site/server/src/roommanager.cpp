@@ -195,7 +195,7 @@ std::vector<RoomInfo> RoomManager::listOpenRooms()
     auto rows =
         db.query("SELECT r.id, r.room_code, r.name, r.created_by, u.username, "
                  "r.seat_a, ua.username, r.seat_b, ub.username, "
-                 "r.game_id, r.status, r.scenario, r.created_at "
+                 "r.game_id, r.status, r.module_id, r.created_at "
                  "FROM rooms r "
                  "LEFT JOIN users u ON r.created_by = u.id "
                  "LEFT JOIN users ua ON r.seat_a = ua.id "
@@ -233,7 +233,7 @@ RoomInfo RoomManager::getRoom(const std::string& code)
     auto rows =
         db.query("SELECT r.id, r.room_code, r.name, r.created_by, u.username, "
                  "r.seat_a, ua.username, r.seat_b, ub.username, "
-                 "r.game_id, r.status, r.scenario, r.created_at "
+                 "r.game_id, r.status, r.module_id, r.created_at "
                  "FROM rooms r "
                  "LEFT JOIN users u ON r.created_by = u.id "
                  "LEFT JOIN users ua ON r.seat_a = ua.id "
@@ -292,11 +292,12 @@ bool RoomManager::setModule(const std::string& code, int module_id)
     DatabaseManager& db = DatabaseManager::getInstance();
 
     // Validate module exists (default to 1 if invalid)
-    if (module_id <= 0) module_id = 1;
+    if (module_id <= 0)
+        module_id = 1;
 
     // For now, just accept any module_id (schema validates via FK)
-    db.exec("UPDATE rooms SET scenario='module_" + std::to_string(module_id) +
-            "' WHERE room_code='" + db.esc(code) + "'");
+    db.exec("UPDATE rooms SET module_id=" + std::to_string(module_id) +
+            " WHERE room_code='" + db.esc(code) + "'");
     return true;
 }
 
@@ -313,10 +314,9 @@ int RoomManager::startGame(const std::string& code)
     if (room.seat_a == 0 || room.seat_b == 0)
         return 0;
 
-    // Use StateMachine to create game - always use full game rules
+    // Use StateMachine to create game
     int module_id = room.module_id > 0 ? room.module_id : 1;
-    GameState gs =
-        StateMachine::getInstance().new_game_state_for_scenario("advanced");
+    GameState gs = StateMachine::getInstance().new_game_state();
 
     // Randomly assign initiative (who goes first)
     static std::random_device rd;

@@ -26,10 +26,10 @@ typedef struct
 } CommodityItem;
 
 static const int NUM_RESOURCES = 8;
-static const CommodityItem BASE_PRICES[] = 
-      {{"FERROUS", 5},      {"RARE_EARTH", 20}, {"RADIOACTIVE", 30},
-       {"CRYSTALLINE", 25}, {"VOLATILE", 8},    {"WATER", 3},
-       {"ORGANIC", 6},      {"EXOTIC", 100}};
+static const CommodityItem BASE_PRICES[] = {
+    {"FERROUS", 5},      {"RARE_EARTH", 20}, {"RADIOACTIVE", 30},
+    {"CRYSTALLINE", 25}, {"VOLATILE", 8},    {"WATER", 3},
+    {"ORGANIC", 6},      {"EXOTIC", 100}};
 
 bool MarketCommand::invoke(void)
 {

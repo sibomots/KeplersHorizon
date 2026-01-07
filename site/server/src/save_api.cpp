@@ -75,7 +75,7 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
 
     // Get game state
     auto game_rows =
-        db.query("SELECT state_json, scenario FROM games WHERE id=" +
+        db.query("SELECT state_json, module_id FROM games WHERE id=" +
                  std::to_string(game_id));
     if (game_rows.empty())
     {
@@ -85,7 +85,8 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     }
 
     std::string state_json = game_rows[0][0];
-    std::string scenario = game_rows[0][1];
+    int module_id = std::atoi(game_rows[0][1].c_str());
+    (void)module_id;
 
     // Get room code if exists
     auto room_rows = db.query("SELECT room_code FROM rooms WHERE game_id=" +
@@ -118,11 +119,11 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     // Insert save
     std::string insert_sql =
         "INSERT INTO saved_games(save_name, user_id, original_game_id, "
-        "room_code, scenario, state_json, round, player_a_name, player_b_name) "
+        "room_code, state_json, round, player_a_name, player_b_name) "
         "VALUES('" +
         db.esc(save_name) + "'," + std::to_string(user_id) + "," +
         std::to_string(game_id) + ",'" + db.esc(room_code) + "','" +
-        db.esc(scenario) + "','" + db.esc(state_json) + "'," +
+        db.esc(state_json) + "'," +
         std::to_string(round) + ",'" + db.esc(player_a_name) + "','" +
         db.esc(player_b_name) + "')";
 
@@ -156,8 +157,7 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
 
     std::ostringstream o;
     o << "{\"ok\":true,\"save_id\":" << save_id << ",\"save_name\":\""
-      << json_escape(save_name) << "\""
-      << ",\"round\":" << round << "}";
+      << json_escape(save_name) << "\"" << ",\"round\":" << round << "}";
     resp->body = o.str();
 }
 
@@ -177,7 +177,7 @@ void handle_saves_list(const HttpRequest* req, HttpResponse* resp)
 
     DatabaseManager& db = DatabaseManager::getInstance();
     auto rows = db.query(
-        "SELECT id, save_name, scenario, round, player_a_name, player_b_name, "
+        "SELECT id, save_name, round, player_a_name, player_b_name, "
         "saved_at FROM saved_games WHERE user_id=" +
         std::to_string(user_id) + " ORDER BY saved_at DESC LIMIT 20");
 
@@ -188,12 +188,10 @@ void handle_saves_list(const HttpRequest* req, HttpResponse* resp)
         if (i > 0)
             o << ",";
         o << "{\"id\":" << rows[i][0] << ",\"name\":\""
-          << json_escape(rows[i][1]) << "\""
-          << ",\"scenario\":\"" << json_escape(rows[i][2]) << "\""
-          << ",\"round\":" << rows[i][3] << ",\"player_a\":\""
-          << json_escape(rows[i][4]) << "\""
-          << ",\"player_b\":\"" << json_escape(rows[i][5]) << "\""
-          << ",\"saved_at\":\"" << json_escape(rows[i][6]) << "\"}";
+          << json_escape(rows[i][1]) << "\"" << ",\"round\":" << rows[i][2]
+          << ",\"player_a\":\"" << json_escape(rows[i][3]) << "\""
+          << ",\"player_b\":\"" << json_escape(rows[i][4]) << "\""
+          << ",\"saved_at\":\"" << json_escape(rows[i][5]) << "\"}";
     }
     o << "]}";
     resp->body = o.str();
@@ -217,7 +215,7 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
 
     // Get save data
     auto save_rows = db.query(
-        "SELECT save_name, scenario, state_json, player_a_name, player_b_name "
+        "SELECT save_name, state_json, player_a_name, player_b_name "
         "FROM saved_games WHERE id=" +
         std::to_string(save_id) + " AND user_id=" + std::to_string(user_id));
 
@@ -229,14 +227,13 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
     }
 
     std::string save_name = save_rows[0][0];
-    std::string scenario = save_rows[0][1];
-    std::string state_json = save_rows[0][2];
-    std::string player_a_name = save_rows[0][3];
-    std::string player_b_name = save_rows[0][4];
+    std::string state_json = save_rows[0][1];
+    std::string player_a_name = save_rows[0][2];
+    std::string player_b_name = save_rows[0][3];
 
-    // Create new game with saved state
-    std::string ins = "INSERT INTO games(scenario, state_json) VALUES('" +
-                      db.esc(scenario) + "','" + db.esc(state_json) + "')";
+    // Create new game with saved state (use default module_id=1)
+    std::string ins = "INSERT INTO games(module_id, state_json) VALUES(1,'" +
+                      db.esc(state_json) + "')";
     db.exec(ins);
 
     auto id_rows = db.query("SELECT LAST_INSERT_ID()");
@@ -281,12 +278,11 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
 
     std::string room_name = "Resumed: " + save_name;
     db.exec("INSERT INTO rooms(room_code, name, created_by, seat_a, status, "
-            "scenario, game_id) "
+            "module_id, game_id) "
             "VALUES('" +
             db.esc(room_code) + "','" + db.esc(room_name) + "'," +
             std::to_string(user_id) + "," + std::to_string(user_id) +
-            ",'waiting','" + db.esc(scenario) + "'," +
-            std::to_string(new_game_id) + ")");
+            ",'waiting',1," + std::to_string(new_game_id) + ")");
 
     // Link user to game
     db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +

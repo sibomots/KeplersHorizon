@@ -15,7 +15,6 @@
 #include "typedefs.h"
 
 #include "logger.h"
-#include "start_command.h"
 #include "build_command.h"
 #include "build_commit_command.h"
 #include "build_new_command.h"
@@ -195,34 +194,9 @@ command:
   ;
 
 session_cmd:
-   TOK_START_GAME TOK_LEARNING
+   TOK_RESET
    {
-        Logger::instance().info("Start a learning game scenario");
-        ICmd *pCmd = StartCommand::Builder()
-                      .set_scenario(ScenarioType::LEARNING)
-                      .build();
-        pCmd->invoke();
-        SafeDelete(pCmd);
-   }
-   |
-   TOK_START_GAME TOK_BASIC
-   {
-        Logger::instance().info("Start a basic game scenario");
-        ICmd *pCmd = StartCommand::Builder()
-                      .set_scenario(ScenarioType::BASIC)
-                      .build();
-        pCmd->invoke();
-        SafeDelete(pCmd);
-   }
-   |
-   TOK_START_GAME TOK_ADVANCED
-   {
-        Logger::instance().info("Start an advanced game scenario");
-        ICmd *pCmd = StartCommand::Builder()
-                      .set_scenario(ScenarioType::ADVANCED)
-                      .build();
-        pCmd->invoke();
-        SafeDelete(pCmd);
+        Logger::instance().info("Reset the current game, wiping everything");
    }
    |
    TOK_RESET
@@ -296,7 +270,7 @@ session_cmd:
         //
         // Stateful conditions like player A and player B are logged in must be
         // true of coure for the State to be in GAME_START
-        Logger::instance().info("Quit the game. Same as Reset but unsets game scenario.");
+        Logger::instance().info("Quit the game. Same as Reset.");
    }
    |
    TOK_CLEAR

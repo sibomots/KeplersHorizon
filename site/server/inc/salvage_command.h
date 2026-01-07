@@ -54,7 +54,8 @@ class SalvageCommand : public ICmd
     bool invoke(void) override;
 
   private:
-    SalvageCommand(const std::string& ship, const std::string& target, bool scan)
+    SalvageCommand(const std::string& ship, const std::string& target,
+                   bool scan)
         : m_ship_code(ship), m_target_name(target), m_scan_mode(scan)
     {
     }

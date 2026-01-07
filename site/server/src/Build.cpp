@@ -87,7 +87,8 @@ bool BuildCommitCommand::invoke(void)
     }
     if (d.attr.M % 3 != 0)
     {
-        Telemetry::getInstance().write("Error: Missiles must be a multiple of 3");
+        Telemetry::getInstance().write(
+            "Error: Missiles must be a multiple of 3");
         return false;
     }
     if (d.attr.PD < 0 || d.attr.B < 0 || d.attr.S < 0 || d.attr.T < 0 ||
@@ -118,9 +119,9 @@ bool BuildCommitCommand::invoke(void)
         return false;
     }
 
-    // Compute tech level
+    // Compute tech level (advanced mode: tech increases every 4 turns)
     int tech = 0;
-    if (s.scenario == "advanced" && s.round >= 1)
+    if (s.round >= 1)
     {
         tech = (s.round - 1) / 4;
     }

@@ -124,23 +124,18 @@
     const selfBp = st?.credits ? (selfOwner === "A" ? st.credits.A : st.credits.B) : "-";
     setText("stBP", st ? String(selfBp) : "-");
 
-    // Bug 5: Update console title with player and scenario
+    // Update console title with player name
     const elTitle = $("consoleTitle");
     if (elTitle) {
-      const scenario = (st && st.scenario) ? st.scenario : "";
       const playerName = S.username || "Player";
-      if (scenario) {
-        elTitle.textContent = "Player " + playerName + " Main Console - Scenario: " + scenario;
-      } else {
-        elTitle.textContent = "Player " + playerName + " Main Console";
-      }
+      elTitle.textContent = "Player " + playerName + " Main Console";
     }
 
     // Bug 3: Turn status indicator (green = your turn, yellow = opponent's turn)
     const elTurn = $("turnStatus");
     if (elTurn) {
       const isYourTurn = st && S.self && (st.activePlayer === S.self.owner);
-      if (st && st.scenario) {
+      if (st && st.gameId > 0) {
         if (isYourTurn) {
           elTurn.textContent = "Your Turn";
           elTurn.style.backgroundColor = "rgba(110, 231, 183, 0.25)";

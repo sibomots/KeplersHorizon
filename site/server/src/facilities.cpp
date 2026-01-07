@@ -96,10 +96,9 @@ void FacilityEngine::update_control(int game_id, int round)
 
         // Get hex for this system
         int mod = get_module_id_for_game(game_id);
-        auto hex_row =
-            db.query("SELECT hex_id FROM star_systems WHERE module_id=" +
-                     std::to_string(mod) + " AND name='" +
-                     db.esc(system) + "'");
+        auto hex_row = db.query(
+            "SELECT hex_id FROM star_systems WHERE module_id=" +
+            std::to_string(mod) + " AND name='" + db.esc(system) + "'");
         if (hex_row.empty())
             continue;
         std::string hex = hex_row[0][0];

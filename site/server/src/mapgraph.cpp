@@ -20,17 +20,19 @@ static const int DEFAULT_MODULE_ID = 1;
 // Helper: Get module_id for a game from the games table
 static int get_module_id_for_game(int game_id)
 {
-    if (game_id <= 0) return DEFAULT_MODULE_ID;
-    
+    if (game_id <= 0)
+        return DEFAULT_MODULE_ID;
+
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query("SELECT module_id FROM games WHERE id=" + 
+    auto rows = db.query("SELECT module_id FROM games WHERE id=" +
                          std::to_string(game_id));
     if (rows.empty() || rows[0].empty() || rows[0][0].empty())
         return DEFAULT_MODULE_ID;
     return std::atoi(rows[0][0].c_str());
 }
 
-MapGraph::MapGraph(int gId) : game_id(gId), module_id(get_module_id_for_game(gId))
+MapGraph::MapGraph(int gId)
+    : game_id(gId), module_id(get_module_id_for_game(gId))
 {
     load_hexes();
     load_warplines();
@@ -96,14 +98,14 @@ void MapGraph::load_state(char owner)
     enemyBlockades.clear();
 
     // Ships are game-specific (use game_id), but star_systems uses module_id
-    std::vector<std::vector<std::string>> blocks =
-        db.query("SELECT DISTINCT ss.hex_id FROM ships s "
-                 "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
-                 std::to_string(module_id) +
-                 " "
-                 "WHERE s.game_id=" +
-                 std::to_string(game_id) + " AND s.owner='" +
-                 std::string(1, enemy) + "' AND s.destroyed_at IS NULL");
+    std::vector<std::vector<std::string>> blocks = db.query(
+        "SELECT DISTINCT ss.hex_id FROM ships s "
+        "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
+        std::to_string(module_id) +
+        " "
+        "WHERE s.game_id=" +
+        std::to_string(game_id) + " AND s.owner='" + std::string(1, enemy) +
+        "' AND s.destroyed_at IS NULL");
 
     for (const auto& r : blocks)
     {

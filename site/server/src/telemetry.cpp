@@ -187,8 +187,7 @@ static std::string getShipsJson(int game_id, char player)
             << ",\"pd\":" << friendly[i][4] << ",\"b\":" << friendly[i][5]
             << ",\"s\":" << friendly[i][6] << ",\"t\":" << friendly[i][7]
             << ",\"m\":" << friendly[i][8] << ",\"sr\":" << friendly[i][9]
-            << ",\"name\":\"" << json_escape(friendly[i][10]) << "\""
-            << "}";
+            << ",\"name\":\"" << json_escape(friendly[i][10]) << "\"" << "}";
     }
     out << "]";
 
@@ -209,8 +208,7 @@ static std::string getShipsJson(int game_id, char player)
             << ",\"type\":\"" << json_escape(enemy[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(enemy[i][2]) << "\""
             << ",\"system\":\"" << json_escape(enemy[i][3]) << "\""
-            << ",\"name\":\"" << json_escape(enemy[i][4]) << "\""
-            << "}";
+            << ",\"name\":\"" << json_escape(enemy[i][4]) << "\"" << "}";
     }
     out << "]";
 
@@ -277,16 +275,10 @@ void Telemetry::status(char player, HttpResponse* resp)
         }
 
         std::ostringstream out;
-        out << "{\"ok\":true,\"state\":{"
-            << "\"gameId\":0,"
-            << "\"scenario\":\"\","
-            << "\"round\":0,"
-            << "\"activePlayer\":\"\","
-            << "\"phaseIndex\":0,"
-            << "\"phase\":\"\","
-            << "\"vp\":{\"A\":0,\"B\":0},"
-            << "\"bp\":{\"A\":0,\"B\":0},"
-            << "\"notes\":\"Type: start learning|basic|advanced\""
+        out << "{\"ok\":true,\"state\":{" << "\"gameId\":0," << "\"round\":0,"
+            << "\"activePlayer\":\"\"," << "\"phaseIndex\":0,"
+            << "\"phase\":\"\"," << "\"vp\":{\"A\":0,\"B\":0},"
+            << "\"bp\":{\"A\":0,\"B\":0}," << "\"notes\":\"Game not started\""
             << "}";
         out << ",\"self\":{\"owner\":\"" << player << "\"}";
         out << ",\"peer\":{\"online\":" << (peerOnline ? "true" : "false");
@@ -306,7 +298,6 @@ void Telemetry::status(char player, HttpResponse* resp)
     std::ostringstream status_json;
     status_json << "{";
     status_json << "\"gameId\":" << s.game_id << ",";
-    status_json << "\"scenario\":\"" << json_escape(s.scenario) << "\",";
     status_json << "\"round\":" << s.round << ",";
     status_json << "\"activePlayer\":\"" << json_escape(s.active_player)
                 << "\",";
@@ -378,9 +369,9 @@ void Telemetry::status(char player, HttpResponse* resp)
     std::ostringstream out;
     out << "{\"ok\":true,\"state\":" << status_json.str()
         << ",\"self\":{\"owner\":\"" << selfOwner << "\",\"username\":\""
-        << json_escape(selfUser) << "\"}"
-        << ",\"peer\":{\"owner\":\"" << oppOwner << "\",\"username\":\""
-        << oppUser << "\",\"online\":" << (oppOnline ? "true" : "false")
+        << json_escape(selfUser) << "\"}" << ",\"peer\":{\"owner\":\""
+        << oppOwner << "\",\"username\":\"" << oppUser
+        << "\",\"online\":" << (oppOnline ? "true" : "false")
         << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}";
 
     // Include queued messages if any

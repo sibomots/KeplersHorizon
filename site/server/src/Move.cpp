@@ -66,8 +66,8 @@ bool DeployCommand::invoke(void)
     int mod_id = get_module_id_for_game(m_game_id);
     auto base_info =
         db.query("SELECT is_base, base_side, territory_name FROM star_systems "
-                 "WHERE module_id=" + std::to_string(mod_id) + " AND name='" +
-                 db.esc(sys) + "'");
+                 "WHERE module_id=" +
+                 std::to_string(mod_id) + " AND name='" + db.esc(sys) + "'");
 
     if (base_info.empty())
     {
@@ -203,7 +203,7 @@ bool MoveCommand::invoke(void)
         std::string destHex =
             MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
 
-        if (destHex.empty()) 
+        if (destHex.empty())
         {
             destHex = firstDest; // Use as-is if not a system name
         }
@@ -253,7 +253,8 @@ bool MoveCommand::invoke(void)
             // display/logic) - star_systems uses module_id from game
             int mod = get_module_id_for_game(m_game_id);
             auto sysr = db.query("SELECT name FROM star_systems WHERE "
-                                 "module_id=" + std::to_string(mod) + " AND hex_id='" +
+                                 "module_id=" +
+                                 std::to_string(mod) + " AND hex_id='" +
                                  stepHex + "' LIMIT 1");
             if (!sysr.empty())
             {
@@ -318,9 +319,9 @@ bool MoveCommand::invoke(void)
         totalCost += stepCost;
         if (totalCost > allowance)
         {
-            errorMsg = "Path exceeds PD allowance. Total cost would be " 
-                       + std::to_string(totalCost)
-                       + ", remaining=" + std::to_string(allowance);
+            errorMsg = "Path exceeds PD allowance. Total cost would be " +
+                       std::to_string(totalCost) +
+                       ", remaining=" + std::to_string(allowance);
             break;
         }
 
@@ -432,16 +433,17 @@ bool MoveCommand::invoke(void)
 
         // Check if two hexes are connected by warpline
         auto isWarpline = [&](const std::string& h1,
-                              const std::string& h2) -> bool {
+                              const std::string& h2) -> bool
+        {
             int m = get_module_id_for_game(m_game_id);
-            auto result = db.query("SELECT 1 FROM warplines WHERE module_id=" +
-                                   std::to_string(m) + " AND "
-                                   "((a_hex='" +
-                                   db.esc(h1) + "' AND b_hex='" + db.esc(h2) +
-                                   "') OR "
-                                   "(a_hex='" +
-                                   db.esc(h2) + "' AND b_hex='" + db.esc(h1) +
-                                   "')) LIMIT 1");
+            auto result = db.query(
+                "SELECT 1 FROM warplines WHERE module_id=" + std::to_string(m) +
+                " AND "
+                "((a_hex='" +
+                db.esc(h1) + "' AND b_hex='" + db.esc(h2) +
+                "') OR "
+                "(a_hex='" +
+                db.esc(h2) + "' AND b_hex='" + db.esc(h1) + "')) LIMIT 1");
             return !result.empty();
         };
 

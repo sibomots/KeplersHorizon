@@ -16,10 +16,11 @@ static const int DEFAULT_MODULE_ID = 1;
 // Helper: Get module_id for a game from the games table
 static int get_module_id_for_game(int game_id)
 {
-    if (game_id <= 0) return DEFAULT_MODULE_ID;
-    
+    if (game_id <= 0)
+        return DEFAULT_MODULE_ID;
+
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query("SELECT module_id FROM games WHERE id=" + 
+    auto rows = db.query("SELECT module_id FROM games WHERE id=" +
                          std::to_string(game_id));
     if (rows.empty() || rows[0].empty() || rows[0][0].empty())
         return DEFAULT_MODULE_ID;

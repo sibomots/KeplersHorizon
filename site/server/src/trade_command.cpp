@@ -11,9 +11,9 @@
 
 #include "db.h"
 #include "logger.h"
+#include "moduleutil.h"
 #include "ships.h"
 #include "statemachine.h"
-#include "moduleutil.h"
 #include "telemetry.h"
 
 // Base prices (CR per unit)
@@ -159,7 +159,8 @@ bool TradeCommand::do_buy()
     auto ships = db.query(
         "SELECT s.ship_code, s.ship_name, s.at_system FROM ships s "
         "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
-        std::to_string(mod) + " "
+        std::to_string(mod) +
+        " "
         "WHERE s.game_id=" +
         std::to_string(game_id) + " AND s.owner='" + std::string(1, me) +
         "' AND s.destroyed_at IS NULL AND s.at_hex IS NOT NULL LIMIT 1");
