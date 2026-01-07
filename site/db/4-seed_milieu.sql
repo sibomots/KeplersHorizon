@@ -70,5 +70,18 @@ FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 (id,system_name,designation,star_class,luminosity,color,age_gy,notes);
 
+
+LOAD DATA LOCAL INFILE 'milieu/salvageables.csv'
+INTO TABLE salvageables
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(id,system_name,name,description,discovery_chance,hazard_chance,hazard_damage_min,hazard_damage_max,max_salvages);
+
+LOAD DATA LOCAL INFILE 'milieu/salvageable_drops.csv'
+INTO TABLE salvageable_drops
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+(id,salvageable_id,item_type,item_name,drop_chance,quantity_min,quantity_max);
+
 COMMIT;
 

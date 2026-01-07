@@ -435,9 +435,28 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
+  | TOK_SALVAGE TOK_SCAN {
+      ICmd* pCmd = SalvageCommand::Builder().scan().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
   | TOK_SALVAGE deconflicted_string {
       std::string ship(*$2);
       ICmd* pCmd = SalvageCommand::Builder().ship(ship).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SALVAGE deconflicted_string TOK_STRING {
+      std::string ship(*$2);
+      std::string target(*$3);
+      ICmd* pCmd = SalvageCommand::Builder().ship(ship).target(target).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_SALVAGE deconflicted_string deconflicted_string {
+      std::string ship(*$2);
+      std::string target(*$3);
+      ICmd* pCmd = SalvageCommand::Builder().ship(ship).target(target).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }

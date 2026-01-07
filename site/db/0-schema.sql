@@ -264,17 +264,17 @@ INDEX (game_id, target_player, sent_at)
 
 -- Economy Tables
 
-CREATE TABLE IF NOT EXISTS harvest_operations (
+CREATE TABLE IF NOT EXISTS extract_operations (
+id INT AUTO_INCREMENT PRIMARY KEY,
 game_id INT NOT NULL,
 ship_code VARCHAR(4) NOT NULL,
 owner CHAR(1) NOT NULL,
 location_type VARCHAR(16) NOT NULL,
 location_id INT NOT NULL,
-resource_type VARCHAR(16) NOT NULL,
+resource_type VARCHAR(32) NOT NULL,
 started_turn INT NOT NULL,
 completed BOOLEAN DEFAULT FALSE,
 yield INT DEFAULT 0,
-PRIMARY KEY (game_id, owner, ship_code, started_turn),
 FOREIGN KEY (game_id) REFERENCES games(id),
 INDEX (game_id, owner)
 );
@@ -368,7 +368,48 @@ FOREIGN KEY (game_id) REFERENCES games(id),
 INDEX (game_id, system_name)
 );
 
--- Salvage records from Graveyard-type anomalies
+-- Salvage System: Data-driven salvageables
+
+-- What can be salvaged (seeded milieu)
+CREATE TABLE IF NOT EXISTS salvageables (
+id INT AUTO_INCREMENT PRIMARY KEY,
+system_name VARCHAR(64) NOT NULL,
+name VARCHAR(64) NOT NULL,
+description TEXT,
+discovery_chance INT DEFAULT 100,
+hazard_chance INT DEFAULT 10,
+hazard_damage_min INT DEFAULT 1,
+hazard_damage_max INT DEFAULT 2,
+max_salvages INT DEFAULT NULL,
+INDEX (system_name)
+);
+
+-- What each salvageable yields
+CREATE TABLE IF NOT EXISTS salvageable_drops (
+id INT AUTO_INCREMENT PRIMARY KEY,
+salvageable_id INT NOT NULL,
+item_type VARCHAR(16) NOT NULL,
+item_name VARCHAR(32) NOT NULL,
+drop_chance INT DEFAULT 100,
+quantity_min INT DEFAULT 1,
+quantity_max INT DEFAULT 5,
+FOREIGN KEY (salvageable_id) REFERENCES salvageables(id)
+);
+
+-- Per-game discovery and depletion state
+CREATE TABLE IF NOT EXISTS discovered_salvageables (
+game_id INT NOT NULL,
+salvageable_id INT NOT NULL,
+discovered_by CHAR(1),
+discovered_turn INT,
+times_salvaged INT DEFAULT 0,
+depleted BOOLEAN DEFAULT FALSE,
+PRIMARY KEY (game_id, salvageable_id),
+FOREIGN KEY (game_id) REFERENCES games(id),
+FOREIGN KEY (salvageable_id) REFERENCES salvageables(id)
+);
+
+-- Salvage operation log
 CREATE TABLE IF NOT EXISTS salvage_operations (
 id INT AUTO_INCREMENT PRIMARY KEY,
 game_id INT NOT NULL,

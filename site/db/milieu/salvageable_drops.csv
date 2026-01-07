@@ -1,0 +1,17 @@
+1,1,resource,FERROUS,40,2,6
+2,1,resource,RARE_EARTH,20,1,3
+3,1,resource,VOLATILE,25,2,4
+4,1,missiles,MISSILES,15,2,4
+5,2,resource,EXOTIC,50,1,3
+6,2,resource,CRYSTALLINE,50,2,5
+7,2,credits,CREDITS,30,100,300
+8,3,resource,RARE_EARTH,40,3,8
+9,3,missiles,MISSILES,40,4,8
+10,3,resource,RADIOACTIVE,20,2,4
+11,4,resource,FERROUS,60,5,12
+12,4,resource,ORGANIC,30,3,8
+13,4,resource,WATER,40,4,10
+14,5,resource,EXOTIC,100,1,3
+15,5,credits,CREDITS,50,200,500
+16,6,resource,FERROUS,70,8,15
+17,6,resource,CRYSTALLINE,30,2,5
