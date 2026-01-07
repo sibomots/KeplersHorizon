@@ -64,10 +64,61 @@ bool DeployCommand::invoke(void)
         return false;
     }
 
+    // Validate destination is a base-star system
+    auto base_info = db.query(
+        "SELECT is_base, base_side, territory_name FROM star_systems "
+        "WHERE map_id=1 AND name='" + db.esc(sys) + "'");
+
+    if (base_info.empty())
+    {
+        Telemetry::getInstance().write(
+            "DEPLOY: Unknown system: " + m_system_name);
+        return false;
+    }
+
+    if (base_info[0][0] != "1")
+    {
+        Telemetry::getInstance().write(
+            "DEPLOY: Ships can only be deployed at a home base system.");
+        return false;
+    }
+
+    std::string base_side = base_info[0][1];
+    std::string territory_name = base_info[0][2];
+
+    // Get player's home side
+    std::string player_side = (active_player == 'A') ? s.home_side_A : s.home_side_B;
+
+    if (player_side.empty())
+    {
+        // First deployment - set player's side
+        if (active_player == 'A')
+        {
+            s.home_side_A = base_side;
+            s.home_side_B = (base_side == "A") ? "B" : "A";
+        }
+        else
+        {
+            s.home_side_B = base_side;
+            s.home_side_A = (base_side == "A") ? "B" : "A";
+        }
+
+        Telemetry::getInstance().broadcast(
+            "DEPLOY: " + std::string(1, active_player) + " has claimed the " +
+            territory_name + ".");
+    }
+    else if (player_side != base_side)
+    {
+        // Trying to deploy on enemy's side
+        Telemetry::getInstance().write(
+            "DEPLOY: Cannot deploy in enemy territory. Use your home bases.");
+        return false;
+    }
+
     std::string hex = MapUtil::getInstance().resolve_system_hex(m_game_id, sys);
     update_ship_location(m_game_id, active_player, m_ship_code, sys, hex, "");
 
-    // Save game state to persist changes
+    // Save game state to persist side assignment
     StateMachine::getInstance().save_game(s);
 
     Logger::instance().info("Deployed " + sh.name + " - " + sh.code + " to " +
@@ -189,6 +240,10 @@ bool MoveCommand::invoke(void)
         return false;
     }
 
+    // Collect full path for telemetry display
+    std::vector<std::string> fullPath;
+    fullPath.push_back(startHex);
+
     for (size_t i = 0; i < m_destinations.size(); ++i)
     {
         std::string destTok = m_destinations[i];
@@ -229,6 +284,14 @@ bool MoveCommand::invoke(void)
                            " (No path or Blocked).";
             }
             break;
+        }
+
+        // Get actual path segment for telemetry
+        auto segPath = graph.get_path(currentHex, stepHex, allowance - totalCost);
+        // Skip first element (it's the current hex, already in fullPath)
+        for (size_t j = 1; j < segPath.size(); ++j)
+        {
+            fullPath.push_back(segPath[j]);
         }
 
         // Apply system constraint modifiers
@@ -342,6 +405,60 @@ bool MoveCommand::invoke(void)
 
     Logger::instance().info(o.str());
     Telemetry::getInstance().write(o.str());
+
+    // Display computed path for inspection
+    if (fullPath.size() > 1)
+    {
+        // Build enhanced path display:
+        // - Star hexes shown as NAME (hex#)
+        // - Warpline traversals use "=" connector
+        // - Regular hex moves use "->" connector
+
+        // Cache system names for hexes
+        std::unordered_map<std::string, std::string> hexToSys;
+        auto sysList = db.query(
+            "SELECT hex_id, name FROM star_systems WHERE map_id=1");
+        for (const auto& row : sysList)
+        {
+            hexToSys[row[0]] = row[1];
+        }
+
+        // Check if two hexes are connected by warpline
+        auto isWarpline = [&](const std::string& h1, const std::string& h2) -> bool {
+            auto result = db.query(
+                "SELECT 1 FROM warplines WHERE map_id=1 AND "
+                "((a_hex='" + db.esc(h1) + "' AND b_hex='" + db.esc(h2) + "') OR "
+                "(a_hex='" + db.esc(h2) + "' AND b_hex='" + db.esc(h1) + "')) LIMIT 1");
+            return !result.empty();
+        };
+
+        std::ostringstream pathOut;
+        pathOut << "NAV: Course plotted: ";
+        for (size_t i = 0; i < fullPath.size(); ++i)
+        {
+            // Add connector before all but first
+            if (i > 0)
+            {
+                if (isWarpline(fullPath[i-1], fullPath[i]))
+                    pathOut << " = ";  // Warpline jump
+                else
+                    pathOut << " -> ";  // Regular hex move
+            }
+
+            // Format hex: STARNAME (hex#) or just hex#
+            const std::string& hex = fullPath[i];
+            auto sit = hexToSys.find(hex);
+            if (sit != hexToSys.end())
+            {
+                pathOut << sit->second << " (" << hex << ")";
+            }
+            else
+            {
+                pathOut << hex;
+            }
+        }
+        Telemetry::getInstance().write(pathOut.str());
+    }
 
     // Check for combat trigger: enemy ships in destination hex
     char enemy = (active_player == 'A') ? 'B' : 'A';

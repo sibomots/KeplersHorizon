@@ -178,10 +178,13 @@ hex_id VARCHAR(8) NOT NULL,
 name VARCHAR(64) NOT NULL,
 is_base TINYINT NOT NULL DEFAULT 0,
 base_owner CHAR(1) NULL,
+base_side CHAR(1) NULL,
+territory_name VARCHAR(64) NULL,
 PRIMARY KEY (map_id, name),
 INDEX (map_id, hex_id),
 INDEX (map_id, is_base),
-INDEX (map_id, base_owner)
+INDEX (map_id, base_owner),
+INDEX (map_id, base_side)
 );
 
 CREATE TABLE IF NOT EXISTS warplines (

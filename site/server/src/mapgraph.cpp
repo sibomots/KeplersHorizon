@@ -222,3 +222,93 @@ int MapGraph::get_path_cost(const std::string& from, const std::string& to,
     }
     return -1; // Not reachable
 }
+
+std::vector<std::string> MapGraph::get_path(const std::string& from,
+                                             const std::string& to, int limit)
+{
+    std::vector<std::string> path;
+    if (from == to)
+    {
+        path.push_back(from);
+        return path;
+    }
+
+    std::unordered_map<std::string, int> dist;
+    std::unordered_map<std::string, std::string> parent;
+    std::queue<std::string> qn;
+
+    dist[from] = 0;
+    parent[from] = "";
+    qn.push(from);
+
+    bool found = false;
+    while (!qn.empty())
+    {
+        std::string cur = qn.front();
+        qn.pop();
+        int d = dist[cur];
+
+        if (cur == to)
+        {
+            found = true;
+            break;
+        }
+        if (d >= limit)
+            continue;
+
+        std::vector<std::string> neighbors;
+
+        // Hex neighbors
+        auto qt = qr.find(cur);
+        if (qt != qr.end())
+        {
+            int cq = qt->second.first;
+            int cr = qt->second.second;
+            const int dq[6] = {1, 1, 0, -1, -1, 0};
+            const int dr[6] = {0, -1, -1, 0, 1, 1};
+            for (int k = 0; k < 6; ++k)
+            {
+                long long key = (static_cast<long long>(cq + dq[k]) << 32) ^
+                                static_cast<unsigned int>(cr + dr[k]);
+                auto bit = byQr.find(key);
+                if (bit != byQr.end())
+                    neighbors.push_back(bit->second);
+            }
+        }
+
+        // Warp neighbors
+        auto wit = warpJumps.find(cur);
+        if (wit != warpJumps.end())
+        {
+            neighbors.insert(neighbors.end(), wit->second.begin(),
+                             wit->second.end());
+        }
+
+        for (const auto& n : neighbors)
+        {
+            // Blockade Check: Cannot enter blocked hex unless it is the destination
+            if (enemyBlockades.count(n) && n != to)
+                continue;
+
+            if (dist.find(n) == dist.end())
+            {
+                dist[n] = d + 1;
+                parent[n] = cur;
+                qn.push(n);
+            }
+        }
+    }
+
+    if (!found)
+        return path;  // Empty - unreachable
+
+    // Reconstruct path from 'to' back to 'from'
+    std::string cur = to;
+    while (!cur.empty())
+    {
+        path.push_back(cur);
+        cur = parent[cur];
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
+}
