@@ -48,7 +48,6 @@ bool DeployCommand::invoke(void)
 
     if (!ship_exists(m_game_id, active_player, m_ship_code))
     {
-        Logger::instance().error("Ship not found: " + m_ship_code);
         Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " is not in your fleet!");
         return false;
@@ -57,8 +56,6 @@ bool DeployCommand::invoke(void)
     ShipRow sh = load_ship(m_game_id, active_player, m_ship_code);
     if (!sh.racked_in.empty())
     {
-        Logger::instance().error("Ship is racked; drop it before deploying: " +
-                                 m_ship_code);
         Telemetry::getInstance().write(
             "Error: Ship is racked; drop it before deploying: " + m_ship_code);
         return false;
@@ -123,8 +120,6 @@ bool DeployCommand::invoke(void)
     // Save game state to persist side assignment
     StateMachine::getInstance().save_game(s);
 
-    Logger::instance().info("Deployed " + sh.name + " - " + sh.code + " to " +
-                            sys);
     Telemetry::getInstance().write("FLEET COMMAND: " + sh.name + " (" +
                                    sh.code + ") deployed to " + sys);
 
@@ -154,7 +149,6 @@ bool MoveCommand::invoke(void)
 
     if (!ship_exists(m_game_id, active_player, m_ship_code))
     {
-        Logger::instance().error("Ship not found: " + m_ship_code);
         Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " is not in your fleet!");
         return false;
@@ -164,7 +158,6 @@ bool MoveCommand::invoke(void)
 
     if (sh.attr.type != 'W')
     {
-        Logger::instance().error("Only Warpships can move");
         Telemetry::getInstance().write(
             "NAV: Only WarpShip class vessels can engage hyperdrive.");
         return false;
@@ -172,7 +165,6 @@ bool MoveCommand::invoke(void)
 
     if (sh.attr.PD <= 0)
     {
-        Logger::instance().error("Ship has PD=0 and cannot move");
         Telemetry::getInstance().write(
             "NAV: " + sh.name +
             " has no power drive capacity. Unable to maneuver.");
@@ -181,8 +173,6 @@ bool MoveCommand::invoke(void)
 
     if (!sh.racked_in.empty())
     {
-        Logger::instance().error("Ship is racked and cannot move: " +
-                                 sh.racked_in);
         Telemetry::getInstance().write(
             "Error: Ship is racked and cannot move: " + sh.racked_in);
         return false;
@@ -197,22 +187,24 @@ bool MoveCommand::invoke(void)
 
     if (startHex.empty())
     {
-        Logger::instance().error("Ship is not deployed");
         Telemetry::getInstance().write(
             "NAV: " + sh.name +
             " is not deployed. Ship must be in-theater to move.");
         return false;
     }
 
-    // Check if trying to move to current location (Bug #5)
+    // Check if trying to move to current location
     if (!m_destinations.empty())
     {
         std::string firstDest = m_destinations[0];
         // Resolve system name to hex if needed
         std::string destHex =
             MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
-        if (destHex.empty())
+
+        if (destHex.empty()) 
+        {
             destHex = firstDest; // Use as-is if not a system name
+        }
 
         if (destHex == startHex)
         {
@@ -238,7 +230,6 @@ bool MoveCommand::invoke(void)
 
     if (allowance <= 0)
     {
-        Logger::instance().error("Ship has no movement remaining (PD spent)");
         Telemetry::getInstance().write(
             "NAV: " + sh.name + " has exhausted power drive for this turn.");
         return false;
@@ -262,7 +253,9 @@ bool MoveCommand::invoke(void)
                                  "map_id=1 AND hex_id='" +
                                  stepHex + "' LIMIT 1");
             if (!sysr.empty())
+            {
                 stepSys = sysr[0][0];
+            }
         }
         else
         {
@@ -272,6 +265,7 @@ bool MoveCommand::invoke(void)
 
         int stepCost =
             graph.get_path_cost(currentHex, stepHex, allowance - totalCost);
+
         if (stepCost == -1)
         {
             int needed = graph.get_path_cost(currentHex, stepHex, 999);
@@ -313,16 +307,17 @@ bool MoveCommand::invoke(void)
                 ConstraintEngine::get_movement_modifier(m_game_id, stepSys);
             stepCost += modifier;
             if (stepCost < 1)
+            {
                 stepCost = 1; // Minimum 1 PD
+            }
         }
 
         totalCost += stepCost;
         if (totalCost > allowance)
         {
-            errorMsg = "Path exceeds PD allowance. "
-                       "Total cost would be " +
-                       std::to_string(totalCost) +
-                       ", remaining=" + std::to_string(allowance);
+            errorMsg = "Path exceeds PD allowance. Total cost would be " 
+                       + std::to_string(totalCost)
+                       + ", remaining=" + std::to_string(allowance);
             break;
         }
 
@@ -343,7 +338,9 @@ bool MoveCommand::invoke(void)
 
     // Update ship location and PD spent
     if (finalSystem.empty())
-        finalSystem = "";
+    {
+        finalSystem.clear();
+    }
     update_ship_location(m_game_id, active_player, sh.code, finalSystem,
                          finalHex, "");
     db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
@@ -409,7 +406,6 @@ bool MoveCommand::invoke(void)
       << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
       << "] complete. Power expended: " << totalCost << " PD";
 
-    Logger::instance().info(o.str());
     Telemetry::getInstance().write(o.str());
 
     // Display computed path for inspection
@@ -450,9 +446,13 @@ bool MoveCommand::invoke(void)
             if (i > 0)
             {
                 if (isWarpline(fullPath[i - 1], fullPath[i]))
+                {
                     pathOut << " = "; // Warpline jump
+                }
                 else
+                {
                     pathOut << " -> "; // Regular hex move
+                }
             }
 
             // Format hex: STARNAME (hex#) or just hex#
@@ -483,8 +483,6 @@ bool MoveCommand::invoke(void)
         // Enemy ships present - trigger combat check
         CombatEngine ce(m_game_id);
         ce.check_for_combat_triggers(); // Creates combat if not exists
-
-        Logger::instance().info("[MOVE] Contact - enemy ships in " + finalHex);
 
         // Notify both players
         std::string sysName = finalSystem.empty() ? finalHex : finalSystem;

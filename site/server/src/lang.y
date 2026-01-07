@@ -73,6 +73,8 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 #include <vector>
 }
 
+%define parse.error verbose
+
 %union {
    int ival;
    std::string* sval;
@@ -693,7 +695,6 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-
   // build new ...
   | TOK_BUILD TOK_NEW deconflicted_string deconflicted_string {
       std::string code(*$3);
@@ -706,7 +707,6 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-
   // bn ...
   | TOK_BUILD_NEW deconflicted_string deconflicted_string {
       std::string code(*$2);
@@ -719,7 +719,6 @@ build_cmd:
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-
   // build drafts
   | TOK_BUILD TOK_DRAFTS {
       Logger::instance().info("List all pending build drafts");

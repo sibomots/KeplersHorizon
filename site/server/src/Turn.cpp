@@ -151,8 +151,7 @@ bool NextCommand::invoke(void)
     StateMachine::getInstance().save_game(s);
 
     std::ostringstream msg;
-    msg << "Advanced: " << before_player << " / " << before_phase << " -> "
-        << s.active_player << " / " << s.phase_name();
+    msg << "New Phase: " << s.phase_name();
     if (s.round != before_round)
     {
         msg << " (round " << s.round << ")";

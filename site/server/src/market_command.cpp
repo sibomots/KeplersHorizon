@@ -18,14 +18,18 @@
 // BUGBUG: Base prices have been moved to: site/db/milieu/market_base_prices.csv
 // This hardcoded array is kept for backward compatibility but should be
 // removed. Market init should INSERT from market_base_prices reference table.
-static const struct
+
+typedef struct
 {
     const char* type;
     int base_price;
-} BASE_PRICES[] = {{"FERROUS", 5},      {"RARE_EARTH", 20}, {"RADIOACTIVE", 30},
-                   {"CRYSTALLINE", 25}, {"VOLATILE", 8},    {"WATER", 3},
-                   {"ORGANIC", 6},      {"EXOTIC", 100}};
+} CommodityItem;
+
 static const int NUM_RESOURCES = 8;
+static const CommodityItem BASE_PRICES[] = 
+      {{"FERROUS", 5},      {"RARE_EARTH", 20}, {"RADIOACTIVE", 30},
+       {"CRYSTALLINE", 25}, {"VOLATILE", 8},    {"WATER", 3},
+       {"ORGANIC", 6},      {"EXOTIC", 100}};
 
 bool MarketCommand::invoke(void)
 {
@@ -82,9 +86,13 @@ void MarketCommand::show_all_prices()
             price = std::atoi(mp[0][0].c_str());
             std::string trend = mp[0][1];
             if (trend == "RISING")
+            {
                 trend_char = "▲";
+            }
             else if (trend == "FALLING")
+            {
                 trend_char = "▼";
+            }
         }
 
         // Format output
@@ -155,7 +163,9 @@ void update_market_prices(int game_id, int round)
             std::to_string(game_id) + " AND resource_type='" + res + "'");
 
         if (mp.empty())
+        {
             continue;
+        }
 
         int current = std::atoi(mp[0][0].c_str());
         int bought = std::atoi(mp[0][1].c_str());

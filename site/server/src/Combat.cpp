@@ -230,7 +230,7 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
         " AND s.at_hex='" + hex_id + "' AND s.destroyed_at IS NULL");
     int orderCount = std::atoi(or_[0][0].c_str());
 
-    Logger::instance().info("[DEBUG] Hex " + hex_id + " Round " +
+    Logger::instance().info("[COMBAT] Hex " + hex_id + " Round " +
                             std::to_string(round) +
                             ": Ships=" + std::to_string(shipCount) +
                             " Orders=" + std::to_string(orderCount));
@@ -258,7 +258,7 @@ bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
                         "' AND s.destroyed_at IS NULL");
     int commitCount = std::atoi(or_[0][0].c_str());
 
-    Logger::instance().info("[DEBUG] Hex " + hex_id + " Round " +
+    Logger::instance().info("[COMBAT] Hex " + hex_id + " Round " +
                             std::to_string(round) +
                             ": Ships=" + std::to_string(shipCount) +
                             " Committed=" + std::to_string(commitCount));
@@ -277,12 +277,10 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
     // If escaped=true, it's a miss but counts as successful retreat.
 
     // Simplification of logic from rules:
-    /*
-      ATTACK vs:
-        A: <=-3 Miss, -1/-2 Hit, 0/+1 Hit+2, +2 Hit+1, >=+3 Miss
-        D: <=-3 Miss, ..., -2..+2 ranges...
-        R: <=-2 Escape, -1..+2 Miss, >=+3 Hit
-    */
+    // ATTACK vs:
+    //  A: <=-3 Miss, -1/-2 Hit, 0/+1 Hit+2, +2 Hit+1, >=+3 Miss
+    //  D: <=-3 Miss, ..., -2..+2 ranges...
+    //  R: <=-2 Escape, -1..+2 Miss, >=+3 Hit
     // Implementing purely based on the text table provided in
     // docs/COMBAT_RULES.md
 
@@ -290,26 +288,34 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
     {
         if (tactic_target == 'A')
         {
-            if (drive_diff <= -3)
+            if (drive_diff <= -3) {
                 return -999;
-            if (drive_diff <= -1)
+            }
+            if (drive_diff <= -1) {
                 return 0; // Hit
-            if (drive_diff <= 1)
+            }
+            if (drive_diff <= 1) {
                 return 2; // Hit+2
-            if (drive_diff == 2)
+            }
+            if (drive_diff == 2) {
                 return 1; // Hit+1
+            }
             return -999;  // +3 or more Miss
         }
         if (tactic_target == 'D')
         {
-            if (drive_diff <= -3)
+            if (drive_diff <= -3) {
                 return -999;
-            if (drive_diff <= 1)
+            }
+            if (drive_diff <= 1) {
                 return -999;
-            if (drive_diff == 2)
+            }
+            if (drive_diff == 2) {
                 return 1; // Hit+1
-            if (drive_diff <= 4)
+            }
+            if (drive_diff <= 4) {
                 return 0; // Hit
+            }
             return -999;
         }
         if (tactic_target == 'R')
@@ -324,7 +330,8 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
                 escaped = true;
                 return -999;
             }
-            if (drive_diff <= 1)
+
+            if (drive_diff <= 1) {
                 return -999; // Miss (prevent escape?) Rules say "Miss", assumes
                              // blocked logic logic? Table says: <=-3 Esc, -1/-2
                              // Esc, 0/+1 Miss, +2 Miss, +3/+4 Hit, +5 Miss?
@@ -335,15 +342,19 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
                              // ATTACK Col Retreat: -3 or less: Escapes -1 or
                              // -2: Escapes 0 or +1: Miss (pinned) +2: Miss +3
                              // or +4: Hit +5 or more: Miss
+            }
+
             if (drive_diff <= -1)
             {
                 escaped = true;
                 return -999;
             }
-            if (drive_diff <= 2)
+            if (drive_diff <= 2) {
                 return -999; // Miss (Pinned)
-            if (drive_diff <= 4)
+            }
+            if (drive_diff <= 4) {
                 return 0; // Hit
+            }
             return -999;
         }
     }
@@ -352,22 +363,28 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
         // DODGE firing
         if (tactic_target == 'A')
         {
-            if (drive_diff <= -4)
+            if (drive_diff <= -4) {
                 return -999;
-            if (drive_diff <= -2)
+            }
+            if (drive_diff <= -2) {
                 return -999;
-            if (drive_diff <= 2)
+            }
+            if (drive_diff <= 2) {
                 return 0; // Hit
+            }
             return -999;
         }
         if (tactic_target == 'D')
         {
-            if (drive_diff <= -3)
+            if (drive_diff <= -3) {
                 return -999;
-            if (drive_diff == -2)
+            }
+            if (drive_diff == -2) {
                 return 0; // Hit
-            if (drive_diff <= 0)
+            }
+            if (drive_diff <= 0) {
                 return 0; // Hit (-1, 0)
+            }
             return -999;
         }
         if (tactic_target == 'R')
@@ -390,17 +407,21 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
         // RETREAT firing
         if (tactic_target == 'A')
         {
-            if (drive_diff <= -2)
+            if (drive_diff <= -2) {
                 return -999;
-            if (drive_diff <= 0)
+            }
+            else if (drive_diff <= 0) {
                 return 0; // Hit
-            return -999;
+            }
+            else {
+                return -999;
+            }
         }
         if (tactic_target == 'D')
         {
             return -999; // Miss
         }
-        if (tactic_target == 'R')
+        else if (tactic_target == 'R')
         {
             escaped = true;
             return -999;
@@ -423,11 +444,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (cs.stage == 0 && all_orders_submitted(hex_id, cs.round))
         {
             // allow proceeding
+            // BUGBUG
         }
         else
         {
-            return "Not ready to resolve (Stage " + std::to_string(cs.stage) +
-                   ")";
+            return "Not ready to resolve (Stage "
+                   + std::to_string(cs.stage) + ")";
         }
     }
 
@@ -491,7 +513,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" +
                  db.esc(hex_id) + "' LIMIT 1");
     if (!sys_row.empty())
+    {
         combat_system = sys_row[0][0];
+    }
 
     std::ostringstream log;
     log << "\n=====\n";
@@ -526,8 +550,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 int mod = get_crt_mod(drive_diff, ship.ord.tactic,
                                       target->ord.tactic, escaped);
 
-                if (escaped)
+                if (escaped) {
                     target->escape_successes++;
+                }
 
                 if (mod != -999)
                 {
@@ -552,13 +577,15 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 }
                 else
                 {
-                    if (escaped)
+                    if (escaped) {
                         log << target->code << " '" << target->name
                             << "' outruns " << ship.code << " '" << ship.name
                             << "' beams.\n";
-                    else
+                    }
+                    else {
                         log << ship.code << " '" << ship.name << "' misses "
                             << target->code << " '" << target->name << "'.\n";
+                    }
                 }
             }
             else
@@ -571,6 +598,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             // If retreating and NOT fired upon, do we need to track?
             // Logic: Escape if escaped ALL attacks. If 0 attacks, Escape =
             // Success.
+            // BUGBUG
         }
     }
 
@@ -604,7 +632,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         int mod = get_crt_mod(drive_diff, ship.ord.tactic,
                                               target->ord.tactic, escaped);
                         if (escaped)
+                        {
                             target->escape_successes++;
+                        }
 
                         if (mod != -999)
                         {
@@ -630,14 +660,16 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         }
                         else
                         {
-                            if (escaped)
+                            if (escaped) {
                                 log << target->code << " '" << target->name
                                     << "' outruns " << ship.code << " '"
                                     << ship.name << "' missile.\n";
-                            else
+                            }
+                            else {
                                 log << ship.code << " '" << ship.name
                                     << "' missile misses " << target->code
                                     << " '" << target->name << "'.\n";
+                            }
                         }
                     }
                     // BUGBUG
@@ -656,20 +688,23 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     std::ostringstream dmgJson;
     dmgJson << "{";
     bool first = true;
-
     for (auto& [key, ship] : ships)
     {
         int absorb = 0;
-        if (ship.ord.power_s > 0)
+        if (ship.ord.power_s > 0) {
             absorb = ship.ord.power_s +
                      ship.tech; // Tech adds to shields? Rules: "Screen Power +
                                 // Tech Level (if powered)"
+        }
 
         int net = std::max(0, ship.damage_received - absorb);
         if (net > 0)
         {
-            if (!first)
+            if (!first) {
                 dmgJson << ",";
+            }
+
+            // Uses owner_code key
             dmgJson << "\\\"" << key << "\\\":" << net; // Uses owner_code key
             total_net_damage += net;
             first = false;
@@ -681,23 +716,30 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (ship.ord.tactic == 'R')
         {
             bool escape = false;
-            if (ship.escape_attempts == 0)
-                escape = true; // Unopposed retreat
-            else if (ship.escape_successes == ship.escape_attempts)
-                escape = true; // Eluded all fire
+            if (ship.escape_attempts == 0) {
+                // Unopposed retreat
+                escape = true;
+            }
+            else if (ship.escape_successes == ship.escape_attempts) {
+                // Eluded all fire
+                escape = true;
+            }
 
             if (escape)
             {
-                log << ship.code << " '" << ship.name
-                    << "' successfully retreats!\n";
+                log << ship.code << " '" << ship.name << "' "
+                    << "successfully retreats!\n";
+
                 // Execute Retreat immediately? Or at end of round?
                 // Rules: "Retreat Resolution".
                 // We can mark them. For now, strict damage focus.
+                // BUGBUG must resolve retreat resolution
             }
             else
             {
                 log << ship.code << " '" << ship.name
                     << "' failed to retreat.\n";
+                // BUGBUG means what?
             }
         }
     }
@@ -710,10 +752,11 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
     if (total_net_damage > 0)
     {
-        next_stage = 2;     // DAMAGE_PENDING
-        next_stalemate = 0; // Reset stalemate counter
-        log << "-----\n"
-            << "RESULT:\n"
+        // DAMAGE_PENDING
+        next_stage = 2;
+        // Reset stalemate counter
+        next_stalemate = 0;
+        log << "RESULT:\n"
             << "Critical Damage!\n"
             << "Assign Damage Now.\n";
 
@@ -726,8 +769,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         for (auto& [key, ship] : ships)
         {
             int absorb = 0;
-            if (ship.ord.power_s > 0)
+            if (ship.ord.power_s > 0) 
+            {
                 absorb = ship.ord.power_s + ship.tech;
+            }
             int net = std::max(0, ship.damage_received - absorb);
 
             if (net > 0)
@@ -794,6 +839,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         // must retreat
         if (next_stalemate >= 3)
         {
+            // RETREAT_PENDING
             next_stage = 3; // RETREAT_PENDING
             log << "STALEMATE: 3 rounds with no damage!\n";
             log << "Initiative player must withdraw all ships from this "
@@ -850,25 +896,40 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                       db.esc(ship_code) + "' AND owner='" +
                       std::string(1, owner) + "' AND destroyed_at IS NULL");
     if (r.empty())
-        return "Ship not found";
+    {
+        std::ostringstream snf;
+        snf << "Ship " << ship_code << " not found";
+        return std::string(snf.str());
+    }
 
+    // BUGBUG explain this dereferencing
     std::string hex = r[0][0];
     char realOwner = r[0][1][0];
+
     if (realOwner != owner)
-        return "Not your ship";
+    {
+        std::ostringstream nys;
+        nys << "Ship " << ship_code << " is not your ship.";
+        return std::string(nys.str());
+    }
 
     auto cs = get_combat_state(hex);
-    if (cs.stage != 2)
-        return "No pending damage for this hex"; // 2=DAMAGE_PENDING
+    if (cs.stage != 2) 
+    {
+        // 2=DAMAGE_PENDING
+        return std::string("No pending damage for this hex");
+    }
 
     // 2. Parse Pending Damage
     // JSON: {"A_S20": 4, "B_W1": 2} ... simple parse
+
     std::map<std::string, int> pending;
     std::string json = cs.pending_damage_json;
     // Remove braces
     if (json.size() >= 2)
+    {
         json = json.substr(1, json.size() - 2);
-
+    }
     std::vector<std::string> parts = split(json, ',');
     for (auto& p : parts)
     {
@@ -881,32 +942,43 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
             size_t q1 = k.find('"');
             size_t q2 = k.rfind('"');
             if (q1 != std::string::npos && q2 > q1)
+            {
                 k = k.substr(q1 + 1, q2 - q1 - 1);
+            }
             pending[k] = std::atoi(v.c_str());
         }
     }
 
     std::string key = std::string(1, owner) + "_" + ship_code;
     if (pending.find(key) == pending.end())
-        return "No damage pending for this ship";
+    {
+        std::ostringstream ndp;
+        ndp << "No damage pending for ship " << ship_code;
+        return std::string(ndp.str());
+    }
 
     int needed = pending[key];
     int assigned = 0;
     for (auto const& [k, v] : assignments)
+    {
         assigned += v;
+    }
 
     if (assigned > needed)
-        return "Assigned more damage than required"; // Or allow
-                                                     // over-assignment? Rules
-                                                     // say "applied by owning
-                                                     // player". Assumes exact
-                                                     // match needed?
+    {
+        // BUGBUG resolve this discrepency:
+        // Or allow over-assignment? Rules say "applied by owning
+        // player". Assumes exact match needed?
+        return std::string("Assigned more damage than required");
+    }
+
     // Let's enforce exact match OR destruction.
 
     // 3. Apply to attributes
     // DB columns: pd, beam, screen, tube, missiles
     // assignments keys: "D", "B", "S", "T", "M"
     // Validate current values
+
     int cur_pd = std::atoi(r[0][2].c_str());
     int cur_b = std::atoi(r[0][3].c_str());
     int cur_s = std::atoi(r[0][4].c_str());
@@ -935,7 +1007,9 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 cur = std::max(0, cur - dmg);
             }
             if (!updateSql.empty())
+            {
                 updateSql += ",";
+            }
             updateSql += col + "=" + std::to_string(cur);
         }
     };
@@ -948,9 +1022,13 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
 
     if (!updateSql.empty())
     {
-        db.exec("UPDATE ships SET " + updateSql +
-                " WHERE game_id=" + std::to_string(game_id) +
-                " AND ship_code='" + db.esc(ship_code) + "'");
+        db.exec("UPDATE ships"
+                " SET " + updateSql 
+                + " WHERE game_id=" 
+                + std::to_string(game_id)
+                + " AND ship_code='"
+                + db.esc(ship_code)
+                + "'");
     }
 
     // Check Destruction
@@ -970,10 +1048,9 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     // Or do we require FULL assignment in one go?
     // Let's assume FULL assignment required for that single ship.
     if (remaining > 0)
+    {
         return "Must assign all " + std::to_string(needed) + " hits";
-
-    if (remaining > 0)
-        return "Must assign all " + std::to_string(needed) + " hits";
+    }
 
     pending.erase(key);
 
@@ -1000,7 +1077,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
         char opponent = (owner == 'A') ? 'B' : 'A';
         Telemetry::getInstance().add_tell(game_id, opponent,
                                           "Player " + std::string(1, owner) +
-                                              " has assigned all damage.");
+                                          " has assigned all damage.");
     }
 
     // Reconstruct JSON
@@ -1010,7 +1087,9 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     for (auto const& [k, v] : pending)
     {
         if (c++ > 0)
+        {
             newJson << ",";
+        }
         newJson << "\\\"" << k << "\\\":" << v;
     }
     newJson << "}";
@@ -1022,7 +1101,8 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
     if (pending.empty())
     {
         // All damage assigned by both players!
-        next_stage = 0; // Back to orders for next round
+        // Back to orders for next round
+        next_stage = 0;
         next_round++;
 
         // Check if combat should end (one side has no ships left)
@@ -1048,13 +1128,17 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                                                    " ends. Player " + winner +
                                                    " controls the hex.");
 
-            return "Damage Applied. Combat ends - " + winner + " victorious!";
+            std::ostringstream cvic;
+            cvic << "Damage Applied. Combat ends - "
+                 << winner
+                 << " victorious!";
+            return std::string(cvic.str());
         }
 
         // Combat continues - notify both players
         Telemetry::getInstance().add_broadcast(
             "All damage assigned. Combat Round " + std::to_string(next_round) +
-            " begins in hex " + hex + ". Submit orders.");
+            " begins in hex " + hex + ". Submit orders!");
     }
 
     db.exec("UPDATE combat_state SET stage=" + std::to_string(next_stage) +
@@ -1062,7 +1146,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
             ", pending_damage_json='" + next_json + "' WHERE game_id=" +
             std::to_string(game_id) + " AND hex_id='" + hex + "'");
 
-    return "Damage Applied";
+    return std::string("Damage Applied");
 }
 
 bool CombatApplyCommand::invoke(void)
@@ -1070,7 +1154,8 @@ bool CombatApplyCommand::invoke(void)
     // Check if this command is allowed given current game state
     CombatOrderParams_t params;
     params.ship_code = m_ship_code;
-    params.order_type = 0; // Apply command type
+    // Apply command type
+    params.order_type = 0;
 
     std::string inhibit_error;
     if (!StateMachine::getInstance().check_inhibits(CommandID::COMBAT_FIRE,
@@ -1088,7 +1173,6 @@ bool CombatApplyCommand::invoke(void)
     std::string result = ce.apply_damage(owner, m_ship_code, m_assignments);
 
     Telemetry::getInstance().write(result);
-
     return true;
 }
 
@@ -1200,8 +1284,12 @@ bool CombatCommitCommand::invoke(void)
             for (const auto& ord : orders)
             {
                 char t = ord[2][0];
-                std::string tactic =
-                    (t == 'A') ? "Attack" : (t == 'D') ? "Dodge" : "Escape";
+                std::string tactic;
+                switch(t) {
+                    case 'A': tactic = "Attack"; break;
+                    case 'D': tactic = "Attack"; break;
+                    case 'E': tactic = "Attack"; break;
+                } 
                 reveal << "  " << ord[0] << ":" << ord[1] << " " << tactic
                        << " " << ord[3] << " [D=" << ord[4] << " B=" << ord[5]
                        << " S=" << ord[6] << " T=" << ord[7] << "]\n";
@@ -1270,7 +1358,9 @@ bool CombatDraftsCommand::invoke(void)
             << (r[3].empty() ? "(none)" : r[3]) << " [D=" << r[4]
             << " B=" << r[5] << " S=" << r[6] << " T=" << r[7];
         if (!r[8].empty())
+        {
             out << " M=" << r[8];
+        }
         out << "]\n";
     }
     Telemetry::getInstance().write(out.str());

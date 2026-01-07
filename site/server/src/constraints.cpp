@@ -96,9 +96,13 @@ int ConstraintEngine::get_combat_modifier(int game_id,
         {
             // Environmental modifier applies to all
             if (mod_type == "BONUS")
+            {
                 total_modifier += value;
+            }
             else if (mod_type == "PENALTY")
+            {
                 total_modifier -= value;
+            }
         }
     }
 
@@ -122,9 +126,13 @@ int ConstraintEngine::get_extraction_modifier(int game_id,
         int value = std::atoi(row[1].c_str());
 
         if (mod_type == "BONUS")
+        {
             total_modifier += value;
+        }
         else if (mod_type == "PENALTY")
+        {
             total_modifier -= value;
+        }
     }
 
     return total_modifier;
@@ -143,7 +151,9 @@ bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
                          "condition_text LIKE '%hazardous%'");
 
     if (!rows.empty() && std::atoi(rows[0][0].c_str()) > 0)
+    {
         return true;
+    }
 
     // Also check resource-specific difficulty
     auto res_rows = db.query(
@@ -163,7 +173,9 @@ bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
     for (const auto& r : res_rows)
     {
         if (r[0] == "Extreme" || r[0] == "Difficult")
+        {
             return true;
+        }
     }
 
     return false;
@@ -188,24 +200,39 @@ ConstraintEngine::get_constraints(int game_id, const std::string& system)
 
         std::string type_str = row[1];
         if (type_str == "MOVEMENT")
+        {
             c.type = CONSTRAINT_MOVEMENT;
+        }
         else if (type_str == "COMBAT")
+        {
             c.type = CONSTRAINT_COMBAT;
+        }
         else if (type_str == "TRADE")
+        {
             c.type = CONSTRAINT_TRADE;
+        }
         else if (type_str == "HARVEST")
+        {
             c.type = CONSTRAINT_HARVEST;
+        }
         else
+        {
             c.type = CONSTRAINT_BUILD;
+        }
 
         std::string mod_str = row[2];
         if (mod_str == "BONUS")
+        {
             c.modifier = MODIFIER_BONUS;
+        }
         else if (mod_str == "PENALTY")
+        {
             c.modifier = MODIFIER_PENALTY;
+        }
         else
+        {
             c.modifier = MODIFIER_BLOCK;
-
+        }
         c.value = std::atoi(row[3].c_str());
         c.condition = row[4];
         c.source = row[5];
@@ -214,15 +241,4 @@ ConstraintEngine::get_constraints(int game_id, const std::string& system)
     }
 
     return result;
-}
-
-void ConstraintEngine::initialize_constraints(int game_id)
-{
-    // BUGBUG: This function is atrophied. Constraint initialization data
-    // has been moved to: site/db/milieu/system_constraints.csv
-    // The system_constraints table is global (not per-game) and should be
-    // pre-loaded from CSV during database setup.
-
-    Logger::instance().info(
-        "[CONSTRAINTS] Constraints initialized (loaded from CSV)");
 }

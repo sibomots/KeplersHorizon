@@ -20,7 +20,7 @@ bool SurveyCommand::has_ship_in_system(const std::string& system)
     DatabaseManager& db = DatabaseManager::getInstance();
 
     // Get the hex for this system
-    auto hex_rows = db.query("SELECT hex FROM star_systems WHERE name='" +
+    auto hex_rows = db.query("SELECT hex_id FROM star_systems WHERE name='" +
                              db.esc(system) + "'");
     if (hex_rows.empty())
     {
@@ -67,7 +67,7 @@ bool SurveyCommand::invoke(void)
     {
         // Find first system where player has a ship
         auto loc_rows = db.query("SELECT DISTINCT ss.name FROM ships s "
-                                 "JOIN star_systems ss ON s.at_hex = ss.hex "
+                                 "JOIN star_systems ss ON s.at_hex = ss.hex_id "
                                  "WHERE s.game_id=" +
                                  std::to_string(s.game_id) + " AND s.owner='" +
                                  std::string(1, owner) +

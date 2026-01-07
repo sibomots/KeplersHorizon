@@ -121,12 +121,8 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 
     // Parser failed
     Logger::instance().info("Falling back to legacy handler: " + cmdline);
-    {
-        resp->status = 400;
-        resp->body = json_error("unknown command");
-        Logger::instance().error("Unknown command attempted");
-        return;
-    }
-
+    resp->status = 400;
+    resp->body = json_error("unknown command");
+    Logger::instance().error("Unknown command attempted");
     return;
 }

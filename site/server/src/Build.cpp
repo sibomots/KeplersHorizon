@@ -34,16 +34,13 @@ bool BuildCancelCommand::invoke(void)
 
     if (draft_code.empty())
     {
-        Logger::instance().error("No current draft to cancel");
         Telemetry::getInstance().write("SHIPYARD: No ship is in the shipyard.");
         return true;
     }
 
     delete_draft(game_id, active_player, draft_code);
     set_current_draft(game_id, active_player, "");
-    Logger::instance().info("Canceled draft: " + draft_code);
     Telemetry::getInstance().write("Canceled draft: " + draft_code);
-
     return true;
 }
 
@@ -68,7 +65,6 @@ bool BuildCommitCommand::invoke(void)
     std::string draft_code = get_current_draft(game_id, active_player);
     if (draft_code.empty())
     {
-        Logger::instance().error("No current draft to commit");
         Telemetry::getInstance().write("Error: No current draft to commit");
         return false;
     }
@@ -76,7 +72,6 @@ bool BuildCommitCommand::invoke(void)
     // Validate draft exists
     if (!draft_exists(game_id, active_player, draft_code))
     {
-        Logger::instance().error("Draft not found: " + draft_code);
         Telemetry::getInstance().write("Error: Draft not found: " + draft_code);
         return false;
     }
@@ -87,21 +82,17 @@ bool BuildCommitCommand::invoke(void)
     // Validate draft attributes
     if (d.attr.type == 'S' && d.attr.SR != 0)
     {
-        Logger::instance().error("SystemShips cannot have SR");
         Telemetry::getInstance().write("Error: SystemShips cannot have SR");
         return false;
     }
     if (d.attr.M % 3 != 0)
     {
-        Logger::instance().error("Missiles must be a multiple of 3");
-        Telemetry::getInstance().write(
-            "Error: Missiles must be a multiple of 3");
+        Telemetry::getInstance().write("Error: Missiles must be a multiple of 3");
         return false;
     }
     if (d.attr.PD < 0 || d.attr.B < 0 || d.attr.S < 0 || d.attr.T < 0 ||
         d.attr.M < 0 || d.attr.SR < 0)
     {
-        Logger::instance().error("Negative attribute");
         Telemetry::getInstance().write(
             "Error: Negative attribute values not allowed");
         return false;
@@ -110,16 +101,17 @@ bool BuildCommitCommand::invoke(void)
     // Calculate cost (inflated ×20: each stat = 20 CR, warp = 100 CR)
     int cost = (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
     cost += ((d.attr.M + 2) / 3) * 20; // 20 CR per 3 missiles
+
     if (d.attr.type == 'W')
+    {
         cost += 100; // Warp generator
+    }
 
     // Check BP availability
     int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
+
     if (cost > bp)
     {
-        Logger::instance().error("Insufficient CR. Need " +
-                                 std::to_string(cost) + ", have " +
-                                 std::to_string(bp));
         Telemetry::getInstance().write("Error: Insufficient CR. Need " +
                                        std::to_string(cost) + ", have " +
                                        std::to_string(bp));
@@ -145,11 +137,6 @@ bool BuildCommitCommand::invoke(void)
     bp -= cost;
     StateMachine::getInstance().save_game(s);
 
-    Logger::instance().info("Committed: " + sh.name + " - " + sh.code + " (L" +
-                            std::to_string(sh.attr.tech) +
-                            ") cost=" + std::to_string(cost) +
-                            " BP. Remaining BP=" + std::to_string(bp));
-
     std::ostringstream bcmsg;
     bcmsg << "Committed: " << sh.name << " - " << sh.code << " (Tech Level "
           << std::to_string(sh.attr.tech) << ")\n"
@@ -173,7 +160,6 @@ bool BuildListDraftsCommand::invoke(void)
 
     if (drafts.empty())
     {
-        Logger::instance().info("No drafts found");
         Telemetry::getInstance().write("No drafts found");
     }
     else
@@ -187,7 +173,9 @@ bool BuildListDraftsCommand::invoke(void)
                 (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
             cost += ((d.attr.M + 2) / 3) * 20;
             if (d.attr.type == 'W')
+            {
                 cost += 100;
+            }
 
             msg << "  " << d.code << " '" << d.name << "' cost=" << cost
                 << " BP\n";
@@ -196,10 +184,11 @@ bool BuildListDraftsCommand::invoke(void)
                 << " M=" << d.attr.M << " SR=" << d.attr.SR;
 
             if (d.code == current_draft)
+            {
                 msg << "  [current]";
+            }
             msg << "\n";
         }
-        Logger::instance().info(msg.str());
         Telemetry::getInstance().write(msg.str());
     }
 
@@ -217,7 +206,7 @@ bool BuildNewCommand::invoke(void)
     if (!StateMachine::getInstance().check_inhibits(CommandID::BUILD_NEW,
                                                     &params, inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::getInstance().write("BuildNewCommand: " + inhibit_error);
         return false;
     }
 
@@ -228,7 +217,6 @@ bool BuildNewCommand::invoke(void)
     int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
     if (bp <= 0)
     {
-        Logger::instance().error("No Build Points available");
         Telemetry::getInstance().write(
             "SHIPYARD: Insufficient Build Points. Construction halted.");
         return false;
@@ -237,7 +225,6 @@ bool BuildNewCommand::invoke(void)
     // Validate ship code format
     if (m_ship_code.empty() || m_ship_code.length() > 10)
     {
-        Logger::instance().error("Invalid ship code format");
         Telemetry::getInstance().write(
             "SHIPYARD: Invalid hull designation. Review ship code.");
         return false;
@@ -265,7 +252,6 @@ bool BuildNewCommand::invoke(void)
     // Check for duplicates
     if (draft_exists(s.game_id, active_player, ship_code))
     {
-        Logger::instance().error("Draft already exists: " + ship_code);
         Telemetry::getInstance().write("SHIPYARD: Hull " + ship_code +
                                        " already on drafting board.");
         return false;
@@ -273,7 +259,6 @@ bool BuildNewCommand::invoke(void)
 
     if (ship_exists(s.game_id, active_player, ship_code))
     {
-        Logger::instance().error("Ship already exists: " + ship_code);
         Telemetry::getInstance().write("SHIPYARD: Vessel " + ship_code +
                                        " already commissioned in fleet.");
         return false;
@@ -287,9 +272,6 @@ bool BuildNewCommand::invoke(void)
 
     insert_draft(s.game_id, active_player, draft);
     set_current_draft(s.game_id, active_player, ship_code);
-
-    Logger::instance().info("Draft created: " + m_ship_name + " - " +
-                            ship_code);
 
     std::ostringstream bmes;
     bmes << "SHIPYARD: Hull " << ship_code
@@ -308,7 +290,6 @@ bool BuildSetAttributeCommand::invoke(void)
 
     if (draft_code.empty())
     {
-        Logger::instance().error("No current draft to modify");
         Telemetry::getInstance().write("Error: No current draft to modify");
         return false;
     }
@@ -347,7 +328,6 @@ bool BuildSetAttributeCommand::invoke(void)
     msg << "Draft updated: " << draft_code << " [PD=" << d.attr.PD
         << ", B=" << d.attr.B << ", S=" << d.attr.S << ", T=" << d.attr.T
         << ", M=" << d.attr.M << ", SR=" << d.attr.SR << "]";
-    Logger::instance().info(msg.str());
     Telemetry::getInstance().write(msg.str());
 
     return true;
@@ -363,7 +343,6 @@ bool BuildShowDraftCommand::invoke(void)
 
     if (!draft_exists(m_game_id, active_player, m_draft_code))
     {
-        Logger::instance().error("Draft not found: " + m_draft_code);
         Telemetry::getInstance().write("Error: Draft not found: " +
                                        m_draft_code);
         return false;
@@ -375,10 +354,7 @@ bool BuildShowDraftCommand::invoke(void)
         << "  Type: " << d.attr.type << "\n"
         << "  PD=" << d.attr.PD << ", B=" << d.attr.B << ", S=" << d.attr.S
         << ", T=" << d.attr.T << ", M=" << d.attr.M << ", SR=" << d.attr.SR;
-    Logger::instance().info(msg.str());
     Telemetry::getInstance().write(msg.str());
-
     set_current_draft(m_game_id, active_player, m_draft_code);
-
     return true;
 }
