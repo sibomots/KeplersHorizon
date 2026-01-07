@@ -22,13 +22,12 @@ bool FleetCommand::invoke(void)
     char owner = StateMachine::getInstance().get_current_player();
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    // Join with systems table to get star names for at_hex
+    // Join with star_systems table to get star names for at_hex
     auto rows = db.query(
         "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
-        "s.screen, s.tube, s.missiles, s.tech_level, sys.name "
+        "s.screen, s.tube, s.missiles, s.tech_level, ss.name "
         "FROM ships s "
-        "LEFT JOIN systems sys ON s.at_hex = sys.hex_id AND s.game_id = "
-        "sys.game_id "
+        "LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = 1 "
         "WHERE s.game_id=" +
         std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
         "' AND s.destroyed_at IS NULL ORDER BY s.ship_code");

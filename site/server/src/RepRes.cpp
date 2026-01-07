@@ -188,11 +188,12 @@ bool RepairCommand::invoke(void)
             " WHERE game_id=" + std::to_string(s.game_id) + " AND ship_code='" +
             db.esc(m_ship_code) + "'");
 
-    // Deduct BP
-    std::string bpCol = (owner == 'A') ? "creditsA" : "creditsB";
-    db.exec("UPDATE game_state SET " + bpCol + "=" + bpCol + "-" +
-            std::to_string(cost) +
-            " WHERE game_id=" + std::to_string(s.game_id));
+    // Deduct BP via GameState
+    if (owner == 'A')
+        s.creditsA -= cost;
+    else
+        s.creditsB -= cost;
+    StateMachine::getInstance().save_game(s);
 
     Telemetry::getInstance().write("Repaired " + m_ship_code + " " + col +
                                    " by " + std::to_string(repairAmt) +
@@ -297,11 +298,12 @@ bool ResupplyCommand::invoke(void)
             " WHERE game_id=" + std::to_string(s.game_id) + " AND ship_code='" +
             db.esc(m_ship_code) + "'");
 
-    // Deduct BP
-    std::string bpCol = (owner == 'A') ? "creditsA" : "creditsB";
-    db.exec("UPDATE game_state SET " + bpCol + "=" + bpCol + "-" +
-            std::to_string(cost) +
-            " WHERE game_id=" + std::to_string(s.game_id));
+    // Deduct BP via GameState
+    if (owner == 'A')
+        s.creditsA -= cost;
+    else
+        s.creditsB -= cost;
+    StateMachine::getInstance().save_game(s);
 
     Telemetry::getInstance().write(
         "Resupplied " + m_ship_code + " with " + std::to_string(addAmt) +

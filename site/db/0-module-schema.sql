@@ -175,6 +175,19 @@ PRIMARY KEY (module_id, system_name),
 FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
+-- Per-game player knowledge tracking for Grimoire of Stars
+CREATE TABLE IF NOT EXISTS grimoire_entries (
+game_id INT NOT NULL,
+player CHAR(1) NOT NULL,
+system_name VARCHAR(64) NOT NULL,
+knowledge_level VARCHAR(16) NOT NULL DEFAULT 'Unknown',
+last_updated_turn INT,
+notes TEXT,
+PRIMARY KEY (game_id, player, system_name),
+FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+INDEX idx_game_player (game_id, player)
+);
+
 CREATE TABLE IF NOT EXISTS market_base_prices (
 module_id INT NOT NULL DEFAULT 1,
 resource_type VARCHAR(32) NOT NULL,
@@ -455,4 +468,26 @@ CREATE TABLE IF NOT EXISTS load_requests (
     FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
     FOREIGN KEY (requester_user_id) REFERENCES users(id),
     FOREIGN KEY (target_game_id) REFERENCES games(id)
+);
+
+-- Per-game base star ownership (for repair/resupply eligibility)
+CREATE TABLE IF NOT EXISTS base_stars (
+    game_id INT NOT NULL,
+    hex_id VARCHAR(8) NOT NULL,
+    owner CHAR(1) NOT NULL,
+    PRIMARY KEY (game_id, hex_id),
+    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    INDEX idx_game_owner (game_id, owner)
+);
+
+-- Saved game ship snapshots
+CREATE TABLE IF NOT EXISTS saved_ships (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    save_id INT NOT NULL,
+    ship_code VARCHAR(4) NOT NULL,
+    ship_name VARCHAR(64),
+    owner CHAR(1) NOT NULL,
+    ship_json TEXT,
+    FOREIGN KEY (save_id) REFERENCES saved_games(id) ON DELETE CASCADE,
+    INDEX idx_save (save_id)
 );
