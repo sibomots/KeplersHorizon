@@ -15,6 +15,7 @@
 #include "statemachine.h"
 #include "telemetry.h"
 
+// BUGBUG-REWORK: IS IT REALLY NEEEDED?  We are not interested in backward compat.
 // BUGBUG: Base prices have been moved to: site/db/milieu/market_base_prices.csv
 // This hardcoded array is kept for backward compatibility but should be
 // removed. Market init should INSERT from market_base_prices reference table.

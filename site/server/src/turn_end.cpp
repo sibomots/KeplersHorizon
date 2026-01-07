@@ -33,6 +33,12 @@ void TurnEndProcessor::on_round_complete(int game_id, int completed_round)
     // 4. Apply trade hub income to players
     apply_trade_hub_income(game_id, completed_round);
 
+    // 5. Process completed fabrication jobs
+    process_fabrication_queue(game_id, completed_round);
+
+    // 6. Check victory conditions (VP count phase)
+    check_victory_conditions(game_id, completed_round);
+
     Logger::instance().info("[TURN_END] Round-end processing complete");
 }
 
@@ -191,5 +197,170 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
                 }
             }
         }
+    }
+}
+
+void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    // Find all jobs that are IN_PROGRESS and complete this round
+    auto jobs = db.query(
+        "SELECT id, player, ship_code, recipe, quantity FROM fabrication_queue "
+        "WHERE game_id=" +
+        std::to_string(game_id) +
+        " AND status='IN_PROGRESS' AND completion_turn<=" + std::to_string(round));
+
+    for (const auto& job : jobs)
+    {
+        int job_id = std::atoi(job[0].c_str());
+        char player = job[1][0];
+        std::string ship_code = job[2];
+        std::string recipe = job[3];
+        int quantity = std::atoi(job[4].c_str());
+
+        // Apply upgrade based on recipe type
+        std::string update_sql;
+        std::string msg;
+
+        if (recipe == "BEAM_UPGRADE")
+        {
+            update_sql = "UPDATE ships SET beam=beam+" + std::to_string(quantity);
+            msg = "Beam weapon upgraded (+" + std::to_string(quantity) + ")";
+        }
+        else if (recipe == "SCREEN_UPGRADE")
+        {
+            update_sql = "UPDATE ships SET screen=screen+" + std::to_string(quantity);
+            msg = "Shields upgraded (+" + std::to_string(quantity) + ")";
+        }
+        else if (recipe == "TUBE_UPGRADE")
+        {
+            update_sql = "UPDATE ships SET tube=tube+" + std::to_string(quantity);
+            msg = "Missile tubes upgraded (+" + std::to_string(quantity) + ")";
+        }
+        else if (recipe == "TECH_UPGRADE")
+        {
+            update_sql = "UPDATE ships SET tech_level=tech_level+" + std::to_string(quantity);
+            msg = "Tech level upgraded (+" + std::to_string(quantity) + ")";
+        }
+        else if (recipe == "MISSILES")
+        {
+            update_sql = "UPDATE ships SET missiles=missiles+" + std::to_string(quantity);
+            msg = "Missiles manufactured (+" + std::to_string(quantity) + ")";
+        }
+        else
+        {
+            Logger::instance().info("[FABRICATION] WARNING: Unknown recipe: " + recipe);
+            continue;
+        }
+
+        // Apply to ship
+        if (!ship_code.empty())
+        {
+            update_sql += " WHERE game_id=" + std::to_string(game_id) +
+                          " AND ship_code='" + db.esc(ship_code) + "'";
+            db.exec(update_sql);
+
+            // Notify player
+            Telemetry::getInstance().add_tell(
+                game_id, player,
+                "FABRICATION COMPLETE: " + ship_code + " - " + msg);
+        }
+
+        // Mark job complete
+        db.exec("UPDATE fabrication_queue SET status='COMPLETED' WHERE id=" +
+                std::to_string(job_id));
+
+        Logger::instance().info("[FABRICATION] Job " + std::to_string(job_id) +
+                                " completed for player " + std::string(1, player));
+    }
+}
+
+void TurnEndProcessor::check_victory_conditions(int game_id, int round)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    // Check if game already has a winner
+    auto game_rows = db.query("SELECT vp_A, vp_B, winner FROM games WHERE id=" +
+                              std::to_string(game_id));
+    if (game_rows.empty())
+        return;
+
+    int vp_A = std::atoi(game_rows[0][0].c_str());
+    int vp_B = std::atoi(game_rows[0][1].c_str());
+    std::string winner = game_rows[0][2];
+
+    if (!winner.empty())
+        return; // Game already ended
+
+    // Check for enemy base star control
+    // Get base stars from base_stars table
+    auto base_stars = db.query(
+        "SELECT hex_id, owner FROM base_stars WHERE game_id=" +
+        std::to_string(game_id));
+
+    for (const auto& bs : base_stars)
+    {
+        std::string hex_id = bs[0];
+        char base_owner = bs[1][0];
+        char enemy = (base_owner == 'A') ? 'B' : 'A';
+
+        // Check if enemy has ships at this base star
+        auto ships = db.query(
+            "SELECT 1 FROM ships WHERE game_id=" + std::to_string(game_id) +
+            " AND at_hex='" + db.esc(hex_id) + "' AND owner='" +
+            std::string(1, enemy) + "' AND destroyed_at IS NULL LIMIT 1");
+
+        // Check if owner has NO ships at their base star
+        auto owner_ships = db.query(
+            "SELECT 1 FROM ships WHERE game_id=" + std::to_string(game_id) +
+            " AND at_hex='" + db.esc(hex_id) + "' AND owner='" +
+            std::string(1, base_owner) + "' AND destroyed_at IS NULL LIMIT 1");
+
+        // Enemy controls if they have ships AND owner has none
+        if (!ships.empty() && owner_ships.empty())
+        {
+            // Award +2 VP for controlling enemy base star
+            std::string vp_col = (enemy == 'A') ? "vp_A" : "vp_B";
+            db.exec("UPDATE games SET " + vp_col + "=" + vp_col +
+                    "+2 WHERE id=" + std::to_string(game_id));
+
+            // Update local count
+            if (enemy == 'A')
+                vp_A += 2;
+            else
+                vp_B += 2;
+
+            Telemetry::getInstance().add_tell(
+                game_id, enemy,
+                "VICTORY: +2 VP for controlling enemy base star!");
+
+            Logger::instance().info("[VP] Player " + std::string(1, enemy) +
+                                    " controls enemy base star at " + hex_id);
+        }
+    }
+
+    // Check for win condition (3 VP)
+    if (vp_A >= 3)
+    {
+        db.exec("UPDATE games SET winner='A' WHERE id=" +
+                std::to_string(game_id));
+        Telemetry::getInstance().add_tell(game_id, 'A',
+                                          "*** VICTORY! You have won the game! ***");
+        Telemetry::getInstance().add_tell(game_id, 'B',
+                                          "*** DEFEAT. Your opponent has won. ***");
+        Logger::instance().info("[VICTORY] Player A wins game " +
+                                std::to_string(game_id));
+    }
+    else if (vp_B >= 3)
+    {
+        db.exec("UPDATE games SET winner='B' WHERE id=" +
+                std::to_string(game_id));
+        Telemetry::getInstance().add_tell(game_id, 'B',
+                                          "*** VICTORY! You have won the game! ***");
+        Telemetry::getInstance().add_tell(game_id, 'A',
+                                          "*** DEFEAT. Your opponent has won. ***");
+        Logger::instance().info("[VICTORY] Player B wins game " +
+                                std::to_string(game_id));
     }
 }

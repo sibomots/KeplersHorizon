@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "db.h"
+#include "facilities.h"
 #include "json.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -359,6 +360,9 @@ int RoomManager::startGame(const std::string& code)
     // This ensures all subsequent state operations (like Telemetry) work
     // correctly
     StateMachine::getInstance().set_game_id(game_id);
+
+    // Initialize facility control for this game
+    FacilityEngine::initialize_facilities(game_id);
 
     // Look up player usernames
     std::string playerA_name = "PLAYER 1";

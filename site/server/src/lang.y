@@ -32,6 +32,7 @@
 #include "combat_commit_command.h"
 #include "combat_cancel_command.h"
 #include "fleet_command.h"
+#include "cargo_command.h"
 #include "system_command.h"
 #include "survey_command.h"
 #include "repair_command.h"
@@ -42,6 +43,7 @@
 #include "trade_command.h"
 #include "fabricate_command.h"
 #include "salvage_command.h"
+#include "retreat_command.h"
 #include "save_command.h"
 #include "help_command.h"
 #include "statemachine.h"
@@ -86,6 +88,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type  <sval> deployable_ship
 %type  <sval> building_draft_ship
 %type  <vec_sval> chain_move_location
+%type  <vec_sval> chain_resource_words
 %type  <sval> deconflicted_string
 
 %token TOK_ADVANCED
@@ -121,6 +124,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_ESCAPE
 %token TOK_FLEET
 %token TOK_GALAXY
+%token TOK_CARGO
 %token TOK_HELP
 %token TOK_HEX
 %token TOK_LEARNING
@@ -139,6 +143,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_REPAIR
 %token TOK_RESET
 %token TOK_RESUPPLY
+%token TOK_RETREAT
 %token TOK_SAVE
 %token TOK_ACCEPT
 %token TOK_REJECT
@@ -345,12 +350,20 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_EXTRACT deconflicted_string deconflicted_string {
+  | TOK_EXTRACT deconflicted_string deconflicted_string chain_resource_words {
       std::string ship(*$2);
-      std::string res(*$3);
+      // Join words with underscore: "rare" + "earth" -> "RARE_EARTH"
+      std::string res = *$3;
+      for (auto& c : res) c = std::toupper(c);
+      for (const auto& word : *$4) {
+          std::string upper = word;
+          for (auto& c : upper) c = std::toupper(c);
+          res += "_" + upper;
+      }
       ICmd* pCmd = ExtractCommand::Builder().ship(ship).resource(res).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
+      SafeDelete($2); SafeDelete($3); SafeDelete($4);
   }
   | TOK_MARKET {
       ICmd* pCmd = MarketCommand::Builder().build();
@@ -437,6 +450,17 @@ looking_cmd:
   | TOK_GALAXY {
       Logger::instance().info("Complete run-down of all systems, "
                               " all ships in the game.");
+  }
+  | TOK_CARGO {
+      // Show cargo help
+      Telemetry::getInstance().write("Usage: cargo <ship_code>");
+  }
+  | TOK_CARGO deconflicted_string {
+      std::string ship(*$2);
+      ICmd* pCmd = CargoCommand::Builder().ship(ship).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+      SafeDelete($2);
   }
   ;
 
@@ -935,10 +959,22 @@ chain_move_location:
                                 + waypoint + "<");
        $$ = $2;
        $$->insert($$->begin(), waypoint);
-       delete $1;
+       SafeDelete($1);
    }
    ;
 
+// Resource type chaining (for multi-word resources like "rare earth")
+chain_resource_words:
+   /* empty - no more words */
+   {
+       $$ = new std::vector<std::string>;
+   }
+   | deconflicted_string chain_resource_words {
+       $$ = $2;
+       $$->insert($$->begin(), *$1);
+       SafeDelete($1);
+   }
+   ;
 
 move_cmd:
   // move
@@ -1059,7 +1095,18 @@ rep_cmd:
      ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_missiles(qty).build();
      if (pCmd && pCmd->invoke()) { /* success */ }
      SafeDelete(pCmd);
-  }
+   }
+   // retreat <ship> <hex>
+   // rt <ship> <hex>
+   | TOK_RETREAT deconflicted_string deconflicted_string {
+      std::string ship(*$2);
+      std::string hex(*$3);
+      ICmd* pCmd = new RetreatCommand(ship, hex);
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+      delete $2;
+      delete $3;
+   }
   ;
 
 repair_attr_spec:

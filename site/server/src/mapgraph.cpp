@@ -327,3 +327,34 @@ std::vector<std::string> MapGraph::get_path(const std::string& from,
     std::reverse(path.begin(), path.end());
     return path;
 }
+
+std::vector<std::string> MapGraph::get_adjacent_hexes(const std::string& hex_id)
+{
+    std::vector<std::string> neighbors;
+
+    auto it = qr.find(hex_id);
+    if (it == qr.end())
+        return neighbors;
+
+    int q = it->second.first;
+    int r = it->second.second;
+
+    // Axial coordinate neighbor offsets for hex grid
+    static const int dq[] = {1, 1, 0, -1, -1, 0};
+    static const int dr[] = {0, -1, -1, 0, 1, 1};
+
+    for (int i = 0; i < 6; i++)
+    {
+        int nq = q + dq[i];
+        int nr = r + dr[i];
+        long long key =
+            (static_cast<long long>(nq) << 32) ^ static_cast<unsigned int>(nr);
+        auto nit = byQr.find(key);
+        if (nit != byQr.end())
+        {
+            neighbors.push_back(nit->second);
+        }
+    }
+
+    return neighbors;
+}

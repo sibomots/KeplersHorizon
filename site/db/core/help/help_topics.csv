@@ -1,112 +1,183 @@
-1,"KEPLER'S HORIZON - COMMAND REFERENCE
-
-Type HELP TOPICS for a list of available topics.
-Type HELP {topic} for detailed help on a specific topic.
-
-For complete documentation, see:
-github.com/sibomots/KeplersHorizon/wiki"
-2,"BUILD COMMANDS
-
-  BN W/S {NAME}       Build New Warpship (W) or Systemship (S)
-  BS {SHIP} {SPECS}   Set ship specifications
+1,"TOPIC: GENERAL
+SYNOPSIS:
+  HELP           Show this help
+  HELP {topic}   Show detailed help on a topic
+  HELP TOPICS    List available topics
+DESCRIPTION:
+  Kepler's Horizon - A two-player tactical game of space combat.
+  Players build ships, move them, and resolve combat without dice.
+  The objective is to occupy your opponent's base star(s).
+  For complete documentation: github.com/sibomots/KeplersHorizon/wiki
+SEE ALSO: build, move, combat, economy, info, turn"
+2,"TOPIC: BUILD
+SYNOPSIS:
+  BN W/S {name}       Build new Warpship (W) or Systemship (S)
+  BS {ship} {specs}   Set ship specifications
   BC                  Commit draft to fleet
   BX                  Cancel current draft
   BD                  Show pending drafts
-
-SPECS format: PD=# B=# S=# T=# M=#
-  PD = PowerDrive, B = Beams, S = Screens, T = Tubes, M = Missiles
-
-Warpships can travel between star systems.
-Systemships operate within a single system."
-3,"MOVE COMMANDS
-
-  M {SHIP} {HEX/SYSTEM}   Move ship to hex or system
-  PICK {SHIP}             Rack systemship into warpship
-  DROP {SHIP}             Unrack systemship from warpship
-  DEPLOY {SHIP} {SYSTEM}  Deploy ship to star system
-
-Warpships move along warp lines between systems.
-Systemships move within hex grids in systems."
-4,"COMBAT COMMANDS
-
+DESCRIPTION:
+  Create and configure new ships during the Build Ships phase.
+  Attributes and costs:
+    PD (Power/Drive) = 1 BP each - engines and weapon power
+    B (Beams) = 1 BP each - destructive energy projector
+    S (Screens) = 1 BP each - protective energy shield
+    T (Tubes) = 1 BP each - launches one Missile per combat round
+    M (Missiles) = 3 per 1 BP - does 2 hits damage when it hits
+    SR (System Racks) = 1 BP each - carries one Systemship
+    WG (Warp Generator) = 5 BP - required for Warpships
+  Warpships travel between star systems via Warplines.
+  Systemships operate within star hexes, cannot use Warplines.
+EXAMPLES:
+  > bn w Falcon
+  > bs W1 pd=9 b=3 s=2 t=1 m=3
+  > bc
+SEE ALSO: fleet, deploy, ship"
+3,"TOPIC: MOVE
+SYNOPSIS:
+  M {ship} {dest...}      Move ship through waypoints
+  PICK {ship}             Rack systemship into warpship
+  DROP {ship}             Unrack systemship from warpship
+  DEPLOY {ship} {system}  Deploy ship to star system
+DESCRIPTION:
+  Movement is governed by Power/Drive (PD).
+  Each PD point allows one of:
+    - Move one hex on the map
+    - Move full distance along a Warpline
+    - Pick up one Systemship (costs 1 PD)
+    - Drop off one Systemship (costs 1 PD)
+  Warpships must stop on any Star Hex occupied by enemy ships.
+  Systemships cannot move under their own power.
+EXAMPLES:
+  > m W1 BELIX
+  > pick S1
+  > deploy W1 ARVEN
+SEE ALSO: fleet, system, galaxy"
+4,"TOPIC: COMBAT
+SYNOPSIS:
   C                       Show active combat status
-  CO {SHIP} A {TARGET}    Order ship to ATTACK target
-  CO {SHIP} D {TARGET}    Order ship to DEFEND against target
-  CO {SHIP} E             Order ship to EVADE
+  CO {ship} A {target}    Order ship to ATTACK target
+  CO {ship} D             Order ship to DODGE
+  CO {ship} E             Order ship to RETREAT (Warpships only)
   CC                      Commit combat orders
   CX                      Cancel combat orders
-  CD {SHIP} {SPECS}       Assign damage to ship
-
-Combat occurs when opposing ships occupy the same hex.
-Use CRT command to view the Combat Results Table."
-5,"ECONOMY COMMANDS
-
-  EXTRACT      Extract resources from current location
-  MARKET       View market prices and inventory
-  TRADE        Buy/sell resources at market
-  FABRICATE    Convert resources into components
-
-Resources: ORE, GAS, RARE
-Components: ALLOY, FUEL, ELECTRONICS"
-6,"INFORMATION COMMANDS
-
+DESCRIPTION:
+  Combat occurs when opposing ships occupy the same star hex.
+  Each combat round, players write orders including:
+    - Tactic: Attack, Dodge, or Retreat
+    - Target for Beam fire
+    - Target for each Missile and its drive setting
+    - Power allocation: PD to Drive, Beams, Screens, Tubes
+  Combat Results Table determines hits based on Drive difference.
+  Beams and Screens cannot be used when firing Missiles.
+  Systemships may never select Retreat.
+EXAMPLES:
+  > co W1 a E1
+  > cc
+SEE ALSO: crt, ship, fleet"
+5,"TOPIC: ECONOMY
+SYNOPSIS:
+  EXTRACT SCAN            Scan for harvestable resources
+  EXTRACT {ship} {type}   Harvest resource (e.g., extract W1 rare earth)
+  MARKET                  View market prices
+  TRADE BUY {type} {qty}  Buy resources
+  TRADE SELL {type} {qty} Sell resources
+  FABRICATE               List fabrication recipes
+  FAB {recipe} {ship}     Fabricate items
+DESCRIPTION:
+  Resources: FERROUS, RARE_EARTH, RADIOACTIVE, CRYSTALLINE,
+             VOLATILE, WATER, ORGANIC, EXOTIC
+  Fabricate to convert resources into Missiles, ship upgrades, tech.
+EXAMPLES:
+  > extract scan
+  > extract W1 volatile
+  > fab missiles W1
+SEE ALSO: cargo, salvage, trade"
+6,"TOPIC: INFO
+SYNOPSIS:
   STATUS           Display current game state
   FLEET            List your ships and their status
   SCORE            Show victory points and credits
-  SYSTEM {NAME}    Show details for a star system
-  SURVEY           Scan for resources/anomalies
+  SYSTEM {name}    Show details for a star system
+  SURVEY {system}  Survey a system for intel
   CRT              Display Combat Results Table
-  DEMO             Run demonstration sequence"
-7,"TURN COMMANDS
-
-  FF    Fast-forward (end your turn)
-  N     Advance to next game phase
-
-Game Phases:
-  1. Build Ships
-  2. Movement
-  3. Combat
-  4. Economy
-  5. Victory Check"
-8,"SHIP TYPES
-
-WARPSHIP (W)
-  Can travel between star systems via warp lines
-  Can carry systemships (rack/unrack)
-  Larger, more expensive
-
-SYSTEMSHIP (S)
-  Operates within a single star system
-  Moves on hex grid
-  Smaller, cheaper, specialized
-
-SHIP SPECS:
-  PD = PowerDrive (movement points)
-  B  = Beams (attack power)
-  S  = Screens (defense)
-  T  = Tubes (missile launchers)
-  M  = Missiles (ammunition)"
-9,"COMBAT RESULTS TABLE (CRT)
-
-Attack vs Defense ratio determines outcome:
-  3:1 or better = Attacker advantage
-  2:1           = Even engagement
-  1:1           = Defender advantage
-
-Damage is applied to ship systems:
-  First: Screens absorb hits
-  Then: Systems destroyed (B/T/PD)
-  Finally: Ship destroyed
-
-Type CRT in-game to see the full table."
-10,"MISSILES
-
-Missiles are ammunition for Tubes (T).
-Each Tube can fire one missile per combat round.
-
-  T = Tube capacity (launchers)
-  M = Missile supply
-
-Missiles provide long-range attack capability.
-Once fired, missiles are consumed.
-Resupply at bases or via FABRICATE command."
+  GALAXY           Show galaxy map
+DESCRIPTION:
+  Information commands for situational awareness.
+  Survey to increase knowledge levels.
+EXAMPLES:
+  > fleet
+  > system BELIX planets
+  > survey ARVEN
+SEE ALSO: score, fleet, crt"
+7,"TOPIC: TURN
+SYNOPSIS:
+  N / NEXT   Advance to next game phase
+  ZZ / DONE  End your turn
+DESCRIPTION:
+  Game Phases:
+    1. Count Victory Points
+    2. Build Ships (receive BP in Advanced Scenario)
+    3. Movement (move Warpships, pick/drop Systemships)
+    4. Resolve Combat (if opposing ships share a star hex)
+    5. Systemship Pick and Drop (free rearrangement)
+    6. End of Turn
+  Victory: First to accumulate required Victory Points wins.
+EXAMPLES:
+  > n
+  > done
+SEE ALSO: score, build, move, combat"
+8,"TOPIC: SHIP
+SYNOPSIS:
+  FLEET          List all your ships
+  CARGO {ship}   View ship cargo manifest
+DESCRIPTION:
+  Ship Types:
+    WARPSHIP (W) - Has Warp Generator, travels via Warplines
+    SYSTEMSHIP (S) - No Warp Generator, must be carried by Warpships
+  Ship Attributes:
+    PD (Power/Drive) - Engine strength, powers weapons in combat
+    B (Beams) - Destructive energy projection
+    S (Screens) - Protective energy shield, absorbs hits
+    T (Tubes) - Launches Missiles (1 per tube per round)
+    M (Missiles) - Does 2 hits damage when it hits
+    SR (System Racks) - Carries Systemships (Warpships only)
+  Tech Level adds to Beam, Missile, and Screen effectiveness.
+EXAMPLES:
+  > fleet
+  > cargo W1
+SEE ALSO: build, deploy, fleet"
+9,"TOPIC: CRT
+SYNOPSIS:
+  CRT   Display the Combat Results Table
+DESCRIPTION:
+  The CRT determines combat outcomes based on:
+    - Firing ship's tactic (Attack, Dodge, Retreat)
+    - Target ship's tactic
+    - Drive difference (firing Drive minus target Drive)
+  Results: Miss, Hit, Hit +1, Hit +2, Escapes
+  Beams do damage equal to power allocation plus tech level.
+  Missiles do 2 hits damage plus tech level.
+  Screens absorb hits equal to power allocation plus tech level.
+  When all attributes (except Warp Generator) reach 0, ship destroyed.
+EXAMPLES:
+  > crt
+SEE ALSO: combat, ship"
+10,"TOPIC: MISSILES
+SYNOPSIS:
+  FAB missiles {ship}   Fabricate Missiles
+  RESUPPLY {ship}       Resupply Missiles at base
+DESCRIPTION:
+  Missiles are fired through Tubes at enemy ships.
+  Each Tube fires one Missile per combat round.
+  Powering a Tube requires 1 PD allocation.
+  A Missile does 2 hits damage when it hits, plus tech level.
+  Missiles have their own Drive setting (1 to PD+Tech of firing ship).
+  Missiles always use the Attack tactic on the CRT.
+  Missiles cannot be fired while using Beams or Screens.
+  Once fired, Missiles are expended.
+  Resupply at base star hexes (costs 1 BP per 3 Missiles).
+EXAMPLES:
+  > fab missiles W1
+  > rs W1
+SEE ALSO: combat, fabricate, ship"

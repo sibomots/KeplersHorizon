@@ -74,6 +74,8 @@
 "j"        { return TOK_SALVAGE; }
 "galaxy"   { return TOK_GALAXY; }
 "gx"       { return TOK_GALAXY; }
+"cargo"    { return TOK_CARGO; }
+"hold"     { return TOK_CARGO; }
 
 "next"     { return TOK_NEXT; }
 "n"        { return TOK_NEXT; }
@@ -123,6 +125,8 @@
 "rp"       { return TOK_REPAIR; }
 "resupply" { return TOK_RESUPPLY; }
 "rs"       { return TOK_RESUPPLY; }
+"retreat"  { return TOK_RETREAT; }
+"rt"       { return TOK_RETREAT; }
 
 "pd"[ \t]*"="[ \t]*[0-9]+   { 
     char* eq = strchr(yytext, '=');

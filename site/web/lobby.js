@@ -63,7 +63,6 @@
       <table class="table table-hover">
         <thead>
           <tr>
-            <th>Code</th>
             <th>Name</th>
             <th>Players</th>
             <th>Status</th>
@@ -80,7 +79,6 @@
 
             html += `
         <tr>
-          <td><span class="room-code">${room.room_code}</span></td>
           <td>${escapeHtml(room.name || 'Unnamed')}</td>
           <td class="seats-display">
             <span class="${room.seat_a ? 'filled' : 'empty'}">${escapeHtml(seatA)}</span> vs 

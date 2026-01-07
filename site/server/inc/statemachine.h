@@ -324,6 +324,9 @@ class StateMachine
     // Returns true if allowed, false if inhibited (error_msg set)
     bool check_inhibits(CommandID cmd, void* params, std::string& error_msg);
 
+    // Get player username from game_seats table (returns seat letter if not found)
+    std::string get_player_name(int game_id, const std::string& seat);
+
     // Setters for state properties (used by Commands to set up Transitions)
 
     void set_pending_build_commit(bool val)

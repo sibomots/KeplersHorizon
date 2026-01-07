@@ -49,6 +49,7 @@ src/comms.cpp
 src/db.cpp
 src/events.cpp
 src/fleet_command.cpp
+src/cargo_command.cpp
 src/system_command.cpp
 src/survey_command.cpp
 src/score_command.cpp
@@ -59,6 +60,7 @@ src/trade_command.cpp
 src/fabricate_command.cpp
 src/constraints.cpp
 src/salvage_command.cpp
+src/retreat_command.cpp
 src/facilities.cpp
 src/turn_end.cpp
 src/init.cpp
@@ -113,7 +115,7 @@ inc/resupply_command.h
 inc/roommanager.h
 inc/ships.h
 inc/srvmgr.h
-inc/start_command.h
+inc/cargo_command.h
 inc/system_command.h
 inc/survey_command.h
 inc/score_command.h

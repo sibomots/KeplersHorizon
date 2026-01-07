@@ -84,6 +84,9 @@ state_json MEDIUMTEXT NOT NULL,
 current_draft_A VARCHAR(4) DEFAULT NULL,
 current_draft_B VARCHAR(4) DEFAULT NULL,
 active_combat_hex VARCHAR(8) DEFAULT NULL,
+vp_A INT NOT NULL DEFAULT 0,  -- Victory Points for Player A
+vp_B INT NOT NULL DEFAULT 0,  -- Victory Points for Player B
+winner CHAR(1) DEFAULT NULL,  -- 'A', 'B', or NULL if ongoing
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 FOREIGN KEY (room_id) REFERENCES rooms(id),
 FOREIGN KEY (module_id) REFERENCES modules(module_id)
@@ -155,6 +158,7 @@ at_system VARCHAR(16) DEFAULT NULL,
 at_hex VARCHAR(8) DEFAULT NULL,
 racked_in VARCHAR(4) DEFAULT NULL,
 destroyed_at TIMESTAMP NULL DEFAULT NULL,
+escape_pending TINYINT NOT NULL DEFAULT 0,  -- Flag for pending retreat
 -- Cargo holds for resources
 cargo_ferrous INT NOT NULL DEFAULT 0,
 cargo_rare_earth INT NOT NULL DEFAULT 0,

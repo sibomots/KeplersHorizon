@@ -24,6 +24,8 @@ class TurnEndProcessor
     static void update_market_prices(int game_id, int round);
     static void regenerate_resources(int game_id, int round);
     static void apply_trade_hub_income(int game_id, int round);
+    static void process_fabrication_queue(int game_id, int round);
+    static void check_victory_conditions(int game_id, int round);
 };
 
 #endif

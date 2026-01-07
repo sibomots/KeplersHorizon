@@ -7,54 +7,104 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "star_system_constraints.h"
 
-// Stub implementations - all return 0 (no modifier) for now
-// Future: Query DB for star system properties and compute modifiers
+#include <cstdlib>
 
-int StarSystemConstraints::getBeamModifier(const std::string& hex_id)
+#include "db.h"
+#include "moduleutil.h"
+
+// Helper: Get star system name for a hex ID
+std::string StarSystemConstraints::getSystemForHex(int game_id,
+                                                    const std::string& hex_id)
 {
-    // TODO: Plasma clouds, radiation could reduce beam effectiveness
-    (void)hex_id;
-    return 0;
+    if (hex_id.empty())
+        return "";
+
+    DatabaseManager& db = DatabaseManager::getInstance();
+    int mod = get_module_id_for_game(game_id);
+
+    auto rows =
+        db.query("SELECT name FROM star_systems WHERE module_id=" +
+                 std::to_string(mod) + " AND hex_id='" + db.esc(hex_id) + "'");
+
+    return rows.empty() ? "" : rows[0][0];
 }
 
-int StarSystemConstraints::getScreenModifier(const std::string& hex_id)
+// Helper: Query constraint modifier from system_constraints table
+int StarSystemConstraints::getConstraintModifier(int game_id,
+                                                  const std::string& hex_id,
+                                                  const std::string& constraint_type)
 {
-    // TODO: EM interference could reduce screen absorption
-    (void)hex_id;
-    return 0;
+    std::string system = getSystemForHex(game_id, hex_id);
+    if (system.empty())
+        return 0;
+
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    auto rows =
+        db.query("SELECT modifier_type, modifier_value FROM system_constraints "
+                 "WHERE system_name='" +
+                 db.esc(system) + "' AND constraint_type='" +
+                 db.esc(constraint_type) + "'");
+
+    int total = 0;
+    for (const auto& row : rows)
+    {
+        std::string mod_type = row[0];
+        int value = std::atoi(row[1].c_str());
+
+        if (mod_type == "PENALTY")
+        {
+            total -= value; // Penalty reduces effectiveness
+        }
+        else if (mod_type == "BONUS")
+        {
+            total += value; // Bonus increases effectiveness
+        }
+        // BLOCK is handled separately where needed
+    }
+
+    return total;
 }
 
-int StarSystemConstraints::getMissileModifier(const std::string& hex_id)
+// Combat modifiers
+int StarSystemConstraints::getBeamModifier(int game_id, const std::string& hex_id)
 {
-    // TODO: Asteroid fields could affect missile tracking
-    (void)hex_id;
-    return 0;
+    return getConstraintModifier(game_id, hex_id, "COMBAT");
 }
 
-int StarSystemConstraints::getDriveModifier(const std::string& hex_id)
+int StarSystemConstraints::getScreenModifier(int game_id,
+                                              const std::string& hex_id)
 {
-    // TODO: Gravity wells could affect maneuverability
-    (void)hex_id;
-    return 0;
+    return getConstraintModifier(game_id, hex_id, "COMBAT");
 }
 
-int StarSystemConstraints::getMovementModifier(const std::string& hex_id)
+int StarSystemConstraints::getMissileModifier(int game_id,
+                                               const std::string& hex_id)
 {
-    // TODO: Gravity, debris fields could slow movement
-    (void)hex_id;
-    return 0;
+    return getConstraintModifier(game_id, hex_id, "COMBAT");
 }
 
-int StarSystemConstraints::getRepairModifier(const std::string& hex_id)
+int StarSystemConstraints::getDriveModifier(int game_id,
+                                             const std::string& hex_id)
 {
-    // TODO: Hazardous conditions could impair repair
-    (void)hex_id;
-    return 0;
+    return getConstraintModifier(game_id, hex_id, "MOVEMENT");
 }
 
-int StarSystemConstraints::getResupplyModifier(const std::string& hex_id)
+// Movement/Repair/Resupply modifiers
+int StarSystemConstraints::getMovementModifier(int game_id,
+                                                const std::string& hex_id)
 {
-    // TODO: System hazards could limit resupply efficiency
-    (void)hex_id;
-    return 0;
+    return getConstraintModifier(game_id, hex_id, "MOVEMENT");
+}
+
+int StarSystemConstraints::getRepairModifier(int game_id,
+                                              const std::string& hex_id)
+{
+    return getConstraintModifier(game_id, hex_id, "BUILD");
+}
+
+int StarSystemConstraints::getResupplyModifier(int game_id,
+                                                const std::string& hex_id)
+{
+    return getConstraintModifier(game_id, hex_id, "BUILD");
 }

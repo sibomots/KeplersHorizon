@@ -516,6 +516,17 @@ int StateMachine::next_event_seq(int game_id)
     return std::atoi(r[0][0].c_str());
 }
 
+std::string StateMachine::get_player_name(int game_id, const std::string& seat)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto rows = db.query(
+        "SELECT u.username FROM game_seats gs "
+        "JOIN users u ON gs.user_id = u.id "
+        "WHERE gs.game_id=" + std::to_string(game_id) +
+        " AND gs.seat='" + db.esc(seat) + "'");
+    return rows.empty() ? seat : rows[0][0];
+}
+
 //------------------------------------------------------------------------------
 // Command Inhibit System - centralized validation for all commands
 // Check priority: 1) Initiative, 2) Phase, 3) Intra-phase state
@@ -538,8 +549,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
         // 1. Check initiative first
         if (!has_initiative)
         {
-            error_msg =
-                "It's not your turn (active player: " + s.active_player + ")";
+            error_msg = "It's not your turn (waiting for " +
+                        get_player_name(s.game_id, s.active_player) + ")";
             return false;
         }
         // 2. Check phase
@@ -558,8 +569,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
     {
         if (!has_initiative)
         {
-            error_msg =
-                "It's not your turn (active player: " + s.active_player + ")";
+            error_msg = "It's not your turn (waiting for " +
+                        get_player_name(s.game_id, s.active_player) + ")";
             return false;
         }
         if (s.phase_index != PH_BUILD_SHIPS)
@@ -576,8 +587,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
     {
         if (!has_initiative)
         {
-            error_msg =
-                "It's not your turn (active player: " + s.active_player + ")";
+            error_msg = "It's not your turn (waiting for " +
+                        get_player_name(s.game_id, s.active_player) + ")";
             return false;
         }
         if (s.phase_index != PH_BUILD_SHIPS)
@@ -597,8 +608,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
     {
         if (!has_initiative)
         {
-            error_msg =
-                "It's not your turn (active player: " + s.active_player + ")";
+            error_msg = "It's not your turn (waiting for " +
+                        get_player_name(s.game_id, s.active_player) + ")";
             return false;
         }
         if (s.phase_index != PH_BUILD_SHIPS)
@@ -617,8 +628,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
     {
         if (!has_initiative)
         {
-            error_msg =
-                "It's not your turn (active player: " + s.active_player + ")";
+            error_msg = "It's not your turn (waiting for " +
+                        get_player_name(s.game_id, s.active_player) + ")";
             return false;
         }
         if (s.phase_index != PH_MOVEMENT)
@@ -638,8 +649,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
     {
         if (!has_initiative)
         {
-            error_msg =
-                "It's not your turn (active player: " + s.active_player + ")";
+            error_msg = "It's not your turn (waiting for " +
+                        get_player_name(s.game_id, s.active_player) + ")";
             return false;
         }
         return true;

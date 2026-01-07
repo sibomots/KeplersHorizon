@@ -48,6 +48,10 @@ class MapGraph
     std::vector<std::string> get_path(const std::string& fromHex,
                                       const std::string& toHex, int limit);
 
+    // Get all hexes adjacent to 'hex_id' (up to 6 neighbors).
+    // Uses axial coordinate offsets for hex grid.
+    std::vector<std::string> get_adjacent_hexes(const std::string& hex_id);
+
   private:
     int game_id;
     int module_id; // Loaded from games table based on game_id

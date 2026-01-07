@@ -58,6 +58,8 @@ bool FacilityEngine::player_controls(int game_id, const std::string& system,
 
 void FacilityEngine::initialize_facilities(int game_id)
 {
+
+    // BUGBUG-REWORK:  is it really?
     // BUGBUG: This function is atrophied. Facility initialization data
     // has been moved to: site/db/milieu/facility_control_initial.csv
     // Game init should INSERT from facility_control_initial reference table.

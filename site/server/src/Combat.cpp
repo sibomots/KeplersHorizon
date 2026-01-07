@@ -19,6 +19,7 @@
 #include "combat_drafts_command.h"
 #include "combat_order_command.h"
 #include "constraints.h"
+#include "star_system_constraints.h"
 #include "db.h"
 #include "logger.h"
 #include "maputil.h"
@@ -465,12 +466,11 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (cs.stage == 0 && all_orders_submitted(hex_id, cs.round))
         {
             // allow proceeding
-            // BUGBUG
+            // BUGBUG-REWORK 
         }
         else
         {
-            return "Not ready to resolve (Stage " + std::to_string(cs.stage) +
-                   ")";
+            return "Not ready to resolve (Stage " + std::to_string(cs.stage) + ")";
         }
     }
 
@@ -590,6 +590,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         dmg += constraint_mod;
                     }
 
+                    // Apply star system environmental constraints
+                    dmg += StarSystemConstraints::getBeamModifier(game_id, hex_id);
+
                     if (dmg > 0)
                     {
                         target->damage_received += dmg;
@@ -623,7 +626,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             // If retreating and NOT fired upon, do we need to track?
             // Logic: Escape if escaped ALL attacks. If 0 attacks, Escape =
             // Success.
-            // BUGBUG
+            // BUGBUG-REWORK
         }
     }
 
@@ -673,6 +676,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                                         game_id, combat_system, ship.owner);
                                 dmg += constraint_mod;
                             }
+
+                            // Apply star system environmental constraints
+                            dmg += StarSystemConstraints::getMissileModifier(game_id, hex_id);
 
                             if (dmg > 0)
                             {
@@ -1068,6 +1074,18 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 std::to_string(game_id) + " AND ship_code='" +
                 db.esc(ship_code) + "' AND owner='" + std::string(1, owner) +
                 "'");
+        
+        // Award VP to enemy player
+        char enemy = (owner == 'A') ? 'B' : 'A';
+        std::string vp_col = (enemy == 'A') ? "vp_A" : "vp_B";
+        db.exec("UPDATE games SET " + vp_col + "=" + vp_col + "+1 WHERE id=" +
+                std::to_string(game_id));
+        
+        // Notify enemy of VP gain
+        Telemetry::getInstance().add_tell(
+            game_id, enemy,
+            "VICTORY: +1 VP for destroying enemy ship " + ship_code);
+        
         // Remove pending (already done below)
     }
 

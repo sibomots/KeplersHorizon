@@ -11,6 +11,7 @@
 
 #include "combat.h"
 #include "constraints.h"
+#include "star_system_constraints.h"
 #include "db.h"
 #include "deploy_command.h"
 #include "logger.h"
@@ -309,6 +310,10 @@ bool MoveCommand::invoke(void)
 
             int modifier =
                 ConstraintEngine::get_movement_modifier(m_game_id, stepSys);
+            
+            // Add star system environmental movement modifier
+            modifier += StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
+            
             stepCost += modifier;
             if (stepCost < 1)
             {

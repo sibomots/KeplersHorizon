@@ -12,6 +12,7 @@
 #include "repair_command.h"
 #include "resupply_command.h"
 #include "statemachine.h"
+#include "star_system_constraints.h"
 #include "telemetry.h"
 
 bool RepairCommand::invoke(void)
@@ -170,6 +171,12 @@ bool RepairCommand::invoke(void)
     }
 
     int repairAmt = std::min(m_amount, maxRepair);
+    
+    // Apply environmental repair modifier
+    int repairMod = StarSystemConstraints::getRepairModifier(s.game_id, at_hex);
+    repairAmt = std::max(1, repairAmt + repairMod);
+    repairAmt = std::min(repairAmt, maxRepair); // Can't exceed max
+    
     int cost = repairAmt * 20; // 20 CR per unit (inflated ×20)
 
     // Check BP
@@ -246,7 +253,7 @@ bool ResupplyCommand::invoke(void)
 
     // Validate ship exists and is at player's base star
     auto shipRow = db.query(
-        "SELECT s.missiles, s.missiles_orig "
+        "SELECT s.missiles, s.missiles_orig, s.at_hex "
         "FROM ships s "
         "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
         "WHERE s.game_id=" +
@@ -263,6 +270,7 @@ bool ResupplyCommand::invoke(void)
 
     int curMissiles = std::atoi(shipRow[0][0].c_str());
     int maxMissiles = std::atoi(shipRow[0][1].c_str());
+    std::string at_hex = shipRow[0][2];
     int canAdd = maxMissiles - curMissiles;
 
     if (canAdd <= 0)
@@ -280,6 +288,12 @@ bool ResupplyCommand::invoke(void)
     }
 
     int addAmt = std::min(m_missiles, canAdd);
+    
+    // Apply environmental resupply modifier
+    int resupplyMod = StarSystemConstraints::getResupplyModifier(s.game_id, at_hex);
+    addAmt = std::max(1, addAmt + resupplyMod);
+    addAmt = std::min(addAmt, canAdd); // Can't exceed capacity
+    
     int cost = ((addAmt + 2) / 3) * 20; // 20 CR per 3 missiles (inflated ×20)
 
     // Check BP
