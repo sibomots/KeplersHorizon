@@ -874,11 +874,34 @@ deployable_ship:
   ;
 
 deploy_cmd:
-   // deploy
-   // ds
+   // deploy - list undeployed ships
    TOK_DEPLOY {
-       Logger::instance().info("Show current self deployment");
-       Logger::instance().info("Show opponent deployment");
+       GameState s = StateMachine::getInstance().get_game_state();
+       char owner = StateMachine::getInstance().get_current_player();
+       DatabaseManager& db = DatabaseManager::getInstance();
+
+       auto rows = db.query(
+           "SELECT ship_code, ship_name FROM ships WHERE game_id=" +
+           std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
+           "' AND destroyed_at IS NULL AND (at_hex IS NULL OR at_hex = '') "
+           "AND (at_system IS NULL OR at_system = '') ORDER BY ship_code");
+
+       if (rows.empty())
+       {
+           Telemetry::getInstance().write(
+               "DEPLOY: All vessels are deployed. None in spacedock.");
+       }
+       else
+       {
+           std::ostringstream out;
+           out << "DEPLOY: Ships in spacedock awaiting deployment:\n";
+           for (const auto& r : rows)
+           {
+               out << "  " << r[0] << " - " << r[1] << "\n";
+           }
+           out << "Use: deploy <SHIP> <BASE_SYSTEM>";
+           Telemetry::getInstance().write(out.str());
+       }
    }
    | TOK_DEPLOY deployable_ship deconflicted_string {
        std::string ship(*$2);

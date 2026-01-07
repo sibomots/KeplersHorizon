@@ -29,6 +29,10 @@ class GameState
     bool game_over = false;
     std::string winner = "";
 
+    // Territory assignments - set on first deploy
+    std::string home_side_A;  // 'A' or 'B' (internal only)
+    std::string home_side_B;  // opposite of home_side_A
+
     // ship lists (future)
     // right now: none
     std::string combat_summary_json; // JSON object for combat state
@@ -66,6 +70,8 @@ class GameState
         creditsB = 0;
         game_over = false;
         winner = "";
+        home_side_A = "";
+        home_side_B = "";
     }
     std::string phase_name() const
     {
@@ -113,6 +119,14 @@ class GameState
         if (!combat_summary_json.empty())
         {
             o << "\"combat\":" << combat_summary_json << ",";
+        }
+        if (!home_side_A.empty())
+        {
+            o << "\"homeSideA\":\"" << home_side_A << "\",";
+        }
+        if (!home_side_B.empty())
+        {
+            o << "\"homeSideB\":\"" << home_side_B << "\",";
         }
         o << "\"notes\":\"" << json_escape(notes()) << "\"";
         o << "}";
@@ -172,6 +186,8 @@ class GameState
         s.vpB = 0;
         // We'll avoid parsing vp/bp deeply; state is small; for now server is
         // source of truth in RAM anyway.
+        s.home_side_A = get_str("homeSideA");
+        s.home_side_B = get_str("homeSideB");
         return s;
     }
 };

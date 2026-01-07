@@ -15,7 +15,7 @@ LOAD DATA LOCAL INFILE 'data/star_systems.csv'
 INTO TABLE star_systems
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
-(map_id, hex_id, name, is_base, base_owner);
+(map_id, hex_id, name, is_base, base_owner, base_side, territory_name);
 
 LOAD DATA LOCAL INFILE 'data/warplines.csv'
 INTO TABLE warplines
