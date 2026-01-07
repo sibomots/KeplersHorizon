@@ -22,6 +22,7 @@
 #include "db.h"
 #include "logger.h"
 #include "maputil.h"
+#include "moduleutil.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "typedefs.h"
@@ -509,8 +510,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
     // Lookup system name for constraint check
     std::string combat_system;
+    int mod = get_module_id_for_game(game_id);
     auto sys_row =
-        db.query("SELECT name FROM star_systems WHERE module_id=1 AND hex_id='" +
+        db.query("SELECT name FROM star_systems WHERE module_id=" +
+                 std::to_string(mod) + " AND hex_id='" +
                  db.esc(hex_id) + "' LIMIT 1");
     if (!sys_row.empty())
     {

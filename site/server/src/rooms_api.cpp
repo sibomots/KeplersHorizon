@@ -44,7 +44,7 @@ static std::string room_to_json(const RoomInfo& r)
     o << "\"game_id\":" << (r.game_id > 0 ? std::to_string(r.game_id) : "null")
       << ",";
     o << "\"status\":\"" << json_escape(r.status) << "\",";
-    o << "\"scenario\":\"" << json_escape(r.scenario) << "\",";
+    o << "\"module_id\":" << r.module_id << ",";
     o << "\"is_full\":" << (r.isFull() ? "true" : "false");
     o << "}";
     return o.str();
@@ -76,6 +76,27 @@ void handle_rooms_list(const HttpRequest* req, HttpResponse* resp)
     }
     o << "],\"online_count\":" << rm.countOnlineUsers() << "}";
 
+    resp->body = o.str();
+}
+
+// GET /api/modules - List available modules
+void handle_modules_list(const HttpRequest* /* req */, HttpResponse* resp)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    
+    auto modules = db.query(
+        "SELECT module_id, name, description FROM modules ORDER BY module_id");
+    
+    std::ostringstream o;
+    o << "{\"ok\":true,\"modules\":[";
+    for (size_t i = 0; i < modules.size(); i++)
+    {
+        if (i > 0) o << ",";
+        o << "{\"module_id\":" << modules[i][0] 
+          << ",\"name\":\"" << json_escape(modules[i][1]) << "\""
+          << ",\"description\":\"" << json_escape(modules[i][2]) << "\"}";
+    }
+    o << "]}";
     resp->body = o.str();
 }
 
@@ -175,9 +196,9 @@ void handle_room_leave(const std::string& code, const HttpRequest* req,
     resp->body = "{\"ok\":true}";
 }
 
-// POST /api/rooms/:code/scenario - Set scenario
-void handle_room_scenario(const std::string& code, const HttpRequest* req,
-                          HttpResponse* resp)
+// POST /api/rooms/:code/module - Set module
+void handle_room_module(const std::string& code, const HttpRequest* req,
+                        HttpResponse* resp)
 {
     std::string token = pick_bearer(req);
     int user_id = get_user_id_from_token(token);
@@ -188,13 +209,15 @@ void handle_room_scenario(const std::string& code, const HttpRequest* req,
         return;
     }
 
-    std::string scenario = json_get_string(req->body, "scenario");
+    std::string module_str = json_get_string(req->body, "module_id");
+    int module_id = module_str.empty() ? 1 : std::atoi(module_str.c_str());
+    if (module_id <= 0) module_id = 1;
 
     RoomManager& rm = RoomManager::getInstance();
-    if (!rm.setScenario(code, scenario))
+    if (!rm.setModule(code, module_id))
     {
         resp->status = 400;
-        resp->body = json_error("invalid scenario");
+        resp->body = json_error("invalid module");
         return;
     }
 
@@ -226,11 +249,11 @@ void handle_room_start(const std::string& code, const HttpRequest* req,
         return;
     }
 
-    // Check if optional scenario in body
-    std::string scenario = json_get_string(req->body, "scenario");
-    if (!scenario.empty())
+    std::string mod_str = json_get_string(req->body, "module_id");
+    int module_id = mod_str.empty() ? 0 : std::atoi(mod_str.c_str());
+    if (module_id > 0)
     {
-        rm.setScenario(code, scenario);
+        rm.setModule(code, module_id);
     }
 
     int game_id = rm.startGame(code);
@@ -320,11 +343,11 @@ void handle_rooms(const HttpRequest* req, HttpResponse* resp)
             resp->body = json_error("method not allowed");
         }
     }
-    else if (action == "scenario")
+    else if (action == "module")
     {
         if (req->method == "POST")
         {
-            handle_room_scenario(code, req, resp);
+            handle_room_module(code, req, resp);
         }
         else
         {

@@ -98,20 +98,23 @@ View open rooms or create a new one. Each room can host one game.
 .br
 Join a room and take a seat (A or B). When both seats are filled, either player can start the game.
 .PP
-.B 4. Scenario Selection
+.B 4. Module Selection
 .br
-The room creator selects the scenario:
+The room creator selects the universe module:
 .RS
-.IP \fBlearning\fR
-40 BP initial, WarpShips only, 1 base star, first to 1 VP wins
-.IP \fBbasic\fR
-50 BP initial, WarpShips and SystemShips, 1 base star, first to 2 VP wins
-.IP \fBadvanced\fR
-20 BP initial + 10 BP/turn, all rules active, 3 base stars, first to 3 VP wins
+.IP \fBKepler's Horizon\fR
+The original frontier universe - humanity's expansion into the stars. Contains 28 star systems across Alpha and Beta territories.
+.IP \fB(Additional Modules)\fR
+Custom modules can be created with unique star maps, populations, species, and resources. See \fBModuleAuthoring.md\fR for details.
 .RE
 .RE
 
-.SH SCENARIOS
+.SH MODULES
+A \fBModule\fR defines a complete game universe. All milieu data (star systems, planets, species, populations, resources) is keyed by module_id.
+
+The game engine is module-agnostic; only content varies between modules. Players select a module when creating a game.
+
+See \fBdocs/ModuleAuthoring.md\fR for creating custom modules.
 
 .SH COMMANDS
 Commands are case-insensitive. Aliases are shown after commas.

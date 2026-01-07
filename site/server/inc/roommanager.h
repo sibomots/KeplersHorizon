@@ -25,7 +25,7 @@ struct RoomInfo
     std::string seat_b_name;
     int game_id;
     std::string status; // "waiting", "ready", "playing", "finished"
-    std::string scenario;
+    int module_id;  // Universe module (default 1 = Kepler's Horizon)
     std::string created_at;
 
     bool isFull() const
@@ -64,7 +64,7 @@ class RoomManager
     bool roomExists(const std::string& code);
 
     // Room state
-    bool setScenario(const std::string& code, const std::string& scenario);
+    bool setModule(const std::string& code, int module_id);
     int startGame(const std::string& code); // Returns game_id
 
     // Presence (independent of game)

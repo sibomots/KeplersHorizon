@@ -48,6 +48,11 @@ void dispatch_request(const HttpRequest* req, HttpResponse* resp)
         handle_events(req, resp);
         return;
     }
+    else if (req->path == "/api/modules")
+    {
+        handle_modules_list(req, resp);
+        return;
+    }
     else if (req->path == "/api/rooms" || starts_with(req->path, "/api/rooms/"))
     {
         handle_rooms(req, resp);

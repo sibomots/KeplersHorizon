@@ -16,6 +16,7 @@
 #include "logger.h"
 #include "mapgraph.h"
 #include "maputil.h"
+#include "moduleutil.h"
 #include "move_command.h"
 #include "ships.h"
 #include "statemachine.h"
@@ -62,9 +63,10 @@ bool DeployCommand::invoke(void)
     }
 
     // Validate destination is a base-star system
+    int mod_id = get_module_id_for_game(m_game_id);
     auto base_info =
         db.query("SELECT is_base, base_side, territory_name FROM star_systems "
-                 "WHERE module_id=1 AND name='" +
+                 "WHERE module_id=" + std::to_string(mod_id) + " AND name='" +
                  db.esc(sys) + "'");
 
     if (base_info.empty())
@@ -248,9 +250,10 @@ bool MoveCommand::invoke(void)
         if (!stepHex.empty())
         {
             // See if it matches a system name (reverse lookup for
-            // display/logic) - star_systems uses module_id, not game_id
+            // display/logic) - star_systems uses module_id from game
+            int mod = get_module_id_for_game(m_game_id);
             auto sysr = db.query("SELECT name FROM star_systems WHERE "
-                                 "module_id=1 AND hex_id='" +
+                                 "module_id=" + std::to_string(mod) + " AND hex_id='" +
                                  stepHex + "' LIMIT 1");
             if (!sysr.empty())
             {
@@ -418,8 +421,10 @@ bool MoveCommand::invoke(void)
 
         // Cache system names for hexes
         std::unordered_map<std::string, std::string> hexToSys;
+        int mod = get_module_id_for_game(m_game_id);
         auto sysList =
-            db.query("SELECT hex_id, name FROM star_systems WHERE module_id=1");
+            db.query("SELECT hex_id, name FROM star_systems WHERE module_id=" +
+                     std::to_string(mod));
         for (const auto& row : sysList)
         {
             hexToSys[row[0]] = row[1];
@@ -428,7 +433,9 @@ bool MoveCommand::invoke(void)
         // Check if two hexes are connected by warpline
         auto isWarpline = [&](const std::string& h1,
                               const std::string& h2) -> bool {
-            auto result = db.query("SELECT 1 FROM warplines WHERE module_id=1 AND "
+            int m = get_module_id_for_game(m_game_id);
+            auto result = db.query("SELECT 1 FROM warplines WHERE module_id=" +
+                                   std::to_string(m) + " AND "
                                    "((a_hex='" +
                                    db.esc(h1) + "' AND b_hex='" + db.esc(h2) +
                                    "') OR "

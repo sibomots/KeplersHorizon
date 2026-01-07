@@ -67,6 +67,7 @@ src/logger.cpp
 src/main.cpp
 src/mapgraph.cpp
 src/maputil.cpp
+src/moduleutil.cpp
 src/roommanager.cpp
 src/rooms_api.cpp
 src/save_command.cpp

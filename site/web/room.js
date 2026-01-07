@@ -88,10 +88,10 @@
             seatBEl.classList.remove('filled', 'you');
         }
 
-        // Scenario - use radio buttons
-        if (room.scenario) {
-            const radio = document.querySelector(`input[name="scenario"][value="${room.scenario}"]`);
-            if (radio) radio.checked = true;
+        // Module - use dropdown
+        if (room.module_id) {
+            const select = document.getElementById('moduleSelect');
+            if (select) select.value = room.module_id;
         }
 
         // Status and start button
@@ -127,16 +127,16 @@
         renderRoom(data.room);
     }
 
-    async function setScenario() {
-        const selected = document.querySelector('input[name="scenario"]:checked');
-        const scenario = selected ? selected.value : 'basic';
-        await apiCall('/rooms/' + roomCode + '/scenario', 'POST', { scenario });
+    async function setModule() {
+        const select = document.getElementById('moduleSelect');
+        const module_id = select ? parseInt(select.value) : 1;
+        await apiCall('/rooms/' + roomCode + '/module', 'POST', { module_id });
     }
 
     async function startGame() {
-        const selected = document.querySelector('input[name="scenario"]:checked');
-        const scenario = selected ? selected.value : 'basic';
-        const data = await apiCall('/rooms/' + roomCode + '/start', 'POST', { scenario });
+        const select = document.getElementById('moduleSelect');
+        const module_id = select ? parseInt(select.value) : 1;
+        const data = await apiCall('/rooms/' + roomCode + '/start', 'POST', { module_id });
 
         if (data && data.ok) {
             // Store game info for the game page
@@ -162,6 +162,24 @@
         });
     }
 
+    async function loadModules() {
+        try {
+            const data = await apiCall('/modules');
+            if (data && data.modules) {
+                const select = document.getElementById('moduleSelect');
+                select.innerHTML = '';
+                data.modules.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.module_id;
+                    opt.textContent = m.name;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.warn('Could not load modules:', e);
+        }
+    }
+
     function init() {
         if (!checkAuth()) return;
 
@@ -175,12 +193,13 @@
         }
 
         document.getElementById('roomCode').addEventListener('click', copyRoomCode);
-        // Scenario radio buttons
-        document.querySelectorAll('input[name="scenario"]').forEach(radio => {
-            radio.addEventListener('change', setScenario);
-        });
+        // Module dropdown
+        document.getElementById('moduleSelect').addEventListener('change', setModule);
         document.getElementById('btnStart').addEventListener('click', startGame);
         document.getElementById('btnLeave').addEventListener('click', leaveRoom);
+
+        // Load modules from API
+        loadModules();
 
         // Initial load
         loadRoom();

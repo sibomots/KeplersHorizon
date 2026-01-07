@@ -66,7 +66,11 @@
                 showAlert(data.error || 'Login failed', 'danger');
             }
         } catch (err) {
-            showAlert('Connection error: ' + err.message, 'danger');
+            if (err.message.includes('fetch') || err.message.includes('Failed')) {
+                showAlert('⚠️ Server not reachable. Please ensure the game server is running.', 'warning');
+            } else {
+                showAlert('Connection error: ' + err.message, 'danger');
+            }
         }
     });
 

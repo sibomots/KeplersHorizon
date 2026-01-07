@@ -277,16 +277,12 @@ Copyright (c) 2025, sibomots
         </div>
 
         <div class="mb-3">
-            <label class="form-label text-center d-block">Scenario</label>
-            <div class="scenario-group">
-                <input type="radio" name="scenario" value="learning" id="scnLearn" class="scenario-radio">
-                <label for="scnLearn" class="scenario-btn">LEARNING</label>
-
-                <input type="radio" name="scenario" value="basic" id="scnBasic" class="scenario-radio" checked>
-                <label for="scnBasic" class="scenario-btn">BASIC</label>
-
-                <input type="radio" name="scenario" value="advanced" id="scnAdv" class="scenario-radio">
-                <label for="scnAdv" class="scenario-btn">ADVANCED</label>
+            <label class="form-label text-center d-block">Module</label>
+            <div class="module-group text-center">
+                <select id="moduleSelect" class="form-select form-select-lg"
+                    style="max-width: 300px; margin: 0 auto; background-color: #1a1a2e; color: #00ff88; border-color: #00ff88;">
+                    <option value="1" selected>Kepler's Horizon</option>
+                </select>
             </div>
         </div>
 

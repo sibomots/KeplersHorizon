@@ -217,7 +217,7 @@ std::vector<RoomInfo> RoomManager::listOpenRooms()
         info.seat_b_name = row[8];
         info.game_id = row[9].empty() ? 0 : std::stoi(row[9]);
         info.status = row[10];
-        info.scenario = row[11];
+        info.module_id = row[11].empty() ? 1 : std::stoi(row[11]);
         info.created_at = row[12];
         rooms.push_back(info);
     }
@@ -256,7 +256,7 @@ RoomInfo RoomManager::getRoom(const std::string& code)
     info.seat_b_name = row[8];
     info.game_id = row[9].empty() ? 0 : std::stoi(row[9]);
     info.status = row[10];
-    info.scenario = row[11];
+    info.module_id = row[11].empty() ? 1 : std::stoi(row[11]);
     info.created_at = row[12];
 
     return info;
@@ -287,17 +287,15 @@ bool RoomManager::roomExists(const std::string& code)
     return !rows.empty();
 }
 
-bool RoomManager::setScenario(const std::string& code,
-                              const std::string& scenario)
+bool RoomManager::setModule(const std::string& code, int module_id)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    if (scenario != "learning" && scenario != "basic" && scenario != "advanced")
-    {
-        return false;
-    }
+    // Validate module exists (default to 1 if invalid)
+    if (module_id <= 0) module_id = 1;
 
-    db.exec("UPDATE rooms SET scenario='" + db.esc(scenario) +
+    // For now, just accept any module_id (schema validates via FK)
+    db.exec("UPDATE rooms SET scenario='module_" + std::to_string(module_id) +
             "' WHERE room_code='" + db.esc(code) + "'");
     return true;
 }
@@ -315,10 +313,10 @@ int RoomManager::startGame(const std::string& code)
     if (room.seat_a == 0 || room.seat_b == 0)
         return 0;
 
-    // Use StateMachine to create game
-    std::string scenario = room.scenario.empty() ? "basic" : room.scenario;
+    // Use StateMachine to create game - always use full game rules
+    int module_id = room.module_id > 0 ? room.module_id : 1;
     GameState gs =
-        StateMachine::getInstance().new_game_state_for_scenario(scenario);
+        StateMachine::getInstance().new_game_state_for_scenario("advanced");
 
     // Randomly assign initiative (who goes first)
     static std::random_device rd;
@@ -326,10 +324,10 @@ int RoomManager::startGame(const std::string& code)
     std::uniform_int_distribution<> dis(0, 1);
     gs.active_player = (dis(gen) == 0) ? "A" : "B";
 
-    // Insert game with room_id
+    // Insert game with room_id and module_id
     std::string sql =
-        "INSERT INTO games(room_id, scenario, state_json) VALUES(" +
-        std::to_string(room.id) + ",'" + db.esc(scenario) + "','" +
+        "INSERT INTO games(room_id, module_id, state_json) VALUES(" +
+        std::to_string(room.id) + "," + std::to_string(module_id) + ",'" +
         db.esc(gs.to_json()) + "')";
     db.exec(sql);
 

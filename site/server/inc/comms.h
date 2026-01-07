@@ -52,5 +52,6 @@ void handle_register(const HttpRequest* req, HttpResponse* resp);
 
 // Room handlers (rooms_api.cpp)
 void handle_rooms(const HttpRequest* req, HttpResponse* resp);
+void handle_modules_list(const HttpRequest* req, HttpResponse* resp);
 
 #endif

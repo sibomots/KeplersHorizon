@@ -220,6 +220,26 @@ void test_db(void)
         std::cerr << "[TEST] FAIL: Write test: " << ex.what() << std::endl;
     }
 
+    // Test 4: Check that at least one module exists
+    try
+    {
+        auto moduleCheck = db.query("SELECT COUNT(*) FROM modules");
+        if (!moduleCheck.empty() && moduleCheck[0][0] != "0")
+        {
+            std::cout << "[TEST] PASS: " << moduleCheck[0][0] 
+                      << " module(s) defined" << std::endl;
+        }
+        else
+        {
+            std::cerr << "[TEST] FAIL: No modules defined in database" 
+                      << std::endl;
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "[TEST] FAIL: Module check: " << ex.what() << std::endl;
+    }
+
     std::cout << "[TEST] Database validation complete." << std::endl;
 }
 

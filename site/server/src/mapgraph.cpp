@@ -14,11 +14,23 @@
 #include "db.h"
 #include "util.h"
 
-// Module data uses module_id=1 (the default Kepler's Horizon module)
-// Future: load module_id from game state for multi-module support
+// Default module_id for cases where game doesn't exist yet
 static const int DEFAULT_MODULE_ID = 1;
 
-MapGraph::MapGraph(int gId) : game_id(gId)
+// Helper: Get module_id for a game from the games table
+static int get_module_id_for_game(int game_id)
+{
+    if (game_id <= 0) return DEFAULT_MODULE_ID;
+    
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto rows = db.query("SELECT module_id FROM games WHERE id=" + 
+                         std::to_string(game_id));
+    if (rows.empty() || rows[0].empty() || rows[0][0].empty())
+        return DEFAULT_MODULE_ID;
+    return std::atoi(rows[0][0].c_str());
+}
+
+MapGraph::MapGraph(int gId) : game_id(gId), module_id(get_module_id_for_game(gId))
 {
     load_hexes();
     load_warplines();
@@ -30,7 +42,7 @@ void MapGraph::load_hexes()
     // Module hexes are shared across all games using same module
     std::vector<std::vector<std::string>> allHex =
         db.query("SELECT hex_id,q,r FROM hexes WHERE module_id=" +
-                 std::to_string(DEFAULT_MODULE_ID));
+                 std::to_string(module_id));
 
     for (size_t i = 0; i < allHex.size(); i++)
     {
@@ -53,11 +65,11 @@ void MapGraph::load_warplines()
         "FROM warpline_hexes wh "
         "JOIN warplines w ON w.id=wh.warpline_id AND w.module_id=wh.module_id "
         "WHERE wh.module_id=" +
-        std::to_string(DEFAULT_MODULE_ID));
+        std::to_string(module_id));
 
     std::vector<std::vector<std::string>> wlines =
         db.query("SELECT a_hex,b_hex FROM warplines WHERE module_id=" +
-                 std::to_string(DEFAULT_MODULE_ID));
+                 std::to_string(module_id));
 
     for (size_t i = 0; i < wh.size(); i++)
     {
@@ -87,7 +99,7 @@ void MapGraph::load_state(char owner)
     std::vector<std::vector<std::string>> blocks =
         db.query("SELECT DISTINCT ss.hex_id FROM ships s "
                  "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
-                 std::to_string(DEFAULT_MODULE_ID) +
+                 std::to_string(module_id) +
                  " "
                  "WHERE s.game_id=" +
                  std::to_string(game_id) + " AND s.owner='" +
@@ -144,7 +156,7 @@ std::string MapGraph::resolve_system(const std::string& token)
     std::string u = upper_ascii(token);
     // Star systems use module_id (shared across all games using same module)
     auto r = db.query("SELECT hex_id FROM star_systems WHERE module_id=" +
-                      std::to_string(DEFAULT_MODULE_ID) + " AND UPPER(name)='" +
+                      std::to_string(module_id) + " AND UPPER(name)='" +
                       db.esc(u) + "' LIMIT 1");
     if (!r.empty() && !r[0].empty())
     {
