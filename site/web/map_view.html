@@ -402,19 +402,37 @@ Copyright (c) 2025, sibomots
       }
 
       function stackOffset(index, total) {
-        // Base offset: place ships to LEFT of hex center
+        // Bug #8: Radial slot-based positioning to prevent glyph overlap
+        // Ships are placed in 6 slots around the hex periphery (like pie slices)
         // Avoids: hex ID (bottom), star name (top), star icon (center)
-        const baseX = -25;  // offset left
-        const baseY = 0;    // vertically centered
 
-        if (total === 1) return { dx: baseX, dy: baseY };
+        if (total === 1) {
+          // Single ship: offset to left of center
+          return { dx: -22, dy: 0 };
+        }
 
-        // For multiple ships, arrange vertically along the left side
-        const spacing = 14;
-        const startY = -((total - 1) * spacing) / 2;
+        // Define 6 slots around the hex at radius ~18px from center
+        // Slots are positioned to avoid star icon (center) and star name (top)
+        // Angles: 30°, 90°, 150°, 210°, 270°, 330° (avoiding 0° top where star name is)
+        const RADIUS = 20;
+        const SLOT_ANGLES = [
+          210,  // bottom-left
+          150,  // top-left
+          270,  // left
+          90,   // right
+          330,  // bottom-right
+          30    // top-right (avoid - star name area)
+        ];
+
+        // For more than 6 ships, use multiple rings
+        const slotIndex = index % 6;
+        const ring = Math.floor(index / 6);
+        const ringRadius = RADIUS + (ring * 14);  // Expand outward for additional rings
+
+        const angle = SLOT_ANGLES[slotIndex] * (Math.PI / 180);
         return {
-          dx: baseX,
-          dy: startY + index * spacing
+          dx: Math.cos(angle) * ringRadius,
+          dy: Math.sin(angle) * ringRadius
         };
       }
 

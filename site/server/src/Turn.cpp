@@ -110,7 +110,7 @@ bool DoneCommand::invoke(void)
                                           s.phase_name() + " (Round " +
                                           std::to_string(s.round) + ")");
         Telemetry::getInstance().broadcast("COMMAND: " + oppUser +
-                                           " now has the conn.");
+                                           "'s turn has begun.");
     }
 
     // Save game state to persist changes

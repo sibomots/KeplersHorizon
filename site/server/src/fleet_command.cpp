@@ -7,6 +7,9 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include "fleet_command.h"
 
+#include <algorithm>
+#include <cctype>
+#include <iomanip>
 #include <sstream>
 
 #include "db.h"
@@ -19,11 +22,15 @@ bool FleetCommand::invoke(void)
     char owner = StateMachine::getInstance().get_current_player();
     DatabaseManager& db = DatabaseManager::getInstance();
 
+    // Join with systems table to get star names for at_hex
     auto rows = db.query(
-        "SELECT ship_code, ship_name, at_hex, racked_in, pd, beam, screen, "
-        "tube, missiles, tech_level FROM ships WHERE game_id=" +
-        std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
-        "' AND destroyed_at IS NULL ORDER BY ship_code");
+        "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
+        "s.screen, s.tube, s.missiles, s.tech_level, sys.name "
+        "FROM ships s "
+        "LEFT JOIN systems sys ON s.at_hex = sys.hex_id AND s.game_id = sys.game_id "
+        "WHERE s.game_id=" +
+        std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
+        "' AND s.destroyed_at IS NULL ORDER BY s.ship_code");
 
     if (rows.empty())
     {
@@ -34,25 +41,44 @@ bool FleetCommand::invoke(void)
 
     std::ostringstream out;
     out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
-    out << "Hull  Designation      Sector      PD  B  S  T  M  Tech\n";
-    out << "----  --------------  ----------  --  -  -  -  -  ----\n";
+    out << "HULL  DESIGNATION      SECTOR                 PD   B  S  T  M  TECH LEVEL\n";
+    out << "----  --------------  -------------------    --  -- -- -- --  ----------\n";
 
     for (const auto& r : rows)
     {
-        std::string loc = r[3].empty() ? r[2] : ("in " + r[3]);
-        out << r[0]; // ship_code
-        out << std::string(6 - r[0].size(), ' ');
+        // Uppercase the hull designator (ship_code)
+        std::string hull = r[0];
+        std::transform(hull.begin(), hull.end(), hull.begin(), ::toupper);
 
-        std::string name = r[1].substr(0, 14);
-        out << name << std::string(16 - name.size(), ' ');
+        // Format location: show star name with hex ID if available
+        std::string loc;
+        if (!r[3].empty())
+        {
+            // Racked in another ship
+            loc = "in " + r[3];
+        }
+        else if (!r[10].empty())
+        {
+            // Have system name from join
+            loc = r[10] + " (" + r[2] + ")";
+        }
+        else
+        {
+            // Just hex ID
+            loc = r[2];
+        }
 
-        out << loc << std::string(12 - loc.size(), ' ');
-        out << r[4] << std::string(4 - r[4].size(), ' '); // pd
-        out << r[5] << std::string(3 - r[5].size(), ' '); // beam
-        out << r[6] << std::string(3 - r[6].size(), ' '); // screen
-        out << r[7] << std::string(3 - r[7].size(), ' '); // tube
-        out << r[8] << std::string(3 - r[8].size(), ' '); // missiles
-        out << r[9] << "\n";                              // tech_level
+        // Use iomanip for proper formatting with right-justified numbers
+        out << std::left << std::setw(6) << hull;
+        out << std::left << std::setw(16) << r[1].substr(0, 14);
+        out << std::left << std::setw(23) << loc.substr(0, 21);
+        out << std::right << std::setw(2) << r[4];   // pd
+        out << std::right << std::setw(4) << r[5];   // beam
+        out << std::right << std::setw(3) << r[6];   // screen
+        out << std::right << std::setw(3) << r[7];   // tube
+        out << std::right << std::setw(3) << r[8];   // missiles
+        out << std::right << std::setw(12) << r[9];  // tech_level
+        out << "\n";
     }
 
     Telemetry::getInstance().write(out.str());

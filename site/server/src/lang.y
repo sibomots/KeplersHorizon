@@ -85,7 +85,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type  <sval> deployable_ship
 %type  <sval> building_draft_ship
 %type  <vec_sval> chain_move_location
-%type  <sval> help_topic
+%type  <sval> deconflicted_string
 
 %token TOK_ADVANCED
 %token TOK_APPLY
@@ -159,6 +159,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_SYSTEM
 %token TOK_SURVEY
 %token TOK_TUBE
+%token TOK_CLEAR
 
 /* Attribute assignment tokens - value in yylval.ival */
 %token <ival> TOK_PD_ASSIGN
@@ -234,12 +235,13 @@ session_cmd:
         SafeDelete(pCmd);
    }
    |
-   TOK_SAVE TOK_STRING
+   TOK_SAVE deconflicted_string
    {
         std::string save_name(*$2);
         ICmd *pCmd = SaveCommand::Builder().set_name(save_name).build();
         pCmd->invoke();
         SafeDelete(pCmd);
+        delete $2;
    }
    |
    TOK_LOAD
@@ -249,39 +251,38 @@ session_cmd:
         SafeDelete(pCmd);
    }
    |
-   TOK_LOAD TOK_STRING
+   TOK_LOAD deconflicted_string
    {
         std::string load_name(*$2);
         ICmd *pCmd = LoadCommand::Builder().set_name(load_name).build();
         pCmd->invoke();
         SafeDelete(pCmd);
+        delete $2;
    }
    |
-   TOK_ACCEPT TOK_STRING
+   TOK_ACCEPT deconflicted_string
    {
         std::string accept_name(*$2);
         ICmd *pCmd = AcceptCommand::Builder().set_name(accept_name).build();
         pCmd->invoke();
         SafeDelete(pCmd);
+        delete $2;
    }
    |
-   TOK_REJECT TOK_STRING
+   TOK_REJECT deconflicted_string
    {
         std::string reject_name(*$2);
         ICmd *pCmd = RejectCommand::Builder().set_name(reject_name).build();
         pCmd->invoke();
         SafeDelete(pCmd);
+        delete $2;
    }
-   | TOK_DELETE {
-        // deleting the most recent game saved, if any
-        Logger::instance().info("Delete the most recent saved");
-   }
-   | TOK_DELETE TOK_STRING {
+   | TOK_DELETE deconflicted_string {
+        // MISSING HANDLER
         // delete the named game (the same naming convention used for saving,
         // loading)
         std::string target_game(*$2);
-        Logger::instance().info("Delete the game saved under "
-               ">" + target_game + "<");
+        Logger::instance().info("Delete the game saved under " ">" + target_game + "<");
    }
    |
    TOK_QUIT
@@ -294,6 +295,13 @@ session_cmd:
         // Stateful conditions like player A and player B are logged in must be
         // true of coure for the State to be in GAME_START
         Logger::instance().info("Quit the game. Same as Reset but unsets game scenario.");
+   }
+   |
+   TOK_CLEAR
+   {
+        // Bug #6: Clear command sends special marker that client will detect
+        // Using ANSI escape sequence ESC[2J which means "clear entire screen"
+        Telemetry::getInstance().write("\033[2J");
    }
    ;
 
@@ -311,7 +319,7 @@ info_cmd:
    ;
 
 looking_cmd:
-  TOK_HEX TOK_STRING {
+  TOK_HEX deconflicted_string {
       std::string identifier(*$2);
       Logger::instance().info("Location and spatial information "
                               "about current hex named >" + identifier + "<");
@@ -327,13 +335,13 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SYSTEM TOK_STRING {
+  | TOK_SYSTEM deconflicted_string {
       std::string identifier(*$2);
       ICmd* pCmd = SystemCommand::Builder().setName(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SYSTEM TOK_STRING TOK_STRING {
+  | TOK_SYSTEM deconflicted_string deconflicted_string {
       std::string identifier(*$2);
       std::string subcmd(*$3);
       ICmd* pCmd = SystemCommand::Builder().setName(identifier).setSubcommand(subcmd).build();
@@ -345,7 +353,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SURVEY TOK_STRING {
+  | TOK_SURVEY deconflicted_string {
       std::string identifier(*$2);
       ICmd* pCmd = SurveyCommand::Builder().setSystem(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -361,7 +369,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_EXTRACT TOK_STRING TOK_STRING {
+  | TOK_EXTRACT deconflicted_string deconflicted_string {
       std::string ship(*$2);
       std::string res(*$3);
       ICmd* pCmd = ExtractCommand::Builder().ship(ship).resource(res).build();
@@ -373,7 +381,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_MARKET TOK_STRING {
+  | TOK_MARKET deconflicted_string {
       std::string res(*$2);
       ICmd* pCmd = MarketCommand::Builder().resource(res).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -384,21 +392,21 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_TRADE TOK_BUY TOK_STRING TOK_INT {
+  | TOK_TRADE TOK_BUY deconflicted_string TOK_INT {
       std::string res(*$3);
       int qty = $4;
       ICmd* pCmd = TradeCommand::Builder().buyMode().resource(res).quantity(qty).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_TRADE TOK_SELL TOK_STRING TOK_INT {
+  | TOK_TRADE TOK_SELL deconflicted_string TOK_INT {
       std::string res(*$3);
       int qty = $4;
       ICmd* pCmd = TradeCommand::Builder().sellMode().resource(res).quantity(qty).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_TRADE TOK_TRANSFER TOK_STRING TOK_STRING TOK_STRING TOK_INT {
+  | TOK_TRADE TOK_TRANSFER deconflicted_string deconflicted_string deconflicted_string TOK_INT {
       std::string ship1(*$3);
       std::string ship2(*$4);
       std::string res(*$5);
@@ -412,20 +420,20 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_FABRICATE TOK_STRING {
+  | TOK_FABRICATE deconflicted_string {
       std::string rec(*$2);
       ICmd* pCmd = FabricateCommand::Builder().recipe(rec).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_FABRICATE TOK_STRING TOK_INT {
+  | TOK_FABRICATE deconflicted_string TOK_INT {
       std::string rec(*$2);
       int qty = $3;
       ICmd* pCmd = FabricateCommand::Builder().recipe(rec).quantity(qty).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SALVAGE TOK_STRING {
+  | TOK_SALVAGE deconflicted_string {
       std::string ship(*$2);
       ICmd* pCmd = SalvageCommand::Builder().ship(ship).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -549,7 +557,7 @@ combat_cmd:
 
 
 building_draft_ship:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Drafting ship: "
                               ">" + ship_id + "<" );
@@ -558,7 +566,7 @@ building_draft_ship:
   ;
 
 combat_initiator_ship:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Combat ship initiator: >" + ship_id + "<");
       g_combat_order_builder->ship_code(ship_id);
@@ -567,7 +575,7 @@ combat_initiator_ship:
   ;
 
 combat_damaged_ship:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Combat damaged ship: >" + ship_id + "<");
       g_combat_apply_builder->ship_code(ship_id);
@@ -591,7 +599,7 @@ combat_tactic:
   ;
 
 combat_target_ship:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Combat target ship: >" + ship_id + "<");
       g_combat_order_builder->target(ship_id);
@@ -687,7 +695,7 @@ build_cmd:
   }
 
   // build new ...
-  | TOK_BUILD TOK_NEW TOK_STRING TOK_STRING {
+  | TOK_BUILD TOK_NEW deconflicted_string deconflicted_string {
       std::string code(*$3);
       std::string name(*$4);
       Logger::instance().info("Create new draft: " + code + " '" + name + "'");
@@ -700,7 +708,7 @@ build_cmd:
   }
 
   // bn ...
-  | TOK_BUILD_NEW TOK_STRING TOK_STRING {
+  | TOK_BUILD_NEW deconflicted_string deconflicted_string {
       std::string code(*$2);
       std::string name(*$3);
       Logger::instance().info("Create new draft: " + code + " '" + name + "'");
@@ -857,7 +865,7 @@ additional_build_attr_spec:
 // deployment
 // "deploy" { return TOK_DEPLOY; }
 deployable_ship:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Deployable ship: "
                               ">" + ship_id + "<" );
@@ -872,7 +880,7 @@ deploy_cmd:
        Logger::instance().info("Show current self deployment");
        Logger::instance().info("Show opponent deployment");
    }
-   | TOK_DEPLOY deployable_ship TOK_STRING {
+   | TOK_DEPLOY deployable_ship deconflicted_string {
        std::string ship(*$2);
        std::string destination(*$3);
        Logger::instance().info("Attempt to deploy ship "
@@ -893,7 +901,7 @@ deploy_cmd:
   ;
 
 target_systemship:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Target SystemShip: "
                               ">" + ship_id + "<");
@@ -906,7 +914,7 @@ chain_move_location:
    {
        $$ = new std::vector<std::string>;
    }
-   | TOK_STRING chain_move_location {
+   | deconflicted_string chain_move_location {
        std::string waypoint(*$1);
        Logger::instance().info("Additional waypoint on chain: >"
                                 + waypoint + "<");
@@ -926,7 +934,7 @@ move_cmd:
 
   // move
   // m
-  | TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
+  | TOK_MOVE deconflicted_string deconflicted_string chain_move_location {
        std::string ship(*$2);
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
@@ -957,14 +965,14 @@ move_cmd:
 // "pick" { return TOK_PICK; }
 // "drop" { return TOK_DROP; }
 warpship_pick_destination:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Pick destination warpship: "
                               ">" + ship_id + "<");
   }
   ;
 warpship_drop_source:
-  TOK_STRING {
+  deconflicted_string {
       std::string ship_id(*$1);
       Logger::instance().info("Drop source warpship: "
                               ">" + ship_id + "<");
@@ -973,7 +981,7 @@ warpship_drop_source:
 pickdrop_cmd:
   // pick
   // p
-  TOK_PICK TOK_STRING {
+  TOK_PICK deconflicted_string {
      std::string location(*$2);
      Logger::instance().info("Status of what can be picked up at hex "
                  ">" + location + "<");
@@ -1012,7 +1020,7 @@ rep_cmd:
   }
   // repair ...
   // rp ...
-  | TOK_REPAIR TOK_STRING repair_attr_spec {
+  | TOK_REPAIR deconflicted_string repair_attr_spec {
      // g_repair_builder populated by repair_attr_spec
      g_repair_builder->set_ship_code(*$2);
      ICmd* pCmd = g_repair_builder->build();
@@ -1030,7 +1038,7 @@ rep_cmd:
   }
   // resupply ...
   // rs ...
-  | TOK_RESUPPLY TOK_STRING TOK_INT {
+  | TOK_RESUPPLY deconflicted_string TOK_INT {
      std::string ship(*$2);
      int qty = (int) $3;
      ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_missiles(qty).build();
@@ -1065,7 +1073,7 @@ help_cmd:
        SafeDelete(pCmd);
   }
   |
-  TOK_HELP help_topic {
+  TOK_HELP deconflicted_string {
        std::string topic(*$2);
        ICmd *pCmd = HelpCommand::Builder().set_topic(topic).build();
        pCmd->invoke();
@@ -1081,7 +1089,7 @@ help_cmd:
   ;
 
 /* Help topic can be a string OR any keyword that might be a topic name */
-help_topic:
+deconflicted_string:
     TOK_STRING              { $$ = $1; }
   | TOK_BUILD_COMMIT        { $$ = new std::string("bc"); }
   | TOK_BUILD_DRAFTS        { $$ = new std::string("bd"); }
@@ -1110,6 +1118,7 @@ help_topic:
   | TOK_STATUS              { $$ = new std::string("status"); }
   | TOK_DRAFTS              { $$ = new std::string("drafts"); }
   | TOK_CRT                 { $$ = new std::string("crt"); }
+  | TOK_CLEAR               { $$ = new std::string("clear"); }
   | TOK_EXTRACT             { $$ = new std::string("extract"); }
   | TOK_MARKET              { $$ = new std::string("market"); }
   | TOK_TRADE               { $$ = new std::string("trade"); }
@@ -1119,6 +1128,14 @@ help_topic:
   | TOK_DODGE               { $$ = new std::string("dodge"); }
   | TOK_ESCAPE              { $$ = new std::string("escape"); }
   | TOK_HEX                 { $$ = new std::string("hex"); }
+  | TOK_SAVE                { $$ = new std::string("save"); }
+  | TOK_LOAD                { $$ = new std::string("load"); }
+  | TOK_ACCEPT              { $$ = new std::string("accept"); }
+  | TOK_REJECT              { $$ = new std::string("reject"); }
+  | TOK_DELETE              { $$ = new std::string("delete"); }
+  | TOK_RESET               { $$ = new std::string("reset"); }
+  | TOK_DEMO                { $$ = new std::string("demo"); }
+  | TOK_HELP                { $$ = new std::string("help"); }
   ;
 
 %%

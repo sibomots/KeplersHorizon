@@ -290,8 +290,26 @@ bool AcceptCommand::invoke()
     // Clear the pending request
     db.exec("DELETE FROM load_requests WHERE game_id=" + std::to_string(game_id));
 
+    // Bug #10: Check for combat condition after load
+    // If any hex has ships from both players, force COMBAT phase
+    auto conflict_rows = db.query(
+        "SELECT at_hex FROM ships WHERE game_id=" + std::to_string(target_game_id) +
+        " AND destroyed_at IS NULL AND at_hex IS NOT NULL AND at_hex != '' "
+        "GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1 LIMIT 1");
+
+    std::string extra_msg;
+    if (!conflict_rows.empty())
+    {
+        // Force combat phase - update state_json
+        db.exec(
+            "UPDATE games SET state_json = JSON_SET(state_json, '$.phase_index', 3) "
+            "WHERE id=" + std::to_string(target_game_id));
+        extra_msg = "\nALERT: Ships in conflict detected at " + conflict_rows[0][0] +
+                    ". Entering combat phase.";
+    }
+
     // Notify both players
-    std::string msg = "COMMAND: Game '" + save_name + "' loaded. Resuming Turn " + round + ".";
+    std::string msg = "COMMAND: Game '" + save_name + "' loaded. Resuming Turn " + round + "." + extra_msg;
     Telemetry::getInstance().add_tell(target_game_id, 'A', msg);
     Telemetry::getInstance().add_tell(target_game_id, 'B', msg);
     Telemetry::getInstance().write(msg);

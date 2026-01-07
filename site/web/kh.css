@@ -128,7 +128,6 @@ button:hover {
 
 /* Console Log - scrollbar on left via rtl direction */
 #consoleLog {
-  xxheight: 100%;
   height: calc(100% - 70px);
   overflow-y: auto;
   padding: 10px 12px;
@@ -155,10 +154,10 @@ button:hover {
 
 /* --- Custom Scrollbar (WebKit/Blink Browsers) --- */
 
-/* Scrollbar width */
+/* Scrollbar width - hidden but scrollable via mousewheel */
 #consoleLog::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 0;
+  height: 0;
   background: transparent;
 }
 

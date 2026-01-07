@@ -78,6 +78,13 @@
     if (!log) {
       return;
     }
+
+    // Bug #6: Check for clear screen escape sequence (ESC[2J)
+    if (text && text.includes('\x1b[2J')) {
+      log.innerHTML = '';
+      return;
+    }
+
     const div = document.createElement("div");
     div.className = cls || "";
     div.textContent = text;

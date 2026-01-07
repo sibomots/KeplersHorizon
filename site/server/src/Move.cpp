@@ -151,6 +151,22 @@ bool MoveCommand::invoke(void)
         return false;
     }
 
+    // Check if trying to move to current location (Bug #5)
+    if (!m_destinations.empty())
+    {
+        std::string firstDest = m_destinations[0];
+        // Resolve system name to hex if needed
+        std::string destHex = MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
+        if (destHex.empty()) destHex = firstDest;  // Use as-is if not a system name
+
+        if (destHex == startHex)
+        {
+            Telemetry::getInstance().write(
+                "NAV: " + sh.name + " is already at " + firstDest + ".");
+            return false;
+        }
+    }
+
     // ============================================================================
     // PATHFINDING ALGORITHM - PRESERVED EXACTLY FROM LEGACY CODE
     // ============================================================================

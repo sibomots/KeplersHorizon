@@ -35,6 +35,8 @@
 "accept"   { return TOK_ACCEPT; }
 "reject"   { return TOK_REJECT; }
 "delete"   { return TOK_DELETE; }
+"clear"    { return TOK_CLEAR; }
+"cls"      { return TOK_CLEAR; }
 "quit"     { return TOK_QUIT; }
 "basic"    { return TOK_BASIC; }
 "learning" { return TOK_LEARNING; }

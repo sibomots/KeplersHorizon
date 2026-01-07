@@ -1093,6 +1093,18 @@ bool CombatCancelCommand::invoke(void)
     char owner = StateMachine::getInstance().get_current_player();
     DatabaseManager& db = DatabaseManager::getInstance();
 
+    // Check if there are any uncommitted orders to cancel (Bug #1)
+    auto orderRows = db.query(
+        "SELECT COUNT(*) FROM combat_orders WHERE game_id=" + std::to_string(s.game_id) +
+        " AND owner='" + std::string(1, owner) + "' AND committed=0");
+
+    if (orderRows.empty() || orderRows[0][0] == "0")
+    {
+        Telemetry::getInstance().write(
+            "TACTICAL: No combat orders have been received.");
+        return true;
+    }
+
     // Delete all uncommitted orders for this player
     db.exec(
         "DELETE FROM combat_orders WHERE game_id=" + std::to_string(s.game_id) +
@@ -1271,6 +1283,14 @@ bool CombatOrderCommand::invoke(void)
                                                     &params, inhibit_error))
     {
         Telemetry::getInstance().write("Error: " + inhibit_error);
+        return false;
+    }
+
+    // Check for self-targeting (Bug #9)
+    if (m_ship_code == m_target_id)
+    {
+        Telemetry::getInstance().write(
+            "TACTICAL: Cannot target your own ship!");
         return false;
     }
 

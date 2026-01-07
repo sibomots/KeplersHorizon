@@ -35,8 +35,8 @@ bool BuildCancelCommand::invoke(void)
     if (draft_code.empty())
     {
         Logger::instance().error("No current draft to cancel");
-        Telemetry::getInstance().write("Error: No current draft to cancel");
-        return false;
+        Telemetry::getInstance().write("SHIPYARD: No ship is in the shipyard.");
+        return true;
     }
 
     delete_draft(game_id, active_player, draft_code);
