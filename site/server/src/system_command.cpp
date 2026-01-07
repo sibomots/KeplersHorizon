@@ -35,11 +35,11 @@ std::string SystemCommand::get_knowledge_level()
     char owner = StateMachine::getInstance().get_current_player();
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    auto rows = db.query(
-        "SELECT knowledge_level FROM grimoire_entries "
-        "WHERE game_id=" +
-        std::to_string(s.game_id) + " AND player='" + std::string(1, owner) +
-        "' AND system_name='" + db.esc(m_system_name) + "'");
+    auto rows = db.query("SELECT knowledge_level FROM grimoire_entries "
+                         "WHERE game_id=" +
+                         std::to_string(s.game_id) + " AND player='" +
+                         std::string(1, owner) + "' AND system_name='" +
+                         db.esc(m_system_name) + "'");
 
     if (rows.empty())
     {
@@ -114,10 +114,10 @@ void SystemCommand::show_overview()
     // Always show star info if at least Rumored
     if (rank >= 1)
     {
-        auto stars = db.query(
-            "SELECT designation, star_class, luminosity, color, notes "
-            "FROM system_stars WHERE system_name='" +
-            db.esc(m_system_name) + "'");
+        auto stars =
+            db.query("SELECT designation, star_class, luminosity, color, notes "
+                     "FROM system_stars WHERE system_name='" +
+                     db.esc(m_system_name) + "'");
 
         if (!stars.empty())
         {
@@ -262,14 +262,14 @@ void SystemCommand::show_resources()
         db.esc(m_system_name) + "' ORDER BY r.resource_type");
 
     // Get resources from belts
-    auto belt_rows = db.query(
-        "SELECT b.designation, r.resource_type, r.abundance, "
-        "r.extraction_difficulty "
-        "FROM system_resources r "
-        "JOIN system_asteroid_belts b ON r.location_type='Belt' AND "
-        "r.location_id=b.id "
-        "WHERE b.system_name='" +
-        db.esc(m_system_name) + "' ORDER BY r.resource_type");
+    auto belt_rows =
+        db.query("SELECT b.designation, r.resource_type, r.abundance, "
+                 "r.extraction_difficulty "
+                 "FROM system_resources r "
+                 "JOIN system_asteroid_belts b ON r.location_type='Belt' AND "
+                 "r.location_id=b.id "
+                 "WHERE b.system_name='" +
+                 db.esc(m_system_name) + "' ORDER BY r.resource_type");
 
     if (rows.empty() && belt_rows.empty())
     {
@@ -444,10 +444,9 @@ void SystemCommand::show_anomalies()
     std::ostringstream out;
     out << "=== " << m_system_name << " ANOMALIES ===\n\n";
 
-    auto rows =
-        db.query("SELECT name, anomaly_type, effect, discovery_text "
-                 "FROM system_anomalies WHERE system_name='" +
-                 db.esc(m_system_name) + "'");
+    auto rows = db.query("SELECT name, anomaly_type, effect, discovery_text "
+                         "FROM system_anomalies WHERE system_name='" +
+                         db.esc(m_system_name) + "'");
 
     if (rows.empty())
     {

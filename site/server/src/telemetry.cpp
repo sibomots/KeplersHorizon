@@ -162,45 +162,49 @@ static std::string getShipsJson(int game_id, char player)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     char opponent = (player == 'A') ? 'B' : 'A';
-    
+
     std::ostringstream out;
     out << "{";
-    
+
     // Friendly ships (owned by current player) - include specs for tooltip
     auto friendly = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, tube, missiles, sr, ship_name FROM ships "
-        "WHERE game_id=" + std::to_string(game_id) + 
-        " AND owner='" + std::string(1, player) + "'"
+        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
+        "tube, missiles, sr, ship_name FROM ships "
+        "WHERE game_id=" +
+        std::to_string(game_id) + " AND owner='" + std::string(1, player) +
+        "'"
         " AND destroyed_at IS NULL");
-    
+
     out << "\"friendly\":[";
-    for (size_t i = 0; i < friendly.size(); ++i) {
-        if (i > 0) out << ",";
+    for (size_t i = 0; i < friendly.size(); ++i)
+    {
+        if (i > 0)
+            out << ",";
         out << "{\"code\":\"" << json_escape(friendly[i][0]) << "\""
             << ",\"type\":\"" << json_escape(friendly[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(friendly[i][2]) << "\""
             << ",\"system\":\"" << json_escape(friendly[i][3]) << "\""
-            << ",\"pd\":" << friendly[i][4]
-            << ",\"b\":" << friendly[i][5]
-            << ",\"s\":" << friendly[i][6]
-            << ",\"t\":" << friendly[i][7]
-            << ",\"m\":" << friendly[i][8]
-            << ",\"sr\":" << friendly[i][9]
+            << ",\"pd\":" << friendly[i][4] << ",\"b\":" << friendly[i][5]
+            << ",\"s\":" << friendly[i][6] << ",\"t\":" << friendly[i][7]
+            << ",\"m\":" << friendly[i][8] << ",\"sr\":" << friendly[i][9]
             << ",\"name\":\"" << json_escape(friendly[i][10]) << "\""
             << "}";
     }
     out << "]";
-    
+
     // Enemy ships (owned by opponent)
     auto enemy = db.query(
         "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
-        "WHERE game_id=" + std::to_string(game_id) + 
-        " AND owner='" + std::string(1, opponent) + "'"
+        "WHERE game_id=" +
+        std::to_string(game_id) + " AND owner='" + std::string(1, opponent) +
+        "'"
         " AND destroyed_at IS NULL");
-    
+
     out << ",\"enemy\":[";
-    for (size_t i = 0; i < enemy.size(); ++i) {
-        if (i > 0) out << ",";
+    for (size_t i = 0; i < enemy.size(); ++i)
+    {
+        if (i > 0)
+            out << ",";
         out << "{\"code\":\"" << json_escape(enemy[i][0]) << "\""
             << ",\"type\":\"" << json_escape(enemy[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(enemy[i][2]) << "\""
@@ -209,24 +213,27 @@ static std::string getShipsJson(int game_id, char player)
             << "}";
     }
     out << "]";
-    
+
     // Neutral ships (owner N or X for xeno/third-party)
-    auto neutral = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
-        "WHERE game_id=" + std::to_string(game_id) + 
-        " AND owner NOT IN ('A','B')"
-        " AND destroyed_at IS NULL");
-    
+    auto neutral =
+        db.query("SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+                 "WHERE game_id=" +
+                 std::to_string(game_id) +
+                 " AND owner NOT IN ('A','B')"
+                 " AND destroyed_at IS NULL");
+
     out << ",\"neutral\":[";
-    for (size_t i = 0; i < neutral.size(); ++i) {
-        if (i > 0) out << ",";
+    for (size_t i = 0; i < neutral.size(); ++i)
+    {
+        if (i > 0)
+            out << ",";
         out << "{\"code\":\"" << json_escape(neutral[i][0]) << "\""
             << ",\"type\":\"" << json_escape(neutral[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(neutral[i][2]) << "\""
             << ",\"system\":\"" << json_escape(neutral[i][3]) << "\"}";
     }
     out << "]";
-    
+
     out << "}";
     return out.str();
 }
@@ -306,7 +313,8 @@ void Telemetry::status(char player, HttpResponse* resp)
     status_json << "\"phaseIndex\":" << s.phase_index << ",";
     status_json << "\"phase\":\"" << json_escape(s.phase_name()) << "\",";
     status_json << "\"vp\":{\"A\":" << s.vpA << ",\"B\":" << s.vpB << "},";
-    status_json << "\"bp\":{\"A\":" << s.creditsA << ",\"B\":" << s.creditsB << "},";
+    status_json << "\"bp\":{\"A\":" << s.creditsA << ",\"B\":" << s.creditsB
+                << "},";
 
     if (!s.combat_summary_json.empty())
     {

@@ -18,8 +18,9 @@
 #include "telemetry.h"
 
 // Random resource table for salvage
-static const char* SALVAGE_RESOURCES[] = {"FERROUS",     "RARE_EARTH", "CRYSTALLINE",
-                                          "RADIOACTIVE", "VOLATILE",   "EXOTIC"};
+static const char* SALVAGE_RESOURCES[] = {"FERROUS",     "RARE_EARTH",
+                                          "CRYSTALLINE", "RADIOACTIVE",
+                                          "VOLATILE",    "EXOTIC"};
 static const int NUM_SALVAGE_RESOURCES = 6;
 
 bool SalvageCommand::invoke(void)
@@ -32,9 +33,9 @@ bool SalvageCommand::invoke(void)
 
     if (m_ship_code.empty())
     {
-        Telemetry::getInstance().write(
-            "Usage: salvage <ship>\n"
-            "Ship must be at a system with salvageable wreckage (e.g., SYDRA).");
+        Telemetry::getInstance().write("Usage: salvage <ship>\n"
+                                       "Ship must be at a system with "
+                                       "salvageable wreckage (e.g., SYDRA).");
         return true;
     }
 
@@ -56,10 +57,10 @@ bool SalvageCommand::invoke(void)
     }
 
     // Check if system has salvageable anomaly
-    auto anomaly = db.query(
-        "SELECT condition_text FROM system_constraints "
-        "WHERE system_name='" +
-        db.esc(ship.at_system) + "' AND source='SCRAPYARD'");
+    auto anomaly =
+        db.query("SELECT condition_text FROM system_constraints "
+                 "WHERE system_name='" +
+                 db.esc(ship.at_system) + "' AND source='SCRAPYARD'");
 
     if (anomaly.empty())
     {
@@ -70,10 +71,10 @@ bool SalvageCommand::invoke(void)
     }
 
     // Check ship has drones (required for salvage)
-    auto dr_check = db.query("SELECT dr FROM ships WHERE game_id=" +
-                             std::to_string(game_id) + " AND owner='" +
-                             std::string(1, me) + "' AND ship_code='" +
-                             db.esc(m_ship_code) + "'");
+    auto dr_check = db.query(
+        "SELECT dr FROM ships WHERE game_id=" + std::to_string(game_id) +
+        " AND owner='" + std::string(1, me) + "' AND ship_code='" +
+        db.esc(m_ship_code) + "'");
 
     int drones = dr_check.empty() ? 0 : std::atoi(dr_check[0][0].c_str());
     if (drones < 1)
@@ -130,7 +131,7 @@ bool SalvageCommand::invoke(void)
         // Successful salvage
         int res_idx = rand() % NUM_SALVAGE_RESOURCES;
         std::string resource = SALVAGE_RESOURCES[res_idx];
-        int quantity = 2 + (rand() % 4);  // 2-5 units
+        int quantity = 2 + (rand() % 4); // 2-5 units
 
         // Map resource to cargo column
         std::string col = "cargo_ferrous";

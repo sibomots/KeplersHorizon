@@ -16,13 +16,13 @@
 #include "telemetry.h"
 
 // BUGBUG: Base prices have been moved to: site/db/milieu/market_base_prices.csv
-// This hardcoded array is kept for backward compatibility but should be removed.
-// Market init should INSERT from market_base_prices reference table.
+// This hardcoded array is kept for backward compatibility but should be
+// removed. Market init should INSERT from market_base_prices reference table.
 static const struct
 {
     const char* type;
     int base_price;
-} BASE_PRICES[] = {{"FERROUS", 5},     {"RARE_EARTH", 20}, {"RADIOACTIVE", 30},
+} BASE_PRICES[] = {{"FERROUS", 5},      {"RARE_EARTH", 20}, {"RADIOACTIVE", 30},
                    {"CRYSTALLINE", 25}, {"VOLATILE", 8},    {"WATER", 3},
                    {"ORGANIC", 6},      {"EXOTIC", 100}};
 static const int NUM_RESOURCES = 8;
@@ -89,7 +89,8 @@ void MarketCommand::show_all_prices()
 
         // Format output
         std::string name = res;
-        if (name.length() < 12) {
+        if (name.length() < 12)
+        {
             name += std::string(12 - name.length(), ' ');
         }
 
@@ -111,10 +112,10 @@ void MarketCommand::show_price_history()
     for (auto& c : res_upper)
         c = toupper(c);
 
-    auto history = db.query(
-        "SELECT turn, price FROM market_history WHERE game_id=" +
-        std::to_string(game_id) + " AND resource_type='" + db.esc(res_upper) +
-        "' ORDER BY turn DESC LIMIT 10");
+    auto history =
+        db.query("SELECT turn, price FROM market_history WHERE game_id=" +
+                 std::to_string(game_id) + " AND resource_type='" +
+                 db.esc(res_upper) + "' ORDER BY turn DESC LIMIT 10");
 
     std::ostringstream out;
     out << "     " << res_upper << " PRICE HISTORY\n"
@@ -162,7 +163,7 @@ void update_market_prices(int game_id, int round)
         int base_price = std::atoi(mp[0][3].c_str());
 
         // Calculate supply/demand adjustment
-        int demand_pressure = bought - sold;  // positive = more buying
+        int demand_pressure = bought - sold; // positive = more buying
 
         // Synthesize market movement (random factor)
         int roll = rand() % 6 + 1;

@@ -31,11 +31,11 @@ void ScoreCommand::show_overview()
 
     // Get active player's username (whose turn it is)
     std::string active_username = "Unknown";
-    auto active_seat = db.query(
-        "SELECT u.username FROM users u "
-        "JOIN game_seats gs ON gs.user_id = u.id "
-        "WHERE gs.game_id=" +
-        std::to_string(game_id) + " AND gs.seat='" + s.active_player + "'");
+    auto active_seat = db.query("SELECT u.username FROM users u "
+                                "JOIN game_seats gs ON gs.user_id = u.id "
+                                "WHERE gs.game_id=" +
+                                std::to_string(game_id) + " AND gs.seat='" +
+                                s.active_player + "'");
     if (!active_seat.empty())
         active_username = active_seat[0][0];
 

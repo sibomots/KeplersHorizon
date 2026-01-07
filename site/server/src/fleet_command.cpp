@@ -27,7 +27,8 @@ bool FleetCommand::invoke(void)
         "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
         "s.screen, s.tube, s.missiles, s.tech_level, sys.name "
         "FROM ships s "
-        "LEFT JOIN systems sys ON s.at_hex = sys.hex_id AND s.game_id = sys.game_id "
+        "LEFT JOIN systems sys ON s.at_hex = sys.hex_id AND s.game_id = "
+        "sys.game_id "
         "WHERE s.game_id=" +
         std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
         "' AND s.destroyed_at IS NULL ORDER BY s.ship_code");
@@ -41,8 +42,10 @@ bool FleetCommand::invoke(void)
 
     std::ostringstream out;
     out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
-    out << "HULL  DESIGNATION      SECTOR                 PD   B  S  T  M  TECH LEVEL\n";
-    out << "----  --------------  -------------------    --  -- -- -- --  ----------\n";
+    out << "HULL  DESIGNATION      SECTOR                 PD   B  S  T  M  "
+           "TECH LEVEL\n";
+    out << "----  --------------  -------------------    --  -- -- -- --  "
+           "----------\n";
 
     for (const auto& r : rows)
     {
@@ -72,12 +75,12 @@ bool FleetCommand::invoke(void)
         out << std::left << std::setw(6) << hull;
         out << std::left << std::setw(16) << r[1].substr(0, 14);
         out << std::left << std::setw(23) << loc.substr(0, 21);
-        out << std::right << std::setw(2) << r[4];   // pd
-        out << std::right << std::setw(4) << r[5];   // beam
-        out << std::right << std::setw(3) << r[6];   // screen
-        out << std::right << std::setw(3) << r[7];   // tube
-        out << std::right << std::setw(3) << r[8];   // missiles
-        out << std::right << std::setw(12) << r[9];  // tech_level
+        out << std::right << std::setw(2) << r[4];  // pd
+        out << std::right << std::setw(4) << r[5];  // beam
+        out << std::right << std::setw(3) << r[6];  // screen
+        out << std::right << std::setw(3) << r[7];  // tube
+        out << std::right << std::setw(3) << r[8];  // missiles
+        out << std::right << std::setw(12) << r[9]; // tech_level
         out << "\n";
     }
 

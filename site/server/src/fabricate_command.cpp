@@ -24,28 +24,52 @@ struct Recipe
     // Resource costs: Fe, Re, Rd, Cr, Vo, H2O, Or, Ex
     int cost[8];
     int output;
-    const char* output_type;  // "missiles", "tube", "beam", "screen", "tech"
+    const char* output_type; // "missiles", "tube", "beam", "screen", "tech"
 };
 
 static const Recipe RECIPES[] = {
-    {"missiles", "Basic Missiles (x4)", 1, {2, 0, 1, 0, 1, 0, 0, 0}, 4,
+    {"missiles",
+     "Basic Missiles (x4)",
+     1,
+     {2, 0, 1, 0, 1, 0, 0, 0},
+     4,
      "missiles"},
-    {"adv_missiles", "Advanced Missiles (x4, +damage)", 2,
-     {2, 1, 2, 0, 2, 0, 0, 0}, 4, "missiles"},
-    {"tubes", "Tube Upgrade (+1 capacity)", 3, {5, 3, 0, 2, 0, 0, 0, 0}, 1,
+    {"adv_missiles",
+     "Advanced Missiles (x4, +damage)",
+     2,
+     {2, 1, 2, 0, 2, 0, 0, 0},
+     4,
+     "missiles"},
+    {"tubes",
+     "Tube Upgrade (+1 capacity)",
+     3,
+     {5, 3, 0, 2, 0, 0, 0, 0},
+     1,
      "tube"},
-    {"beams", "Beam Upgrade (+1 rating)", 3, {8, 4, 0, 3, 0, 0, 0, 0}, 1,
+    {"beams",
+     "Beam Upgrade (+1 rating)",
+     3,
+     {8, 4, 0, 3, 0, 0, 0, 0},
+     1,
      "beam"},
-    {"screens", "Screen Upgrade (+1 rating)", 3, {6, 2, 0, 4, 0, 0, 0, 0}, 1,
+    {"screens",
+     "Screen Upgrade (+1 rating)",
+     3,
+     {6, 2, 0, 4, 0, 0, 0, 0},
+     1,
      "screen"},
-    {"tech", "Tech Research (+1 level)", 5, {0, 10, 0, 5, 0, 0, 0, 2}, 1,
+    {"tech",
+     "Tech Research (+1 level)",
+     5,
+     {0, 10, 0, 5, 0, 0, 0, 2},
+     1,
      "tech"},
 };
 
 static const int NUM_RECIPES = sizeof(RECIPES) / sizeof(RECIPES[0]);
-static const char* RES_NAMES[] = {"Fe",  "Re",  "Rd", "Cr",
-                                  "Vo",  "H2O", "Or", "Ex"};
-static const char* CARGO_COLS[] = {"cargo_ferrous",    "cargo_rare_earth",
+static const char* RES_NAMES[] = {"Fe", "Re",  "Rd", "Cr",
+                                  "Vo", "H2O", "Or", "Ex"};
+static const char* CARGO_COLS[] = {"cargo_ferrous",     "cargo_rare_earth",
                                    "cargo_radioactive", "cargo_crystalline",
                                    "cargo_volatile",    "cargo_water",
                                    "cargo_organic",     "cargo_exotic"};
@@ -187,13 +211,11 @@ bool FabricateCommand::do_fabricate()
             continue;
 
         int remaining = total_cost[res];
-        auto res_ships = db.query("SELECT ship_code, " +
-                                  std::string(CARGO_COLS[res]) +
-                                  " FROM ships WHERE game_id=" +
-                                  std::to_string(game_id) + " AND owner='" +
-                                  std::string(1, me) +
-                                  "' AND destroyed_at IS NULL AND " +
-                                  CARGO_COLS[res] + ">0");
+        auto res_ships = db.query(
+            "SELECT ship_code, " + std::string(CARGO_COLS[res]) +
+            " FROM ships WHERE game_id=" + std::to_string(game_id) +
+            " AND owner='" + std::string(1, me) +
+            "' AND destroyed_at IS NULL AND " + CARGO_COLS[res] + ">0");
 
         for (const auto& rs : res_ships)
         {
@@ -227,13 +249,12 @@ bool FabricateCommand::do_fabricate()
     {
         // Queue for later (ship upgrades take time)
         int completion = s.round + recipe->time_rounds;
-        db.exec(
-            "INSERT INTO fabrication_queue(game_id,player,ship_code,recipe,"
-            "quantity,started_turn,completion_turn,status) VALUES(" +
-            std::to_string(game_id) + ",'" + std::string(1, me) + "','" +
-            db.esc(ship_code) + "','" + db.esc(m_recipe) + "'," +
-            std::to_string(m_quantity) + "," + std::to_string(s.round) + "," +
-            std::to_string(completion) + ",'IN_PROGRESS')");
+        db.exec("INSERT INTO fabrication_queue(game_id,player,ship_code,recipe,"
+                "quantity,started_turn,completion_turn,status) VALUES(" +
+                std::to_string(game_id) + ",'" + std::string(1, me) + "','" +
+                db.esc(ship_code) + "','" + db.esc(m_recipe) + "'," +
+                std::to_string(m_quantity) + "," + std::to_string(s.round) +
+                "," + std::to_string(completion) + ",'IN_PROGRESS')");
         result_msg = "Queued " + m_recipe + " x" + std::to_string(m_quantity) +
                      ". Completes round " + std::to_string(completion);
     }

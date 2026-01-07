@@ -65,14 +65,15 @@ bool DeployCommand::invoke(void)
     }
 
     // Validate destination is a base-star system
-    auto base_info = db.query(
-        "SELECT is_base, base_side, territory_name FROM star_systems "
-        "WHERE map_id=1 AND name='" + db.esc(sys) + "'");
+    auto base_info =
+        db.query("SELECT is_base, base_side, territory_name FROM star_systems "
+                 "WHERE map_id=1 AND name='" +
+                 db.esc(sys) + "'");
 
     if (base_info.empty())
     {
-        Telemetry::getInstance().write(
-            "DEPLOY: Unknown system: " + m_system_name);
+        Telemetry::getInstance().write("DEPLOY: Unknown system: " +
+                                       m_system_name);
         return false;
     }
 
@@ -87,7 +88,8 @@ bool DeployCommand::invoke(void)
     std::string territory_name = base_info[0][2];
 
     // Get player's home side
-    std::string player_side = (active_player == 'A') ? s.home_side_A : s.home_side_B;
+    std::string player_side =
+        (active_player == 'A') ? s.home_side_A : s.home_side_B;
 
     if (player_side.empty())
     {
@@ -207,13 +209,15 @@ bool MoveCommand::invoke(void)
     {
         std::string firstDest = m_destinations[0];
         // Resolve system name to hex if needed
-        std::string destHex = MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
-        if (destHex.empty()) destHex = firstDest;  // Use as-is if not a system name
+        std::string destHex =
+            MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
+        if (destHex.empty())
+            destHex = firstDest; // Use as-is if not a system name
 
         if (destHex == startHex)
         {
-            Telemetry::getInstance().write(
-                "NAV: " + sh.name + " is already at " + firstDest + ".");
+            Telemetry::getInstance().write("NAV: " + sh.name +
+                                           " is already at " + firstDest + ".");
             return false;
         }
     }
@@ -287,7 +291,8 @@ bool MoveCommand::invoke(void)
         }
 
         // Get actual path segment for telemetry
-        auto segPath = graph.get_path(currentHex, stepHex, allowance - totalCost);
+        auto segPath =
+            graph.get_path(currentHex, stepHex, allowance - totalCost);
         // Skip first element (it's the current hex, already in fullPath)
         for (size_t j = 1; j < segPath.size(); ++j)
         {
@@ -308,7 +313,7 @@ bool MoveCommand::invoke(void)
                 ConstraintEngine::get_movement_modifier(m_game_id, stepSys);
             stepCost += modifier;
             if (stepCost < 1)
-                stepCost = 1;  // Minimum 1 PD
+                stepCost = 1; // Minimum 1 PD
         }
 
         totalCost += stepCost;
@@ -353,24 +358,25 @@ bool MoveCommand::invoke(void)
     if (!finalSystem.empty())
     {
         // Check current knowledge level
-        auto know = db.query(
-            "SELECT knowledge_level FROM grimoire_entries "
-            "WHERE game_id=" +
-            std::to_string(m_game_id) + " AND player='" +
-            std::string(1, active_player) + "' AND system_name='" +
-            db.esc(finalSystem) + "'");
+        auto know = db.query("SELECT knowledge_level FROM grimoire_entries "
+                             "WHERE game_id=" +
+                             std::to_string(m_game_id) + " AND player='" +
+                             std::string(1, active_player) +
+                             "' AND system_name='" + db.esc(finalSystem) + "'");
 
         std::string current_level = know.empty() ? "Unknown" : know[0][0];
 
         // Upgrade if Unknown - check for LRS
         if (current_level == "Unknown")
         {
-            auto lrs_check = db.query("SELECT lrs FROM ships WHERE game_id=" +
-                                      std::to_string(m_game_id) + " AND owner='" +
-                                      std::string(1, active_player) +
-                                      "' AND ship_code='" + db.esc(sh.code) + "'");
+            auto lrs_check =
+                db.query("SELECT lrs FROM ships WHERE game_id=" +
+                         std::to_string(m_game_id) + " AND owner='" +
+                         std::string(1, active_player) + "' AND ship_code='" +
+                         db.esc(sh.code) + "'");
 
-            int lrs = lrs_check.empty() ? 0 : std::atoi(lrs_check[0][0].c_str());
+            int lrs =
+                lrs_check.empty() ? 0 : std::atoi(lrs_check[0][0].c_str());
             std::string new_level = (lrs > 0) ? "Charted" : "Rumored";
 
             if (know.empty())
@@ -386,11 +392,11 @@ bool MoveCommand::invoke(void)
             else
             {
                 db.exec("UPDATE grimoire_entries SET knowledge_level='" +
-                        new_level + "', last_updated_turn=" +
-                        std::to_string(s.round) + " WHERE game_id=" +
-                        std::to_string(m_game_id) + " AND player='" +
-                        std::string(1, active_player) + "' AND system_name='" +
-                        db.esc(finalSystem) + "'");
+                        new_level +
+                        "', last_updated_turn=" + std::to_string(s.round) +
+                        " WHERE game_id=" + std::to_string(m_game_id) +
+                        " AND player='" + std::string(1, active_player) +
+                        "' AND system_name='" + db.esc(finalSystem) + "'");
             }
 
             Telemetry::getInstance().write("GRIMOIRE: " + finalSystem +
@@ -416,19 +422,23 @@ bool MoveCommand::invoke(void)
 
         // Cache system names for hexes
         std::unordered_map<std::string, std::string> hexToSys;
-        auto sysList = db.query(
-            "SELECT hex_id, name FROM star_systems WHERE map_id=1");
+        auto sysList =
+            db.query("SELECT hex_id, name FROM star_systems WHERE map_id=1");
         for (const auto& row : sysList)
         {
             hexToSys[row[0]] = row[1];
         }
 
         // Check if two hexes are connected by warpline
-        auto isWarpline = [&](const std::string& h1, const std::string& h2) -> bool {
-            auto result = db.query(
-                "SELECT 1 FROM warplines WHERE map_id=1 AND "
-                "((a_hex='" + db.esc(h1) + "' AND b_hex='" + db.esc(h2) + "') OR "
-                "(a_hex='" + db.esc(h2) + "' AND b_hex='" + db.esc(h1) + "')) LIMIT 1");
+        auto isWarpline = [&](const std::string& h1,
+                              const std::string& h2) -> bool {
+            auto result = db.query("SELECT 1 FROM warplines WHERE map_id=1 AND "
+                                   "((a_hex='" +
+                                   db.esc(h1) + "' AND b_hex='" + db.esc(h2) +
+                                   "') OR "
+                                   "(a_hex='" +
+                                   db.esc(h2) + "' AND b_hex='" + db.esc(h1) +
+                                   "')) LIMIT 1");
             return !result.empty();
         };
 
@@ -439,10 +449,10 @@ bool MoveCommand::invoke(void)
             // Add connector before all but first
             if (i > 0)
             {
-                if (isWarpline(fullPath[i-1], fullPath[i]))
-                    pathOut << " = ";  // Warpline jump
+                if (isWarpline(fullPath[i - 1], fullPath[i]))
+                    pathOut << " = "; // Warpline jump
                 else
-                    pathOut << " -> ";  // Regular hex move
+                    pathOut << " -> "; // Regular hex move
             }
 
             // Format hex: STARNAME (hex#) or just hex#
@@ -472,7 +482,7 @@ bool MoveCommand::invoke(void)
     {
         // Enemy ships present - trigger combat check
         CombatEngine ce(m_game_id);
-        ce.check_for_combat_triggers();  // Creates combat if not exists
+        ce.check_for_combat_triggers(); // Creates combat if not exists
 
         Logger::instance().info("[MOVE] Contact - enemy ships in " + finalHex);
 

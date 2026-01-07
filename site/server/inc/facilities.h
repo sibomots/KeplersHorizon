@@ -28,9 +28,9 @@ struct FacilityInfo
 {
     std::string system_name;
     std::string facility_type;
-    char controller;       // 'A', 'B', or '\0' for neutral
-    int occupied_since;    // Turn when occupation began
-    int capture_progress;  // Turns of continuous occupation
+    char controller;      // 'A', 'B', or '\0' for neutral
+    int occupied_since;   // Turn when occupation began
+    int capture_progress; // Turns of continuous occupation
 };
 
 class FacilityEngine

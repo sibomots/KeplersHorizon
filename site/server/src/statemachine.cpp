@@ -97,19 +97,15 @@ bool StateMachine::transition()
                 "Transition: Game Initialized. Moving to IN_GAME.");
             data.state = ServerState::IN_GAME;
 
-            // Clear intent? Or keep it as part of state?
-            // User said "We set it. We test it. What's possibly going to change
-            // it?" So maybe we don't clear it. It IS the scenario of the game.
-
-            // Game is now active - turn phases tracked via PhaseIndex in
-            // GameState
+            // Game is now active:
+            // Turn phases tracked via PhaseIndex in GameState
             return true;
         }
         break;
 
     case ServerState::IN_GAME:
         // BUGBUG
-		break;
+        break;
 
     default:
         // BUGBUG
@@ -124,14 +120,15 @@ bool StateMachine::active_player_execute(ICmd* pICmd)
     {
         return false;
     }
-    // Command sets properties on the State Slate (invoke), then we turn the crank.
+    // Command sets properties on the State Slate (invoke), then we turn the
+    // crank.
     bool result = pICmd->invoke();
     return result;
 }
 
 bool StateMachine::nonactive_player_execute(ICmd* pICmd)
 {
-    if (!pICmd) 
+    if (!pICmd)
     {
         return false;
     }
@@ -319,17 +316,17 @@ GameState StateMachine::new_game_state_for_scenario(const std::string& scenario)
 
     if (scenario == "learning")
     {
-        s.creditsA = 800;  // 40 × 20 (inflated)
+        s.creditsA = 800; // 40 × 20 (inflated)
         s.creditsB = 800;
     }
     else if (scenario == "basic")
     {
-        s.creditsA = 1000;  // 50 × 20 (inflated)
+        s.creditsA = 1000; // 50 × 20 (inflated)
         s.creditsB = 1000;
     }
     else if (scenario == "advanced")
     {
-        s.creditsA = 400;  // 20 × 20 (inflated)
+        s.creditsA = 400; // 20 × 20 (inflated)
         s.creditsB = 400; // start of first turn
     }
 
@@ -400,9 +397,9 @@ void StateMachine::apply_start_of_turn(GameState& s)
         if (!is_first_player_first_turn)
         {
             if (me == 'A')
-                s.creditsA += 200;  // 10 × 20 (inflated)
+                s.creditsA += 200; // 10 × 20 (inflated)
             else
-                s.creditsB += 200;  // 10 × 20 (inflated)
+                s.creditsB += 200; // 10 × 20 (inflated)
         }
     }
 
@@ -494,8 +491,7 @@ void StateMachine::advance_next(GameState& s)
                         combatMsg << "COMBAT DETECTED!\n";
                         combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName
                                   << " [" << combat.hex_id << "]\n";
-                        combatMsg << "     SHIPS IN SYSTEM " << sysName
-                                  << "\n";
+                        combatMsg << "     SHIPS IN SYSTEM " << sysName << "\n";
 
                         // Blue-Force (viewer's ships) - show stats
                         combatMsg << "         Blue-Force\n";
@@ -533,8 +529,7 @@ void StateMachine::advance_next(GameState& s)
                             }
                         }
 
-                        combatMsg
-                            << "     >> Draft orders:   'combat order'\n";
+                        combatMsg << "     >> Draft orders:   'combat order'\n";
                         combatMsg << "     >> Execute orders: 'combat commit'";
 
                         Telemetry::getInstance().add_tell(s.game_id, viewer,

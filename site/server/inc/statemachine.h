@@ -24,14 +24,14 @@ class GameState
     int phase_index;
     int vpA = 0;
     int vpB = 0;
-    int creditsA = 0;  // Stellar Credits (formerly Build Points)
+    int creditsA = 0; // Stellar Credits (formerly Build Points)
     int creditsB = 0;
     bool game_over = false;
     std::string winner = "";
 
     // Territory assignments - set on first deploy
-    std::string home_side_A;  // 'A' or 'B' (internal only)
-    std::string home_side_B;  // opposite of home_side_A
+    std::string home_side_A; // 'A' or 'B' (internal only)
+    std::string home_side_B; // opposite of home_side_A
 
     // ship lists (future)
     // right now: none

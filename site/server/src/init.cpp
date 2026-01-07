@@ -57,7 +57,7 @@ void apply_arguments(int argc, char** argv)
             out = argv[++i];
         };
         auto next_ushort = [&](unsigned short& out) {
-            if (i + 1 >= argc) 
+            if (i + 1 >= argc)
             {
                 throw std::runtime_error("Missing arg for " + k);
             }

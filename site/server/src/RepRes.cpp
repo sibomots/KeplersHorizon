@@ -58,7 +58,8 @@ bool RepairCommand::invoke(void)
         return true;
     }
 
-    // Validate ship exists and is at player's base star OR controlled repair facility
+    // Validate ship exists and is at player's base star OR controlled repair
+    // facility
     auto shipRow = db.query(
         "SELECT s.at_hex, s.pd, s.beam, s.screen, s.tube, s.missiles, "
         "s.pd_orig, s.beam_orig, s.screen_orig, s.tube_orig, s.missiles_orig, "
@@ -67,7 +68,8 @@ bool RepairCommand::invoke(void)
         "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.map_id = 1 "
         "WHERE s.game_id=" +
         std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
-        "' AND s.ship_code='" + db.esc(m_ship_code) + "' AND s.destroyed_at IS NULL");
+        "' AND s.ship_code='" + db.esc(m_ship_code) +
+        "' AND s.destroyed_at IS NULL");
 
     if (shipRow.empty())
     {
@@ -89,7 +91,8 @@ bool RepairCommand::invoke(void)
     // Also check for controlled repair facility
     if (!can_repair && !system_name.empty())
     {
-        can_repair = FacilityEngine::can_repair_at(s.game_id, system_name, owner);
+        can_repair =
+            FacilityEngine::can_repair_at(s.game_id, system_name, owner);
     }
 
     if (!can_repair)

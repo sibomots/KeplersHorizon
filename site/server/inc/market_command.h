@@ -20,13 +20,18 @@ class MarketCommand : public ICmd
     class Builder
     {
       public:
-        Builder() : m_resource("") {}
+        Builder() : m_resource("")
+        {
+        }
         Builder& resource(const std::string& res)
         {
             m_resource = res;
             return *this;
         }
-        MarketCommand* build() { return new MarketCommand(m_resource); }
+        MarketCommand* build()
+        {
+            return new MarketCommand(m_resource);
+        }
 
       private:
         std::string m_resource;
@@ -35,7 +40,9 @@ class MarketCommand : public ICmd
     bool invoke(void) override;
 
   private:
-    MarketCommand(const std::string& res) : m_resource(res) {}
+    MarketCommand(const std::string& res) : m_resource(res)
+    {
+    }
     std::string m_resource;
 
     void show_all_prices();

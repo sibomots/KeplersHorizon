@@ -18,10 +18,10 @@ int ConstraintEngine::get_movement_modifier(int game_id,
     DatabaseManager& db = DatabaseManager::getInstance();
 
     // Check for movement constraints
-    auto rows = db.query(
-        "SELECT modifier_type, modifier_value FROM system_constraints "
-        "WHERE system_name='" +
-        db.esc(system) + "' AND constraint_type='MOVEMENT'");
+    auto rows =
+        db.query("SELECT modifier_type, modifier_value FROM system_constraints "
+                 "WHERE system_name='" +
+                 db.esc(system) + "' AND constraint_type='MOVEMENT'");
 
     int total_modifier = 0;
     for (const auto& row : rows)
@@ -48,11 +48,11 @@ bool ConstraintEngine::is_movement_blocked(int game_id,
 {
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    auto rows = db.query(
-        "SELECT COUNT(*) FROM system_constraints "
-        "WHERE system_name='" +
-        db.esc(system) +
-        "' AND constraint_type='MOVEMENT' AND modifier_type='BLOCK'");
+    auto rows =
+        db.query("SELECT COUNT(*) FROM system_constraints "
+                 "WHERE system_name='" +
+                 db.esc(system) +
+                 "' AND constraint_type='MOVEMENT' AND modifier_type='BLOCK'");
 
     return (!rows.empty() && std::atoi(rows[0][0].c_str()) > 0);
 }
@@ -81,10 +81,10 @@ int ConstraintEngine::get_combat_modifier(int game_id,
         if (source == "FORTRESS")
         {
             // Check facility ownership
-            auto owner_check = db.query(
-                "SELECT controller FROM system_facilities "
-                "WHERE system_name='" +
-                db.esc(system) + "' AND facility_type='FORTRESS'");
+            auto owner_check =
+                db.query("SELECT controller FROM system_facilities "
+                         "WHERE system_name='" +
+                         db.esc(system) + "' AND facility_type='FORTRESS'");
 
             if (!owner_check.empty() && owner_check[0][0][0] == player)
             {
@@ -110,10 +110,10 @@ int ConstraintEngine::get_extraction_modifier(int game_id,
 {
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    auto rows = db.query(
-        "SELECT modifier_type, modifier_value FROM system_constraints "
-        "WHERE system_name='" +
-        db.esc(system) + "' AND constraint_type='HARVEST'");
+    auto rows =
+        db.query("SELECT modifier_type, modifier_value FROM system_constraints "
+                 "WHERE system_name='" +
+                 db.esc(system) + "' AND constraint_type='HARVEST'");
 
     int total_modifier = 0;
     for (const auto& row : rows)
@@ -136,12 +136,11 @@ bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
     DatabaseManager& db = DatabaseManager::getInstance();
 
     // Check for hazardous extraction conditions
-    auto rows = db.query(
-        "SELECT COUNT(*) FROM system_constraints "
-        "WHERE system_name='" +
-        db.esc(system) +
-        "' AND constraint_type='HARVEST' AND "
-        "condition_text LIKE '%hazardous%'");
+    auto rows = db.query("SELECT COUNT(*) FROM system_constraints "
+                         "WHERE system_name='" +
+                         db.esc(system) +
+                         "' AND constraint_type='HARVEST' AND "
+                         "condition_text LIKE '%hazardous%'");
 
     if (!rows.empty() && std::atoi(rows[0][0].c_str()) > 0)
         return true;
@@ -170,8 +169,8 @@ bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
     return false;
 }
 
-std::vector<SystemConstraint> ConstraintEngine::get_constraints(
-    int game_id, const std::string& system)
+std::vector<SystemConstraint>
+ConstraintEngine::get_constraints(int game_id, const std::string& system)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::vector<SystemConstraint> result;
@@ -223,6 +222,7 @@ void ConstraintEngine::initialize_constraints(int game_id)
     // has been moved to: site/db/milieu/system_constraints.csv
     // The system_constraints table is global (not per-game) and should be
     // pre-loaded from CSV during database setup.
-    
-    Logger::instance().info("[CONSTRAINTS] Constraints initialized (loaded from CSV)");
+
+    Logger::instance().info(
+        "[CONSTRAINTS] Constraints initialized (loaded from CSV)");
 }

@@ -20,14 +20,21 @@ class ScoreCommand : public ICmd
     class Builder
     {
       public:
-        Builder() {}
-        ScoreCommand* build() { return new ScoreCommand(); }
+        Builder()
+        {
+        }
+        ScoreCommand* build()
+        {
+            return new ScoreCommand();
+        }
     };
 
     bool invoke(void) override;
 
   private:
-    ScoreCommand() {}
+    ScoreCommand()
+    {
+    }
     void show_overview();
 };
 

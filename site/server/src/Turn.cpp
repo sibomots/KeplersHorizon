@@ -272,16 +272,16 @@ bool StartCommand::invoke(void)
     StateMachine::getInstance().save_game(s);
 
     Logger::instance().info(
-        "Game initialized: " + sc_str +
-        " scenario (game_id=" + std::to_string(new_game_id) + "), Round " +
-        std::to_string(s.round) + ", Phase: " + s.phase_name() +
-        ", CR A=" + std::to_string(s.creditsA) + " B=" + std::to_string(s.creditsB));
+        "Game initialized: " + sc_str + " scenario (game_id=" +
+        std::to_string(new_game_id) + "), Round " + std::to_string(s.round) +
+        ", Phase: " + s.phase_name() + ", CR A=" + std::to_string(s.creditsA) +
+        " B=" + std::to_string(s.creditsB));
 
     Telemetry::getInstance().write("Game initialized: " + sc_str + " scenario");
     Telemetry::getInstance().write("Round " + std::to_string(s.round) +
                                    ", Phase: " + s.phase_name());
-    Telemetry::getInstance().write("Starting credits: " +
-                                   std::to_string(s.creditsA) + " CR");
+    Telemetry::getInstance().write(
+        "Starting credits: " + std::to_string(s.creditsA) + " CR");
 
     return true;
 }

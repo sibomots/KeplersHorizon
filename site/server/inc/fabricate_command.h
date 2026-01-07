@@ -23,7 +23,9 @@ class FabricateCommand : public ICmd
     class Builder
     {
       public:
-        Builder() : m_recipe(""), m_quantity(1) {}
+        Builder() : m_recipe(""), m_quantity(1)
+        {
+        }
         Builder& recipe(const std::string& r)
         {
             m_recipe = r;

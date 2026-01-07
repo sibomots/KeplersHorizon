@@ -25,9 +25,8 @@ bool ExtractCommand::invoke(void)
 
     if (m_ship_code.empty())
     {
-        Telemetry::getInstance().write(
-            "Usage: extract scan\n"
-            "       extract <ship> <resource>");
+        Telemetry::getInstance().write("Usage: extract scan\n"
+                                       "       extract <ship> <resource>");
         return true;
     }
 
@@ -118,8 +117,8 @@ bool ExtractCommand::do_extract()
     // Verify ship exists and get location
     if (!ship_exists(game_id, me, m_ship_code))
     {
-        Telemetry::getInstance().write(
-            "FLEET REGISTRY: Vessel " + m_ship_code + " not found.");
+        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
+                                       " not found.");
         return false;
     }
 
@@ -143,8 +142,8 @@ bool ExtractCommand::do_extract()
         "JOIN system_planets sp ON sr.location_type='Planet' AND "
         "sr.location_id=sp.id "
         "WHERE sp.system_name='" +
-        db.esc(ship.at_system) + "' AND sr.resource_type='" + db.esc(res_upper) +
-        "' LIMIT 1");
+        db.esc(ship.at_system) + "' AND sr.resource_type='" +
+        db.esc(res_upper) + "' LIMIT 1");
 
     if (res_check.empty())
     {
@@ -162,8 +161,8 @@ bool ExtractCommand::do_extract()
 
     if (res_check.empty())
     {
-        Telemetry::getInstance().write(
-            "HARVEST: No " + res_upper + " deposits found in " + ship.at_system);
+        Telemetry::getInstance().write("HARVEST: No " + res_upper +
+                                       " deposits found in " + ship.at_system);
         return false;
     }
 
@@ -195,12 +194,13 @@ bool ExtractCommand::do_extract()
         yield = 1;
 
     // Check cargo capacity
-    auto cargo = db.query(
-        "SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
-        "cargo_crystalline+cargo_volatile+cargo_water+cargo_organic+"
-        "cargo_exotic+cargo_missiles, cargo_capacity FROM ships WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-        "' AND ship_code='" + db.esc(m_ship_code) + "'");
+    auto cargo =
+        db.query("SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
+                 "cargo_crystalline+cargo_volatile+cargo_water+cargo_organic+"
+                 "cargo_exotic+cargo_missiles, cargo_capacity FROM ships WHERE "
+                 "game_id=" +
+                 std::to_string(game_id) + " AND owner='" + std::string(1, me) +
+                 "' AND ship_code='" + db.esc(m_ship_code) + "'");
 
     int current_cargo = cargo.empty() ? 0 : std::atoi(cargo[0][0].c_str());
     int capacity = cargo.empty() ? 10 : std::atoi(cargo[0][1].c_str());
@@ -210,8 +210,8 @@ bool ExtractCommand::do_extract()
         yield = capacity - current_cargo;
         if (yield <= 0)
         {
-            Telemetry::getInstance().write(
-                "HARVEST: " + ship.name + " cargo hold is full!");
+            Telemetry::getInstance().write("HARVEST: " + ship.name +
+                                           " cargo hold is full!");
             return false;
         }
     }
@@ -234,9 +234,10 @@ bool ExtractCommand::do_extract()
         col = "cargo_exotic";
 
     // Update cargo
-    db.exec("UPDATE ships SET " + col + "=" + col + "+" + std::to_string(yield) +
-            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-            std::string(1, me) + "' AND ship_code='" + db.esc(m_ship_code) + "'");
+    db.exec(
+        "UPDATE ships SET " + col + "=" + col + "+" + std::to_string(yield) +
+        " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
+        std::string(1, me) + "' AND ship_code='" + db.esc(m_ship_code) + "'");
 
     // Log extract operation
     db.exec(

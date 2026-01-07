@@ -29,11 +29,10 @@ bool SurveyCommand::has_ship_in_system(const std::string& system)
     std::string hex = hex_rows[0][0];
 
     // Check for ships at this hex
-    auto ship_rows =
-        db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
-                 std::to_string(s.game_id) + " AND owner='" +
-                 std::string(1, owner) + "' AND at_hex='" + db.esc(hex) +
-                 "' AND destroyed_at IS NULL");
+    auto ship_rows = db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
+                              std::to_string(s.game_id) + " AND owner='" +
+                              std::string(1, owner) + "' AND at_hex='" +
+                              db.esc(hex) + "' AND destroyed_at IS NULL");
 
     if (ship_rows.empty())
     {
@@ -67,12 +66,12 @@ bool SurveyCommand::invoke(void)
     if (target_system.empty())
     {
         // Find first system where player has a ship
-        auto loc_rows = db.query(
-            "SELECT DISTINCT ss.name FROM ships s "
-            "JOIN star_systems ss ON s.at_hex = ss.hex "
-            "WHERE s.game_id=" +
-            std::to_string(s.game_id) + " AND s.owner='" +
-            std::string(1, owner) + "' AND s.destroyed_at IS NULL LIMIT 1");
+        auto loc_rows = db.query("SELECT DISTINCT ss.name FROM ships s "
+                                 "JOIN star_systems ss ON s.at_hex = ss.hex "
+                                 "WHERE s.game_id=" +
+                                 std::to_string(s.game_id) + " AND s.owner='" +
+                                 std::string(1, owner) +
+                                 "' AND s.destroyed_at IS NULL LIMIT 1");
 
         if (loc_rows.empty())
         {
@@ -98,18 +97,19 @@ bool SurveyCommand::invoke(void)
     // Check ship presence
     if (!has_ship_in_system(target_system))
     {
-        Telemetry::getInstance().write(
-            "SURVEY: No ships present in " + target_system +
-            ".\nYou must have a vessel in-system to conduct survey operations.");
+        Telemetry::getInstance().write("SURVEY: No ships present in " +
+                                       target_system +
+                                       ".\nYou must have a vessel in-system to "
+                                       "conduct survey operations.");
         return false;
     }
 
     // Get current knowledge level
-    auto know_rows = db.query(
-        "SELECT knowledge_level FROM grimoire_entries "
-        "WHERE game_id=" +
-        std::to_string(s.game_id) + " AND player='" + std::string(1, owner) +
-        "' AND system_name='" + db.esc(target_system) + "'");
+    auto know_rows = db.query("SELECT knowledge_level FROM grimoire_entries "
+                              "WHERE game_id=" +
+                              std::to_string(s.game_id) + " AND player='" +
+                              std::string(1, owner) + "' AND system_name='" +
+                              db.esc(target_system) + "'");
 
     std::string current_level = "Unknown";
     if (!know_rows.empty())
@@ -141,10 +141,10 @@ bool SurveyCommand::invoke(void)
     else
     {
         db.exec("UPDATE grimoire_entries SET knowledge_level='" + new_level +
-                "', last_updated_turn='" + turn_str + "' WHERE game_id=" +
-                std::to_string(s.game_id) + " AND player='" +
-                std::string(1, owner) + "' AND system_name='" +
-                db.esc(target_system) + "'");
+                "', last_updated_turn='" + turn_str +
+                "' WHERE game_id=" + std::to_string(s.game_id) +
+                " AND player='" + std::string(1, owner) +
+                "' AND system_name='" + db.esc(target_system) + "'");
     }
 
     // Report success

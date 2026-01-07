@@ -20,13 +20,18 @@ class SalvageCommand : public ICmd
     class Builder
     {
       public:
-        Builder() : m_ship_code("") {}
+        Builder() : m_ship_code("")
+        {
+        }
         Builder& ship(const std::string& code)
         {
             m_ship_code = code;
             return *this;
         }
-        SalvageCommand* build() { return new SalvageCommand(m_ship_code); }
+        SalvageCommand* build()
+        {
+            return new SalvageCommand(m_ship_code);
+        }
 
       private:
         std::string m_ship_code;
@@ -35,7 +40,9 @@ class SalvageCommand : public ICmd
     bool invoke(void) override;
 
   private:
-    SalvageCommand(const std::string& ship) : m_ship_code(ship) {}
+    SalvageCommand(const std::string& ship) : m_ship_code(ship)
+    {
+    }
     std::string m_ship_code;
 };
 

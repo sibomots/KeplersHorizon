@@ -180,9 +180,9 @@ bool TradeCommand::do_buy()
 
     // Update cargo
     db.exec("UPDATE ships SET " + col + "=" + col + "+" +
-            std::to_string(m_quantity) + " WHERE game_id=" +
-            std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-            "' AND ship_code='" + db.esc(ship_code) + "'");
+            std::to_string(m_quantity) +
+            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
+            std::string(1, me) + "' AND ship_code='" + db.esc(ship_code) + "'");
 
     StateMachine::getInstance().save_game(s);
 
@@ -210,7 +210,7 @@ bool TradeCommand::do_sell()
 
     // Sell price is 75% of market price
     int market = get_market_price(game_id, res_upper);
-    int price = (market * 3) / 4;  // 75% of market
+    int price = (market * 3) / 4; // 75% of market
     if (price == 0)
     {
         Telemetry::getInstance().write("TRADE: Unknown resource type: " +
@@ -221,7 +221,8 @@ bool TradeCommand::do_sell()
     std::string col = get_cargo_column(res_upper);
 
     // Find total of this resource across all ships
-    auto cargo = db.query("SELECT COALESCE(SUM(" + col + "),0) FROM ships WHERE "
+    auto cargo = db.query("SELECT COALESCE(SUM(" + col +
+                          "),0) FROM ships WHERE "
                           "game_id=" +
                           std::to_string(game_id) + " AND owner='" +
                           std::string(1, me) + "' AND destroyed_at IS NULL");
@@ -230,9 +231,9 @@ bool TradeCommand::do_sell()
 
     if (m_quantity > available)
     {
-        Telemetry::getInstance().write(
-            "TRADE: Insufficient " + res_upper + ". Have " +
-            std::to_string(available) + ", need " + std::to_string(m_quantity));
+        Telemetry::getInstance().write("TRADE: Insufficient " + res_upper +
+                                       ". Have " + std::to_string(available) +
+                                       ", need " + std::to_string(m_quantity));
         return false;
     }
 
@@ -240,11 +241,10 @@ bool TradeCommand::do_sell()
 
     // Deduct from first ship that has cargo
     int remaining = m_quantity;
-    auto ships = db.query("SELECT ship_code, " + col +
-                          " FROM ships WHERE game_id=" +
-                          std::to_string(game_id) + " AND owner='" +
-                          std::string(1, me) +
-                          "' AND destroyed_at IS NULL AND " + col + ">0");
+    auto ships =
+        db.query("SELECT ship_code, " + col + " FROM ships WHERE game_id=" +
+                 std::to_string(game_id) + " AND owner='" + std::string(1, me) +
+                 "' AND destroyed_at IS NULL AND " + col + ">0");
 
     for (const auto& ship : ships)
     {
@@ -254,10 +254,10 @@ bool TradeCommand::do_sell()
         int take = std::min(remaining, has);
         remaining -= take;
 
-        db.exec("UPDATE ships SET " + col + "=" + col + "-" +
-                std::to_string(take) + " WHERE game_id=" +
-                std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-                "' AND ship_code='" + db.esc(ship[0]) + "'");
+        db.exec(
+            "UPDATE ships SET " + col + "=" + col + "-" + std::to_string(take) +
+            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
+            std::string(1, me) + "' AND ship_code='" + db.esc(ship[0]) + "'");
     }
 
     // Add credits
@@ -300,28 +300,29 @@ bool TradeCommand::do_transfer()
     std::string col = get_cargo_column(res_upper);
     if (col.empty())
     {
-        Telemetry::getInstance().write("TRADE: Unknown resource: " + m_resource);
+        Telemetry::getInstance().write("TRADE: Unknown resource: " +
+                                       m_resource);
         return false;
     }
 
     // Check source ship cargo
-    auto src =
-        db.query("SELECT " + col + " FROM ships WHERE game_id=" +
-                 std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-                 "' AND ship_code='" + db.esc(m_from_ship) + "'");
+    auto src = db.query("SELECT " + col +
+                        " FROM ships WHERE game_id=" + std::to_string(game_id) +
+                        " AND owner='" + std::string(1, me) +
+                        "' AND ship_code='" + db.esc(m_from_ship) + "'");
 
     if (src.empty())
     {
-        Telemetry::getInstance().write("TRADE: Ship " + m_from_ship + " not found.");
+        Telemetry::getInstance().write("TRADE: Ship " + m_from_ship +
+                                       " not found.");
         return false;
     }
 
     int has = std::atoi(src[0][0].c_str());
     if (has < m_quantity)
     {
-        Telemetry::getInstance().write(
-            "TRADE: " + m_from_ship + " only has " + std::to_string(has) + " " +
-            res_upper);
+        Telemetry::getInstance().write("TRADE: " + m_from_ship + " only has " +
+                                       std::to_string(has) + " " + res_upper);
         return false;
     }
 
@@ -332,9 +333,9 @@ bool TradeCommand::do_transfer()
             "' AND ship_code='" + db.esc(m_from_ship) + "'");
 
     db.exec("UPDATE ships SET " + col + "=" + col + "+" +
-            std::to_string(m_quantity) + " WHERE game_id=" +
-            std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-            "' AND ship_code='" + db.esc(m_to_ship) + "'");
+            std::to_string(m_quantity) +
+            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
+            std::string(1, me) + "' AND ship_code='" + db.esc(m_to_ship) + "'");
 
     std::ostringstream msg;
     msg << "TRADE: Transferred " << m_quantity << " " << res_upper << " from "

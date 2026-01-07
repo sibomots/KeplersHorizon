@@ -46,7 +46,7 @@ class MapGraph
     // Get the actual path (hex sequence) from 'fromHex' to 'toHex'.
     // Returns empty vector if unreachable within 'limit'.
     std::vector<std::string> get_path(const std::string& fromHex,
-                                       const std::string& toHex, int limit);
+                                      const std::string& toHex, int limit);
 
   private:
     int game_id;

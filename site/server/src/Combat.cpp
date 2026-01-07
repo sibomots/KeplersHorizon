@@ -487,8 +487,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
     // Lookup system name for constraint check
     std::string combat_system;
-    auto sys_row = db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" +
-                            db.esc(hex_id) + "' LIMIT 1");
+    auto sys_row =
+        db.query("SELECT name FROM star_systems WHERE map_id=1 AND hex_id='" +
+                 db.esc(hex_id) + "' LIMIT 1");
     if (!sys_row.empty())
         combat_system = sys_row[0][0];
 
@@ -535,8 +536,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     // Apply combat constraint modifier for attacker
                     if (!combat_system.empty())
                     {
-                        int constraint_mod = ConstraintEngine::get_combat_modifier(
-                            game_id, combat_system, ship.owner);
+                        int constraint_mod =
+                            ConstraintEngine::get_combat_modifier(
+                                game_id, combat_system, ship.owner);
                         dmg += constraint_mod;
                     }
 
@@ -611,8 +613,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             // Apply combat constraint modifier for attacker
                             if (!combat_system.empty())
                             {
-                                int constraint_mod = ConstraintEngine::get_combat_modifier(
-                                    game_id, combat_system, ship.owner);
+                                int constraint_mod =
+                                    ConstraintEngine::get_combat_modifier(
+                                        game_id, combat_system, ship.owner);
                                 dmg += constraint_mod;
                             }
 
@@ -637,9 +640,11 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                                     << " '" << target->name << "'.\n";
                         }
                     }
+                    // BUGBUG
                     // Deduct ammo? Need to update ships table?
                     // For now simplest simulation: assume deducted elsewhere or
-                    // strictly simulation. User didn't asking for permanent
+                    // strictly simulation.
+                    // BUGBUG Didn't deal with permanent
                     // ammo tracking yet, just resolution.
                 }
             }
@@ -1094,9 +1099,10 @@ bool CombatCancelCommand::invoke(void)
     DatabaseManager& db = DatabaseManager::getInstance();
 
     // Check if there are any uncommitted orders to cancel (Bug #1)
-    auto orderRows = db.query(
-        "SELECT COUNT(*) FROM combat_orders WHERE game_id=" + std::to_string(s.game_id) +
-        " AND owner='" + std::string(1, owner) + "' AND committed=0");
+    auto orderRows =
+        db.query("SELECT COUNT(*) FROM combat_orders WHERE game_id=" +
+                 std::to_string(s.game_id) + " AND owner='" +
+                 std::string(1, owner) + "' AND committed=0");
 
     if (orderRows.empty() || orderRows[0][0] == "0")
     {

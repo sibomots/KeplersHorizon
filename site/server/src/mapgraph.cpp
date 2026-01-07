@@ -224,7 +224,7 @@ int MapGraph::get_path_cost(const std::string& from, const std::string& to,
 }
 
 std::vector<std::string> MapGraph::get_path(const std::string& from,
-                                             const std::string& to, int limit)
+                                            const std::string& to, int limit)
 {
     std::vector<std::string> path;
     if (from == to)
@@ -286,7 +286,8 @@ std::vector<std::string> MapGraph::get_path(const std::string& from,
 
         for (const auto& n : neighbors)
         {
-            // Blockade Check: Cannot enter blocked hex unless it is the destination
+            // Blockade Check: Cannot enter blocked hex unless it is the
+            // destination
             if (enemyBlockades.count(n) && n != to)
                 continue;
 
@@ -300,7 +301,7 @@ std::vector<std::string> MapGraph::get_path(const std::string& from,
     }
 
     if (!found)
-        return path;  // Empty - unreachable
+        return path; // Empty - unreachable
 
     // Reconstruct path from 'to' back to 'from'
     std::string cur = to;

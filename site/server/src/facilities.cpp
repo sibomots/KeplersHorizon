@@ -15,8 +15,8 @@
 
 const int FacilityEngine::TURNS_TO_CAPTURE;
 
-std::vector<FacilityInfo> FacilityEngine::get_facilities(
-    int game_id, const std::string& system)
+std::vector<FacilityInfo>
+FacilityEngine::get_facilities(int game_id, const std::string& system)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::vector<FacilityInfo> result;
@@ -46,11 +46,11 @@ bool FacilityEngine::player_controls(int game_id, const std::string& system,
 {
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    auto rows = db.query(
-        "SELECT 1 FROM facility_control WHERE game_id=" +
-        std::to_string(game_id) + " AND system_name='" + db.esc(system) +
-        "' AND facility_type='" + db.esc(facility_type) + "' AND controller='" +
-        std::string(1, player) + "'");
+    auto rows = db.query("SELECT 1 FROM facility_control WHERE game_id=" +
+                         std::to_string(game_id) + " AND system_name='" +
+                         db.esc(system) + "' AND facility_type='" +
+                         db.esc(facility_type) + "' AND controller='" +
+                         std::string(1, player) + "'");
 
     return !rows.empty();
 }
@@ -66,10 +66,12 @@ void FacilityEngine::initialize_facilities(int game_id)
                             std::to_string(game_id));
 
     // Copy from reference table
-    db.exec(
-        "INSERT IGNORE INTO facility_control(game_id,system_name,facility_type,controller) "
-        "SELECT " + std::to_string(game_id) + ", system_name, facility_type, controller "
-        "FROM facility_control_initial");
+    db.exec("INSERT IGNORE INTO "
+            "facility_control(game_id,system_name,facility_type,controller) "
+            "SELECT " +
+            std::to_string(game_id) +
+            ", system_name, facility_type, controller "
+            "FROM facility_control_initial");
 
     Logger::instance().info("[FACILITIES] Facilities initialized");
 }
@@ -79,10 +81,10 @@ void FacilityEngine::update_control(int game_id, int round)
     DatabaseManager& db = DatabaseManager::getInstance();
 
     // Get all systems with facilities
-    auto facilities = db.query(
-        "SELECT DISTINCT system_name, facility_type, controller, "
-        "capture_progress FROM facility_control WHERE game_id=" +
-        std::to_string(game_id));
+    auto facilities =
+        db.query("SELECT DISTINCT system_name, facility_type, controller, "
+                 "capture_progress FROM facility_control WHERE game_id=" +
+                 std::to_string(game_id));
 
     for (const auto& fac : facilities)
     {
@@ -101,10 +103,10 @@ void FacilityEngine::update_control(int game_id, int round)
         std::string hex = hex_row[0][0];
 
         // Check which players have ships in this system
-        auto ship_owners = db.query(
-            "SELECT DISTINCT owner FROM ships WHERE game_id=" +
-            std::to_string(game_id) + " AND at_hex='" + db.esc(hex) +
-            "' AND destroyed_at IS NULL AND racked_in IS NULL");
+        auto ship_owners =
+            db.query("SELECT DISTINCT owner FROM ships WHERE game_id=" +
+                     std::to_string(game_id) + " AND at_hex='" + db.esc(hex) +
+                     "' AND destroyed_at IS NULL AND racked_in IS NULL");
 
         std::set<char> present;
         for (const auto& row : ship_owners)
@@ -141,11 +143,12 @@ void FacilityEngine::update_control(int game_id, int round)
                     }
                     else
                     {
-                        db.exec("UPDATE facility_control SET capture_progress=" +
-                                std::to_string(progress) + " WHERE game_id=" +
-                                std::to_string(game_id) + " AND system_name='" +
-                                db.esc(system) + "' AND facility_type='" +
-                                db.esc(fac_type) + "'");
+                        db.exec(
+                            "UPDATE facility_control SET capture_progress=" +
+                            std::to_string(progress) +
+                            " WHERE game_id=" + std::to_string(game_id) +
+                            " AND system_name='" + db.esc(system) +
+                            "' AND facility_type='" + db.esc(fac_type) + "'");
                     }
                 }
                 else
@@ -168,11 +171,12 @@ void FacilityEngine::update_control(int game_id, int round)
                     }
                     else
                     {
-                        db.exec("UPDATE facility_control SET capture_progress=" +
-                                std::to_string(progress) + " WHERE game_id=" +
-                                std::to_string(game_id) + " AND system_name='" +
-                                db.esc(system) + "' AND facility_type='" +
-                                db.esc(fac_type) + "'");
+                        db.exec(
+                            "UPDATE facility_control SET capture_progress=" +
+                            std::to_string(progress) +
+                            " WHERE game_id=" + std::to_string(game_id) +
+                            " AND system_name='" + db.esc(system) +
+                            "' AND facility_type='" + db.esc(fac_type) + "'");
                     }
                 }
             }
@@ -211,10 +215,10 @@ void FacilityEngine::update_control(int game_id, int round)
                 else
                 {
                     db.exec("UPDATE facility_control SET capture_progress=" +
-                            std::to_string(progress) + " WHERE game_id=" +
-                            std::to_string(game_id) + " AND system_name='" +
-                            db.esc(system) + "' AND facility_type='" +
-                            db.esc(fac_type) + "'");
+                            std::to_string(progress) +
+                            " WHERE game_id=" + std::to_string(game_id) +
+                            " AND system_name='" + db.esc(system) +
+                            "' AND facility_type='" + db.esc(fac_type) + "'");
                 }
             }
             else
@@ -249,11 +253,11 @@ int FacilityEngine::calculate_trade_hub_income(int game_id, char player)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    auto rows = db.query(
-        "SELECT COUNT(*) FROM facility_control WHERE game_id=" +
-        std::to_string(game_id) +
-        " AND facility_type='TRADE_HUB' AND controller='" +
-        std::string(1, player) + "'");
+    auto rows =
+        db.query("SELECT COUNT(*) FROM facility_control WHERE game_id=" +
+                 std::to_string(game_id) +
+                 " AND facility_type='TRADE_HUB' AND controller='" +
+                 std::string(1, player) + "'");
 
     int hubs = rows.empty() ? 0 : std::atoi(rows[0][0].c_str());
 

@@ -62,8 +62,8 @@ class ConstraintEngine
                                 const std::string& resource);
 
     // Get all constraints for a system
-    static std::vector<SystemConstraint> get_constraints(
-        int game_id, const std::string& system);
+    static std::vector<SystemConstraint>
+    get_constraints(int game_id, const std::string& system);
 
     // Load constraints from facilities and anomalies
     static void initialize_constraints(int game_id);

@@ -21,7 +21,9 @@ class ExtractCommand : public ICmd
     class Builder
     {
       public:
-        Builder() : m_ship_code(""), m_resource_type(""), m_scan_mode(false) {}
+        Builder() : m_ship_code(""), m_resource_type(""), m_scan_mode(false)
+        {
+        }
         Builder& ship(const std::string& code)
         {
             m_ship_code = code;
@@ -39,7 +41,8 @@ class ExtractCommand : public ICmd
         }
         ExtractCommand* build()
         {
-            return new ExtractCommand(m_ship_code, m_resource_type, m_scan_mode);
+            return new ExtractCommand(m_ship_code, m_resource_type,
+                                      m_scan_mode);
         }
 
       private:

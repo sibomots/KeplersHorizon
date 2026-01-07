@@ -17,7 +17,8 @@
 
 void TurnEndProcessor::on_round_complete(int game_id, int completed_round)
 {
-    Logger::instance().info("[TURN_END] Round " + std::to_string(completed_round) +
+    Logger::instance().info("[TURN_END] Round " +
+                            std::to_string(completed_round) +
                             " complete for game " + std::to_string(game_id));
 
     // 1. Update facility control based on ship presence
@@ -60,12 +61,13 @@ void TurnEndProcessor::update_market_prices(int game_id, int round)
         int bought = std::atoi(res[3].c_str());
         int sold = std::atoi(res[4].c_str());
 
-        // Calculate demand pressure: net bought = price up, net sold = price down
+        // Calculate demand pressure: net bought = price up, net sold = price
+        // down
         int net_demand = bought - sold;
-        int demand_delta = (net_demand / 10) * 5;  // +/- 5% per 10 net units
+        int demand_delta = (net_demand / 10) * 5; // +/- 5% per 10 net units
 
         // Random market variance +/- 2%
-        int variance = (rand() % 5) - 2;  // -2 to +2
+        int variance = (rand() % 5) - 2; // -2 to +2
 
         // Calculate new price
         int delta_percent = demand_delta + variance;
@@ -102,10 +104,9 @@ void TurnEndProcessor::update_market_prices(int game_id, int round)
 
         if (delta_percent != 0 || variance != 0)
         {
-            Logger::instance().info("[MARKET] " + res_type + ": " +
-                                    std::to_string(current_price) + " -> " +
-                                    std::to_string(new_price) + " CR (" + trend +
-                                    ")");
+            Logger::instance().info(
+                "[MARKET] " + res_type + ": " + std::to_string(current_price) +
+                " -> " + std::to_string(new_price) + " CR (" + trend + ")");
         }
     }
 }
@@ -133,14 +134,14 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
     // Calculate income for each player
     for (char player : {'A', 'B'})
     {
-        int income = FacilityEngine::calculate_trade_hub_income(game_id, player);
+        int income =
+            FacilityEngine::calculate_trade_hub_income(game_id, player);
 
         if (income > 0)
         {
             // Get current credits from game state
-            auto state_row =
-                db.query("SELECT state_json FROM games WHERE id=" +
-                         std::to_string(game_id));
+            auto state_row = db.query("SELECT state_json FROM games WHERE id=" +
+                                      std::to_string(game_id));
 
             if (!state_row.empty())
             {
@@ -156,8 +157,10 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
                     size_t b_start = json.find("\"B\":", a_end) + 4;
                     size_t b_end = json.find("}", b_start);
 
-                    int creditsA = std::atoi(json.substr(a_start, a_end - a_start).c_str());
-                    int creditsB = std::atoi(json.substr(b_start, b_end - b_start).c_str());
+                    int creditsA = std::atoi(
+                        json.substr(a_start, a_end - a_start).c_str());
+                    int creditsB = std::atoi(
+                        json.substr(b_start, b_end - b_start).c_str());
 
                     if (player == 'A')
                         creditsA += income;
@@ -165,21 +168,20 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
                         creditsB += income;
 
                     // Reconstruct that portion of JSON
-                    std::string new_credits = "\"credits\":{\"A\":" +
-                                              std::to_string(creditsA) + ",\"B\":" +
-                                              std::to_string(creditsB) + "}";
+                    std::string new_credits =
+                        "\"credits\":{\"A\":" + std::to_string(creditsA) +
+                        ",\"B\":" + std::to_string(creditsB) + "}";
 
-                    std::string new_json =
-                        json.substr(0, credits_pos) + new_credits +
-                        json.substr(b_end + 1);
+                    std::string new_json = json.substr(0, credits_pos) +
+                                           new_credits + json.substr(b_end + 1);
 
                     db.exec("UPDATE games SET state_json='" + db.esc(new_json) +
                             "' WHERE id=" + std::to_string(game_id));
 
-                    Logger::instance().info("[INCOME] Player " +
-                                            std::string(1, player) + " earned " +
-                                            std::to_string(income) +
-                                            " CR from trade hubs");
+                    Logger::instance().info(
+                        "[INCOME] Player " + std::string(1, player) +
+                        " earned " + std::to_string(income) +
+                        " CR from trade hubs");
 
                     // Notify player
                     Telemetry::getInstance().add_tell(

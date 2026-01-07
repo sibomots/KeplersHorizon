@@ -109,7 +109,7 @@ bool BuildCommitCommand::invoke(void)
 
     // Calculate cost (inflated ×20: each stat = 20 CR, warp = 100 CR)
     int cost = (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
-    cost += ((d.attr.M + 2) / 3) * 20;  // 20 CR per 3 missiles
+    cost += ((d.attr.M + 2) / 3) * 20; // 20 CR per 3 missiles
     if (d.attr.type == 'W')
         cost += 100; // Warp generator
 
@@ -151,13 +151,10 @@ bool BuildCommitCommand::invoke(void)
                             " BP. Remaining BP=" + std::to_string(bp));
 
     std::ostringstream bcmsg;
-    bcmsg
-        << "Committed: "
-        << sh.name << " - " << sh.code << " (Tech Level "
-        << std::to_string(sh.attr.tech) << ")\n"
-        << "Cost: "
-        << std::to_string(cost) << " BP, Remaining: " << std::to_string(bp)
-        << " BP";
+    bcmsg << "Committed: " << sh.name << " - " << sh.code << " (Tech Level "
+          << std::to_string(sh.attr.tech) << ")\n"
+          << "Cost: " << std::to_string(cost)
+          << " BP, Remaining: " << std::to_string(bp) << " BP";
 
     Telemetry::getInstance().write(bcmsg.str());
     return true;
@@ -186,7 +183,8 @@ bool BuildListDraftsCommand::invoke(void)
         for (const auto& d : drafts)
         {
             // Calculate cost (inflated ×20)
-            int cost = (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
+            int cost =
+                (d.attr.PD + d.attr.B + d.attr.S + d.attr.T + d.attr.SR) * 20;
             cost += ((d.attr.M + 2) / 3) * 20;
             if (d.attr.type == 'W')
                 cost += 100;
@@ -294,10 +292,8 @@ bool BuildNewCommand::invoke(void)
                             ship_code);
 
     std::ostringstream bmes;
-    bmes << "SHIPYARD: Hull "
-         << ship_code
-         << " laid down. Designation: "
-         << m_ship_name;
+    bmes << "SHIPYARD: Hull " << ship_code
+         << " laid down. Designation: " << m_ship_name;
 
     Telemetry::getInstance().write(bmes.str());
     return true;
