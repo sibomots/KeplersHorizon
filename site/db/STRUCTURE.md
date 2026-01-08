@@ -43,7 +43,7 @@ All metadata is stored in CSV format for database ingestion.
 | `populations.csv` | Population centers |
 | `facilities.csv` | Infrastructure |
 | `anomalies.csv` | Discoveries and phenomena |
-| `grimoire_rumors.csv` | Starting knowledge hints |
+| `codex_rumors.csv` | Starting knowledge hints |
 
 ---
 
@@ -160,7 +160,7 @@ All metadata is stored in CSV format for database ingestion.
 | effect | TEXT | No | Gameplay effect |
 | discovery_text | TEXT | No | What players see |
 
-### GRIMOIRE_RUMOR
+### CODEX_RUMOR
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | system_name | VARCHAR(64) | Yes | Target system |
@@ -193,7 +193,7 @@ Due to foreign key dependencies, load CSV files in this order:
 7. `populations.csv`
 8. `facilities.csv`
 9. `anomalies.csv`
-10. `grimoire_rumors.csv`
+10. `codex_rumors.csv`
 
 ---
 
@@ -217,7 +217,7 @@ Due to foreign key dependencies, load CSV files in this order:
 
 ---
 
-## Knowledge Levels (Grimoire)
+## Knowledge Levels (Milieu Codex)
 
 | Level | Visible Data |
 |-------|--------------|

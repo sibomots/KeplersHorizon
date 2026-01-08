@@ -1,4 +1,4 @@
-DBUSR=frog
+DBUSR=borusr
 DBPASS=foobar
 DB=mysql -vv -u $(DBUSR) -D khdb -p$(DBPASS) 
 it:

@@ -211,12 +211,12 @@ CREATE TABLE IF NOT EXISTS system_anomalies (
 
 ---
 
-## Table: system_grimoire_rumors
+## Table: system_codex_rumors
 
 Starting knowledge for each system.
 
 ```sql
-CREATE TABLE IF NOT EXISTS system_grimoire_rumors (
+CREATE TABLE IF NOT EXISTS system_codex_rumors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     system_name VARCHAR(64) NOT NULL,
     rumor_text TEXT NOT NULL,
@@ -228,12 +228,12 @@ CREATE TABLE IF NOT EXISTS system_grimoire_rumors (
 
 ---
 
-## Runtime Table: grimoire_entries
+## Runtime Table: codex_entries
 
 Per-game, per-player knowledge tracking (created at game start, not seeded).
 
 ```sql
-CREATE TABLE IF NOT EXISTS grimoire_entries (
+CREATE TABLE IF NOT EXISTS codex_entries (
     game_id INT NOT NULL,
     player ENUM('A', 'B') NOT NULL,
     system_name VARCHAR(64) NOT NULL,
@@ -282,8 +282,8 @@ LOAD DATA LOCAL INFILE 'facilities.csv' INTO TABLE system_facilities ...
 -- 9. Anomalies (depends on star_systems.name)
 LOAD DATA LOCAL INFILE 'anomalies.csv' INTO TABLE system_anomalies ...
 
--- 10. Grimoire Rumors (depends on star_systems.name)
-LOAD DATA LOCAL INFILE 'grimoire_rumors.csv' INTO TABLE system_grimoire_rumors ...
+-- 10. Codex Rumors (depends on star_systems.name)
+LOAD DATA LOCAL INFILE 'codex_rumors.csv' INTO TABLE system_codex_rumors ...
 ```
 
 ---
@@ -301,7 +301,7 @@ SELECT r.* FROM system_resources r
 WHERE r.location_type = 'Planet' AND r.location_id = ?;
 ```
 
-### Get grimoire-filtered view (player A knows 'Charted')
+### Get codex-filtered view (player A knows 'Charted')
 ```sql
 SELECT p.designation, p.common_name, p.planet_type
 FROM system_planets p
@@ -312,7 +312,7 @@ WHERE p.system_name = 'KORAL';
 ### Get all anomalies discovered by player
 ```sql
 SELECT a.* FROM system_anomalies a
-JOIN grimoire_entries g ON a.system_name = g.system_name
+JOIN codex_entries g ON a.system_name = g.system_name
 WHERE g.game_id = ? AND g.player = 'A' AND g.knowledge_level = 'Intimate';
 ```
 
@@ -322,7 +322,7 @@ WHERE g.game_id = ? AND g.player = 'A' AND g.knowledge_level = 'Intimate';
 
 1. **star_systems.name**: Bridge to existing schema (shared by map_id)
 2. **ships.at_system**: When ship enters system, can query metadata
-3. **game state**: grimoire_entries tied to game_id
+3. **game state**: codex_entries tied to game_id
 4. **combat/movement**: System constraints from anomalies/populations
 
 ---
@@ -330,5 +330,5 @@ WHERE g.game_id = ? AND g.player = 'A' AND g.knowledge_level = 'Intimate';
 ## Notes
 
 - All `system_*` tables are map-independent (same data for all games)
-- Only `grimoire_entries` is game-specific
+- Only `codex_entries` is game-specific
 - No formal FKs to main schema yet (future work)

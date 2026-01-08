@@ -108,7 +108,7 @@ void SalvageCommand::do_scan()
             {
                 // Query knowledge level for discovery modifier
                 auto knowledge = db.query(
-                    "SELECT knowledge_level FROM grimoire_entries WHERE game_id=" +
+                    "SELECT knowledge_level FROM codex_entries WHERE game_id=" +
                     std::to_string(game_id) + " AND player='" + std::string(1, me) +
                     "' AND system_name='" + db.esc(sys) + "'");
 
@@ -270,7 +270,7 @@ bool SalvageCommand::do_salvage()
 
     // Query knowledge level for hazard modifier
     auto knowledge = db.query(
-        "SELECT knowledge_level FROM grimoire_entries WHERE game_id=" +
+        "SELECT knowledge_level FROM codex_entries WHERE game_id=" +
         std::to_string(game_id) + " AND player='" + std::string(1, me) +
         "' AND system_name='" + db.esc(ship.at_system) + "'");
 

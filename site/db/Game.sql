@@ -345,7 +345,7 @@ INDEX (module_id, name),
 FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
-CREATE TABLE IF NOT EXISTS system_grimoire_rumors (
+CREATE TABLE IF NOT EXISTS system_codex_rumors (
 module_id INT NOT NULL DEFAULT 1,
 system_name VARCHAR(64) NOT NULL,
 rumor_text TEXT,
@@ -354,8 +354,8 @@ PRIMARY KEY (module_id, system_name),
 FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
--- Per-game player knowledge tracking for Grimoire of Stars
-CREATE TABLE IF NOT EXISTS grimoire_entries (
+-- Per-game player knowledge tracking for Milieu Codex of Stars
+CREATE TABLE IF NOT EXISTS codex_entries (
 game_id INT NOT NULL,
 player CHAR(1) NOT NULL,
 system_name VARCHAR(64) NOT NULL,

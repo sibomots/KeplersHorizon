@@ -13,7 +13,7 @@
 #include "icmd.h"
 
 // SystemCommand - Display information about a star system
-// Information is filtered based on player's grimoire knowledge level
+// Information is filtered based on player's Milieu Codex knowledge level
 class SystemCommand : public ICmd
 {
   public:

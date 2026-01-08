@@ -369,11 +369,11 @@ bool MoveCommand::invoke(void)
     // Save game state to persist changes
     StateMachine::getInstance().save_game(s);
 
-    // Auto-update Grimoire knowledge if entering a new system
+    // Auto-update codex knowledge if entering a new system
     if (!finalSystem.empty())
     {
         // Check current knowledge level
-        auto know = db.query("SELECT knowledge_level FROM grimoire_entries "
+        auto know = db.query("SELECT knowledge_level FROM codex_entries "
                              "WHERE game_id=" +
                              std::to_string(m_game_id) + " AND player='" +
                              std::string(1, active_player) +
@@ -396,7 +396,7 @@ bool MoveCommand::invoke(void)
 
             if (know.empty())
             {
-                db.exec("INSERT INTO grimoire_entries(game_id, player, "
+                db.exec("INSERT INTO codex_entries(game_id, player, "
                         "system_name, knowledge_level, last_updated_turn) "
                         "VALUES(" +
                         std::to_string(m_game_id) + ",'" +
@@ -406,7 +406,7 @@ bool MoveCommand::invoke(void)
             }
             else
             {
-                db.exec("UPDATE grimoire_entries SET knowledge_level='" +
+                db.exec("UPDATE codex_entries SET knowledge_level='" +
                         new_level +
                         "', last_updated_turn=" + std::to_string(s.round) +
                         " WHERE game_id=" + std::to_string(m_game_id) +
@@ -414,7 +414,7 @@ bool MoveCommand::invoke(void)
                         "' AND system_name='" + db.esc(finalSystem) + "'");
             }
 
-            Telemetry::getInstance().write("GRIMOIRE: " + finalSystem +
+            Telemetry::getInstance().write("CODEX: " + finalSystem +
                                            " now " + new_level + ".");
         }
     }

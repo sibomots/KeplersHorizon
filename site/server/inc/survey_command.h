@@ -12,7 +12,7 @@
 
 #include "icmd.h"
 
-// SurveyCommand - Upgrade player's grimoire knowledge of a star system
+// SurveyCommand - Upgrade player's Milieu Codex knowledge of a star system
 // Requires a ship to be present in the target system
 class SurveyCommand : public ICmd
 {
@@ -44,7 +44,7 @@ class SurveyCommand : public ICmd
     // Check if player has a ship in the given system
     bool has_ship_in_system(const std::string& system);
 
-    // Upgrade grimoire knowledge level
+    // Upgrade Milieu Codex knowledge level
     std::string upgrade_knowledge(const std::string& current);
 
     std::string m_system_name;

@@ -1,4 +1,4 @@
-# The Grimoire of Stars
+# The Milieu Codex of Stars
 
 *A Compendium of Known Space in the Age of Kepler's Horizon*
 
@@ -6,7 +6,7 @@
 
 ## Preface
 
-This Grimoire contains the accumulated knowledge of star systems within the contested sphere. Information ranges from well-documented home territories to fragmentary rumors of distant systems. Entries are organized by territorial affiliation: Western Alliance, Eastern Powers, and the Contested Reach.
+This Milieu Codex contains the accumulated knowledge of star systems within the contested sphere. Information ranges from well-documented home territories to fragmentary rumors of distant systems. Entries are organized by territorial affiliation: Western Alliance, Eastern Powers, and the Contested Reach.
 
 Knowledge levels are indicated:
 - ⬛ **Unknown**: Name only. No reliable information.
@@ -564,6 +564,6 @@ The Hive. Home of the Vesh, an insectoid collective consciousness that defies hu
 
 ---
 
-*End of Grimoire*
+*End of Milieu Codex*
 
 *"The stars are many. The known are few. What lies beyond the warplines, only the bold discover."*

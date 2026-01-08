@@ -54,8 +54,8 @@ LINES TERMINATED BY '\n'
 (id,location_type,location_id,facility_type,name,capacity,owner,operational,notes)
 SET module_id = @module;
 
-LOAD DATA LOCAL INFILE 'modules/kh/grimoire_rumors.csv'
-INTO TABLE system_grimoire_rumors
+LOAD DATA LOCAL INFILE 'modules/kh/codex_rumors.csv'
+INTO TABLE system_codex_rumors
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 (system_name,rumor_text,knowledge_level)

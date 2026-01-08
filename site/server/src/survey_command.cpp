@@ -105,7 +105,7 @@ bool SurveyCommand::invoke(void)
     }
 
     // Get current knowledge level
-    auto know_rows = db.query("SELECT knowledge_level FROM grimoire_entries "
+    auto know_rows = db.query("SELECT knowledge_level FROM codex_entries "
                               "WHERE game_id=" +
                               std::to_string(s.game_id) + " AND player='" +
                               std::string(1, owner) + "' AND system_name='" +
@@ -128,11 +128,11 @@ bool SurveyCommand::invoke(void)
         return true;
     }
 
-    // Update or insert grimoire entry
+    // Update or insert codex entry
     std::string turn_str = std::to_string(s.round);
     if (know_rows.empty())
     {
-        db.exec("INSERT INTO grimoire_entries (game_id, player, system_name, "
+        db.exec("INSERT INTO codex_entries (game_id, player, system_name, "
                 "knowledge_level, last_updated_turn) VALUES (" +
                 std::to_string(s.game_id) + ", '" + std::string(1, owner) +
                 "', '" + db.esc(target_system) + "', '" + new_level + "', '" +
@@ -140,7 +140,7 @@ bool SurveyCommand::invoke(void)
     }
     else
     {
-        db.exec("UPDATE grimoire_entries SET knowledge_level='" + new_level +
+        db.exec("UPDATE codex_entries SET knowledge_level='" + new_level +
                 "', last_updated_turn='" + turn_str +
                 "' WHERE game_id=" + std::to_string(s.game_id) +
                 " AND player='" + std::string(1, owner) +

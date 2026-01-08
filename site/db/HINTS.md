@@ -81,7 +81,7 @@ mysql> show tables;
 | game_events            |
 | game_seats             |
 | games                  |
-| grimoire_entries       |
+| codex_entries          |
 | hexes                  |
 | rooms                  |
 | sessions               |
@@ -91,7 +91,7 @@ mysql> show tables;
 | system_anomalies       |
 | system_asteroid_belts  |
 | system_facilities      |
-| system_grimoire_rumors |
+| system_codex_rumors    |
 | system_moons           |
 | system_planets         |
 | system_populations     |

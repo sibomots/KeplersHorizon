@@ -27,7 +27,7 @@ site/db/modules/<module_name>/
 ├── anomalies.csv           # System anomalies
 ├── salvageables.csv        # Salvage sites
 ├── salvageable_drops.csv   # Salvage loot tables
-└── grimoire_rumors.csv     # Knowledge/rumors
+└── codex_rumors.csv       # Knowledge/rumors
 ```
 
 ## Creating a New Module

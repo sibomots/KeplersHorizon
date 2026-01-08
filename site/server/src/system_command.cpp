@@ -35,7 +35,7 @@ std::string SystemCommand::get_knowledge_level()
     char owner = StateMachine::getInstance().get_current_player();
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    auto rows = db.query("SELECT knowledge_level FROM grimoire_entries "
+    auto rows = db.query("SELECT knowledge_level FROM codex_entries "
                          "WHERE game_id=" +
                          std::to_string(s.game_id) + " AND player='" +
                          std::string(1, owner) + "' AND system_name='" +
@@ -156,7 +156,7 @@ void SystemCommand::show_overview()
 
     // Show rumors if available
     auto rumors = db.query(
-        "SELECT rumor_text FROM system_grimoire_rumors WHERE system_name='" +
+        "SELECT rumor_text FROM system_codex_rumors WHERE system_name='" +
         db.esc(m_system_name) + "'");
     if (!rumors.empty())
     {

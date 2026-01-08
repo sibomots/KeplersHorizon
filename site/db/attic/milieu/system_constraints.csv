@@ -1,6 +1,0 @@
-system_name,constraint_type,modifier_type,modifier_value,condition_text,source
-KORAL,MOVEMENT,BONUS,1,Axis Marker beacon,ANOMALY
-QUELL,HARVEST,BONUS,2,Keplerite deposits,ANOMALY
-FEXON,COMBAT,PENALTY,1,Sensor-blocking dust,ANOMALY
-SYDRA,MOVEMENT,PENALTY,1,Dense debris field,SCRAPYARD
-GALEN,HARVEST,PENALTY,1,Radiation hazardous,ANOMALY
