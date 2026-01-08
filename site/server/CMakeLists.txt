@@ -58,6 +58,7 @@ src/help_command.cpp
 src/market_command.cpp
 src/trade_command.cpp
 src/fabricate_command.cpp
+src/outfit_command.cpp
 src/constraints.cpp
 src/salvage_command.cpp
 src/retreat_command.cpp

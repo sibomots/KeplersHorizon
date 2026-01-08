@@ -42,6 +42,7 @@
 #include "market_command.h"
 #include "trade_command.h"
 #include "fabricate_command.h"
+#include "outfit_command.h"
 #include "salvage_command.h"
 #include "retreat_command.h"
 #include "save_command.h"
@@ -153,6 +154,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_MARKET
 %token TOK_TRADE
 %token TOK_FABRICATE
+%token TOK_OUTFIT
 %token TOK_SCAN
 %token TOK_BUY
 %token TOK_SELL
@@ -419,6 +421,23 @@ looking_cmd:
       std::string rec(*$2);
       int qty = $3;
       ICmd* pCmd = FabricateCommand::Builder().recipe(rec).quantity(qty).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_OUTFIT {
+      ICmd* pCmd = OutfitCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_OUTFIT TOK_LIST {
+      ICmd* pCmd = OutfitCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+  }
+  | TOK_OUTFIT deconflicted_string deconflicted_string {
+      std::string ship(*$2);
+      std::string equip(*$3);
+      ICmd* pCmd = OutfitCommand::Builder().ship(ship).equipment(equip).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }

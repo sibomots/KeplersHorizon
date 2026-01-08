@@ -64,6 +64,8 @@
 "tr"       { return TOK_TRADE; }
 "fabricate" { return TOK_FABRICATE; }
 "fab"      { return TOK_FABRICATE; }
+"outfit"   { return TOK_OUTFIT; }
+"out"      { return TOK_OUTFIT; }
 "list"     { return TOK_LIST; }
 "scan"     { return TOK_SCAN; }
 "buy"      { return TOK_BUY; }
