@@ -64,6 +64,7 @@ src/salvage_command.cpp
 src/retreat_command.cpp
 src/facilities.cpp
 src/turn_end.cpp
+src/hex_events.cpp
 src/init.cpp
 src/json.cpp
 src/logger.cpp

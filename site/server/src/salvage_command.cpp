@@ -16,6 +16,7 @@
 #include "ships.h"
 #include "statemachine.h"
 #include "telemetry.h"
+#include "hex_events.h"
 
 bool SalvageCommand::invoke(void)
 {
@@ -299,6 +300,11 @@ bool SalvageCommand::do_salvage()
             continue;
 
         int qty = qty_min + (rand() % (qty_max - qty_min + 1));
+        
+        // Apply dynamic hex event modifier (SALVAGE_OPPORTUNITY)
+        float mult = HexEventEngine::get_salvage_multiplier(game_id, ship.at_hex);
+        qty = (int)(qty * mult);
+        
         got_something = true;
 
         if (item_type == "resource")

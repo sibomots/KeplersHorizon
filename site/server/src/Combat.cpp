@@ -20,6 +20,7 @@
 #include "combat_order_command.h"
 #include "constraints.h"
 #include "star_system_constraints.h"
+#include "hex_events.h"
 #include "db.h"
 #include "logger.h"
 #include "maputil.h"
@@ -592,6 +593,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
                     // Apply star system environmental constraints
                     dmg += StarSystemConstraints::getBeamModifier(game_id, hex_id);
+                    
+                    // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
+                    dmg += HexEventEngine::get_combat_modifier(game_id, hex_id);
 
                     if (dmg > 0)
                     {

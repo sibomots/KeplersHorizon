@@ -12,6 +12,7 @@
 #include "combat.h"
 #include "constraints.h"
 #include "star_system_constraints.h"
+#include "hex_events.h"
 #include "db.h"
 #include "deploy_command.h"
 #include "logger.h"
@@ -313,6 +314,9 @@ bool MoveCommand::invoke(void)
             
             // Add star system environmental movement modifier
             modifier += StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
+            
+            // Add dynamic hex event modifier (NAVIGATION_HAZARD)
+            modifier += HexEventEngine::get_movement_modifier(m_game_id, stepHex);
             
             stepCost += modifier;
             if (stepCost < 1)

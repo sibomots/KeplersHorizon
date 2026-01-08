@@ -671,3 +671,16 @@ CREATE TABLE IF NOT EXISTS saved_ships (
     FOREIGN KEY (save_id) REFERENCES saved_games(id) ON DELETE CASCADE,
     INDEX idx_save (save_id)
 );
+
+-- Dynamic hex events that affect gameplay
+CREATE TABLE IF NOT EXISTS hex_events (
+id INT AUTO_INCREMENT PRIMARY KEY,
+game_id INT NOT NULL,
+hex_id VARCHAR(8) NOT NULL,
+event_type VARCHAR(32) NOT NULL,  -- NAVIGATION_HAZARD, COMBAT_INTERFERENCE, etc.
+modifier_value INT DEFAULT 0,
+spawned_turn INT NOT NULL,
+expires_turn INT NOT NULL,
+FOREIGN KEY (game_id) REFERENCES games(id),
+INDEX idx_hex_events (game_id, hex_id)
+);

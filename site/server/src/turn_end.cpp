@@ -12,6 +12,7 @@
 
 #include "db.h"
 #include "facilities.h"
+#include "hex_events.h"
 #include "logger.h"
 #include "telemetry.h"
 
@@ -38,6 +39,9 @@ void TurnEndProcessor::on_round_complete(int game_id, int completed_round)
 
     // 6. Check victory conditions (VP count phase)
     check_victory_conditions(game_id, completed_round);
+    
+    // 7. Process hex events (expire old, prepare new)
+    HexEventEngine::process_events(game_id, completed_round);
 
     Logger::instance().info("[TURN_END] Round-end processing complete");
 }

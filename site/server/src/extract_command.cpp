@@ -14,6 +14,7 @@
 #include "ships.h"
 #include "statemachine.h"
 #include "telemetry.h"
+#include "hex_events.h"
 
 bool ExtractCommand::invoke(void)
 {
@@ -192,6 +193,9 @@ bool ExtractCommand::do_extract()
     int yield = (int)(base_yield * modifier);
     if (yield < 1)
         yield = 1;
+    
+    // Apply dynamic hex event modifier (EXTRACTION_BONUS)
+    yield += HexEventEngine::get_extraction_modifier(game_id, ship.at_hex);
 
     // Check cargo capacity
     auto cargo =
