@@ -106,9 +106,14 @@ bool DeployCommand::invoke(void)
             s.home_side_A = (base_side == "A") ? "B" : "A";
         }
 
+        // Get player's actual username for the broadcast
+        int user_id = StateMachine::getInstance().get_current_user_id();
+        auto user_rows = DatabaseManager::getInstance().query(
+            "SELECT username FROM users WHERE id=" + std::to_string(user_id));
+        std::string player_name = user_rows.empty() ? "Player" : user_rows[0][0];
+
         Telemetry::getInstance().broadcast(
-            "DEPLOY: " + std::string(1, active_player) + " has claimed the " +
-            territory_name + ".");
+            "DEPLOY: " + player_name + " has claimed the " + territory_name + ".");
     }
     else if (player_side != base_side)
     {
