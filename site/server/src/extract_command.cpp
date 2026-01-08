@@ -190,10 +190,24 @@ bool ExtractCommand::do_extract()
     else if (difficulty == "Extreme")
         modifier = 0.2;
 
-    int yield = (int)(base_yield * modifier);
+    // Query knowledge level for yield modifier
+    auto knowledge = db.query(
+        "SELECT knowledge_level FROM grimoire_entries WHERE game_id=" +
+        std::to_string(game_id) + " AND player='" + std::string(1, me) +
+        "' AND system_name='" + db.esc(ship.at_system) + "'");
+
+    std::string know_level = knowledge.empty() ? "Unknown" : knowledge[0][0];
+    double intel_mod = 1.0;
+    if (know_level == "Unknown")
+        intel_mod = 0.25; // 25% yield without survey
+    else if (know_level == "Charted")
+        intel_mod = 0.50; // 50% yield with basic charts
+    // Surveyed/Intimate = 100%
+
+    int yield = (int)(base_yield * modifier * intel_mod);
     if (yield < 1)
         yield = 1;
-    
+
     // Apply dynamic hex event modifier (EXTRACTION_BONUS)
     yield += HexEventEngine::get_extraction_modifier(game_id, ship.at_hex);
 

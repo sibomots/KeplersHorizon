@@ -106,9 +106,26 @@ void SalvageCommand::do_scan()
             }
             else
             {
-                // Roll for discovery
+                // Query knowledge level for discovery modifier
+                auto knowledge = db.query(
+                    "SELECT knowledge_level FROM grimoire_entries WHERE game_id=" +
+                    std::to_string(game_id) + " AND player='" + std::string(1, me) +
+                    "' AND system_name='" + db.esc(sys) + "'");
+
+                std::string know_level = knowledge.empty() ? "Unknown" : knowledge[0][0];
+                double intel_mult = 0.5; // Unknown = half chance
+                if (know_level == "Charted")
+                    intel_mult = 0.75;
+                else if (know_level == "Surveyed")
+                    intel_mult = 1.0;
+                else if (know_level == "Intimate")
+                    intel_mult = 1.25; // Better than base
+
+                int effective_chance = (int)(disc_chance * intel_mult);
+
+                // Roll for discovery with knowledge-modified chance
                 int roll = rand() % 100;
-                if (roll < disc_chance)
+                if (roll < effective_chance)
                 {
                     // Discovered!
                     db.exec("INSERT INTO "
@@ -251,9 +268,28 @@ bool SalvageCommand::do_salvage()
     srand(time(NULL) + game_id + s.round + salv_id);
     std::ostringstream result;
 
-    // Hazard check
+    // Query knowledge level for hazard modifier
+    auto knowledge = db.query(
+        "SELECT knowledge_level FROM grimoire_entries WHERE game_id=" +
+        std::to_string(game_id) + " AND player='" + std::string(1, me) +
+        "' AND system_name='" + db.esc(ship.at_system) + "'");
+
+    std::string know_level = knowledge.empty() ? "Unknown" : knowledge[0][0];
+    int hazard_mod = 20; // Unknown = +20% more dangerous
+    if (know_level == "Charted")
+        hazard_mod = 10;
+    else if (know_level == "Surveyed")
+        hazard_mod = 0;
+    else if (know_level == "Intimate")
+        hazard_mod = -10; // Safer with detailed charts
+
+    int effective_hazard = hazard_chance + hazard_mod;
+    if (effective_hazard < 0)
+        effective_hazard = 0;
+
+    // Hazard check with knowledge-modified chance
     int hazard_roll = rand() % 100;
-    if (hazard_roll < hazard_chance)
+    if (hazard_roll < effective_hazard)
     {
         int damage = hazard_min + (rand() % (hazard_max - hazard_min + 1));
         result << "SALVAGE: " << ship.name << " encountered hazards at "
