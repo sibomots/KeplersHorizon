@@ -86,8 +86,9 @@ contest. Programs written in Microsoft BASIC for the Macintosh were invited,
 and games and simulations were explicitly permitted under the Entertainment 
 category. Submissions were to be mailed on physical disks.
 
-<a target="_blank" href="docs/contest-page-MacWorld_8503_March_1985.pdf">
-Borealis was submitted.</a>
+
+[Borealis was submitted.](http://spin-off.com/contest-page-MacWorld_8503_March_1985.pdf)
+
 
 No confirmation arrived, and no feedback followed. According to the contest 
 rules, this was expected. All entries became the property of Microsoft, and 
