@@ -28,8 +28,6 @@
 "demo"     { return TOK_DEMO; }
 "?"        { return TOK_HELP; }
 
-"start"    { return TOK_START_GAME; }
-"reset"    { return TOK_RESET; }
 "save"     { return TOK_SAVE; }
 "load"     { return TOK_LOAD; }
 "accept"   { return TOK_ACCEPT; }
@@ -38,9 +36,6 @@
 "clear"    { return TOK_CLEAR; }
 "cls"      { return TOK_CLEAR; }
 "quit"     { return TOK_QUIT; }
-"basic"    { return TOK_BASIC; }
-"learning" { return TOK_LEARNING; }
-"advanced" { return TOK_ADVANCED; }
 
 "crt"      { return TOK_CRT; }
 "status"   { return TOK_STATUS; }

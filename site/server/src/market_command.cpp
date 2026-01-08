@@ -11,20 +11,10 @@
 #include <sstream>
 
 #include "db.h"
+#include "typedefs.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
-
-// BUGBUG-REWORK: IS IT REALLY NEEEDED?  We are not interested in backward compat.
-// BUGBUG: Base prices have been moved to: site/db/milieu/market_base_prices.csv
-// This hardcoded array is kept for backward compatibility but should be
-// removed. Market init should INSERT from market_base_prices reference table.
-
-typedef struct
-{
-    const char* type;
-    int base_price;
-} CommodityItem;
 
 static const int NUM_RESOURCES = 8;
 static const CommodityItem BASE_PRICES[] = {

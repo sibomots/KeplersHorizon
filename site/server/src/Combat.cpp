@@ -709,11 +709,11 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             }
                         }
                     }
-                    // BUGBUG
+                    // BUGBUG-REWORK
                     // Deduct ammo? Need to update ships table?
                     // For now simplest simulation: assume deducted elsewhere or
                     // strictly simulation.
-                    // BUGBUG Didn't deal with permanent
+                    // BUGBUG-REWORK Didn't deal with permanent
                     // ammo tracking yet, just resolution.
                 }
             }
@@ -774,13 +774,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 // Execute Retreat immediately? Or at end of round?
                 // Rules: "Retreat Resolution".
                 // We can mark them. For now, strict damage focus.
-                // BUGBUG must resolve retreat resolution
+                // BUGBUG-REWORK must resolve retreat resolution
             }
             else
             {
-                log << ship.code << " '" << ship.name
-                    << "' failed to retreat.\n";
-                // BUGBUG means what?
+                log << ship.code << " '" << ship.name << "' failed to retreat.\n";
+                // BUGBUG-REWORK means what?
             }
         }
     }
@@ -943,7 +942,6 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
         return std::string(snf.str());
     }
 
-    // BUGBUG explain this dereferencing
     std::string hex = r[0][0];
     char realOwner = r[0][1][0];
 
@@ -1007,7 +1005,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
 
     if (assigned > needed)
     {
-        // BUGBUG resolve this discrepency:
+        // BUGBUG-REWORK resolve this discrepency:
         // Or allow over-assignment? Rules say "applied by owning
         // player". Assumes exact match needed?
         return std::string("Assigned more damage than required");

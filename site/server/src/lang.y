@@ -80,7 +80,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %union {
    int ival;
    std::string* sval;
-   //std::vector<std::string>* vec_sval;
    std::vector<std::string>* vec_sval;
 }
 
@@ -92,10 +91,8 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type  <vec_sval> chain_resource_words
 %type  <sval> deconflicted_string
 
-%token TOK_ADVANCED
 %token TOK_APPLY
 %token TOK_ATTACK
-%token TOK_BASIC
 %token TOK_BEAM
 %token TOK_BUILD
 %token TOK_BUILD_COMMIT
@@ -128,7 +125,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_CARGO
 %token TOK_HELP
 %token TOK_HEX
-%token TOK_LEARNING
 %token TOK_LIST
 %token TOK_LOAD
 %token TOK_MISSILE
@@ -142,7 +138,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_POWER_DRIVE
 %token TOK_QUIT
 %token TOK_REPAIR
-%token TOK_RESET
 %token TOK_RESUPPLY
 %token TOK_RETREAT
 %token TOK_SAVE
@@ -161,7 +156,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_TRANSFER
 %token TOK_SALVAGE
 %token TOK_SET_ATTR
-%token TOK_START_GAME
 %token TOK_STATS
 %token TOK_STATUS
 %token TOK_SYSTEM
@@ -201,16 +195,6 @@ command:
   ;
 
 session_cmd:
-   TOK_RESET
-   {
-        Logger::instance().info("Reset the current game, wiping everything");
-   }
-   |
-   TOK_RESET
-   {
-        Logger::instance().info("Reset the current game, wiping everything");
-   }
-   |
    TOK_SAVE
    {
         ICmd *pCmd = SaveCommand::Builder().set_show_usage().build();
@@ -1214,7 +1198,6 @@ deconflicted_string:
   | TOK_ACCEPT              { $$ = new std::string("accept"); }
   | TOK_REJECT              { $$ = new std::string("reject"); }
   | TOK_DELETE              { $$ = new std::string("delete"); }
-  | TOK_RESET               { $$ = new std::string("reset"); }
   | TOK_DEMO                { $$ = new std::string("demo"); }
   | TOK_HELP                { $$ = new std::string("help"); }
   ;

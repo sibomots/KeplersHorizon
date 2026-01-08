@@ -157,5 +157,12 @@ typedef struct
     int order_type;
 } CombatOrderParams_t;
 
+typedef struct
+{
+    const char* type;
+    int base_price;
+} CommodityItem;
+
+
 // end typedefs
 #endif
