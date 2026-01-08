@@ -19,12 +19,13 @@
 #include "combat_drafts_command.h"
 #include "combat_order_command.h"
 #include "constraints.h"
-#include "star_system_constraints.h"
-#include "hex_events.h"
 #include "db.h"
+#include "hex_events.h"
 #include "logger.h"
+#include "mapgraph.h"
 #include "maputil.h"
 #include "moduleutil.h"
+#include "star_system_constraints.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "typedefs.h"
@@ -466,11 +467,24 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         // For now, strict check.
         if (cs.stage == 0 && all_orders_submitted(hex_id, cs.round))
         {
-            // allow proceeding
-            // BUGBUG-REWORK 
+            // Update stage in database for consistency, then proceed
+            db.exec("UPDATE combat_state SET stage=1 WHERE game_id=" +
+                    std::to_string(game_id) + " AND hex_id='" + hex_id + "'");
         }
         else
         {
+            if (cs.stage == 0)
+            {
+                return "Awaiting orders. Use 'combat order' then 'combat commit'.";
+            }
+            else if (cs.stage == 2)
+            {
+                return "Damage pending. Use 'combat apply' to assign damage.";
+            }
+            else if (cs.stage == 3)
+            {
+                return "Retreat pending. Use 'retreat <ship> <hex>' to withdraw.";
+            }
             return "Not ready to resolve (Stage " + std::to_string(cs.stage) + ")";
         }
     }
@@ -490,11 +504,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     };
     std::map<std::string, ShipCtx> ships;
 
-    // Load active ships in hex
+    // Load active ships in hex (exclude ships pending retreat)
     auto r = db.query("SELECT ship_code, ship_name, owner, tech_level FROM "
                       "ships WHERE game_id=" +
                       std::to_string(game_id) + " AND at_hex='" + hex_id +
-                      "' AND racked_in IS NULL AND destroyed_at IS NULL");
+                      "' AND racked_in IS NULL AND destroyed_at IS NULL "
+                      "AND escape_pending=0");
     for (const auto& row : r)
     {
         ShipCtx s;
@@ -592,10 +607,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     }
 
                     // Apply star system environmental constraints
-                    dmg += StarSystemConstraints::getBeamModifier(game_id, hex_id);
-                    
+                    dmg +=
+                        StarSystemConstraints::getBeamModifier(game_id, hex_id);
+
                     // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
-                    dmg += HexEventEngine::get_combat_modifier(game_id, cs.round, hex_id);
+                    dmg += HexEventEngine::get_combat_modifier(
+                        game_id, cs.round, hex_id);
 
                     if (dmg > 0)
                     {
@@ -627,10 +644,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else if (ship.ord.tactic == 'R')
         {
-            // If retreating and NOT fired upon, do we need to track?
-            // Logic: Escape if escaped ALL attacks. If 0 attacks, Escape =
-            // Success.
-            // BUGBUG-REWORK
+            // Retreating ships hold fire - log acknowledgment
+            log << ship.code << " '" << ship.name << "' holds fire (Retreating).\n";
         }
     }
 
@@ -682,7 +697,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             }
 
                             // Apply star system environmental constraints
-                            dmg += StarSystemConstraints::getMissileModifier(game_id, hex_id);
+                            dmg += StarSystemConstraints::getMissileModifier(
+                                game_id, hex_id);
 
                             if (dmg > 0)
                             {
@@ -709,12 +725,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             }
                         }
                     }
-                    // BUGBUG-REWORK
-                    // Deduct ammo? Need to update ships table?
-                    // For now simplest simulation: assume deducted elsewhere or
-                    // strictly simulation.
-                    // BUGBUG-REWORK Didn't deal with permanent
-                    // ammo tracking yet, just resolution.
+                    // Deduct fired missiles from inventory
+                    db.exec(
+                        "UPDATE ships SET missiles = GREATEST(0, missiles - " +
+                        std::to_string(count) +
+                        ") WHERE game_id=" + std::to_string(game_id) +
+                        " AND ship_code='" + db.esc(ship.code) + "'");
                 }
             }
         }
@@ -768,18 +784,33 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
             if (escape)
             {
-                log << ship.code << " '" << ship.name << "' "
-                    << "successfully retreats!\n";
+                // Mark for retreat - user must issue 'retreat <ship> <hex>'
+                // command
+                db.exec("UPDATE ships SET escape_pending=1 WHERE game_id=" +
+                        std::to_string(game_id) + " AND ship_code='" +
+                        db.esc(ship.code) + "'");
 
-                // Execute Retreat immediately? Or at end of round?
-                // Rules: "Retreat Resolution".
-                // We can mark them. For now, strict damage focus.
-                // BUGBUG-REWORK must resolve retreat resolution
+                // Build valid destination list using MapGraph
+                MapGraph mg(game_id);
+                std::vector<std::string> adjacent =
+                    mg.get_adjacent_hexes(hex_id);
+
+                log << ship.code << " '" << ship.name
+                    << "' successfully retreats!\n";
+                log << ">> Issue 'retreat " << ship.code
+                    << " <hex>' to select destination.\n";
+                log << "Valid destinations: ";
+                for (const auto& adj : adjacent)
+                {
+                    log << adj << " ";
+                }
+                log << "\n";
             }
             else
             {
-                log << ship.code << " '" << ship.name << "' failed to retreat.\n";
-                // BUGBUG-REWORK means what?
+                log << ship.code << " '" << ship.name
+                    << "' failed to retreat.\n";
+                log << "Ship remains in combat.\n";
             }
         }
     }
@@ -1003,26 +1034,43 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
         assigned += v;
     }
 
-    if (assigned > needed)
-    {
-        // BUGBUG-REWORK resolve this discrepency:
-        // Or allow over-assignment? Rules say "applied by owning
-        // player". Assumes exact match needed?
-        return std::string("Assigned more damage than required");
-    }
-
-    // Let's enforce exact match OR destruction.
-
-    // 3. Apply to attributes
-    // DB columns: pd, beam, screen, tube, missiles
-    // assignments keys: "D", "B", "S", "T", "M"
-    // Validate current values
-
+    // Get current HP values for validation
     int cur_pd = std::atoi(r[0][2].c_str());
     int cur_b = std::atoi(r[0][3].c_str());
     int cur_s = std::atoi(r[0][4].c_str());
     int cur_t = std::atoi(r[0][5].c_str());
     int cur_m = std::atoi(r[0][6].c_str());
+
+    // Calculate total current HP (1 BP = 1 HP for most, 3 missiles = 1 HP)
+    int current_hp = cur_pd + cur_b + cur_s + cur_t + (cur_m / 3);
+
+    if (assigned > needed)
+    {
+        // Over-assignment only valid if ship will be destroyed
+        if (assigned < current_hp)
+        {
+            return std::string("Cannot over-assign damage. Ship has " +
+                               std::to_string(current_hp) +
+                               " HP but only took " + std::to_string(needed) +
+                               " damage.");
+        }
+        // Else: overkill accepted - ship will be destroyed
+    }
+    else if (assigned < needed)
+    {
+        // Under-assignment only valid if ship is destroyed
+        if (assigned < current_hp)
+        {
+            return std::string(
+                "Must assign all " + std::to_string(needed) +
+                " damage. Currently assigned: " + std::to_string(assigned));
+        }
+        // Else: ship destroyed with remaining damage, acceptable
+    }
+
+    // 3. Apply to attributes
+    // DB columns: pd, beam, screen, tube, missiles
+    // assignments keys: "D", "B", "S", "T", "M"
 
     std::string updateSql;
 
@@ -1076,18 +1124,18 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 std::to_string(game_id) + " AND ship_code='" +
                 db.esc(ship_code) + "' AND owner='" + std::string(1, owner) +
                 "'");
-        
+
         // Award VP to enemy player
         char enemy = (owner == 'A') ? 'B' : 'A';
         std::string vp_col = (enemy == 'A') ? "vp_A" : "vp_B";
-        db.exec("UPDATE games SET " + vp_col + "=" + vp_col + "+1 WHERE id=" +
-                std::to_string(game_id));
-        
+        db.exec("UPDATE games SET " + vp_col + "=" + vp_col +
+                "+1 WHERE id=" + std::to_string(game_id));
+
         // Notify enemy of VP gain
         Telemetry::getInstance().add_tell(
             game_id, enemy,
             "VICTORY: +1 VP for destroying enemy ship " + ship_code);
-        
+
         // Remove pending (already done below)
     }
 

@@ -74,6 +74,29 @@ bool DoneCommand::invoke(void)
         }
     }
 
+    // Check for pending retreats
+    {
+        DatabaseManager& db = DatabaseManager::getInstance();
+        auto retreat_pending = db.query(
+            "SELECT ship_code FROM ships WHERE game_id=" +
+            std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
+            "' AND escape_pending=1 AND destroyed_at IS NULL");
+        if (!retreat_pending.empty())
+        {
+            std::ostringstream msg;
+            msg << "TACTICAL: Retreat pending! " << retreat_pending.size()
+                << " ship(s) must complete withdrawal:";
+            for (const auto& r : retreat_pending)
+            {
+                msg << "\n  - " << r[0];
+            }
+            msg << "\nUse: retreat <ship> <hex>";
+            Telemetry::getInstance().write(msg.str());
+            StateMachine::getInstance().save_game(s);
+            return true;
+        }
+    }
+
     // Game over check
     if (s.game_over)
     {
