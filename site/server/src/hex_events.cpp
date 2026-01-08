@@ -12,10 +12,12 @@
 #include "db.h"
 #include "logger.h"
 
-int HexEventEngine::get_movement_modifier(int game_id, const std::string& hex)
+int HexEventEngine::get_movement_modifier(int game_id, int round, const std::string& hex)
 {
     if (hex.empty())
+    {
         return 0;
+    }
 
     DatabaseManager& db = DatabaseManager::getInstance();
 
@@ -24,18 +26,21 @@ int HexEventEngine::get_movement_modifier(int game_id, const std::string& hex)
         "WHERE game_id=" +
         std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
         "' AND event_type='NAVIGATION_HAZARD'"
-        " AND expires_turn > (SELECT round FROM games WHERE id=" +
-        std::to_string(game_id) + ")");
+        " AND expires_turn > " + std::to_string(round));
 
     if (rows.empty() || rows[0][0].empty())
+    {
         return 0;
+    }
     return std::atoi(rows[0][0].c_str()); // +N = more PD cost
 }
 
-int HexEventEngine::get_combat_modifier(int game_id, const std::string& hex)
+int HexEventEngine::get_combat_modifier(int game_id, int round, const std::string& hex)
 {
     if (hex.empty())
+    {
         return 0;
+    }
 
     DatabaseManager& db = DatabaseManager::getInstance();
 
@@ -44,18 +49,21 @@ int HexEventEngine::get_combat_modifier(int game_id, const std::string& hex)
         "WHERE game_id=" +
         std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
         "' AND event_type='COMBAT_INTERFERENCE'"
-        " AND expires_turn > (SELECT round FROM games WHERE id=" +
-        std::to_string(game_id) + ")");
+        " AND expires_turn > " + std::to_string(round));
 
     if (rows.empty() || rows[0][0].empty())
+    {
         return 0;
+    }
     return std::atoi(rows[0][0].c_str()); // -N = less damage
 }
 
-float HexEventEngine::get_salvage_multiplier(int game_id, const std::string& hex)
+float HexEventEngine::get_salvage_multiplier(int game_id, int round, const std::string& hex)
 {
     if (hex.empty())
+    {
         return 1.0f;
+    }
 
     DatabaseManager& db = DatabaseManager::getInstance();
 
@@ -64,18 +72,21 @@ float HexEventEngine::get_salvage_multiplier(int game_id, const std::string& hex
         "WHERE game_id=" +
         std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
         "' AND event_type='SALVAGE_OPPORTUNITY'"
-        " AND expires_turn > (SELECT round FROM games WHERE id=" +
-        std::to_string(game_id) + ")");
+        " AND expires_turn > " + std::to_string(round));
 
     if (rows.empty() || rows[0][0] == "0")
+    {
         return 1.0f;
+    }
     return 1.25f; // +25% yield when active
 }
 
-int HexEventEngine::get_extraction_modifier(int game_id, const std::string& hex)
+int HexEventEngine::get_extraction_modifier(int game_id, int round, const std::string& hex)
 {
     if (hex.empty())
+    {
         return 0;
+    }
 
     DatabaseManager& db = DatabaseManager::getInstance();
 
@@ -84,11 +95,12 @@ int HexEventEngine::get_extraction_modifier(int game_id, const std::string& hex)
         "WHERE game_id=" +
         std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
         "' AND event_type='EXTRACTION_BONUS'"
-        " AND expires_turn > (SELECT round FROM games WHERE id=" +
-        std::to_string(game_id) + ")");
+        " AND expires_turn > " + std::to_string(round));
 
     if (rows.empty() || rows[0][0].empty())
+    {
         return 0;
+    }
     return std::atoi(rows[0][0].c_str()); // +N = more yield
 }
 

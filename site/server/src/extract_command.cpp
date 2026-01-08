@@ -209,7 +209,7 @@ bool ExtractCommand::do_extract()
         yield = 1;
 
     // Apply dynamic hex event modifier (EXTRACTION_BONUS)
-    yield += HexEventEngine::get_extraction_modifier(game_id, ship.at_hex);
+    yield += HexEventEngine::get_extraction_modifier(game_id, s.round, ship.at_hex);
 
     // Check cargo capacity
     auto cargo =

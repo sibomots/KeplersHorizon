@@ -17,10 +17,10 @@ class HexEventEngine
 {
   public:
     // Gameplay modifiers - return 0 if no active event
-    static int get_movement_modifier(int game_id, const std::string& hex);
-    static int get_combat_modifier(int game_id, const std::string& hex);
-    static float get_salvage_multiplier(int game_id, const std::string& hex);
-    static int get_extraction_modifier(int game_id, const std::string& hex);
+    static int get_movement_modifier(int game_id, int round, const std::string& hex);
+    static int get_combat_modifier(int game_id, int round, const std::string& hex);
+    static float get_salvage_multiplier(int game_id, int round, const std::string& hex);
+    static int get_extraction_modifier(int game_id, int round, const std::string& hex);
 
     // Turn-end processing
     static void process_events(int game_id, int round);

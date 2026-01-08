@@ -338,7 +338,7 @@ bool SalvageCommand::do_salvage()
         int qty = qty_min + (rand() % (qty_max - qty_min + 1));
         
         // Apply dynamic hex event modifier (SALVAGE_OPPORTUNITY)
-        float mult = HexEventEngine::get_salvage_multiplier(game_id, ship.at_hex);
+        float mult = HexEventEngine::get_salvage_multiplier(game_id, s.round, ship.at_hex);
         qty = (int)(qty * mult);
         
         got_something = true;

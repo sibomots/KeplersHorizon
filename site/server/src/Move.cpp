@@ -321,7 +321,7 @@ bool MoveCommand::invoke(void)
             modifier += StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
             
             // Add dynamic hex event modifier (NAVIGATION_HAZARD)
-            modifier += HexEventEngine::get_movement_modifier(m_game_id, stepHex);
+            modifier += HexEventEngine::get_movement_modifier(m_game_id, s.round, stepHex);
             
             stepCost += modifier;
             if (stepCost < 1)

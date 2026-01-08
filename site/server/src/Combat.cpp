@@ -595,7 +595,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     dmg += StarSystemConstraints::getBeamModifier(game_id, hex_id);
                     
                     // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
-                    dmg += HexEventEngine::get_combat_modifier(game_id, hex_id);
+                    dmg += HexEventEngine::get_combat_modifier(game_id, cs.round, hex_id);
 
                     if (dmg > 0)
                     {
