@@ -59,7 +59,10 @@ void Telemetry::add_broadcast(const std::string& msg)
 void Telemetry::add_broadcast(int game_id, const std::string& msg)
 {
     if (game_id == 0)
+    {
+        Logger::instance().info("Telemetry::add_broadcast:  game_id was 0");
         return; // No game, no messages
+    }
 
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string ins =
@@ -68,47 +71,84 @@ void Telemetry::add_broadcast(int game_id, const std::string& msg)
     db.exec(ins);
 }
 
-std::vector<std::string> Telemetry::get_queued_messages(char player)
+Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
 {
+    QueuedMessages result;
     DatabaseManager& db = DatabaseManager::getInstance();
     int game_id = StateMachine::getInstance().get_game_id();
 
     if (game_id == 0)
     {
-        return {};
+        Logger::instance().info("Telemetry::get_queued_messages:  game_id was 0");
+        return result;
     }
 
     std::string target = std::string(1, player);
+    result.player = player;
+    Logger::instance().info("Telemetry::get_queued_messages:  target player = " + target);
 
-    // Only get unsent messages (sent_at IS NULL)
-    auto rows =
+    // Get direct messages (target_player = A or B, use sent_at)
+    auto direct_rows =
         db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +
-                 std::to_string(game_id) + " AND (target_player='" + target +
-                 "' OR target_player='BOTH') AND sent_at IS NULL ORDER BY id");
+                 std::to_string(game_id) + " AND target_player='" + target +
+                 "' AND sent_at IS NULL ORDER BY id");
 
-    std::vector<std::string> messages;
-    std::vector<std::string> ids;
-    for (const auto& row : rows)
+    for (const auto& row : direct_rows)
     {
-        ids.push_back(row[0]);
-        messages.push_back(row[1]);
+        Logger::instance().info("Telemetry::get_queued_messages: direct msg(id = " + row[0] + "): " + row[1]);
+        result.direct_ids.push_back(row[0]);
+        result.messages.push_back(row[1]);
     }
 
-    // Mark messages as sent instead of deleting
-    if (!ids.empty())
+    // Get broadcast messages (target_player = BOTH, use sent_to_A/sent_to_B)
+    std::string sent_col = (player == 'A') ? "sent_to_A" : "sent_to_B";
+    auto both_rows =
+        db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +
+                 std::to_string(game_id) + " AND target_player='BOTH' AND " +
+                 sent_col + "=0 ORDER BY id");
+
+    for (const auto& row : both_rows)
+    {
+        Logger::instance().info("Telemetry::get_queued_messages: broadcast msg(id = " + row[0] + "): " + row[1]);
+        result.both_ids.push_back(row[0]);
+        result.messages.push_back(row[1]);
+    }
+
+    // DO NOT mark sent here - that happens in status() after response is built
+    return result;
+}
+
+void Telemetry::mark_messages_sent(const QueuedMessages& msgs)
+{
+    if (msgs.direct_ids.empty() && msgs.both_ids.empty())
+        return;
+
+    DatabaseManager& db = DatabaseManager::getInstance();
+
+    // Mark direct messages as sent (sent_at)
+    if (!msgs.direct_ids.empty())
     {
         std::string id_list;
-        for (size_t i = 0; i < ids.size(); ++i)
+        for (auto it = msgs.direct_ids.cbegin(); it != msgs.direct_ids.cend(); ++it)
         {
-            if (i > 0)
-                id_list += ",";
-            id_list += ids[i];
+            if (it != msgs.direct_ids.cbegin()) id_list += ",";
+            id_list += *it;
         }
-        db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" +
-                id_list + ")");
+        db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" + id_list + ")");
     }
 
-    return messages;
+    // Mark broadcast messages as sent TO THIS PLAYER ONLY (sent_to_A or sent_to_B)
+    if (!msgs.both_ids.empty())
+    {
+        std::string sent_col = (msgs.player == 'A') ? "sent_to_A" : "sent_to_B";
+        std::string id_list;
+        for (auto it = msgs.both_ids.cbegin(); it != msgs.both_ids.cend(); ++it)
+        {
+            if (it != msgs.both_ids.cbegin()) id_list += ",";
+            id_list += *it;
+        }
+        db.exec("UPDATE telemetry_queue SET " + sent_col + "=1 WHERE id IN (" + id_list + ")");
+    }
 }
 
 std::string Telemetry::write(const std::string& msg)
@@ -363,7 +403,7 @@ void Telemetry::status(char player, HttpResponse* resp)
     }
 
     // Get queued messages for this player (from tell/broadcast)
-    auto queued_messages = get_queued_messages(player);
+    auto queued = get_queued_messages(player);
 
     // Build complete response and set directly
     std::ostringstream out;
@@ -375,14 +415,14 @@ void Telemetry::status(char player, HttpResponse* resp)
         << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}";
 
     // Include queued messages if any
-    if (!queued_messages.empty())
+    if (!queued.messages.empty())
     {
         out << ",\"messages\":[";
-        for (size_t i = 0; i < queued_messages.size(); ++i)
+        for (size_t i = 0; i < queued.messages.size(); ++i)
         {
             if (i > 0)
                 out << ",";
-            out << "\"" << json_escape(queued_messages[i]) << "\"";
+            out << "\"" << json_escape(queued.messages[i]) << "\"";
         }
         out << "]";
     }
@@ -393,4 +433,7 @@ void Telemetry::status(char player, HttpResponse* resp)
     out << "}";
 
     resp->body = out.str();
+
+    // Mark messages as sent AFTER response is built
+    mark_messages_sent(queued);
 }

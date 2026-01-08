@@ -60,7 +60,17 @@ class Telemetry
     void add_broadcast(const std::string& msg);
     void add_broadcast(int game_id,
                        const std::string& msg); // Explicit game context
-    std::vector<std::string> get_queued_messages(char player);
+
+    // Struct to hold queued messages and their IDs for deferred marking
+    struct QueuedMessages {
+        std::vector<std::string> messages;
+        std::vector<std::string> direct_ids;  // For direct tells (A or B)
+        std::vector<std::string> both_ids;    // For broadcasts (BOTH)
+        char player;                          // 'A' or 'B'
+    };
+
+    QueuedMessages get_queued_messages(char player);
+    void mark_messages_sent(const QueuedMessages& msgs);
 };
 
 #endif
