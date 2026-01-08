@@ -390,9 +390,10 @@ FOREIGN KEY (module_id) REFERENCES modules(module_id)
 
 CREATE TABLE IF NOT EXISTS facility_control_initial (
 module_id INT NOT NULL DEFAULT 1,
-facility_id INT NOT NULL,
-initial_owner CHAR(1),
-PRIMARY KEY (module_id, facility_id),
+system_name VARCHAR(64) NOT NULL,
+facility_type VARCHAR(32) NOT NULL,
+controller CHAR(1) DEFAULT NULL,
+PRIMARY KEY (module_id, system_name, facility_type),
 FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 

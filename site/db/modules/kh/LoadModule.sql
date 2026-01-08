@@ -116,4 +116,12 @@ FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 (id,salvageable_id,item_type,item_name,drop_chance,quantity_min,quantity_max);
 
+LOAD DATA LOCAL INFILE 'modules/kh/facility_control_initial.csv'
+INTO TABLE facility_control_initial
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(system_name, facility_type, controller)
+SET module_id = @module;
+
 COMMIT;

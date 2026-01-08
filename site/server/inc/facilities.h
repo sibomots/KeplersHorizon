@@ -45,7 +45,7 @@ class FacilityEngine
                                 const std::string& facility_type, char player);
 
     // Initialize facility control for a game (copy from global templates)
-    // BUGBUG static void initialize_facilities(int game_id);
+    static void initialize_facilities(int game_id);
 
     // Update facility control based on ship presence (called at turn end)
     static void update_control(int game_id, int round);
