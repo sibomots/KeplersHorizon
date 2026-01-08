@@ -1,8 +1,10 @@
 DBUSR=frog
+DBPASS=foobar
+DB=mysql -vv -u $(DBUSR) -D khdb -p$(DBPASS) 
 it:
-	echo "create db"
-	cat 0-schema.sql 1-milieu.sql 2-seed.sql 3-help_load.sql 4-seed_milieu.sql 5-constraints.sql | mysql  -u $(DBUSR) -D mysql -p
-
-fix:
-	cat 99-fix.sql | mysql -vv -u $(DBUSR) -D khdb -p
+	cat ./Game.sql | $(DB)
+	cat ./core/Load.sql | $(DB)
+	cat ./modules/kh/LoadModule.sql | $(DB)
+	cat ./99-fix.sql | $(DB)
+	cat 99-fix.sql | $(DB)
 

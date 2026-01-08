@@ -56,28 +56,29 @@ bool FacilityEngine::player_controls(int game_id, const std::string& system,
     return !rows.empty();
 }
 
-void FacilityEngine::initialize_facilities(int game_id)
-{
 
-    // BUGBUG-REWORK:  is it really?
-    // BUGBUG: This function is atrophied. Facility initialization data
-    // has been moved to: site/db/milieu/facility_control_initial.csv
-    // Game init should INSERT from facility_control_initial reference table.
-    DatabaseManager& db = DatabaseManager::getInstance();
-
-    Logger::instance().info("[FACILITIES] Initializing facilities for game " +
-                            std::to_string(game_id));
-
-    // Copy from reference table
-    db.exec("INSERT IGNORE INTO "
-            "facility_control(game_id,system_name,facility_type,controller) "
-            "SELECT " +
-            std::to_string(game_id) +
-            ", system_name, facility_type, controller "
-            "FROM facility_control_initial");
-
-    Logger::instance().info("[FACILITIES] Facilities initialized");
-}
+// BUGBUG void FacilityEngine::initialize_facilities(int game_id)
+// BUGBUG {
+// BUGBUG 
+// BUGBUG     // BUGBUG-REWORK:  is it really?
+// BUGBUG     // BUGBUG: This function is atrophied. Facility initialization data
+// BUGBUG     // has been moved to: site/db/milieu/facility_control_initial.csv
+// BUGBUG     // Game init should INSERT from facility_control_initial reference table.
+// BUGBUG     DatabaseManager& db = DatabaseManager::getInstance();
+// BUGBUG 
+// BUGBUG     Logger::instance().info("[FACILITIES] Initializing facilities for game " +
+// BUGBUG                             std::to_string(game_id));
+// BUGBUG 
+// BUGBUG     // Copy from reference table
+// BUGBUG     db.exec("INSERT IGNORE INTO "
+// BUGBUG             "facility_control(game_id,system_name,facility_type,controller) "
+// BUGBUG             "SELECT " +
+// BUGBUG             std::to_string(game_id) +
+// BUGBUG             ", system_name, facility_type, controller "
+// BUGBUG             "FROM facility_control_initial");
+// BUGBUG 
+// BUGBUG     Logger::instance().info("[FACILITIES] Facilities initialized");
+// BUGBUG }
 
 void FacilityEngine::update_control(int game_id, int round)
 {

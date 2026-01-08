@@ -362,7 +362,7 @@ int RoomManager::startGame(const std::string& code)
     StateMachine::getInstance().set_game_id(game_id);
 
     // Initialize facility control for this game
-    FacilityEngine::initialize_facilities(game_id);
+    //BUGBUG FacilityEngine::initialize_facilities(game_id);
 
     // Look up player usernames
     std::string playerA_name = "PLAYER 1";

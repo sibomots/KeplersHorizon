@@ -56,6 +56,7 @@ void DatabaseManager::exec(const std::string& q)
 
     if (mysql_query(driver, q.c_str()))
     {
+        Logger::instance().info("QUERY: " + q );
         throw std::runtime_error(std::string("mysql_query: ") +
                                  mysql_error(driver));
     }
@@ -70,6 +71,7 @@ DatabaseManager::query(const std::string& q)
     }
     if (mysql_query(driver, q.c_str()))
     {
+        Logger::instance().info("QUERY: " + q );
         throw std::runtime_error(std::string("mysql_query: ") +
                                  mysql_error(driver));
     }
