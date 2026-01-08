@@ -25,7 +25,7 @@ bool FleetCommand::invoke(void)
     // Join with star_systems table to get star names for at_hex
     auto rows = db.query(
         "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
-        "s.screen, s.tube, s.missiles, s.tech_level, ss.name "
+        "s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, ss.name "
         "FROM ships s "
         "LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = 1 "
         "WHERE s.game_id=" +
@@ -42,9 +42,9 @@ bool FleetCommand::invoke(void)
     std::ostringstream out;
     out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
     out << "HULL  DESIGNATION      SECTOR                 PD   B  S  T  M  "
-           "TECH LEVEL\n";
+           "LRS TB DR  TECH\n";
     out << "----  --------------  -------------------    --  -- -- -- --  "
-           "----------\n";
+           "--- -- --  ----\n";
 
     for (const auto& r : rows)
     {
@@ -59,10 +59,10 @@ bool FleetCommand::invoke(void)
             // Racked in another ship
             loc = "in " + r[3];
         }
-        else if (!r[10].empty())
+        else if (!r[13].empty())
         {
-            // Have system name from join
-            loc = r[10] + " (" + r[2] + ")";
+            // Have system name from join (index shifted due to lrs/tb/dr)
+            loc = r[13] + " (" + r[2] + ")";
         }
         else
         {
@@ -79,7 +79,10 @@ bool FleetCommand::invoke(void)
         out << std::right << std::setw(3) << r[6];  // screen
         out << std::right << std::setw(3) << r[7];  // tube
         out << std::right << std::setw(3) << r[8];  // missiles
-        out << std::right << std::setw(12) << r[9]; // tech_level
+        out << std::right << std::setw(4) << r[10]; // lrs
+        out << std::right << std::setw(3) << r[11]; // tb
+        out << std::right << std::setw(3) << r[12]; // dr
+        out << std::right << std::setw(6) << r[9];  // tech_level
         out << "\n";
     }
 
