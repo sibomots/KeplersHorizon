@@ -41,34 +41,7 @@ bool StateMachine::start_game_for_random_player()
     return true;
 }
 
-// Core State Machine Transition Logic
-// The "Big Case Statement" that manages lifecycle and executes work based on
-// properties set by Agents/Commands.
-bool StateMachine::transition()
-{
-    Logger::instance().info("StateMachine::transition current_state=" +
-                            std::to_string(data.state));
 
-    DatabaseManager& db = DatabaseManager::getInstance();
-
-    switch (data.state)
-    {
-
-    case ServerState::READY_GAME_START:
-        // Game initialization happens through room flow (via
-        // RoomManager::startGame) - only one game mode exists
-        break;
-
-    case ServerState::IN_GAME:
-        // BUGBUG
-        break;
-
-    default:
-        // BUGBUG
-        break;
-    }
-    return false;
-}
 
 bool StateMachine::active_player_execute(ICmd* pICmd)
 {
@@ -691,7 +664,7 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
             error_msg = "Combat fire only allowed during Combat phase";
             return false;
         }
-        // TODO: Intra-phase check - both players must have issued orders first
+        // Note: Order commitment enforced by CombatEngine::all_orders_committed()
         return true;
     }
     break;

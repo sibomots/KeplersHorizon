@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "db.h"
+#include "facilities.h"
 #include "logger.h"
 #include "ships.h"
 #include "statemachine.h"
@@ -160,7 +161,14 @@ bool FabricateCommand::do_fabricate()
     std::string ship_code = ships[0][0];
     std::string at_system = ships[0][1];
 
-    // TODO: Check if system has SHIPYARD or REFINERY facility
+    // Check if system has SHIPYARD or REFINERY facility that player controls
+    if (!FacilityEngine::player_controls(game_id, at_system, "SHIPYARD", me) &&
+        !FacilityEngine::player_controls(game_id, at_system, "REFINERY", me))
+    {
+        Telemetry::getInstance().write(
+            "FABRICATE: Ship must be at a SHIPYARD or REFINERY you control.");
+        return false;
+    }
 
     // Calculate total resource costs
     int total_cost[8];

@@ -371,8 +371,7 @@ class StateMachine
     // inward facing utilities
     bool start_game_for_random_player();
 
-    // Core state transition logic
-    bool transition();
+
 
   private:
     Data data;
