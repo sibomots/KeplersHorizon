@@ -59,6 +59,7 @@ src/crt_command.cpp
 src/status_command.cpp
 src/hex_command.cpp
 src/galaxy_command.cpp
+src/delete_command.cpp
 src/market_command.cpp
 src/trade_command.cpp
 src/fabricate_command.cpp

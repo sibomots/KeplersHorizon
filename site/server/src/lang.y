@@ -51,6 +51,7 @@
 #include "status_command.h"
 #include "hex_command.h"
 #include "galaxy_command.h"
+#include "delete_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
 // #include "game.h"
@@ -249,11 +250,11 @@ session_cmd:
         delete $2;
    }
    | TOK_DELETE deconflicted_string {
-        // MISSING HANDLER
-        // delete the named game (the same naming convention used for saving,
-        // loading)
         std::string target_game(*$2);
-        Logger::instance().info("Delete the game saved under " ">" + target_game + "<");
+        ICmd* pCmd = DeleteCommand::Builder().setSaveName(target_game).build();
+        if (pCmd && pCmd->invoke()) { /* success */ }
+        SafeDelete(pCmd);
+        delete $2;
    }
    |
    TOK_QUIT
