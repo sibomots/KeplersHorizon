@@ -47,6 +47,10 @@
 #include "retreat_command.h"
 #include "save_command.h"
 #include "help_command.h"
+#include "crt_command.h"
+#include "status_command.h"
+#include "hex_command.h"
+#include "galaxy_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
 // #include "game.h"
@@ -278,18 +282,24 @@ session_cmd:
 
 info_cmd:
    TOK_STATUS {
-      Logger::instance().info("Show Game Status, important records.");
+      ICmd* pCmd = StatusCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
    }
    | TOK_CRT {
-      Logger::instance().info("Show the CRT");
+      ICmd* pCmd = CrtCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
    }
    ;
 
 looking_cmd:
   TOK_HEX deconflicted_string {
       std::string identifier(*$2);
-      Logger::instance().info("Location and spatial information "
-                              "about current hex named >" + identifier + "<");
+      ICmd* pCmd = HexCommand::Builder().setLocation(identifier).build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
+      delete $2;
   }
   | TOK_ONLINE {
       Logger::instance().info("Who's online and when?");
@@ -451,8 +461,9 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_GALAXY {
-      Logger::instance().info("Complete run-down of all systems, "
-                              " all ships in the game.");
+      ICmd* pCmd = GalaxyCommand::Builder().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
   | TOK_CARGO {
       // Show cargo help
