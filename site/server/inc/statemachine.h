@@ -371,6 +371,27 @@ class StateMachine
     // inward facing utilities
     bool start_game_for_random_player();
 
+    // Clear game session and return to lobby state
+    void clear_game_session()
+    {
+        data.state = ServerState::READY_GAME_START;
+        data.game_id = 0;
+        data.current_player = 'A';
+        data.current_user_id = 0;
+        data.turn_number = 0;
+        data.pending_build_commit = false;
+        data.pending_build_cancel = false;
+        data.pending_build_list_drafts = false;
+        data.pending_build_show_draft.clear();
+        data.pending_build_attributes.clear();
+        data.pending_build_draft.clear();
+        data.pending_repair_ship.clear();
+        data.pending_repair_attribute.clear();
+        data.pending_repair_amount = 0;
+        data.pending_resupply_ship.clear();
+        data.pending_resupply_missiles = 0;
+    }
+
 
 
   private:

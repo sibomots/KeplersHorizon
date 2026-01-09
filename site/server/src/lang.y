@@ -52,6 +52,7 @@
 #include "hex_command.h"
 #include "galaxy_command.h"
 #include "delete_command.h"
+#include "quit_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
 // #include "game.h"
@@ -259,14 +260,9 @@ session_cmd:
    |
    TOK_QUIT
    {
-        // quit the game.  it will automatically save the game under the name
-        // 'lastgame' overwriting lastgame.
-        // the user has to 'load lastgame' to retrieve it when they play again
-        // Everythign about the state of the game, ships, everything is saved
-        //
-        // Stateful conditions like player A and player B are logged in must be
-        // true of coure for the State to be in GAME_START
-        Logger::instance().info("Quit the game. Same as Reset.");
+        ICmd* pCmd = QuitCommand::Builder().build();
+        if (pCmd && pCmd->invoke()) { /* success */ }
+        SafeDelete(pCmd);
    }
    |
    TOK_CLEAR
