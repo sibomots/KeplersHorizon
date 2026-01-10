@@ -41,29 +41,6 @@ bool StateMachine::start_game_for_random_player()
     return true;
 }
 
-
-
-bool StateMachine::active_player_execute(ICmd* pICmd)
-{
-    if (!pICmd)
-    {
-        return false;
-    }
-    // Command sets properties on the State Slate (invoke), then we turn the
-    // crank.
-    bool result = pICmd->invoke();
-    return result;
-}
-
-bool StateMachine::nonactive_player_execute(ICmd* pICmd)
-{
-    if (!pICmd)
-    {
-        return false;
-    }
-    return pICmd->invoke();
-}
-
 GameState StateMachine::load_game(int game_id)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
@@ -331,6 +308,7 @@ void StateMachine::advance_next(GameState& s)
             CombatEngine ce(s.game_id);
             if (!ce.get_active_combats().empty())
             {
+                Logger::instance().info("Combat is still active.");
                 return; // Cannot advance until all combats resolved
             }
         }

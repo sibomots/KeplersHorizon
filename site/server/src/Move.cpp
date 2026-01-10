@@ -8,19 +8,20 @@
 
 #include <cctype>
 #include <sstream>
+#include <iomanip>
 
 #include "combat.h"
 #include "constraints.h"
-#include "star_system_constraints.h"
-#include "hex_events.h"
 #include "db.h"
 #include "deploy_command.h"
+#include "hex_events.h"
 #include "logger.h"
 #include "mapgraph.h"
 #include "maputil.h"
 #include "moduleutil.h"
 #include "move_command.h"
 #include "ships.h"
+#include "star_system_constraints.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "typedefs.h"
@@ -92,6 +93,9 @@ bool DeployCommand::invoke(void)
     std::string player_side =
         (active_player == 'A') ? s.home_side_A : s.home_side_B;
 
+    // BUGBUG jdw   We need a query that can get both territories
+    // announced when the first base is claimed.
+
     if (player_side.empty())
     {
         // First deployment - set player's side
@@ -110,10 +114,12 @@ bool DeployCommand::invoke(void)
         int user_id = StateMachine::getInstance().get_current_user_id();
         auto user_rows = DatabaseManager::getInstance().query(
             "SELECT username FROM users WHERE id=" + std::to_string(user_id));
-        std::string player_name = user_rows.empty() ? "Player" : user_rows[0][0];
+        std::string player_name =
+            user_rows.empty() ? "Player" : user_rows[0][0];
 
-        Telemetry::getInstance().broadcast(
-            "DEPLOY: " + player_name + " has claimed the " + territory_name + ".");
+        Telemetry::getInstance().broadcast("DEPLOY: " + player_name +
+                                           " has claimed the " +
+                                           territory_name + ".");
     }
     else if (player_side != base_side)
     {
@@ -316,13 +322,15 @@ bool MoveCommand::invoke(void)
 
             int modifier =
                 ConstraintEngine::get_movement_modifier(m_game_id, stepSys);
-            
+
             // Add star system environmental movement modifier
-            modifier += StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
-            
+            modifier +=
+                StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
+
             // Add dynamic hex event modifier (NAVIGATION_HAZARD)
-            modifier += HexEventEngine::get_movement_modifier(m_game_id, s.round, stepHex);
-            
+            modifier += HexEventEngine::get_movement_modifier(m_game_id,
+                                                              s.round, stepHex);
+
             stepCost += modifier;
             if (stepCost < 1)
             {
@@ -414,8 +422,8 @@ bool MoveCommand::invoke(void)
                         "' AND system_name='" + db.esc(finalSystem) + "'");
             }
 
-            Telemetry::getInstance().write("CODEX: " + finalSystem +
-                                           " now " + new_level + ".");
+            Telemetry::getInstance().write("CODEX: " + finalSystem + " now " +
+                                           new_level + ".");
         }
     }
 
@@ -447,8 +455,7 @@ bool MoveCommand::invoke(void)
 
         // Check if two hexes are connected by warpline
         auto isWarpline = [&](const std::string& h1,
-                              const std::string& h2) -> bool
-        {
+                              const std::string& h2) -> bool {
             int m = get_module_id_for_game(m_game_id);
             auto result = db.query(
                 "SELECT 1 FROM warplines WHERE module_id=" + std::to_string(m) +
@@ -495,13 +502,10 @@ bool MoveCommand::invoke(void)
 
     // Check for combat trigger: enemy ships in destination hex
     char enemy = (active_player == 'A') ? 'B' : 'A';
-    auto enemy_ships =
-        db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
-                 std::to_string(m_game_id) + " AND owner='" +
-                 std::string(1, enemy) + "' AND at_hex='" + db.esc(finalHex) +
-                 "' AND racked_in IS NULL AND destroyed_at IS NULL");
+    bool litmus = CombatEngine::is_real_combat_state(m_game_id);
 
-    if (!enemy_ships.empty() && std::atoi(enemy_ships[0][0].c_str()) > 0)
+    // if (!enemy_ships.empty() && std::atoi(enemy_ships[0][0].c_str()) > 0)
+    if (litmus) //  && std::atoi(enemy_ships[0][0].c_str()) > 0)
     {
         // Enemy ships present - trigger combat check
         CombatEngine ce(m_game_id);
@@ -516,6 +520,100 @@ bool MoveCommand::invoke(void)
         Telemetry::getInstance().write(alertMsg);
         Telemetry::getInstance().tell(PlayerTarget::THEM, alertMsg);
     }
+    else
+    {
+        // this is not a star-base hex.  So we cannot initiate combat
+        // even if there are enemy ships.  let's see what is there for
+        // alerting the player(s)
+        std::ostringstream inprox;
+        inprox << "SELECT "
+               << " UPPER(s.ship_code), UPPER(s.ship_name),  s.owner, "
+               << " CASE WHEN s.owner='" << std::string(1, active_player)
+               << "' "
+               << "    THEN 1 ELSE 0 END AS is_friendly, "
+               << " CASE WHEN s.owner <> '" << std::string(1, active_player)
+               << "' "
+               << " THEN 1 ELSE 0 END AS is_enemy, "
+               << " 0 AS is_neither_friend_nor_enemy, "
+               << "  hx.ships_in_hex, s.at_hex "
+               << " FROM ships s "
+               << " JOIN ( "
+               << " SELECT "
+               << " s2.at_hex, "
+               << " COUNT(*) AS ships_in_hex "
+               << "  FROM ships s2 "
+               << "  LEFT JOIN star_systems ss "
+               << "    ON ss.hex_id    = s2.at_hex "
+               << "  WHERE s2.game_id=" << std::to_string(m_game_id)
+               << "    AND s2.destroyed_at IS NULL "
+               << "    AND s2.racked_in IS NULL "
+               << "    AND s2.at_hex IS NOT NULL "
+               << "  GROUP BY s2.at_hex "
+               << "  HAVING "
+               << "    SUM(CASE WHEN s2.owner = '"
+               << std::string(1, active_player) << "' "
+               << "   THEN 1 ELSE 0 END) > 0 "
+               << "    AND "
+               << "    SUM(CASE WHEN s2.owner <> '"
+               << std::string(1, active_player) << "' "
+               << "   THEN 1 ELSE 0 END) > 0 "
+               << ") hx "
+               << "  ON hx.at_hex = s.at_hex "
+               << "  WHERE s.game_id=" << std::to_string(m_game_id)
+               << "  AND s.destroyed_at IS NULL "
+               << "  AND s.racked_in IS NULL "
+               << "  AND s.at_hex IS NOT NULL "
+               << "ORDER BY s.at_hex, s.owner, s.ship_code";
 
+        std::vector<std::vector<std::string>> obprox = db.query(inprox.str());
+
+        // If there are opposing forces in any non-star hex, we want to alert
+        // this!
+        if (!obprox.empty())
+        {
+            std::ostringstream pids;
+            pids << "SELECT u.id, UPPER(u.username), u.id, gs.seat "
+                 << " FROM users u, game_seats gs "
+                 << " WHERE gs.user_id = u.id "
+                 << " AND gs.game_id=" << std::to_string(m_game_id) << " AND "
+                 << " (gs.seat='" << std::string(1, active_player) << "' "
+                 << " OR gs.seat = '" << std::string(1, enemy) << "') "
+                 << " ORDER by gs.seat ASC";
+            auto involved = db.query(pids.str());
+
+            std::ostringstream whodat;
+            std::string you("You");
+            std::string them("Enemy");
+            char keyc = 'A';
+
+            // are both players in the game?
+            if (involved.size() == 2)
+            {
+                you = involved[0][1];
+                them = involved[1][1];
+            }
+
+            whodat << "> TACTICAL ALERT:\n"
+                   << "              SCANNERS DETECT\n"
+                   << "  ---------------------------------------\n"
+                   << "  Code  Name                        Owner\n"
+                   << "  ---------------------------------------\n";
+
+            for (std::vector<std::vector<std::string>>::iterator itr =
+                     obprox.begin();
+                 itr != obprox.end(); ++itr)
+            {
+                std::vector<std::string> row = *itr;
+                // s.ship_code, s.ship_name,  s.owner, "
+                whodat << std::left << std::setw(6)  << row[0];
+                whodat << std::left << std::setw(28) << row[1];
+                whodat << std::left << std::setw(5);
+                keyc = (char)(row[2].front());
+                std::string pis = (keyc == 'A') ? you : them;
+                whodat << pis << "\n";
+            }
+            Telemetry::getInstance().broadcast(whodat.str());
+        }
+    }
     return true;
 }

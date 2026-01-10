@@ -402,38 +402,42 @@ Copyright (c) 2025, sibomots
       }
 
       function stackOffset(index, total) {
-        // Bug #8: Radial slot-based positioning to prevent glyph overlap
-        // Ships are placed in 6 slots around the hex periphery (like pie slices)
-        // Avoids: hex ID (bottom), star name (top), star icon (center)
+ if (!Number.isFinite(index)) index = 0;
+  if (!Number.isFinite(total) || total <= 0) return { dx: 0, dy: 0 };
 
-        if (total === 1) {
-          // Single ship: offset to left of center
-          return { dx: -22, dy: 0 };
-        }
+  // radius in px (match your prior look)
+  const BASE_R = 20;
+  const r = BASE_R + Math.max(0, total - 6) * 2;
 
-        // Define 6 slots around the hex at radius ~18px from center
-        // Slots are positioned to avoid star icon (center) and star name (top)
-        // Angles: 30°, 90°, 150°, 210°, 270°, 330° (avoiding 0° top where star name is)
-        const RADIUS = 20;
-        const SLOT_ANGLES = [
-          210,  // bottom-left
-          150,  // top-left
-          270,  // left
-          90,   // right
-          330,  // bottom-right
-          30    // top-right (avoid - star name area)
-        ];
+  // Angles in degrees. 0° = +X (to the right), 90° = +Y (down in SVG coords).
+  // Choose your aesthetics here.
+  const angleTableDeg = {
+    1: [180],                         // legacy-ish: left
+    2: [0, 180],                      // opposite
+    3: [0, 120, 240],                 // evenly spaced
+    4: [45, 135, 225, 315],           // diagonals (often looks nicer than cardinal)
+    5: [0, 72, 144, 216, 288],
+    6: [0, 60, 120, 180, 240, 300],
+    7: [0, 360/7, 2*360/7, 3*360/7, 4*360/7, 5*360/7, 6*360/7],
+    8: [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5]
+  };
 
-        // For more than 6 ships, use multiple rings
-        const slotIndex = index % 6;
-        const ring = Math.floor(index / 6);
-        const ringRadius = RADIUS + (ring * 14);  // Expand outward for additional rings
+  let degList = angleTableDeg[total];
 
-        const angle = SLOT_ANGLES[slotIndex] * (Math.PI / 180);
-        return {
-          dx: Math.cos(angle) * ringRadius,
-          dy: Math.sin(angle) * ringRadius
-        };
+  // Fallback for >8 (or any missing entry): even spacing
+  if (!degList) {
+    degList = Array.from({ length: total }, (_, i) => 180 + (i * 360) / total);
+  }
+
+  // Clamp index safely
+  const i = ((index % total) + total) % total;
+  const deg = degList[i];
+  const rad = (deg * Math.PI) / 180;
+
+  return {
+    dx: Math.cos(rad) * r,
+    dy: Math.sin(rad) * r
+  };
       }
 
       function renderShip(ship, cx, cy, colors, zoom, category) {
@@ -481,14 +485,21 @@ Copyright (c) 2025, sibomots
           g.appendChild(c);
 
           const t = document.createElementNS(NS, 'text');
-          t.setAttribute('dy', -8);
+          t.setAttribute('dy', 0);
           t.setAttribute('text-anchor', 'middle');
-          t.setAttribute('fill', colors.fill);
-          t.setAttribute('font-size', '8pt');
+          t.setAttribute('dominant-baseline', 'middle');
+          t.setAttribute('font-size', '10pt');
           t.setAttribute('font-family', 'ui-monospace, monospace');
-          t.textContent = ship.code;
+          // Overlay the ship TYPE (W/S/etc.) on top of the icon
+          t.setAttribute('fill', category === 'friendly' ? '#00ffff' : '#ffffff');
+          t.setAttribute('stroke', '#000000');
+          t.setAttribute('stroke-width', '1.5');
+          t.setAttribute('paint-order', 'stroke fill');
+          t.setAttribute('pointer-events', 'none');
+          t.textContent = (ship.code || '').toUpperCase(); // ship.type;
           g.appendChild(t);
-        } else {
+
+          } else {
           // Full icon with different shapes for W vs S
           const pts = ship.type === 'W'
             ? '0,-10 8,0 0,10 -8,0'   // Diamond for warpship
@@ -501,50 +512,91 @@ Copyright (c) 2025, sibomots
           g.appendChild(p);
 
           const t = document.createElementNS(NS, 'text');
-          t.setAttribute('dy', 18);
+          t.setAttribute('dy', 0);
           t.setAttribute('text-anchor', 'middle');
-          t.setAttribute('fill', colors.fill);
+          t.setAttribute('dominant-baseline', 'middle');
           t.setAttribute('font-size', '10pt');
           t.setAttribute('font-family', 'ui-monospace, monospace');
-          t.textContent = ship.code;
+          // Overlay the ship TYPE (W/S/etc.) on top of the icon
+          t.setAttribute('fill', category === 'friendly' ? '#00ffff' : '#ffffff');
+          t.setAttribute('stroke', '#000000');
+          t.setAttribute('stroke-width', '1.5');
+          t.setAttribute('paint-order', 'stroke fill');
+          t.setAttribute('pointer-events', 'none');
+          t.textContent = (ship.code || '').toUpperCase(); // ship.type;
           g.appendChild(t);
-        }
+
+          }
 
         return g;
       }
 
       function renderShips(data) {
+        console.log(JSON.stringify(data, null, 2));
         clearShipLayers();
         if (!data || !data.ships) return;
 
         const zoom = getZoomLevel();
 
-        for (const category of ['neutral', 'enemy', 'friendly']) {
-          const ships = data.ships[category] || [];
-          const layer = document.getElementById(`layer-ships-${category}`);
-          const colors = SHIP_COLORS[category];
-          if (!layer || !colors) continue;
-
-          // Group ships by hex
-          const byHex = new Map();
-          for (const ship of ships) {
-            const hex = ship.hex || '';
-            if (!hex) continue;
-            if (!byHex.has(hex)) byHex.set(hex, []);
-            byHex.get(hex).push(ship);
+        // Supports both shapes:
+        //  (A) data.ships = { friendly:[...], enemy:[...], neutral:[...] }
+        //  (B) data.ships = [ {category:'friendly', ...}, ... ]
+        function flattenShips(input) {
+          const out = [];
+          if (Array.isArray(input)) {
+            for (const ship of input) {
+              if (!ship) continue;
+              const category = ship.category || ship.faction || ship.side;
+              if (!category) continue;
+              out.push({ ship, category });
+            }
+            return out;
           }
 
-          for (const [hex, shipsInHex] of byHex) {
-            const pos = hexCenters.get(hex);
-            if (!pos) continue;
-
-            shipsInHex.forEach((ship, idx) => {
-              const offset = stackOffset(idx, shipsInHex.length);
-              const el = renderShip(ship, pos.cx + offset.dx,
-                pos.cy + offset.dy, colors, zoom, category);
-              layer.appendChild(el);
-            });
+          // Legacy shape
+          for (const category of ['neutral', 'enemy', 'friendly']) {
+            const arr = (input && input[category]) ? input[category] : [];
+            for (const ship of arr) out.push({ ship, category });
           }
+          return out;
+        }
+
+        const all = flattenShips(data.ships);
+
+        // Group ALL ships by hex, regardless of category
+        const byHex = new Map();
+        for (const entry of all) {
+          const hex = entry.ship && entry.ship.hex;
+          if (!hex) continue;
+          if (!byHex.has(hex)) byHex.set(hex, []);
+          byHex.get(hex).push(entry);
+        }
+
+        // For each hex: assign shared offsets across all categories
+        for (const [hex, entries] of byHex) {
+          const pos = hexCenters.get(hex);
+          if (!pos) continue;
+
+          const total = entries.length;
+
+          entries.forEach((entry, globalIdx) => {
+            const ship = entry.ship;
+            const category = entry.category;
+
+            const layer = document.getElementById(`layer-ships-${category}`);
+            const colors = SHIP_COLORS[category];
+            if (!layer || !colors) return;
+
+            const offset = stackOffset(globalIdx, total);
+            const el = renderShip(ship,
+              pos.cx + offset.dx,
+              pos.cy + offset.dy,
+              colors,
+              zoom,
+              category
+            );
+            layer.appendChild(el);
+          });
         }
       }
 

@@ -40,13 +40,21 @@ void CombatEngine::check_for_combat_triggers()
     // 1. Find all hexes containing ships from both players (A and B)
     //    We can do this by selecting all ship locations and grouping.
     DatabaseManager& db = DatabaseManager::getInstance();
+    bool litmus  = CombatEngine::is_real_combat_state(game_id);
+
+    if (litmus == false)
+    {
+        Logger::instance().info("No ships are in combat!");
+    }
+    else 
+    {
     auto rows = db.query("SELECT at_hex, owner FROM ships "
                          "WHERE game_id=" +
                          std::to_string(game_id) +
                          " "
                          "AND at_hex IS NOT NULL AND racked_in IS NULL AND "
                          "destroyed_at IS NULL");
-
+  
     std::map<std::string, std::set<char>> hexOccupants;
     for (const auto& r : rows)
     {
@@ -70,6 +78,42 @@ void CombatEngine::check_for_combat_triggers()
             }
         }
     }
+  }
+}
+
+// return vector of rows.
+// each row has at_hex, owner of each ship involved in conflict
+bool CombatEngine::is_real_combat_state(int gid)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    bool real_combat = false;
+
+    // Find out how many hexes are conflicted.
+
+    auto conflict_rows = db.query(
+    "SELECT DISTINCT s.at_hex, count(s.owner)"
+    "FROM ships s "
+    "JOIN star_systems ss ON ss.hex_id = s.at_hex "
+    "WHERE s.game_id=" + std::to_string(gid) +
+    " AND s.destroyed_at IS NULL "
+    " AND s.racked_in IS NULL "
+    " AND s.at_hex IS NOT NULL AND s.at_hex <> '' "
+    " AND s.owner IN ('A','B') "          // ignore neutral
+    "GROUP BY s.at_hex ");
+
+    // for each hex, look at the number of distinct ship owners at that hex.
+    for (const std::vector<std::string>& row : conflict_rows)
+    {
+        // Defensive: ensure expected column count
+        if (row.size() < 2) {
+           continue; 
+        }
+        int owner_count = std::stoi(row[1]);
+        if ( owner_count > 1 ) {
+                real_combat = true;
+        }
+    }
+    return real_combat;
 }
 
 void CombatEngine::create_combat(const std::string& hex_id)

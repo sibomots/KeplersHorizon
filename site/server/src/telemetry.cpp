@@ -85,8 +85,6 @@ Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
 
     std::string target = std::string(1, player);
     result.player = player;
-    Logger::instance().info("Telemetry::get_queued_messages:  target player = " + target);
-
     // Get direct messages (target_player = A or B, use sent_at)
     auto direct_rows =
         db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +

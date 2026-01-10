@@ -31,6 +31,8 @@ bool SaveCommand::invoke()
     int user_id = sm.get_current_user_id();
     GameState gs = sm.get_game_state();
 
+// BUGBUG
+#if 0
     // Check phase - only allow during BUILD_SHIPS
     if (gs.phase_index != 0)
     {
@@ -38,6 +40,7 @@ bool SaveCommand::invoke()
             "SAVE: Only allowed during BUILD_SHIPS phase.");
         return false;
     }
+#endif
 
     if (m_name.empty())
     {
@@ -309,13 +312,28 @@ bool AcceptCommand::invoke()
     db.exec("DELETE FROM load_requests WHERE game_id=" +
             std::to_string(game_id));
 
+
     // Bug #10: Check for combat condition after load
     // If any hex has ships from both players, force COMBAT phase
+    // auto conflict_rows = db.query(
+    //    "SELECT at_hex FROM ships WHERE game_id=" +
+    //    std::to_string(target_game_id) +
+    //    " AND destroyed_at IS NULL AND at_hex IS NOT NULL AND at_hex != '' "
+    //    "GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1 LIMIT 1");
+
     auto conflict_rows = db.query(
-        "SELECT at_hex FROM ships WHERE game_id=" +
-        std::to_string(target_game_id) +
-        " AND destroyed_at IS NULL AND at_hex IS NOT NULL AND at_hex != '' "
-        "GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1 LIMIT 1");
+    "SELECT s.at_hex "
+    "FROM ships s "
+    "JOIN star_systems ss ON ss.hex_id = s.at_hex "
+    "WHERE s.game_id=" + std::to_string(target_game_id) +
+    " AND s.destroyed_at IS NULL "
+    " AND s.racked_in IS NULL "
+    " AND s.at_hex IS NOT NULL AND s.at_hex <> '' "
+    " AND s.owner IN ('A','B') "          // ignore neutral
+    " AND ss.is_base = 1 "                // must be a base star-hex
+    "GROUP BY s.at_hex "
+    "HAVING COUNT(DISTINCT s.owner) = 2 " // both A and B present
+    "LIMIT 1");
 
     std::string extra_msg;
     if (!conflict_rows.empty())

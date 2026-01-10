@@ -69,6 +69,10 @@ class CombatEngine
     std::vector<CombatState> get_active_combats();
     CombatState get_combat_state(const std::string& hex_id);
 
+
+    // A test if any ships are actually in combat (has to be ON STAR HEX)
+    static bool is_real_combat_state(int gid);
+
     // Order handling
     std::string submit_order(char owner, const CombatOrder& order);
 

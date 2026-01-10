@@ -75,26 +75,24 @@ bool DoneCommand::invoke(void)
     }
 
     // Check for pending retreats
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto retreat_pending = db.query(
+        "SELECT ship_code FROM ships WHERE game_id=" +
+        std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
+        "' AND escape_pending=1 AND destroyed_at IS NULL");
+    if (!retreat_pending.empty())
     {
-        DatabaseManager& db = DatabaseManager::getInstance();
-        auto retreat_pending = db.query(
-            "SELECT ship_code FROM ships WHERE game_id=" +
-            std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
-            "' AND escape_pending=1 AND destroyed_at IS NULL");
-        if (!retreat_pending.empty())
+        std::ostringstream msg;
+        msg << "TACTICAL: Retreat pending! " << retreat_pending.size()
+            << " ship(s) must complete withdrawal:";
+        for (const auto& r : retreat_pending)
         {
-            std::ostringstream msg;
-            msg << "TACTICAL: Retreat pending! " << retreat_pending.size()
-                << " ship(s) must complete withdrawal:";
-            for (const auto& r : retreat_pending)
-            {
-                msg << "\n  - " << r[0];
-            }
-            msg << "\nUse: retreat <ship> <hex>";
-            Telemetry::getInstance().write(msg.str());
-            StateMachine::getInstance().save_game(s);
-            return true;
+            msg << "\n  - " << r[0];
         }
+        msg << "\nUse: retreat <ship> <hex>";
+        Telemetry::getInstance().write(msg.str());
+        StateMachine::getInstance().save_game(s);
+        return true;
     }
 
     // Game over check
@@ -140,19 +138,20 @@ bool DoneCommand::invoke(void)
 
     return true;
 }
-//////////////////////////////////////////////////////////////////////////////////
-// This file is part of Kepler's Horizon
-//
-// Licensed under BSD 3-Clause License
-//
-// Copyright (c) 2025, sibomots
-/////////////////////////////////////////////////////////////////////////////////
 
 bool NextCommand::invoke(void)
 {
     // Check if this command is allowed given current game state
     NextParams_t params;
     std::string inhibit_error;
+
+    typedef struct
+    {
+        std::string player;
+        int phase;
+        int round;
+    } TurnMetrics;
+
     if (!StateMachine::getInstance().check_inhibits(CommandID::NEXT, &params,
                                                     inhibit_error))
     {
@@ -160,46 +159,68 @@ bool NextCommand::invoke(void)
         return false;
     }
 
+    // jdw
+    TurnMetrics before_advance;
+    TurnMetrics after_advance;
+
     GameState s = StateMachine::getInstance().get_game_state();
     int game_id = StateMachine::getInstance().get_game_id();
 
-    std::string before_phase = s.phase_name();
-    std::string before_player = s.active_player;
-    int before_round = s.round;
+    // jdw
+    before_advance.phase = s.phase_index;
+    before_advance.round = s.round;
+    before_advance.player = s.active_player;
 
+    // Before we try to advance to the next phase
+    // let's save the current phase and round.
     StateMachine::getInstance().advance_next(s);
 
     // Save the updated game state
     StateMachine::getInstance().save_game(s);
 
+    after_advance.phase = s.phase_index;
+    after_advance.round = s.round;
+    after_advance.player = s.active_player;
+
+    bool phase_change = (before_advance.phase != after_advance.phase);
+    bool round_change = (before_advance.round != after_advance.round);
+    bool player_change =
+        (before_advance.player.compare(after_advance.player) != 0);
+
     std::ostringstream msg;
-    msg << "New Phase: " << s.phase_name();
-    if (s.round != before_round)
+    bool msg_updated = false;
+    if (player_change)
     {
-        msg << " (round " << s.round << ")";
+        if (player_change)
+        {
+            Telemetry::getInstance().tell(PlayerTarget::THEM,
+                                          "It's YOUR turn! " + s.phase_name());
+        }
+        else
+        {
+            if (phase_change)
+            {
+                msg << "Phase: " << s.phase_name();
+                if (round_change)
+                {
+                    msg << " Round: " << s.round;
+                }
+                msg_updated = true;
+            }
+            else
+            {
+                if (round_change)
+                {
+                    msg << "Round: " << s.round;
+                    msg_updated = true;
+                }
+            }
+        }
     }
-
-    Logger::instance().info(msg.str());
-    Telemetry::getInstance().write(msg.str());
-
-    // If active player changed, notify the NEW active player
-    // After advance, s.active_player is the new player (e.g., 'B')
-    // The requester (ME) is the old player (e.g., 'A'), so THEM = the new
-    // player
-    if (before_player != s.active_player)
+    if (msg_updated)
     {
-        Telemetry::getInstance().tell(PlayerTarget::THEM,
-                                      "It's YOUR turn! " + s.phase_name());
+        Logger::instance().info(msg.str());
+        Telemetry::getInstance().write(msg.str());
     }
-
     return true;
 }
-//////////////////////////////////////////////////////////////////////////////////
-// This file is part of Kepler's Horizon
-//
-// Licensed under BSD 3-Clause License
-//
-// Copyright (c) 2025, sibomots
-/////////////////////////////////////////////////////////////////////////////////
-
-// StartCommand removed - game initialization happens through room flow only

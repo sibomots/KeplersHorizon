@@ -261,10 +261,6 @@ class StateMachine
     bool preinitialize();
     bool initialize();
 
-    // user-facing invokables
-    bool active_player_execute(ICmd* pICmd);
-    bool nonactive_player_execute(ICmd* pICmd);
-
     GameState load_game(int game_id);
 
     // BUGBUG
