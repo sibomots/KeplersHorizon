@@ -135,3 +135,4 @@ std::string upper_ascii(const std::string& s)
         r[i] = (char)std::toupper((unsigned char)r[i]);
     return r;
 }
+

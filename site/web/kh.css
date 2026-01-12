@@ -20,6 +20,7 @@
   --warn: #facc15;
   --glow: rgba(50, 255, 50, 0.8);
   --glow-soft: rgba(50, 255, 50, 0.4);
+  --warnmsg: #FFb020;
 }
 
 /* Base Reset */
@@ -264,9 +265,16 @@ button:hover {
   text-shadow: 0 0 8px rgba(68, 255, 136, 0.7);
 }
 
+
 .line-bad {
   color: var(--bad);
   text-shadow: 0 0 8px rgba(255, 68, 68, 0.7);
+}
+
+
+.line-warn {
+  color: var(--warnmsg);
+  text-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 8px rgba(255,176,32,0.7);
 }
 
 /* Map View - Always visible in split layout */

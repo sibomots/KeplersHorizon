@@ -282,10 +282,14 @@ void StateMachine::apply_start_of_turn(GameState& s)
     bool is_first_player_first_turn = (s.round == 1 && me == 'A');
     if (!is_first_player_first_turn)
     {
-        if (me == 'A')
+        if (me == 'A') 
+        {
             s.creditsA += 200; // 10 × 20 (inflated)
+        }
         else
+        {
             s.creditsB += 200; // 10 × 20 (inflated)
+        }
     }
 
     // Reset movement points for active player's ships

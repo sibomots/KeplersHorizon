@@ -118,6 +118,7 @@ typedef struct
 typedef struct
 {
     std::string ship_code;
+    std::string ship_name;
     AttributeMap attributes;
 } BuildSetParams_t;
 

@@ -2,11 +2,18 @@
 #define __SHIP_ATTR_H__
 #include <map>
 #include <string>
+#include <ostream>
+#include <sstream>
+#include <vector>
+#include <iomanip>
 
 #include "app.h"
 #include "combat.h"
 #include "db.h"
 #include "typedefs.h"
+#include "kherr.h"
+#include "localization.h"
+#include "costs.h"
 
 class ShipAttributes
 {
@@ -32,17 +39,129 @@ class ShipAttributes
         M = 0;
         SR = 0;
     }
+    void deep_copy(ShipAttributes& dest, const ShipAttributes& src)
+    {
+        dest.tech = src.tech;
+        dest.type = src.type;
+        dest.PD = src.PD;
+        dest.B = src.B;
+        dest.S = src.S;
+        dest.T = src.T;
+        dest.M = src.M;
+        dest.SR = src.SR;
+    }
+
+    ShipAttributes& operator=(const ShipAttributes& rhs)
+    {
+        if (this != &rhs)
+        {
+           deep_copy(*this, rhs);
+        }
+        return *this;
+    }
+
+    ShipAttributes(const ShipAttributes& rhs)
+    {
+         deep_copy(*this, rhs);
+    }
 };
+
+class ShipRow;
 
 class DraftRow
 {
+  private:
+  ShipAttributes attr;
+
   public:
+
+    friend class ShipRow;
+
+    int total_cost;
     std::string code;
     std::string name;
-    ShipAttributes attr;
     DraftRow()
     {
         attr.type = 'W';
+        total_cost = 0;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, DraftRow& ob)
+    {
+        os << "Code: " << ob.get_code()
+           << " Name: " << ob.get_name()
+           << " Technology Level: " << std::to_string(ob.get_tech()) << "\n"
+           << "Cost: " << ob.get_cost() << "\n"
+           << "    Attributes: "
+           << "[PD=" << ob.get_PD() << " "
+           << "B=" << ob.get_B() << " "
+           << "S=" << ob.get_S() << " "
+           << "T=" << ob.get_T() << " "
+           << "M=" << ob.get_M() << " "
+           << "SR=" << ob.get_SR() << "]\n";
+        return os;
+    }
+            
+    // clang-format off
+    void set_code(std::string c) { code = c; }
+    void set_name(std::string n) { name = n; }
+    void set_tech(int t) { attr.tech = t; }
+    void set_type(char t) { attr.type = t; }
+    void set_PD(int pd) { attr.PD = pd; }
+    void set_B(int b) { attr.B = b; }
+    void set_S(int s) { attr.S = s; }
+    void set_T(int t) { attr.T = t; }
+    void set_M(int m) { attr.M = m; }
+    void set_SR(int sr) { attr.SR = sr; }
+
+    std::string get_code() const { return std::string(code); }
+    std::string get_name() const { return std::string(name); }
+    int get_tech() const { return attr.tech; }
+    char get_type() const { return attr.type; }
+    int get_PD() const { return attr.PD; }
+    int get_B() const { return attr.B; }
+    int get_S() const { return attr.S; }
+    int get_T() const { return attr.T; }
+    int get_M() const { return attr.M; }
+    int get_SR() const { return attr.SR; }
+    int get_cost() const { return total_cost; }
+    // clang-format on
+    
+    void update_cost()
+    {
+       int subtotal = 0;
+       switch(attr.type)
+       {
+         case 'W':
+             subtotal += K_WARPDRIVE_COST; // WarpDrive
+         default:
+             subtotal += 0; // No Warp Drive
+       }
+       subtotal += attr.PD;
+       subtotal += attr.B;
+       subtotal += attr.S;
+       subtotal += attr.T;
+       subtotal += attr.M;
+       subtotal += attr.SR;
+       total_cost = subtotal;
+    }
+
+    bool value_ranges_invalid() {
+      return (attr.PD < 0) ||
+             (attr.B < 0) ||
+             (attr.S < 0) ||
+             (attr.T < 0) ||
+             (attr.M < 0) ||
+             (attr.SR < 0);
+    }
+    bool system_ship_fitment_invalid() {
+      return ((attr.type != 'W') && (attr.SR > 0));
+    }
+    bool missile_count_invalid() {
+      return ((attr.M > 0) && (( attr.M % 3) != 0));
+    }
+    bool tube_missile_match_invalid() {
+      return ((attr.T < 1) && missile_count_invalid());
     }
 };
 
@@ -56,44 +175,88 @@ class ShipRow
     std::string at_hex;
     std::string racked_in;
     int pd_spent = 0;
+    int total_cost;
     ShipAttributes attr;
 
   public:
     // Default constructor
     ShipRow()
     {
+      total_cost = 0;
     }
 
-    // Constructor from DraftRow with tech level and turn info
-    ShipRow(const DraftRow& draft, int tech_level,
-            const std::string& turn_built)
+    ShipRow(const ShipRow& rhs)
+    {
+          code = rhs.code;
+          name = rhs.name;
+          built_turn = rhs.built_turn;
+          at_system = rhs.at_system;
+          at_hex = rhs.at_hex;
+          racked_in = rhs.racked_in;
+          pd_spent = rhs.pd_spent;
+          total_cost = rhs.total_cost;
+          attr = rhs.attr;
+    }
+
+    ShipRow(const DraftRow& draft, const std::string& turn_built)
         : code(draft.code), name(draft.name), built_turn(turn_built),
-          pd_spent(0)
+          pd_spent(0), total_cost(draft.total_cost)
     {
         attr = draft.attr;
-        attr.tech = tech_level;
     }
 
     // Factory method for creating from draft
-    static ShipRow from_draft(const DraftRow& draft, int tech_level, int round,
+    static ShipRow from_draft(const DraftRow& draft, int round,
                               const std::string& active_player)
     {
         std::string turn_built = "R" + std::to_string(round) + active_player;
-        return ShipRow(draft, tech_level, turn_built);
+        return ShipRow(draft, turn_built);
     }
+
+    friend std::ostream& operator<<(std::ostream& os, ShipRow& ob)
+    {
+        os << ob.name << " - " << ob.code
+           << " (Tech Level " << std::to_string(ob.get_tech()) << ")\n"
+           << "Cost: " << std::to_string(ob.get_cost()) << " BP";
+        return os;
+    }
+
+    // clang-format off
+    void set_code(std::string c) { code = c; }
+    void set_name(std::string n) { name = n; }
+    void set_tech(int t) { attr.tech = t; }
+    void set_type(char t) { attr.type = t; }
+    void set_PD(int pd) { attr.PD = pd; }
+    void set_B(int b) { attr.B = b; }
+    void set_S(int s) { attr.S = s; }
+    void set_T(int t) { attr.T = t; }
+    void set_M(int m) { attr.M = m; }
+    void set_SR(int sr) { attr.SR = sr; }
+
+    std::string get_code() const { return std::string(code); }
+    std::string get_name() const { return std::string(name); }
+    int get_tech() const { return attr.tech; }
+    char get_type() const { return attr.type; }
+    int get_PD() const { return attr.PD; }
+    int get_B() const { return attr.B; }
+    int get_S() const { return attr.S; }
+    int get_T() const { return attr.T; }
+    int get_M() const { return attr.M; }
+    int get_SR() const { return attr.SR; }
+    int get_cost() const { return total_cost; }
+    // clang-format on
 };
 
-std::string get_current_draft(int game_id, char owner);
-void set_current_draft(int game_id, char owner,
-                       const std::string& code_or_null);
+// jdw std::string get_current_draft(int game_id, char owner);
+// jdw  void set_current_draft(int game_id, char owner, const std::string& code_or_null);
 bool draft_exists(int game_id, char owner, const std::string& code);
 bool ship_exists(int game_id, char owner, const std::string& code);
-std::vector<DraftRow> load_drafts(int game_id, char owner);
+std::vector<DraftRow> load_drafts_by_owner(int game_id, char owner);
 DraftRow load_draft(int game_id, char owner, const std::string& code);
 void insert_draft(int game_id, char owner, const DraftRow& d);
-void update_draft_attrs(int game_id, char owner, const std::string& code,
+void update_draft_attrs(int did, int game_id, char owner, const std::string& code,
                         const DraftRow& d);
-void delete_draft(int game_id, char owner, const std::string& code);
+void delete_draft(int did, int game_id, char owner, const std::string& code);
 std::vector<ShipRow> load_ships(int game_id, char owner);
 ShipRow load_ship(int game_id, char owner, const std::string& code);
 int count_racked_in(int game_id, char owner, const std::string& warpship_code);
@@ -102,5 +265,82 @@ void update_ship_location(int game_id, char owner, const std::string& code,
                           const std::string& at_system,
                           const std::string& at_hex,
                           const std::string& racked_in);
+
+
+
+bool get_draft_by_spec(int& did, int gid, char owner, std::string target);
+bool load_ship_draft_by_spec(DraftRow& row, int did, int game_id, char owner, const std::string& code);
+bool test_ship_draft_candidate(DraftRow& drow , std::vector<std::string>& report);
+
+inline void append_header(std::ostringstream& out) {
+  // Header line 1
+  out << std::left
+      << std::setw(16) << "Code/"
+      << std::setw(14) << "Tech"
+      << "Attributes" << "\n";
+
+  // Header line 2
+  out << std::left
+      << std::setw(16) << "Name"
+      << std::setw(7)  << "Level"
+      << std::setw(6)  << "Cost"
+      << "  "
+      << std::setw(3)  << "PD"
+      << std::setw(4)  << "B"
+      << std::setw(4)  << "S"
+      << std::setw(4)  << "T"
+      << std::setw(4)  << "M"
+      << std::setw(4)  << "SR"
+      << "\n";
+
+  // Header line 3 (dashes)
+  out << std::left
+      << std::setw(16) << "---------------"
+      << std::setw(7)  << "-----"
+      << std::setw(6)  << "----"
+      << "  "
+      << "-----------------------"
+      << "\n";
+}
+
+inline void append_row(std::ostringstream& out, const DraftRow& r) {
+  out << std::left
+      << std::setw(16) << r.code
+      << "  "
+      << std::setw(6)  << r.get_tech()
+      << "  "
+      << std::setw(5)  << r.get_cost()
+      << "   "
+      << std::setw(3)  << r.get_PD()
+      << ' ' << std::setw(3) << r.get_B()
+      << ' ' << std::setw(3) << r.get_S()
+      << ' ' << std::setw(3) << r.get_T()
+      << ' ' << std::setw(3) << r.get_M()
+      << ' ' << std::setw(3) << r.get_SR()
+      << "\n";
+
+  out << std::left
+      << std::setw(16) << r.name
+      << "\n";
+}
+
+// Builds the whole report string. You can add rows by calling append_row.
+inline void build_draft_report(std::ostringstream& out, std::vector<DraftRow>& drafts)
+{
+  append_header(out);
+  for (auto& d : drafts)
+  {
+       d.update_cost();
+       append_row(out, d);
+  }
+}
+
+
+
+/////
+// jdw
+
+
+
 
 #endif

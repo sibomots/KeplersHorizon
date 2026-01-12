@@ -13,15 +13,8 @@
 #include <vector>
 #include <map>
 #include "typedefs.h"
-
+#include "Build.h"
 #include "logger.h"
-#include "build_command.h"
-#include "build_commit_command.h"
-#include "build_new_command.h"
-#include "build_cancel_command.h"
-#include "build_list_drafts_command.h"
-#include "build_show_draft_command.h"
-#include "build_set_attribute_command.h"
 #include "next_command.h"
 #include "done_command.h"
 #include "deploy_command.h"
@@ -62,12 +55,16 @@ extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
 
-void yyerror(const char *s);
+	// Forward decl so we can declare yyerror before bison defines YYLTYPE.
+	typedef struct YYLTYPE YYLTYPE;
+	extern YYLTYPE yylloc;
+
+	// Bison will call yyerror(const char*) for its own diagnostics.
+	void yyerror(const char* msg);
+	// Our richer helper (used by actions) that can report source location.
+	void yyerror(YYLTYPE* loc, const char* msg);
 
 // BUGBUG
-// Global builder for accumulating build set attributes
-BuildSetAttributeCommand::Builder* g_build_set_builder = new BuildSetAttributeCommand::Builder();
-// Global builders for combat commands (accumulate power/damage specs from sub-rules)
 CombatOrderCommand::Builder* g_combat_order_builder = new CombatOrderCommand::Builder();
 CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
 
@@ -76,18 +73,24 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
 %}
 
+%define parse.error verbose
+%locations
+
 %code requires {
 #include <string>
 #include <vector>
+#include "typedefs.h"
 }
 
-%define parse.error verbose
 
 %union {
    int ival;
    std::string* sval;
    std::vector<std::string>* vec_sval;
+   AttributeMap* vec_attr;
 }
+
+%type <vec_attr> build_attr_spec
 
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
@@ -95,8 +98,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type  <sval> building_draft_ship
 %type  <vec_sval> chain_move_location
 %type  <vec_sval> chain_resource_words
-%type  <sval> deconflicted_string
-
+%type <sval> build_optional_target
 %token TOK_APPLY
 %token TOK_ATTACK
 %token TOK_BEAM
@@ -179,11 +181,12 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
 %token TOK_UNKNOWN
 
+%start input
+
 %%
 
-commands:
-  // no command
-  | commands command
+input:
+    command
   ;
 
 command:
@@ -208,7 +211,7 @@ session_cmd:
         SafeDelete(pCmd);
    }
    |
-   TOK_SAVE deconflicted_string
+   TOK_SAVE TOK_STRING
    {
         std::string save_name(*$2);
         ICmd *pCmd = SaveCommand::Builder().set_name(save_name).build();
@@ -224,7 +227,7 @@ session_cmd:
         SafeDelete(pCmd);
    }
    |
-   TOK_LOAD deconflicted_string
+   TOK_LOAD TOK_STRING
    {
         std::string load_name(*$2);
         ICmd *pCmd = LoadCommand::Builder().set_name(load_name).build();
@@ -233,7 +236,7 @@ session_cmd:
         delete $2;
    }
    |
-   TOK_ACCEPT deconflicted_string
+   TOK_ACCEPT TOK_STRING
    {
         std::string accept_name(*$2);
         ICmd *pCmd = AcceptCommand::Builder().set_name(accept_name).build();
@@ -242,7 +245,7 @@ session_cmd:
         delete $2;
    }
    |
-   TOK_REJECT deconflicted_string
+   TOK_REJECT TOK_STRING
    {
         std::string reject_name(*$2);
         ICmd *pCmd = RejectCommand::Builder().set_name(reject_name).build();
@@ -250,7 +253,7 @@ session_cmd:
         SafeDelete(pCmd);
         delete $2;
    }
-   | TOK_DELETE deconflicted_string {
+   | TOK_DELETE TOK_STRING {
         std::string target_game(*$2);
         ICmd* pCmd = DeleteCommand::Builder().setSaveName(target_game).build();
         if (pCmd && pCmd->invoke()) { /* success */ }
@@ -271,7 +274,13 @@ session_cmd:
         // Using ANSI escape sequence ESC[2J which means "clear entire screen"
         Telemetry::getInstance().write("\033[2J");
    }
-   ;
+   
+| TOK_SAVE error { yyerror(&@1, "save: usage: save <name>. Note: reserved words cannot be used as names."); YYABORT; }
+| TOK_LOAD error { yyerror(&@1, "load: usage: load <name>."); YYABORT; }
+| TOK_ACCEPT error { yyerror(&@1, "accept: usage: accept <name>."); YYABORT; }
+| TOK_REJECT error { yyerror(&@1, "reject: usage: reject <name>."); YYABORT; }
+| TOK_DELETE error { yyerror(&@1, "delete: usage: delete <name>."); YYABORT; }
+;
 
 // Information
 // drafts is unique -- contextual (for combat, building, applying damage) 
@@ -291,7 +300,7 @@ info_cmd:
    ;
 
 looking_cmd:
-  TOK_HEX deconflicted_string {
+  TOK_HEX TOK_STRING {
       std::string identifier(*$2);
       ICmd* pCmd = HexCommand::Builder().setLocation(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -309,13 +318,13 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SYSTEM deconflicted_string {
+  | TOK_SYSTEM TOK_STRING {
       std::string identifier(*$2);
       ICmd* pCmd = SystemCommand::Builder().setName(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SYSTEM deconflicted_string deconflicted_string {
+  | TOK_SYSTEM TOK_STRING TOK_STRING {
       std::string identifier(*$2);
       std::string subcmd(*$3);
       ICmd* pCmd = SystemCommand::Builder().setName(identifier).setSubcommand(subcmd).build();
@@ -327,7 +336,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SURVEY deconflicted_string {
+  | TOK_SURVEY TOK_STRING {
       std::string identifier(*$2);
       ICmd* pCmd = SurveyCommand::Builder().setSystem(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -343,7 +352,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_EXTRACT deconflicted_string deconflicted_string chain_resource_words {
+  | TOK_EXTRACT TOK_STRING TOK_STRING chain_resource_words {
       std::string ship(*$2);
       // Join words with underscore: "rare" + "earth" -> "RARE_EARTH"
       std::string res = *$3;
@@ -363,7 +372,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_MARKET deconflicted_string {
+  | TOK_MARKET TOK_STRING {
       std::string res(*$2);
       ICmd* pCmd = MarketCommand::Builder().resource(res).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -374,21 +383,21 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_TRADE TOK_BUY deconflicted_string TOK_INT {
+  | TOK_TRADE TOK_BUY TOK_STRING TOK_INT {
       std::string res(*$3);
       int qty = $4;
       ICmd* pCmd = TradeCommand::Builder().buyMode().resource(res).quantity(qty).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_TRADE TOK_SELL deconflicted_string TOK_INT {
+  | TOK_TRADE TOK_SELL TOK_STRING TOK_INT {
       std::string res(*$3);
       int qty = $4;
       ICmd* pCmd = TradeCommand::Builder().sellMode().resource(res).quantity(qty).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_TRADE TOK_TRANSFER deconflicted_string deconflicted_string deconflicted_string TOK_INT {
+  | TOK_TRADE TOK_TRANSFER TOK_STRING TOK_STRING TOK_STRING TOK_INT {
       std::string ship1(*$3);
       std::string ship2(*$4);
       std::string res(*$5);
@@ -402,13 +411,13 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_FABRICATE deconflicted_string {
+  | TOK_FABRICATE TOK_STRING {
       std::string rec(*$2);
       ICmd* pCmd = FabricateCommand::Builder().recipe(rec).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_FABRICATE deconflicted_string TOK_INT {
+  | TOK_FABRICATE TOK_STRING TOK_INT {
       std::string rec(*$2);
       int qty = $3;
       ICmd* pCmd = FabricateCommand::Builder().recipe(rec).quantity(qty).build();
@@ -425,7 +434,7 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_OUTFIT deconflicted_string deconflicted_string {
+  | TOK_OUTFIT TOK_STRING TOK_STRING {
       std::string ship(*$2);
       std::string equip(*$3);
       ICmd* pCmd = OutfitCommand::Builder().ship(ship).equipment(equip).build();
@@ -437,20 +446,13 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SALVAGE deconflicted_string {
+  | TOK_SALVAGE TOK_STRING {
       std::string ship(*$2);
       ICmd* pCmd = SalvageCommand::Builder().ship(ship).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_SALVAGE deconflicted_string TOK_STRING {
-      std::string ship(*$2);
-      std::string target(*$3);
-      ICmd* pCmd = SalvageCommand::Builder().ship(ship).target(target).build();
-      if (pCmd && pCmd->invoke()) { /* success */ }
-      SafeDelete(pCmd);
-  }
-  | TOK_SALVAGE deconflicted_string deconflicted_string {
+  | TOK_SALVAGE TOK_STRING TOK_STRING {
       std::string ship(*$2);
       std::string target(*$3);
       ICmd* pCmd = SalvageCommand::Builder().ship(ship).target(target).build();
@@ -466,14 +468,28 @@ looking_cmd:
       // Show cargo help
       Telemetry::getInstance().write("Usage: cargo <ship_code>");
   }
-  | TOK_CARGO deconflicted_string {
+  | TOK_CARGO TOK_STRING {
       std::string ship(*$2);
       ICmd* pCmd = CargoCommand::Builder().ship(ship).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
       SafeDelete($2);
   }
-  ;
+  
+| TOK_HEX error { yyerror(&@1, "hex: usage: hex <hex_id>"); YYABORT; }
+| TOK_SYSTEM error { yyerror(&@1, "system: usage: system <name> [subcommand]"); YYABORT; }
+| TOK_SURVEY error { yyerror(&@1, "survey: usage: survey [system_name]"); YYABORT; }
+| TOK_EXTRACT error { yyerror(&@1, "extract: usage: extract scan | extract <ship> <resource> [resource_words...]"); YYABORT; }
+| TOK_MARKET error { yyerror(&@1, "market: usage: market [system_name]"); YYABORT; }
+| TOK_TRADE error { yyerror(&@1, "trade: usage: trade buy|sell|transfer ..."); YYABORT; }
+| TOK_FABRICATE error { yyerror(&@1, "fabricate: usage: fabricate <ship> <item>"); YYABORT; }
+| TOK_OUTFIT error { yyerror(&@1, "outfit: usage: outfit <ship> <spec>"); YYABORT; }
+| TOK_SALVAGE error { yyerror(&@1, "salvage: usage: salvage <ship> <target>"); YYABORT; }
+| TOK_GALAXY error { yyerror(&@1, "galaxy: usage: galaxy"); YYABORT; }
+| TOK_CARGO error { yyerror(&@1, "cargo: usage: cargo <ship> [resource_words...]"); YYABORT; }
+| TOK_SCAN error { yyerror(&@1, "scan: usage depends on command (e.g., extract scan)"); YYABORT; }
+| TOK_LIST error { yyerror(&@1, "list: usage depends on context"); YYABORT; }
+;
 
 turn_cmd:
   TOK_NEXT {
@@ -489,7 +505,10 @@ turn_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  ;
+  
+| TOK_NEXT error { yyerror(&@1, "next: usage: next"); YYABORT; }
+| TOK_DONE error { yyerror(&@1, "done: usage: done"); YYABORT; }
+;
 
 combat_cmd:
    // combat
@@ -583,20 +602,24 @@ combat_cmd:
        delete g_combat_apply_builder;
        g_combat_apply_builder = new CombatApplyCommand::Builder();
    }
-  ;
+  
+| TOK_COMBAT error { yyerror(&@1, "combat: usage: combat (see help combat)"); YYABORT; }
+| TOK_COMBAT_DRAFTS error { yyerror(&@1, "cd: usage: cd"); YYABORT; }
+| TOK_COMBAT_ORDER error { yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n B=n S=n T=n M=n SR=n]"); YYABORT; }
+| TOK_COMBAT_APPLY error { yyerror(&@1, "ca: usage: ca <draft_id> <damage_spec...>"); YYABORT; }
+| TOK_COMBAT_COMMIT error { yyerror(&@1, "cc: usage: cc <draft_id>"); YYABORT; }
+| TOK_COMBAT_CANCEL error { yyerror(&@1, "cx: usage: cx <draft_id>"); YYABORT; }
+;
 
 
 building_draft_ship:
-  deconflicted_string {
-      std::string ship_id(*$1);
-      Logger::instance().info("Drafting ship: "
-                              ">" + ship_id + "<" );
+  TOK_STRING {
       $$ = $1;  // Pass the string up
   }
   ;
 
 combat_initiator_ship:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Combat ship initiator: >" + ship_id + "<");
       g_combat_order_builder->ship_code(ship_id);
@@ -605,7 +628,7 @@ combat_initiator_ship:
   ;
 
 combat_damaged_ship:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Combat damaged ship: >" + ship_id + "<");
       g_combat_apply_builder->ship_code(ship_id);
@@ -629,7 +652,7 @@ combat_tactic:
   ;
 
 combat_target_ship:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Combat target ship: >" + ship_id + "<");
       g_combat_order_builder->target(ship_id);
@@ -715,19 +738,14 @@ build_cmd:
   // build
   // b
   TOK_BUILD {
-      Logger::instance().info("Without arguments, shows "
-                              "current build state");
-      Logger::instance().info("List all pending build drafts");
-      ICmd *pCmd = BuildListDraftsCommand::Builder()
-                  .build();
+      ICmd *pCmd = BuildListDraftsCommand::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-  // build new ...
-  | TOK_BUILD TOK_NEW deconflicted_string deconflicted_string {
+  // build new W|S NAME
+  | TOK_BUILD TOK_NEW TOK_STRING TOK_STRING {
       std::string code(*$3);
       std::string name(*$4);
-      Logger::instance().info("Create new draft: " + code + " '" + name + "'");
       ICmd *pCmd = BuildNewCommand::Builder()
                   .set_ship_code(code)
                   .set_ship_name(name)
@@ -736,10 +754,10 @@ build_cmd:
       SafeDelete(pCmd);
   }
   // bn ...
-  | TOK_BUILD_NEW deconflicted_string deconflicted_string {
+  // bn W|S NAME
+  | TOK_BUILD_NEW TOK_STRING TOK_STRING {
       std::string code(*$2);
       std::string name(*$3);
-      Logger::instance().info("Create new draft: " + code + " '" + name + "'");
       ICmd *pCmd = BuildNewCommand::Builder()
                   .set_ship_code(code)
                   .set_ship_name(name)
@@ -749,39 +767,35 @@ build_cmd:
   }
   // build drafts
   | TOK_BUILD TOK_DRAFTS {
-      Logger::instance().info("List all pending build drafts");
-      ICmd *pCmd = BuildListDraftsCommand::Builder()
-                  .build();
+      ICmd *pCmd = BuildListDraftsCommand::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
   // bd
   | TOK_BUILD_DRAFTS {
-      Logger::instance().info("List all pending build drafts");
-      ICmd *pCmd = BuildListDraftsCommand::Builder()
-                  .build();
+      ICmd *pCmd = BuildListDraftsCommand::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
-  // build drafts ...
+  // build drafts SHIP_ID
+  // build drafts SHIP_NAME
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
-      std::string ship_code = *$3;
-      Logger::instance().info("Show draft details: " + ship_code);
+      // can also be a name, but we will take it as it comes.
       ICmd *pCmd = BuildShowDraftCommand::Builder()
-                  .set_draft_code(ship_code)
+                  .set_draft_target(*$3)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
-  // bd ...
+  // bd SHIP_ID
+  // bd SHIP_NAME
   | TOK_BUILD_DRAFTS building_draft_ship {
-      std::string ship_code = *$2;
-      Logger::instance().info("Show draft details: " + ship_code);
+      // can also be a name, but we will take it as it comes.
       ICmd *pCmd = BuildShowDraftCommand::Builder()
-                  .set_draft_code(ship_code)
+                  .set_draft_target(*$2)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
@@ -789,110 +803,159 @@ build_cmd:
 
 
   // build set ...
-  | TOK_BUILD TOK_SET_ATTR build_attr_spec {
-      Logger::instance().info("Set attributes on current draft");
-      ICmd *pCmd = g_build_set_builder->build();
-      pCmd->invoke();
+  | TOK_BUILD build_optional_target TOK_SET_ATTR build_attr_spec {
+      // $2 is the optional target
+      //   can be ship_code or  ship name .. dealt with by invoke() later.
+      // $3 is "SET" subcommand, we ignore that.
+      // $4 is map of ship attributes
+
+      ICmd *pCmd = BuildSetAttributeCommand::Builder()
+                    .set_draft_target($2)
+                    .set_attributes($4)
+                    .build();
+
+      pCmd->invoke(); 
+
+      SafeDelete($4)
+      SafeDelete($2)
       SafeDelete(pCmd);
-      delete g_build_set_builder;
-      g_build_set_builder = new BuildSetAttributeCommand::Builder();
   }
 
   // bs ...
-  | TOK_BUILD_SET_ATTR build_attr_spec {
-      Logger::instance().info("Set attributes on current draft");
-      ICmd *pCmd = g_build_set_builder->build();
+  | TOK_BUILD_SET_ATTR build_optional_target build_attr_spec {
+      // Using alias, already know it's the SET subcommand of BUILD.
+      // $2 is the optional target
+      //   can be ship_code or
+      //   ship name 
+      // $3 is vector of ship attributes
+      ICmd *pCmd = BuildSetAttributeCommand::Builder()
+                    .set_draft_target($2)
+                    .set_attributes($3)
+                    .build();
+
       pCmd->invoke();
+      SafeDelete($3)
+      SafeDelete($2)
       SafeDelete(pCmd);
-      delete g_build_set_builder;
-      g_build_set_builder = new BuildSetAttributeCommand::Builder();
   }
 
   // build commit
-  | TOK_BUILD TOK_COMMIT {
-      Logger::instance().info("Build commit - committing current draft");
+  // build commit CODE|NAME
+  | TOK_BUILD TOK_COMMIT build_optional_target {
+      // $3 is the code or name of a ship, or null
       ICmd *pCmd = BuildCommitCommand::Builder()
+                  .set_draft_target($3)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
   // bc
-  | TOK_BUILD_COMMIT {
-      Logger::instance().info("Build commit - committing current draft");
+  | TOK_BUILD_COMMIT build_optional_target {
+      // $2 is the code or name of a ship, or null
       ICmd *pCmd = BuildCommitCommand::Builder()
-                  .build();
+                   .set_draft_target($2)
+                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
-  | TOK_BUILD TOK_CANCEL {
-      Logger::instance().info("Build cancel - canceling current draft");
+  | TOK_BUILD TOK_CANCEL build_optional_target {
+      // $3 is the code or name of a ship, or null
       ICmd *pCmd = BuildCancelCommand::Builder()
+                  .set_draft_target($3)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
   // bx
-  | TOK_BUILD_CANCEL {
-      Logger::instance().info("Build cancel - canceling current draft");
+  | TOK_BUILD_CANCEL build_optional_target {
+      // $2 is the code or name of a ship, or null
       ICmd *pCmd = BuildCancelCommand::Builder()
+                  .set_draft_target($2)
                   .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
+  
+| TOK_BUILD error { yyerror(&@1, "build: usage: build new W|S name | build drafts | build commit [#] | build cancel [#] | bs [attr=#] ..."); YYABORT; }
+| TOK_BUILD_NEW error { yyerror(&@1, "build new: usage: bn W|S name"); YYABORT; }
+| TOK_BUILD_DRAFTS error { yyerror(&@1, "build drafts: usage: bd"); YYABORT; }
+| TOK_BUILD_COMMIT error { yyerror(&@1, "build commit: usage: bc [#]"); YYABORT; }
+| TOK_BUILD_CANCEL error { yyerror(&@1, "build cancel: usage: bx [#]"); YYABORT; }
+| TOK_BUILD_SET_ATTR error { yyerror(&@1, "build set: usage: bs [attr=# [attr=#] ... ]"); YYABORT; }
+;
 
-  ;
-
-
-build_attr_spec:
-  TOK_PD_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_pd($1);
+build_optional_target:
+  {
+     $$ = 0;
+     // nothing, or
   }
-  | TOK_B_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_b($1);
-  }
-  | TOK_S_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_s($1);
-  }
-  | TOK_T_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_t($1);
-  }
-  | TOK_M_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_m($1);
-  }
-  | TOK_SR_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_sr($1);
+  | TOK_STRING
+  {
+     $$ = $1;
   }
   ;
 
-additional_build_attr_spec:
-  // or no more spec
-  | TOK_PD_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_pd($1);
+build_attr_spec: {  
+     $$ = new AttributeMap;
   }
-  | TOK_B_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_b($1);
+  | build_attr_spec TOK_PD_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
+      if (!inserted) {
+        yyerror(&@2, "build set: duplicate POWER_DRIVE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_S_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_s($1);
+  | build_attr_spec TOK_B_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
+      if (!inserted) {
+        yyerror(&@2, "build set: duplicate BEAM assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_T_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_t($1);
+  | build_attr_spec TOK_S_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
+      if (!inserted) {
+        yyerror(&@2, "build set: duplicate SCREEN assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_M_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_m($1);
+  | build_attr_spec TOK_T_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
+      if (!inserted) {
+        yyerror(&@2, "build set: duplicate TUBE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_SR_ASSIGN additional_build_attr_spec {
-      g_build_set_builder->set_sr($1);
+  | build_attr_spec TOK_M_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
+      if (!inserted) {
+        yyerror(&@2, "build set: duplicate MISSILE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
+  }
+  | build_attr_spec TOK_SR_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::SYSTEM_RACK, $2});
+      if (!inserted) {
+        yyerror(&@2, "build set: duplicate SYSTEM_RACK assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
   ;
+
 
 // deployment
 // "deploy" { return TOK_DEPLOY; }
 deployable_ship:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Deployable ship: "
                               ">" + ship_id + "<" );
@@ -930,7 +993,7 @@ deploy_cmd:
            Telemetry::getInstance().write(out.str());
        }
    }
-   | TOK_DEPLOY deployable_ship deconflicted_string {
+   | TOK_DEPLOY deployable_ship TOK_STRING {
        std::string ship(*$2);
        std::string destination(*$3);
        Logger::instance().info("Attempt to deploy ship "
@@ -948,10 +1011,12 @@ deploy_cmd:
        delete $2;
        delete $3;
    }
-  ;
+  
+| TOK_DEPLOY error { yyerror(&@1, "deploy: usage: deploy <ship> <location>"); YYABORT; }
+;
 
 target_systemship:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Target SystemShip: "
                               ">" + ship_id + "<");
@@ -964,7 +1029,7 @@ chain_move_location:
    {
        $$ = new std::vector<std::string>;
    }
-   | deconflicted_string chain_move_location {
+   | TOK_STRING chain_move_location {
        std::string waypoint(*$1);
        Logger::instance().info("Additional waypoint on chain: >"
                                 + waypoint + "<");
@@ -980,7 +1045,7 @@ chain_resource_words:
    {
        $$ = new std::vector<std::string>;
    }
-   | deconflicted_string chain_resource_words {
+   | TOK_STRING chain_resource_words {
        $$ = $2;
        $$->insert($$->begin(), *$1);
        SafeDelete($1);
@@ -996,7 +1061,7 @@ move_cmd:
 
   // move
   // m
-  | TOK_MOVE deconflicted_string deconflicted_string chain_move_location {
+  | TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
        std::string ship(*$2);
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
@@ -1020,21 +1085,23 @@ move_cmd:
        delete $3;
        delete waypoints;
   }
-  ;
+  
+| TOK_MOVE error { yyerror(&@1, "move: usage: move <ship> <destination> [via ...]"); YYABORT; }
+;
 
 
 // Pickup, Drop
 // "pick" { return TOK_PICK; }
 // "drop" { return TOK_DROP; }
 warpship_pick_destination:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Pick destination warpship: "
                               ">" + ship_id + "<");
   }
   ;
 warpship_drop_source:
-  deconflicted_string {
+  TOK_STRING {
       std::string ship_id(*$1);
       Logger::instance().info("Drop source warpship: "
                               ">" + ship_id + "<");
@@ -1043,7 +1110,7 @@ warpship_drop_source:
 pickdrop_cmd:
   // pick
   // p
-  TOK_PICK deconflicted_string {
+  TOK_PICK TOK_STRING {
      std::string location(*$2);
      Logger::instance().info("Status of what can be picked up at hex "
                  ">" + location + "<");
@@ -1069,7 +1136,10 @@ pickdrop_cmd:
      Logger::instance().info("Dropping target SystemShipship from "
                              "target WarpShip");
   }
-  ;
+  
+| TOK_PICK error { yyerror(&@1, "pick: usage: pick <ship> <item>"); YYABORT; }
+| TOK_DROP error { yyerror(&@1, "drop: usage: drop <ship> <item>"); YYABORT; }
+;
 
 
 rep_cmd:
@@ -1082,7 +1152,7 @@ rep_cmd:
   }
   // repair ...
   // rp ...
-  | TOK_REPAIR deconflicted_string repair_attr_spec {
+  | TOK_REPAIR TOK_STRING repair_attr_spec {
      // g_repair_builder populated by repair_attr_spec
      g_repair_builder->set_ship_code(*$2);
      ICmd* pCmd = g_repair_builder->build();
@@ -1100,7 +1170,7 @@ rep_cmd:
   }
   // resupply ...
   // rs ...
-  | TOK_RESUPPLY deconflicted_string TOK_INT {
+  | TOK_RESUPPLY TOK_STRING TOK_INT {
      std::string ship(*$2);
      int qty = (int) $3;
      ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_missiles(qty).build();
@@ -1109,7 +1179,7 @@ rep_cmd:
    }
    // retreat <ship> <hex>
    // rt <ship> <hex>
-   | TOK_RETREAT deconflicted_string deconflicted_string {
+   | TOK_RETREAT TOK_STRING TOK_STRING {
       std::string ship(*$2);
       std::string hex(*$3);
       ICmd* pCmd = new RetreatCommand(ship, hex);
@@ -1118,7 +1188,11 @@ rep_cmd:
       delete $2;
       delete $3;
    }
-  ;
+  
+| TOK_REPAIR error { yyerror(&@1, "repair: usage: repair <ship> PD=n|B=n|S=n|T=n (one attribute)"); YYABORT; }
+| TOK_RESUPPLY error { yyerror(&@1, "resupply: usage: resupply <ship> <amount>"); YYABORT; }
+| TOK_RETREAT error { yyerror(&@1, "retreat: usage: retreat <ship> <destination>"); YYABORT; }
+;
 
 repair_attr_spec:
   TOK_PD_ASSIGN {
@@ -1146,7 +1220,7 @@ help_cmd:
        SafeDelete(pCmd);
   }
   |
-  TOK_HELP deconflicted_string {
+  TOK_HELP TOK_STRING {
        std::string topic(*$2);
        ICmd *pCmd = HelpCommand::Builder().set_topic(topic).build();
        pCmd->invoke();
@@ -1159,59 +1233,109 @@ help_cmd:
        pCmd->invoke();
        SafeDelete(pCmd);
   }
-  ;
-
-/* Help topic can be a string OR any keyword that might be a topic name */
-deconflicted_string:
-    TOK_STRING              { $$ = $1; }
-  | TOK_BUILD_COMMIT        { $$ = new std::string("bc"); }
-  | TOK_BUILD_DRAFTS        { $$ = new std::string("bd"); }
-  | TOK_BUILD_NEW           { $$ = new std::string("bn"); }
-  | TOK_BUILD_CANCEL        { $$ = new std::string("bx"); }
-  | TOK_BUILD_SET_ATTR      { $$ = new std::string("bs"); }
-  | TOK_BUILD               { $$ = new std::string("build"); }
-  | TOK_COMBAT              { $$ = new std::string("combat"); }
-  | TOK_COMBAT_DRAFTS       { $$ = new std::string("cd"); }
-  | TOK_COMBAT_ORDER        { $$ = new std::string("co"); }
-  | TOK_COMBAT_APPLY        { $$ = new std::string("ca"); }
-  | TOK_COMBAT_COMMIT       { $$ = new std::string("cc"); }
-  | TOK_COMBAT_CANCEL       { $$ = new std::string("cx"); }
-  | TOK_MOVE                { $$ = new std::string("move"); }
-  | TOK_NEXT                { $$ = new std::string("next"); }
-  | TOK_DONE                { $$ = new std::string("done"); }
-  | TOK_DEPLOY              { $$ = new std::string("deploy"); }
-  | TOK_PICK                { $$ = new std::string("pick"); }
-  | TOK_DROP                { $$ = new std::string("drop"); }
-  | TOK_REPAIR              { $$ = new std::string("repair"); }
-  | TOK_RESUPPLY            { $$ = new std::string("resupply"); }
-  | TOK_SCORE               { $$ = new std::string("score"); }
-  | TOK_FLEET               { $$ = new std::string("fleet"); }
-  | TOK_SYSTEM              { $$ = new std::string("system"); }
-  | TOK_SURVEY              { $$ = new std::string("survey"); }
-  | TOK_STATUS              { $$ = new std::string("status"); }
-  | TOK_DRAFTS              { $$ = new std::string("drafts"); }
-  | TOK_CRT                 { $$ = new std::string("crt"); }
-  | TOK_CLEAR               { $$ = new std::string("clear"); }
-  | TOK_EXTRACT             { $$ = new std::string("extract"); }
-  | TOK_MARKET              { $$ = new std::string("market"); }
-  | TOK_TRADE               { $$ = new std::string("trade"); }
-  | TOK_FABRICATE           { $$ = new std::string("fabricate"); }
-  | TOK_SALVAGE             { $$ = new std::string("salvage"); }
-  | TOK_ATTACK              { $$ = new std::string("attack"); }
-  | TOK_DODGE               { $$ = new std::string("dodge"); }
-  | TOK_ESCAPE              { $$ = new std::string("escape"); }
-  | TOK_HEX                 { $$ = new std::string("hex"); }
-  | TOK_SAVE                { $$ = new std::string("save"); }
-  | TOK_LOAD                { $$ = new std::string("load"); }
-  | TOK_ACCEPT              { $$ = new std::string("accept"); }
-  | TOK_REJECT              { $$ = new std::string("reject"); }
-  | TOK_DELETE              { $$ = new std::string("delete"); }
-  | TOK_DEMO                { $$ = new std::string("demo"); }
-  | TOK_HELP                { $$ = new std::string("help"); }
-  ;
+  
+| TOK_HELP error { yyerror(&@1, "help: usage: help [topic]."); YYABORT; }
+;
 
 %%
-void yyerror(const char* s)
+
+// for error handling:
+typedef struct ParseErrorState {
+    int error_count;
+    char last_error_msg[2048]; // Or use dynamic allocation
+    YYLTYPE last_error_loc;   // The location data structure
+    std::vector<std::string> user_errors;
+    std::string user_err_msg;
+
+    void clear() {
+         error_count = 0;
+         bzero(last_error_msg, 2048);
+    }
+    ParseErrorState() {
+         clear();
+    }
+ 
+} ParseErrorState;
+
+static ParseErrorState error_state;
+
+bool get_parser_error(std::string& err)
 {
-   Logger::instance().error("Parse error: " + std::string(s));
+    static int err_count = 0;
+    bool result = false;
+
+    fprintf(stderr, "DBEUG: error_state.error_count = %d   err_count = %d\n",
+             error_state.error_count, err_count);
+
+    if ( error_state.error_count > err_count)
+    {
+       // build up the error string.
+       error_state.user_err_msg.clear();
+       fprintf(stderr, "DEBUG: Size of vector of errors: %lu\n",
+                       (error_state.user_errors).size());
+       while ( ! error_state.user_errors.empty() )
+       {
+          std::string tmp = error_state.user_errors.back();
+          error_state.user_errors.pop_back();
+
+          error_state.user_err_msg.append(tmp);
+          fprintf(stderr, "DEBUG: FETCHING ERROR: %s\n", tmp.c_str());
+          fprintf(stderr, "DEBUG: ACCUMULATED ERR STRING:\n---\n%s\n----\n",
+                error_state.user_err_msg.c_str());
+          result = true;
+       }
+
+       if (result)
+       {
+          err = std::string(error_state.user_err_msg);
+          fprintf(stderr, "DEBUG: FINAL ACCUMULATED ERR STRING:\n---\n%s\n----\n",
+                err.c_str());
+          error_state.user_errors.clear();
+       }
+    }
+   
+    if (!result) 
+    {
+       // how did we get here?
+       Logger::instance().info("We are asked for error?");
+       err = std::string("Cannot detect error cause");
+    }
+
+    // bump the counter
+    err_count = error_state.error_count;
+    return result;
 }
+
+void yyerror(const char*) //  msg)
+{
+    // If location tracking is enabled, yylloc is the best available hint.
+    // yyerror(&yylloc, msg);
+}
+
+// Richer helper used by our grammar actions.
+void yyerror(YYLTYPE* loc, const char* msg)
+{
+    //BUGBUG roll over
+    error_state.error_count++;
+    std::ostringstream oerr;
+    if (loc)
+    {
+        fprintf(stderr,
+            "DEBUG: Error at line %d, column %d: %s\n",
+            loc->first_line,
+            loc->first_column,
+            msg);
+        oerr << msg << "\n";
+        error_state.user_errors.push_back(oerr.str());
+        fprintf(stderr, "DEBUG: After push, size of vec: %lu\n", error_state.user_errors.size());
+    }
+    else
+    {
+        fprintf(stderr, "DEBUG: Error had no location:\n");
+        fprintf(stderr, "DEBUG: Error: >%s<\n", msg);
+        std::ostringstream oerr;
+        oerr  << msg << "\n";
+        error_state.user_errors.push_back(oerr.str());
+    }
+}
+

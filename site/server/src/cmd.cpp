@@ -27,6 +27,7 @@ typedef struct yy_buffer_state* YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(const char* str);
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 extern "C" int yyparse();
+extern bool get_parser_error(std::string& err);
 
 void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 {
@@ -103,26 +104,25 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         for (size_t i = 0; i < messages.size(); ++i)
         {
             if (i > 0)
+            {
                 combined << "\n";
+            }
             combined << messages[i];
         }
         std::string event_msg =
             combined.str().empty() ? "Command executed\n" : combined.str();
 
         resp->body = Telemetry::getInstance().write(event_msg);
-
-        /* std::ostringstream err; */
-        /* err << "{\"ok\":false,\"event\":\"Command failed\",\"state\":" <<
-         * s.to_json() << "}"; */
-        /* resp->body = err.str(); */
-
-        return;
+    }
+    else {
+          std::string err;
+          bool found_cause = get_parser_error(err);
+          // Parser failed
+          resp->status = 400;
+          resp->body = json_error(err);
+          Logger::instance().info("Raw command: " + cmdline);
+          Logger::instance().info("Parser error Handler: " + err);
     }
 
-    // Parser failed
-    Logger::instance().info("Falling back to legacy handler: " + cmdline);
-    resp->status = 400;
-    resp->body = json_error("unknown command");
-    Logger::instance().error("Unknown command attempted");
     return;
 }

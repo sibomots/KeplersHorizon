@@ -79,7 +79,7 @@
       return;
     }
 
-    // Bug #6: Check for clear screen escape sequence (ESC[2J)
+    // Check for clear screen escape sequence (ESC[2J)
     if (text && text.includes('\x1b[2J')) {
       log.innerHTML = '';
       return;
@@ -131,7 +131,7 @@
       elTitle.textContent = "Player " + playerName + " Main Console";
     }
 
-    // Bug 3: Turn status indicator (green = your turn, yellow = opponent's turn)
+    // Turn status indicator (green = your turn, yellow = opponent's turn)
     const elTurn = $("turnStatus");
     if (elTurn) {
       const isYourTurn = st && S.self && (st.activePlayer === S.self.owner);
@@ -153,7 +153,7 @@
       }
     }
 
-    // Bug 4: Peer online status indicator
+    // Peer online status indicator
     const elPeerOnline = $("peerOnlineStatus");
     if (elPeerOnline) {
       if (peer && peer.online) {

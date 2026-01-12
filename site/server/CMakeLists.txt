@@ -16,6 +16,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-O0 -pedantic -g)
 
+# Point CMake at the custom tools
+set(BISON_EXECUTABLE "/opt/bison3.8/bin/bison" CACHE FILEPATH "Bison executable")
+set(FLEX_EXECUTABLE  "/opt/flex2.6.4/bin/flex" CACHE FILEPATH "Flex executable")
+
 # Get Git SHA
 execute_process(
     COMMAND git rev-parse --short HEAD
@@ -95,13 +99,7 @@ ${FLEX_Scanner_OUTPUTS}
 # Header files (not required for build, but useful for IDEs)
 set(HDRS
 inc/app.h
-inc/build_cancel_command.h
-inc/build_command.h
-inc/build_commit_command.h
-inc/build_list_drafts_command.h
-inc/build_new_command.h
-inc/build_set_attribute_command.h
-inc/build_show_draft_command.h
+inc/Build.h
 inc/cmd.h
 inc/combat.h
 inc/comms.h

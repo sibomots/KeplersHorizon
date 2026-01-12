@@ -133,7 +133,6 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     auto id_rows = db.query("SELECT LAST_INSERT_ID()");
     int save_id = id_rows.empty() ? 0 : std::stoi(id_rows[0][0]);
 
-    // Save ships - columns must match 0-schema.sql ships table
     auto ships =
         db.query("SELECT ship_code, ship_name, owner, "
                  "CONCAT('{\"pd\":', pd, ',\"beam\":', beam, ',\"screen\":', "

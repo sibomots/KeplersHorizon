@@ -21,17 +21,17 @@ bool QuitCommand::invoke(void)
     int user_id = StateMachine::getInstance().get_current_user_id();
     DatabaseManager& db = DatabaseManager::getInstance();
 
-    // Generate auto-save name with timestamp: ASFQ: DD-MM-YYYY
+    // Generate auto-save name with timestamp: ASF-DD-MM-YYYY
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
     char buf[32];
-    strftime(buf, sizeof(buf), "ASFQ: %d-%m-%Y", t);
+    strftime(buf, sizeof(buf), "ASF-%d-%m-%Y", t);
     std::string save_name(buf);
 
     // Check for existing auto-save from quit, update or insert
     auto existing =
         db.query("SELECT id FROM saved_games WHERE user_id=" +
-                 std::to_string(user_id) + " AND save_name LIKE 'ASFQ:%'");
+                 std::to_string(user_id) + " AND save_name LIKE 'ASF-%'");
 
     if (!existing.empty())
     {

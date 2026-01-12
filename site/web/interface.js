@@ -106,7 +106,7 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
       try {
         await B.apiCommand(cmd);
       } catch (e) {
-        B.appendLine(`Error: ${e.message}`, "line-bad");
+        B.appendLine(`Error: ${e.message}`, "line-warn");
       }
     }
 
