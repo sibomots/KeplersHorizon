@@ -209,9 +209,9 @@ bool BuildListDraftsCommand::invoke(void)
     }
     else
     {
-        std::ostringstream msg;
-        build_draft_report(msg, drafts);
-        Telemetry::getInstance().write(msg.str());
+        std::ostringstream oss;
+        build_draft_report(oss, drafts);
+        Telemetry::getInstance().write(oss.str());
         result = true;
     }
     return result;
@@ -411,8 +411,9 @@ bool BuildSetAttributeCommand::invoke(void)
             update_draft_attrs(did, game_id, active_player, m_target, drow);
             drow.update_cost();
             std::ostringstream os;
-            append_header(os);
-            append_row(os, drow);
+            append_draft_header(os, 0);
+            append_draft_row(os, drow);
+
             Telemetry::getInstance().write(os.str());
             result = true;
         }
@@ -460,8 +461,8 @@ bool BuildShowDraftCommand::invoke(void)
         if (found_draft) { 
            std::ostringstream os;
            drow.update_cost();
-           append_header(os);
-           append_row(os, drow);
+           append_draft_header(os, 0);
+           append_draft_row(os, drow);
            Telemetry::getInstance().write(os.str());
            // set_current_draft(game_id, active_player, m_target);
            result = true;

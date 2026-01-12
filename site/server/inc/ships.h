@@ -27,6 +27,10 @@ class ShipAttributes
     int M;
     int SR;
 
+    int LS;
+    int TB;
+    int DN;
+
   public:
     ShipAttributes()
     {
@@ -38,6 +42,9 @@ class ShipAttributes
         T = 0;
         M = 0;
         SR = 0;
+        LS = 0;
+        TB = 0;
+        DN = 0;
     }
     void deep_copy(ShipAttributes& dest, const ShipAttributes& src)
     {
@@ -49,6 +56,9 @@ class ShipAttributes
         dest.T = src.T;
         dest.M = src.M;
         dest.SR = src.SR;
+        dest.LS = src.LS;
+        dest.TB = src.TB;
+        dest.DN = src.DN;
     }
 
     ShipAttributes& operator=(const ShipAttributes& rhs)
@@ -232,6 +242,9 @@ class ShipRow
     void set_T(int t) { attr.T = t; }
     void set_M(int m) { attr.M = m; }
     void set_SR(int sr) { attr.SR = sr; }
+    void set_LS(int lrs) { attr.LS = lrs; }
+    void set_TB(int tb) { attr.TB = tb; }
+    void set_DN(int dn) { attr.DN = dn; }
 
     std::string get_code() const { return std::string(code); }
     std::string get_name() const { return std::string(name); }
@@ -243,7 +256,19 @@ class ShipRow
     int get_T() const { return attr.T; }
     int get_M() const { return attr.M; }
     int get_SR() const { return attr.SR; }
+    int get_LS() const { return attr.LS; }
+    int get_TB() const { return attr.TB; }
+    int get_DN() const { return attr.DN; }
     int get_cost() const { return total_cost; }
+    std::string get_sector() const {
+       if (at_system.empty()) {
+           return std::string(at_hex);
+       }
+       else {
+           return std::string( at_system + " H" + at_hex);
+       }
+    }
+      
     // clang-format on
 };
 
@@ -272,75 +297,11 @@ bool get_draft_by_spec(int& did, int gid, char owner, std::string target);
 bool load_ship_draft_by_spec(DraftRow& row, int did, int game_id, char owner, const std::string& code);
 bool test_ship_draft_candidate(DraftRow& drow , std::vector<std::string>& report);
 
-inline void append_header(std::ostringstream& out) {
-  // Header line 1
-  out << std::left
-      << std::setw(16) << "Code/"
-      << std::setw(14) << "Tech"
-      << "Attributes" << "\n";
-
-  // Header line 2
-  out << std::left
-      << std::setw(16) << "Name"
-      << std::setw(7)  << "Level"
-      << std::setw(6)  << "Cost"
-      << "  "
-      << std::setw(3)  << "PD"
-      << std::setw(4)  << "B"
-      << std::setw(4)  << "S"
-      << std::setw(4)  << "T"
-      << std::setw(4)  << "M"
-      << std::setw(4)  << "SR"
-      << "\n";
-
-  // Header line 3 (dashes)
-  out << std::left
-      << std::setw(16) << "---------------"
-      << std::setw(7)  << "-----"
-      << std::setw(6)  << "----"
-      << "  "
-      << "-----------------------"
-      << "\n";
-}
-
-inline void append_row(std::ostringstream& out, const DraftRow& r) {
-  out << std::left
-      << std::setw(16) << r.code
-      << "  "
-      << std::setw(6)  << r.get_tech()
-      << "  "
-      << std::setw(5)  << r.get_cost()
-      << "   "
-      << std::setw(3)  << r.get_PD()
-      << ' ' << std::setw(3) << r.get_B()
-      << ' ' << std::setw(3) << r.get_S()
-      << ' ' << std::setw(3) << r.get_T()
-      << ' ' << std::setw(3) << r.get_M()
-      << ' ' << std::setw(3) << r.get_SR()
-      << "\n";
-
-  out << std::left
-      << std::setw(16) << r.name
-      << "\n";
-}
-
-// Builds the whole report string. You can add rows by calling append_row.
-inline void build_draft_report(std::ostringstream& out, std::vector<DraftRow>& drafts)
-{
-  append_header(out);
-  for (auto& d : drafts)
-  {
-       d.update_cost();
-       append_row(out, d);
-  }
-}
-
-
-
-/////
-// jdw
-
-
-
+void append_draft_header(std::ostringstream& out, int vessels_in_production);
+void append_draft_row(std::ostringstream& out, const DraftRow& row);
+void append_fleet_header(std::ostringstream& out, int vessels_operational);
+void append_fleet_row(std::ostringstream& out, const ShipRow& row);
+void build_draft_report(std::ostringstream& out, std::vector<DraftRow>& drafts);
 
 #endif
+
