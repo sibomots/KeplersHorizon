@@ -424,7 +424,7 @@ void append_draft_header(std::ostringstream& out, int vessels_in_production) {
   put_title(out,
             "SHIPYARD",
             itos(vessels_in_production) + " vessels in production",
-            60);
+            50);
 
   pstxt(out, "HULL", 4); out << ' ';
   pstxt(out, "DESIGNATION", 17); out << ' ';
@@ -457,7 +457,7 @@ void append_draft_row(std::ostringstream& out, const DraftRow& r) {
   pstxt(out, r.name, 17); out << ' ';
 
   psnum(out, r.get_tech(), 4); out << ' ';
-  psnum(out, r.get_cost(), 4); out << "  ";
+  psnum(out, r.get_cost(), 4); out << " ";
 
   psnum(out, r.get_PD(), 2); out << ' ';
   psnum(out, r.get_B(),  2); out << ' ';

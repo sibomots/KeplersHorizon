@@ -25,8 +25,6 @@ bool BuildCancelCommand::invoke(void)
     int game_id = StateMachine::getInstance().get_game_id();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
-    // jdw std::string draft_code = get_current_draft(game_id, active_player);
-
     int did = 0;
     bool has_draft = false;
 
@@ -39,23 +37,26 @@ bool BuildCancelCommand::invoke(void)
     {
         // not targetted, so we could infer there is one only
         // or cancel the most recent?
-        Telemetry::getInstance().write(
-            "SHIPYARD: Need ship hull designator or name to find it");
         result = false;
     }
 
-    // jdw if (draft_code.empty())
     if (!has_draft)
     {
-        Telemetry::getInstance().write("SHIPYARD: No ship is in the shipyard.");
+        if (m_target.empty())
+        {
+           Telemetry::getInstance().write(
+            "SHIPYARD: Need ship hull designator or name to find it");
+        }
+        else
+        {
+           Telemetry::getInstance().write("SHIPYARD: No ship with hull designation "
+               + m_target + " in the shipyard.");
+        }
         result = false;
     }
     else
     {
-        // jdw delete_draft(game_id, active_player, draft_code);
         delete_draft(did, game_id, active_player, m_target);
-        // set_current_draft(game_id, active_player, "");
-
         // get ship code and name
         Telemetry::getInstance().write("SHIPYARD: Canceled: " + m_target);
         result = true;
@@ -88,36 +89,28 @@ bool BuildCommitCommand::invoke(void)
         Logger::instance().info("Locating ship " + m_target);
         has_draft = get_draft_by_spec(did, game_id, active_player, m_target);
     }
-    else
+
+    if (!has_draft)
     {
-        // not targetted, so we could infer there is one only
-        // or cancel the most recent?
-        Telemetry::getInstance().write(
+        if (m_target.empty())
+        {
+           Telemetry::getInstance().write(
             "SHIPYARD: Need ship hull designator or name to find it");
+        }
+        else
+        {
+           Telemetry::getInstance().write(
+               "SHIPYARD: Ship with hull designation " +
+                 m_target + " not in space dock.");
+        }
         result = false;
     }
 
-    //////
-    // Get current draft
-    // jdw std::string draft_code = get_current_draft(game_id, active_player);
-    if (!has_draft) // jdw draft_code.empty())
-    {
-        Telemetry::getInstance().write(
-            "SHIPYARD: That ship is not in space dock.");
-        result = false;
-    }
-    else
+    if (has_draft) 
     {
         // this ship exists in space dock, it is a draft.
-
-        // Validate draft exists
-        // jdw if (!draft_exists(game_id, active_player, draft_code))
-        // jdw {
-        // jdw     Telemetry::getInstance().write("Error: Draft not found: " +
-        // draft_code); jdw     return false; jdw }
-
         // Load draft
-        DraftRow drow; //  = load_draft(game_id, active_player, draft_code);
+        DraftRow drow;
 
         bool found_draft_row = load_ship_draft_by_spec(drow, did, game_id,
                                                        active_player, m_target);
@@ -173,7 +166,6 @@ bool BuildCommitCommand::invoke(void)
                 // Commit to DB
                 insert_ship(game_id, s.active_player[0], ship);
                 delete_draft(did, game_id, s.active_player[0], drow.code);
-                // jdw set_current_draft(game_id, s.active_player[0], "");
 
                 // Deduct BP and save
                 // using a reference to the correct player's account
@@ -200,12 +192,10 @@ bool BuildListDraftsCommand::invoke(void)
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
     std::vector<DraftRow> drafts = load_drafts_by_owner(game_id, active_player);
-    // jdw std::string current_draft = get_current_draft(game_id,
-    // active_player);
 
     if (drafts.empty())
     {
-        Telemetry::getInstance().write("SHIPYARD: No hull's in production");
+        Telemetry::getInstance().write("SHIPYARD: No ships in production");
     }
     else
     {
@@ -327,8 +317,6 @@ bool BuildNewCommand::invoke(void)
                 draft.update_cost();
 
                 insert_draft(s.game_id, active_player, draft);
-                // jdw set_current_draft(s.game_id, active_player, ship_code);
-
                 std::ostringstream bmes;
                 bmes << "SHIPYARD: Hull " << ship_code
                      << " laid down. Designation: " << m_ship_name;
@@ -346,7 +334,6 @@ bool BuildSetAttributeCommand::invoke(void)
     GameState s = StateMachine::getInstance().get_game_state();
     int game_id = StateMachine::getInstance().get_game_id();
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
-    // jdw std::string draft_code = get_current_draft(game_id, active_player);
 
     int did = 0;
     bool has_draft = false;
@@ -359,23 +346,26 @@ bool BuildSetAttributeCommand::invoke(void)
     {
         // not targetted, so we could infer there is one only
         // or cancel the most recent?
-        Telemetry::getInstance().write(
-            "SHIPYARD: Need ship hull designator or name to find it");
         result = false;
     }
 
-    if (!has_draft) /// draft_code.empty())
+    if (!has_draft)
     {
-        Telemetry::getInstance().write("SHIPYARD: Ship " + m_target +
-                                       " is not in space dock.");
+        if (m_target.empty())
+        {
+           Telemetry::getInstance().write(
+               "SHIPYARD: Need ship hull designator or name to find it");
+        }
+        else
+        {
+            Telemetry::getInstance().write("SHIPYARD: Ship " + m_target +
+                                       " not in space dock.");
+        }
         result = false;
     }
     else
     {
-
         DraftRow drow;
-
-        // jdw DraftRow d = load_draft(game_id, active_player, m_target);
 
         bool found_ship_draft = load_ship_draft_by_spec(
             drow, did, game_id, active_player, m_target);
