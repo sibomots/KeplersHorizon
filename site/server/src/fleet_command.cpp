@@ -41,7 +41,7 @@ bool FleetCommand::invoke(void)
 
     std::ostringstream out;
     out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
-    out << "HULL  DESIGNATION      SECTOR                 PD   B  S  T  M  "
+    out << "HULL  DESIGNATION      SECTOR                PD   B  S  T  M  "
            "LRS TB DR  TECH\n";
     out << "----  --------------  -------------------    --  -- -- -- --  "
            "--- -- --  ----\n";
