@@ -1,5 +1,10 @@
 ## Bugs
 
+A software package without reported bugs is software that isn't used -- and used fully.
+
+Software development expects bugs reported.
+
+Bring the bugs!
 
 [The Bug/Issue Database](https://github.com/sibomots/KeplersHorizon/issues)
 
@@ -29,6 +34,13 @@ A bug is these things:
 1. **A bug is a statement of the problem, issue, or defect** (or even a question). Sometimes a Bug is merely just a task to  perform.  A feature to add, more capability to provide that was missing
 from the software.  Development of the software involves traversing the  road-map of 
 features planned and desired.  Those efforts are encapsulated as bugs also.  (2-4 sentences)
+
+Most importantly, a Bug is related (linked) to something that was required.  In other-words
+a bug report of a defective behavior that was never planned, offered, or advertised by
+the design of the software is less a bug and more a feature request.   In this
+repository, we're not going *Full On IEEE System Engineering Mode* -- so things are relaxed.
+
+Just report your bug, whatever you think it is.
 
 2. **A bug is reproducible** A brief list of stimulus steps to reproduce evidence of the bug.  If warranted, provide the steps taken from initial state that causes the bug to be evident.  Example:
 
