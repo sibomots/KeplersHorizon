@@ -8,6 +8,8 @@
 #include "mapgraph.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdio>
 #include <queue>
 #include <sstream>
 
@@ -192,25 +194,8 @@ int MapGraph::get_path_cost(const std::string& from, const std::string& to,
         if (d >= limit)
             continue;
 
-        std::vector<std::string> neighbors;
-
-        // Hex neighbors
-        auto qt = qr.find(cur);
-        if (qt != qr.end())
-        {
-            int cq = qt->second.first;
-            int cr = qt->second.second;
-            const int dq[6] = {1, 1, 0, -1, -1, 0};
-            const int dr[6] = {0, -1, -1, 0, 1, 1};
-            for (int k = 0; k < 6; ++k)
-            {
-                long long key = (static_cast<long long>(cq + dq[k]) << 32) ^
-                                static_cast<unsigned int>(cr + dr[k]);
-                auto bit = byQr.find(key);
-                if (bit != byQr.end())
-                    neighbors.push_back(bit->second);
-            }
-        }
+        // Geometric neighbors (as rendered in the UI)
+        std::vector<std::string> neighbors = get_adjacent_hexes(cur);
 
         // Warp neighbors
         auto wit = warpJumps.find(cur);
@@ -270,25 +255,8 @@ std::vector<std::string> MapGraph::get_path(const std::string& from,
         if (d >= limit)
             continue;
 
-        std::vector<std::string> neighbors;
-
-        // Hex neighbors
-        auto qt = qr.find(cur);
-        if (qt != qr.end())
-        {
-            int cq = qt->second.first;
-            int cr = qt->second.second;
-            const int dq[6] = {1, 1, 0, -1, -1, 0};
-            const int dr[6] = {0, -1, -1, 0, 1, 1};
-            for (int k = 0; k < 6; ++k)
-            {
-                long long key = (static_cast<long long>(cq + dq[k]) << 32) ^
-                                static_cast<unsigned int>(cr + dr[k]);
-                auto bit = byQr.find(key);
-                if (bit != byQr.end())
-                    neighbors.push_back(bit->second);
-            }
-        }
+        // Geometric neighbors (as rendered in the UI)
+        std::vector<std::string> neighbors = get_adjacent_hexes(cur);
 
         // Warp neighbors
         auto wit = warpJumps.find(cur);
@@ -330,30 +298,83 @@ std::vector<std::string> MapGraph::get_path(const std::string& from,
 
 std::vector<std::string> MapGraph::get_adjacent_hexes(const std::string& hex_id)
 {
+    // IMPORTANT
+    // =========
+    // The UI (web/map_view*.html) renders the map using a parity-staggered,
+    // half-row ("double-height") lattice based on the hex label "XXYY".
+    // Players reason about adjacency from that rendering. Therefore server-side
+    // pathfinding must derive geometric adjacency from the SAME model.
+    //
+    // We intentionally do NOT use the stored (q,r) from the database here.
+    // The DB hex table is still the authoritative *existence set* of hex IDs,
+    // but adjacency must match the UI's implicit topology.
+
     std::vector<std::string> neighbors;
 
-    auto it = qr.find(hex_id);
-    if (it == qr.end())
+    // Validate input exists in this module
+    if (qr.find(hex_id) == qr.end())
         return neighbors;
 
-    int q = it->second.first;
-    int r = it->second.second;
-
-    // Axial coordinate neighbor offsets for hex grid
-    static const int dq[] = {1, 1, 0, -1, -1, 0};
-    static const int dr[] = {0, -1, -1, 0, 1, 1};
-
-    for (int i = 0; i < 6; i++)
+    // Parse label "XXYY" -> XX, YY
+    if (hex_id.size() != 4 ||
+        !std::isdigit((unsigned char)hex_id[0]) ||
+        !std::isdigit((unsigned char)hex_id[1]) ||
+        !std::isdigit((unsigned char)hex_id[2]) ||
+        !std::isdigit((unsigned char)hex_id[3]))
     {
-        int nq = q + dq[i];
-        int nr = r + dr[i];
-        long long key =
-            (static_cast<long long>(nq) << 32) ^ static_cast<unsigned int>(nr);
-        auto nit = byQr.find(key);
-        if (nit != byQr.end())
-        {
-            neighbors.push_back(nit->second);
-        }
+        return neighbors;
+    }
+
+    const int XX = (hex_id[0] - '0') * 10 + (hex_id[1] - '0');
+    const int YY = (hex_id[2] - '0') * 10 + (hex_id[3] - '0');
+
+    // UI "row" coordinate is based on S = XX + YY (see web template)
+    const int S = XX + YY;
+
+    // UI "column" coordinate matches template's XX_start = floor((S-6+1)/2)
+    // The constant offsets cancel for relative adjacency; the parity dependency
+    // is what matters. A robust derived column index is:
+    //   col = XX - floor((S + 1)/2)
+    const int col = XX - ((S + 1) / 2);
+
+    // Helper: (S, col) -> hex label "XXYY"
+    auto make_hex = [&](int nS, int nCol) -> std::string {
+        // invert
+        const int nXX = nCol + ((nS + 1) / 2);
+        const int nYY = nS - nXX;
+
+        if (nXX < 0 || nXX > 99 || nYY < 0 || nYY > 99)
+            return std::string();
+
+        char buf[5];
+        std::snprintf(buf, sizeof(buf), "%02d%02d", nXX, nYY);
+        return std::string(buf);
+    };
+
+    // Neighbor coordinates in the UI's double-height staggered grid.
+    // North/South moves change S by 2; diagonals change S by 1 and adjust col
+    // based on parity of S.
+    const bool odd = (S & 1) != 0;
+
+    struct SC { int s; int c; };
+    const SC cand[6] = {
+        {S - 2, col},
+        {S + 2, col},
+        {S - 1, col + (odd ? 1 : 0)},
+        {S - 1, col - (odd ? 0 : 1)},
+        {S + 1, col + (odd ? 1 : 0)},
+        {S + 1, col - (odd ? 0 : 1)},
+    };
+
+    neighbors.reserve(6);
+    for (const auto& p : cand)
+    {
+        std::string nh = make_hex(p.s, p.c);
+        if (nh.empty())
+            continue;
+        // Existence filter: only return hexes that exist in the module.
+        if (qr.find(nh) != qr.end())
+            neighbors.push_back(nh);
     }
 
     return neighbors;

@@ -49,7 +49,10 @@ class MapGraph
                                       const std::string& toHex, int limit);
 
     // Get all hexes adjacent to 'hex_id' (up to 6 neighbors).
-    // Uses axial coordinate offsets for hex grid.
+    // IMPORTANT: adjacency is derived to match the UI-rendered topology in
+    // web/map_view*.html (a parity-staggered, half-row "double-height" flat-top
+    // layout based on the "XXYY" label). We intentionally do NOT use the
+    // database (q,r) axial coordinates for adjacency.
     std::vector<std::string> get_adjacent_hexes(const std::string& hex_id);
 
   private:
