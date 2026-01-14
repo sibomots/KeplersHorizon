@@ -1,6 +1,6 @@
 .TH KEPLERS_HORIZON 1 "2025-12-31" "Version 1.0" "Kepler's Horizon Command Reference"
 .SH NAME
-kh \- two-player tactical space combat game command interface
+.B kh \fR "\- two-player tactical space combat game command interface"
 .SH SYNOPSIS
 .B kh
 .br
@@ -8,7 +8,19 @@ kh \- two-player tactical space combat game command interface
 .br
 .B kh \-\^\-version
 .br
-.B kh \-\^\-dbusr " U" \-\^\-dbpass " P" \-\^\-dbname " D" \-\^\-port " P"
+.B kh \-\^\-port " \fIPORT\fR"
+.br
+.B kh \-\^\-dbusr "\fI USER\fR"
+.br
+.B "    " \-\^\-dbpass " \fIPASSWORD\fR"
+.br
+.B "    " \-\^\-dbname " \fIDATABASE\fR"
+.br
+.B "    " \-\^\-dbhost " \fIHOST\fR"
+.br
+.B kh \-\^\-monitor
+.br
+.B kh \-\^\-log " \fIFILE\fR"
 .br
 
 .SH DESCRIPTION
@@ -22,25 +34,37 @@ This manual describes all available commands in the Kepler's Horizon command lan
 .B --help
 Output a usage message and exit.
 .TP
-.BR \-V ", " \-\^\-version
+.BR \-v ", " \-\^\-version
 Output the version number of
 .B kh
 and exit.
 .SS "Database Connection"
 .TP
-.BR \-U ", " \-\^\-dbusr " USER"
+.BR \-H ", " \-\^\-dbhost " HOST"
+The hostname to reach for the database. Default is
+.B 127.0.0.1
+.TP
+.BR \-u ", " \-\^\-dbusr " USER"
 Access the underlying database as \fIUSER\fR
 .TP
-.BR \-D ", " \-\^\-dbname  " DB_NAME"
+.BR \-d ", " \-\^\-dbname  " DB_NAME"
 The name of the underlying database.
 .TP
-.BR \-P ", " \-\^\-dbpass " PASSWORD"
+.BR \-p ", " \-\^\-dbpass " PASSWORD"
 The password for \fIUSER\fR.
 .SS "Database Connection"
 .TP
-.BR \-T ", " \-\^\-port " PORT"
+.BR \-P ", " \-\^\-port " PORT"
 The port number the server listens to for requests via REST.  The default is 8080.
-
+.SS Logging
+.TP
+.BR \-L ", " \-\^\-log " FILE"
+Logging from the server written to \fIFILE\fR.
+.SS Monitor
+.TP
+.BR \-M ", " \-\^\-monitor
+Put the server into monitor mode. The server will accept commands
+from terminal prompt.
 .SH GAME OVERVIEW
 .SS Map Components
 .TP
@@ -792,6 +816,13 @@ FORTRESS|Combat defensive bonus
 .TE
 .PP
 Use \fBrepair\fR at captured REPAIR_DOCKs or SHIPYARDs to repair ships in the field.
+
+.SH MONITOR MODE
+The server may accept commands from the terminal in lieu of player access
+from a web server.  The UI is limited, and each command must be prefixed
+with notation for which player is issuing the command.
+
+This feature is TBD.
 
 .SH BUGS
 Report bugs to the Kepler's Horizon issue tracker.
