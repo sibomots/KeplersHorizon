@@ -98,14 +98,12 @@ bool DoneCommand::invoke(void)
     // Game over check
     if (s.game_over)
     {
-        Logger::instance().info("Game Over during turn end");
-        Telemetry::getInstance().write("Game Over");
         Telemetry::getInstance().broadcast(">> GAME OVER <<");
     }
     else
     {
         char new_player = s.active_player.empty() ? 'A' : s.active_player[0];
-        Logger::instance().info("Turn ended. Active player: " +
+        Logger::instance().info("[TURN] Turn ended. Active player: " +
                                 s.active_player);
 
         // Look up opponent's username for the broadcast
@@ -219,7 +217,6 @@ bool NextCommand::invoke(void)
     }
     if (msg_updated)
     {
-        Logger::instance().info(msg.str());
         Telemetry::getInstance().write(msg.str());
     }
     return true;

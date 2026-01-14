@@ -2,7 +2,7 @@
 -- Loads core engine data that is not module-specific
 -- Run from site/db/ with: mysql --local-infile=1 -u <user> -p khdb < core/Load.sql
 
-USE khdb;
+USE khdb2;
 
 -- Help Topics (game command help)
 DELETE FROM help_lookup;

@@ -172,8 +172,7 @@ bool LoadCommand::invoke()
         if (existing_name == m_name && existing_requester[0] != player)
         {
             // This is the second player confirming - execute the load!
-            Logger::instance().info("[LOAD] Second player confirmed load of " +
-                                    m_name);
+            Logger::instance().info("[LOAD] Second player confirmed load: " + m_name);
 
             // Get both user IDs from game_seats
             auto seats =

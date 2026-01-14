@@ -44,7 +44,8 @@ void CombatEngine::check_for_combat_triggers()
 
     if (litmus == false)
     {
-        Logger::instance().info("No ships are in combat!");
+        Logger::instance().info("[COMBAT][check_for_combat_trigger] "
+                                "No ships are in combat.");
     }
     else 
     {
@@ -278,10 +279,11 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
         " AND s.at_hex='" + hex_id + "' AND s.destroyed_at IS NULL");
     int orderCount = std::atoi(or_[0][0].c_str());
 
-    Logger::instance().info("[COMBAT] Hex " + hex_id + " Round " +
-                            std::to_string(round) +
-                            ": Ships=" + std::to_string(shipCount) +
-                            " Orders=" + std::to_string(orderCount));
+    Logger::instance().info("[COMBAT][all_orders_submitted] Hex " 
+                            + hex_id + " Round "
+                            + std::to_string(round)
+                            + ": Ships=" + std::to_string(shipCount)
+                            + " Orders=" + std::to_string(orderCount));
 
     return orderCount >= shipCount;
 }
@@ -306,10 +308,11 @@ bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
                         "' AND s.destroyed_at IS NULL");
     int commitCount = std::atoi(or_[0][0].c_str());
 
-    Logger::instance().info("[COMBAT] Hex " + hex_id + " Round " +
-                            std::to_string(round) +
-                            ": Ships=" + std::to_string(shipCount) +
-                            " Committed=" + std::to_string(commitCount));
+    Logger::instance().info("[COMBAT][all_orders_committed] Hex "
+                            + hex_id + " Round "
+                            + std::to_string(round)
+                            + ": Ships=" + std::to_string(shipCount)
+                            + " Committed=" + std::to_string(commitCount));
 
     return commitCount >= shipCount;
 }

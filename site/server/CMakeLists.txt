@@ -42,6 +42,7 @@ ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
 # Source files
 set(SRCS
+src/configr.cpp
 src/Build.cpp
 src/Combat.cpp
 src/Move.cpp
@@ -98,6 +99,7 @@ ${FLEX_Scanner_OUTPUTS}
 
 # Header files (not required for build, but useful for IDEs)
 set(HDRS
+inc/configr.h
 inc/app.h
 inc/Build.h
 inc/cmd.h

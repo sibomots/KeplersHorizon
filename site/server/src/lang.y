@@ -308,10 +308,10 @@ looking_cmd:
       delete $2;
   }
   | TOK_ONLINE {
-      Logger::instance().info("Who's online and when?");
+      Logger::instance().info("[LANG] Who's online and when?");
   }
   | TOK_STATS {
-      Logger::instance().info("Statistics about game, fleet, opponent");
+      Logger::instance().info("[LANG] Statistics about game, fleet, opponent");
   }
   | TOK_FLEET {
       ICmd* pCmd = FleetCommand::Builder().build();
@@ -493,14 +493,11 @@ looking_cmd:
 
 turn_cmd:
   TOK_NEXT {
-      Logger::instance().info("Advance active player to next phase");
       ICmd* pCmd = NextCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_DONE {
-      Logger::instance().info("Advance active player to first phase "
-                      "of opponent, if possible");
       ICmd* pCmd = DoneCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
@@ -514,7 +511,7 @@ combat_cmd:
    // combat
    // c
    TOK_COMBAT {
-      Logger::instance().info("Status of combat situation");
+      Logger::instance().info("[LANG] Status of combat situation");
    }
 
    // combat drafts
@@ -621,7 +618,6 @@ building_draft_ship:
 combat_initiator_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Combat ship initiator: >" + ship_id + "<");
       g_combat_order_builder->ship_code(ship_id);
       delete $1;
   }
@@ -630,7 +626,6 @@ combat_initiator_ship:
 combat_damaged_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Combat damaged ship: >" + ship_id + "<");
       g_combat_apply_builder->ship_code(ship_id);
       delete $1;
   }
@@ -638,15 +633,12 @@ combat_damaged_ship:
 
 combat_tactic:
   TOK_ATTACK {
-      Logger::instance().info("Combat Attack Tactic");
       g_combat_order_builder->tactic('A');
   }
   | TOK_DODGE {
-      Logger::instance().info("Combat Dodge Tactic");
       g_combat_order_builder->tactic('D');
   }
   | TOK_ESCAPE {
-      Logger::instance().info("Combat Escape Tactic");
       g_combat_order_builder->tactic('R');
   }
   ;
@@ -654,7 +646,6 @@ combat_tactic:
 combat_target_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Combat target ship: >" + ship_id + "<");
       g_combat_order_builder->target(ship_id);
       delete $1;
   }
@@ -957,8 +948,6 @@ build_attr_spec: {
 deployable_ship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Deployable ship: "
-                              ">" + ship_id + "<" );
       $$ = $1;
   }
   ;
@@ -1018,7 +1007,7 @@ deploy_cmd:
 target_systemship:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Target SystemShip: "
+      Logger::instance().info("[LANG] Target SystemShip: "
                               ">" + ship_id + "<");
   }
   ;
@@ -1031,7 +1020,7 @@ chain_move_location:
    }
    | TOK_STRING chain_move_location {
        std::string waypoint(*$1);
-       Logger::instance().info("Additional waypoint on chain: >"
+       Logger::instance().info("[LANG] Additional waypoint on chain: >"
                                 + waypoint + "<");
        $$ = $2;
        $$->insert($$->begin(), waypoint);
@@ -1055,13 +1044,7 @@ chain_resource_words:
 move_cmd:
   // move
   // m
-  TOK_MOVE {
-       Logger::instance().info("Show move status");
-  }
-
-  // move
-  // m
-  | TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
+  TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
        std::string ship(*$2);
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
@@ -1264,32 +1247,22 @@ bool get_parser_error(std::string& err)
     static int err_count = 0;
     bool result = false;
 
-    fprintf(stderr, "DBEUG: error_state.error_count = %d   err_count = %d\n",
-             error_state.error_count, err_count);
-
     if ( error_state.error_count > err_count)
     {
        // build up the error string.
        error_state.user_err_msg.clear();
-       fprintf(stderr, "DEBUG: Size of vector of errors: %lu\n",
-                       (error_state.user_errors).size());
+
        while ( ! error_state.user_errors.empty() )
        {
           std::string tmp = error_state.user_errors.back();
           error_state.user_errors.pop_back();
-
           error_state.user_err_msg.append(tmp);
-          fprintf(stderr, "DEBUG: FETCHING ERROR: %s\n", tmp.c_str());
-          fprintf(stderr, "DEBUG: ACCUMULATED ERR STRING:\n---\n%s\n----\n",
-                error_state.user_err_msg.c_str());
           result = true;
        }
 
        if (result)
        {
           err = std::string(error_state.user_err_msg);
-          fprintf(stderr, "DEBUG: FINAL ACCUMULATED ERR STRING:\n---\n%s\n----\n",
-                err.c_str());
           error_state.user_errors.clear();
        }
     }
@@ -1297,7 +1270,7 @@ bool get_parser_error(std::string& err)
     if (!result) 
     {
        // how did we get here?
-       Logger::instance().info("We are asked for error?");
+       Logger::instance().info("[LANG][ERROR] Indeterminite error cause");
        err = std::string("Cannot detect error cause");
     }
 
@@ -1320,19 +1293,11 @@ void yyerror(YYLTYPE* loc, const char* msg)
     std::ostringstream oerr;
     if (loc)
     {
-        fprintf(stderr,
-            "DEBUG: Error at line %d, column %d: %s\n",
-            loc->first_line,
-            loc->first_column,
-            msg);
         oerr << msg << "\n";
         error_state.user_errors.push_back(oerr.str());
-        fprintf(stderr, "DEBUG: After push, size of vec: %lu\n", error_state.user_errors.size());
     }
     else
     {
-        fprintf(stderr, "DEBUG: Error had no location:\n");
-        fprintf(stderr, "DEBUG: Error: >%s<\n", msg);
         std::ostringstream oerr;
         oerr  << msg << "\n";
         error_state.user_errors.push_back(oerr.str());

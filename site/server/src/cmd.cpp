@@ -47,11 +47,6 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 
     std::string cmdline = trim(json_get_string(req->body, "command"));
 
-    std::string debug_cmd = "Raw command from user >";
-    debug_cmd.append(cmdline);
-    debug_cmd.append("<");
-    Logger::instance().debug(debug_cmd);
-
     if (cmdline.empty())
     {
         resp->status = 400;
@@ -76,8 +71,6 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     // If parser succeeded, return response with Telemetry
     if (parse_result == 0)
     {
-        Logger::instance().info("Command handled by parser: " + cmdline);
-
         // Check if game_id changed (e.g., after 'start' command)
         int new_game_id = StateMachine::getInstance().get_game_id();
         if (new_game_id != a.game_id)
@@ -87,7 +80,7 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
             db.exec(
                 "UPDATE sessions SET game_id=" + std::to_string(new_game_id) +
                 " WHERE token='" + db.esc(a.token) + "'");
-            Logger::instance().info("Updated session game_id to " +
+            Logger::instance().info("[CMD] Updated session game_id to " +
                                     std::to_string(new_game_id));
         }
 
@@ -120,8 +113,8 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
           // Parser failed
           resp->status = 400;
           resp->body = json_error(err);
-          Logger::instance().info("Raw command: " + cmdline);
-          Logger::instance().info("Parser error Handler: " + err);
+          Logger::instance().info("[CMD] User command: " + cmdline);
+          Logger::instance().info("[CMD] Parser error: " + err);
     }
 
     return;

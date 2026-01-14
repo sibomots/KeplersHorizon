@@ -1,6 +1,6 @@
-DBUSR=borusr
+DBUSR=frog
 DBPASS=foobar
-DB=mysql -vv -u $(DBUSR) -D khdb -p$(DBPASS) 
+DB=mysql -vv -u $(DBUSR) -D mysql -p$(DBPASS) 
 it:
 	cat ./Game.sql | $(DB)
 	cat ./core/Load.sql | $(DB)

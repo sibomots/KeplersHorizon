@@ -45,7 +45,7 @@ bool get_draft_by_spec(int& did, int gid, char owner, std::string target)
             "')";
   auto rows = db.query(qry.c_str());
 
-  fprintf(stderr, "getting draft by spec:\n%s\n", qry.c_str());
+  //jdw fprintf(stderr, "getting draft by spec:\n%s\n", qry.c_str());
 
   size_t sz = rows.size(); 
   if (sz == 0) 
@@ -179,8 +179,8 @@ void insert_draft(int game_id, char owner, const DraftRow& d)
         std::to_string(d.get_B()) + "," + std::to_string(d.get_S()) + "," +
         std::to_string(d.get_T()) + "," + std::to_string(d.get_M()) + "," +
         std::to_string(d.get_SR()) + ")";
-    fprintf(stderr, "Insert Draft:\n%s\n",
-       q.c_str());
+
+    // jdw fprintf(stderr, "Insert Draft:\n%s\n", q.c_str());
     db.exec(q);
 }
 

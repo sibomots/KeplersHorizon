@@ -20,13 +20,11 @@
 // Methods doing work do NOT move state.
 bool StateMachine::preinitialize()
 {
-    Logger::instance().info("StateMachine::preinitialize");
     return true;
 }
 
 bool StateMachine::initialize()
 {
-    Logger::instance().info("StateMachine::initialize");
     if (data.state == ServerState::INVALID ||
         data.state == ServerState::PREINITIALIZE)
     {
@@ -312,7 +310,7 @@ void StateMachine::advance_next(GameState& s)
             CombatEngine ce(s.game_id);
             if (!ce.get_active_combats().empty())
             {
-                Logger::instance().info("Combat is still active.");
+                Logger::instance().info("[SM] Combat is still active.");
                 return; // Cannot advance until all combats resolved
             }
         }
@@ -327,7 +325,7 @@ void StateMachine::advance_next(GameState& s)
             auto combats = ce.get_active_combats();
 
             Logger::instance().info(
-                "[advance_next] Combat phase for game " +
+                "[SM][advance_next] Combat phase for game " +
                 std::to_string(s.game_id) +
                 ", combats found: " + std::to_string(combats.size()));
 
@@ -335,13 +333,13 @@ void StateMachine::advance_next(GameState& s)
             {
                 // No combat? Auto-skip to next phase
                 Logger::instance().info(
-                    "[advance_next] No combat, skipping to Pick/Drop phase");
+                    "[SM][advance_next] No combat, skipping to Pick/Drop phase");
                 s.phase_index = PH_SYSTEM_PICKDROP;
             }
             else
             {
                 Logger::instance().info(
-                    "[advance_next] Combat detected! Pausing at Combat phase");
+                    "[SM][advance_next] Combat detected! Pausing at Combat phase");
 
                 // Notify BOTH players about combat detection with detailed
                 // listing

@@ -203,10 +203,15 @@ void update_market_prices(int game_id, int round)
         // Clamp to 50%-200% of base
         int min_price = base_price / 2;
         int max_price = base_price * 2;
+
         if (new_price < min_price)
+        {
             new_price = min_price;
+        }
         if (new_price > max_price)
+        {
             new_price = max_price;
+        }
 
         // Update market
         db.exec("UPDATE market_prices SET current_price=" +

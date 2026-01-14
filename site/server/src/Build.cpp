@@ -30,7 +30,7 @@ bool BuildCancelCommand::invoke(void)
 
     if (m_btargeted)
     {
-        Logger::instance().info("Locating ship " + m_target);
+        Logger::instance().info("[BUILD][Cancel] Locating ship " + m_target);
         has_draft = get_draft_by_spec(did, game_id, active_player, m_target);
     }
     else
@@ -86,7 +86,7 @@ bool BuildCommitCommand::invoke(void)
 
     if (m_btargeted)
     {
-        Logger::instance().info("Locating ship " + m_target);
+        Logger::instance().info("[BUILD][Commit] Locating ship " + m_target);
         has_draft = get_draft_by_spec(did, game_id, active_player, m_target);
     }
 
@@ -244,7 +244,7 @@ bool BuildNewCommand::invoke(void)
     else
     {
         GameState s = StateMachine::getInstance().get_game_state();
-        fprintf(stderr, "Active Player: >%s<\n", s.active_player.c_str());
+        //jdw fprintf(stderr, "Active Player: >%s<\n", s.active_player.c_str());
 
         char active_player =
             (s.active_player.empty() ? 'A' : s.active_player[0]);
@@ -339,7 +339,7 @@ bool BuildSetAttributeCommand::invoke(void)
     bool has_draft = false;
     if (m_btargeted)
     {
-        Logger::instance().info("Locating ship " + m_target);
+        Logger::instance().info("[BUILD][SetAttr] Locating ship " + m_target);
         has_draft = get_draft_by_spec(did, game_id, active_player, m_target);
     }
     else
@@ -424,7 +424,7 @@ bool BuildShowDraftCommand::invoke(void)
     bool has_draft = false;
     if (m_btargeted)
     {
-        Logger::instance().info("Locating ship " + m_target);
+        Logger::instance().info("[BUILD][ShowDraft] Locating ship " + m_target);
         has_draft = get_draft_by_spec(did, game_id, active_player, m_target);
     }
     else

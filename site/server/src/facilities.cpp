@@ -71,8 +71,6 @@ void FacilityEngine::initialize_facilities(int game_id)
             std::to_string(game_id) +
             ", system_name, facility_type, controller "
             "FROM facility_control_initial");
-
-    Logger::instance().info("[FACILITIES] Facilities initialized");
 }
 
 

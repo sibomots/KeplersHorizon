@@ -25,38 +25,30 @@
 #endif
 // clang-format on
 
-// ScenarioType removed - only one game mode now (formerly "advanced")
-
-typedef struct
-{
-    std::string dbhost;
-    std::string dbuser;
-    std::string dbpass;
-    std::string dbname;
-} DBConfig;
-
-typedef struct
-{
-    unsigned short port;
-} ServerConfig;
 
 typedef struct DataConfig
 {
-    bool clean;                   // Drop all tables (game + milieu)
-    bool schema;                  // Create all tables (game + milieu)
-    std::string seed_game_path;   // Path to game seed CSVs (empty = skip)
-    std::string seed_milieu_path; // Path to milieu seed CSVs (empty = skip)
+    // Drop all tables (game + milieu)
+    bool clean;
+    // Create all tables (game + milieu)
+    bool schema;
+    // Path to game seed CSVs (empty = skip)
+    std::string seed_game_path;
+    // Path to milieu seed CSVs (empty = skip)
+    std::string seed_milieu_path;
 
     DataConfig()
     {
+        // Paths are empty by default (no seeding)
         clean = false;
         schema = false;
-        // Paths are empty by default (no seeding)
     }
 } DataConfig;
 
-// Kepler's Horizon phase sequencing: VP count is implicit at start-of-turn;
-// player-facing phases begin at Build Ships.
+// Kepler's Horizon phase sequencing:
+//  VP count is implicit at start-of-turn;
+//  player-facing phases begin at Build Ships.
+
 enum PhaseIndex
 {
     PH_BUILD_SHIPS = 0,
@@ -82,10 +74,6 @@ typedef int AttributeValue;
 
 // Map of attributes for commands
 typedef std::map<AttributeID, AttributeValue> AttributeMap;
-
-//------------------------------------------------------------------------------
-// Command Inhibit System - IDs and parameter structs for check_inhibits()
-//------------------------------------------------------------------------------
 
 // Command IDs for the check_inhibits() system
 enum class CommandID
@@ -142,12 +130,15 @@ typedef struct
 typedef struct
 { /* empty - no parameters */
 } NextParams_t;
+
 typedef struct
 { /* empty - no parameters */
 } DoneParams_t;
+
 typedef struct
 { /* empty - no parameters */
 } StatusParams_t;
+
 typedef struct
 { /* empty - no parameters */
 } HelpParams_t;
@@ -163,7 +154,6 @@ typedef struct
     const char* type;
     int base_price;
 } CommodityItem;
-
 
 // end typedefs
 #endif

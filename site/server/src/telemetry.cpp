@@ -5,14 +5,13 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include "telemetry.h"
-
 #include <sstream>
 
 #include "db.h"
 #include "json.h"
 #include "logger.h"
 #include "statemachine.h"
+#include "telemetry.h"
 
 void Telemetry::clear_messages()
 {
@@ -58,12 +57,6 @@ void Telemetry::add_broadcast(const std::string& msg)
 
 void Telemetry::add_broadcast(int game_id, const std::string& msg)
 {
-    if (game_id == 0)
-    {
-        Logger::instance().info("Telemetry::add_broadcast:  game_id was 0");
-        return; // No game, no messages
-    }
-
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string ins =
         "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
@@ -77,12 +70,6 @@ Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
     DatabaseManager& db = DatabaseManager::getInstance();
     int game_id = StateMachine::getInstance().get_game_id();
 
-    if (game_id == 0)
-    {
-        Logger::instance().info("Telemetry::get_queued_messages:  game_id was 0");
-        return result;
-    }
-
     std::string target = std::string(1, player);
     result.player = player;
     // Get direct messages (target_player = A or B, use sent_at)
@@ -93,7 +80,6 @@ Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
 
     for (const auto& row : direct_rows)
     {
-        Logger::instance().info("Telemetry::get_queued_messages: direct msg(id = " + row[0] + "): " + row[1]);
         result.direct_ids.push_back(row[0]);
         result.messages.push_back(row[1]);
     }
@@ -107,7 +93,6 @@ Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
 
     for (const auto& row : both_rows)
     {
-        Logger::instance().info("Telemetry::get_queued_messages: broadcast msg(id = " + row[0] + "): " + row[1]);
         result.both_ids.push_back(row[0]);
         result.messages.push_back(row[1]);
     }
@@ -127,25 +112,31 @@ void Telemetry::mark_messages_sent(const QueuedMessages& msgs)
     if (!msgs.direct_ids.empty())
     {
         std::string id_list;
-        for (auto it = msgs.direct_ids.cbegin(); it != msgs.direct_ids.cend(); ++it)
+        for (auto it = msgs.direct_ids.cbegin(); it != msgs.direct_ids.cend();
+             ++it)
         {
-            if (it != msgs.direct_ids.cbegin()) id_list += ",";
+            if (it != msgs.direct_ids.cbegin())
+                id_list += ",";
             id_list += *it;
         }
-        db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" + id_list + ")");
+        db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" +
+                id_list + ")");
     }
 
-    // Mark broadcast messages as sent TO THIS PLAYER ONLY (sent_to_A or sent_to_B)
+    // Mark broadcast messages as sent TO THIS PLAYER ONLY (sent_to_A or
+    // sent_to_B)
     if (!msgs.both_ids.empty())
     {
         std::string sent_col = (msgs.player == 'A') ? "sent_to_A" : "sent_to_B";
         std::string id_list;
         for (auto it = msgs.both_ids.cbegin(); it != msgs.both_ids.cend(); ++it)
         {
-            if (it != msgs.both_ids.cbegin()) id_list += ",";
+            if (it != msgs.both_ids.cbegin())
+                id_list += ",";
             id_list += *it;
         }
-        db.exec("UPDATE telemetry_queue SET " + sent_col + "=1 WHERE id IN (" + id_list + ")");
+        db.exec("UPDATE telemetry_queue SET " + sent_col + "=1 WHERE id IN (" +
+                id_list + ")");
     }
 }
 
@@ -154,7 +145,11 @@ std::string Telemetry::write(const std::string& msg)
     // Add message to buffer for later retrieval
     add_message(msg);
 
-    int game_id = StateMachine::getInstance().get_game_id();
+    std::ostringstream oss;
+    oss << "[TLM:W] ";
+    oss << msg;
+
+    Logger::instance().info(oss.str());
 
     std::ostringstream o;
     o << "{";
@@ -162,6 +157,7 @@ std::string Telemetry::write(const std::string& msg)
     o << "\"event\":\"" << json_escape(msg) << "\"";
 
     // Only include state if a game has been started
+    int game_id = StateMachine::getInstance().get_game_id();
     if (game_id != 0)
     {
         GameState s = StateMachine::getInstance().get_game_state();
@@ -183,6 +179,12 @@ std::string Telemetry::tell(PlayerTarget target, const std::string& msg)
                              : (requesting_player == 'A' ? 'B' : 'A');
     add_tell(target_player, msg);
 
+    std::ostringstream oss;
+    oss << "[TLM: " << requesting_player << "->" << target_player << "] "
+        << msg.c_str();
+
+    Logger::instance().info(oss.str());
+
     // Don't return via write() - tell() is for async delivery via heartbeat
     // only Returning empty so the caller's response isn't duplicated
     return "";
@@ -192,7 +194,11 @@ std::string Telemetry::broadcast(const std::string& msg)
 {
     // Queue message for all players (delivered via heartbeat)
     add_broadcast(msg);
-    return write(msg); // Also return immediate response
+    std::ostringstream oss;
+    oss << "[TLM:BCAST] ";
+    oss << msg;
+    Logger::instance().info(oss.str());
+    return write(msg);
 }
 
 // Helper: Build ships JSON for map rendering
@@ -205,13 +211,26 @@ static std::string getShipsJson(int game_id, char player)
     out << "{";
 
     // Friendly ships (owned by current player) - include specs for tooltip
-    auto friendly = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
-        "tube, missiles, sr, ship_name FROM ships "
-        "WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, player) +
-        "'"
-        " AND destroyed_at IS NULL");
+    // auto friendly = db.query(
+    //    "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
+    //    "tube, missiles, sr, ship_name FROM ships "
+    //    "WHERE game_id=" +
+    //    std::to_string(game_id) + " AND owner='" + std::string(1, player) +
+    //    "'"
+    //    " AND destroyed_at IS NULL");
+
+    std::string sql;
+    sql.reserve(DatabaseManager::SQLSZ);
+    sql += "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
+           "tube, missiles, sr, ship_name FROM ships "
+           "WHERE destroyed_at is NULL "
+           "AND game_id=";
+    sql += std::to_string(game_id);
+    sql += " AND owner='";
+    sql.push_back(player);
+    sql += "'";
+
+    auto friendly = db.query(sql);
 
     out << "\"friendly\":[";
     for (size_t i = 0; i < friendly.size(); ++i)
@@ -225,17 +244,30 @@ static std::string getShipsJson(int game_id, char player)
             << ",\"pd\":" << friendly[i][4] << ",\"b\":" << friendly[i][5]
             << ",\"s\":" << friendly[i][6] << ",\"t\":" << friendly[i][7]
             << ",\"m\":" << friendly[i][8] << ",\"sr\":" << friendly[i][9]
-            << ",\"name\":\"" << json_escape(friendly[i][10]) << "\"" << "}";
+            << ",\"name\":\"" << json_escape(friendly[i][10]) << "\""
+            << "}";
     }
     out << "]";
 
     // Enemy ships (owned by opponent)
-    auto enemy = db.query(
-        "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
-        "WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, opponent) +
-        "'"
-        " AND destroyed_at IS NULL");
+    //auto enemy = db.query(
+    //    "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
+    //    "WHERE game_id=" +
+    //    std::to_string(game_id) + " AND owner='" + std::string(1, opponent) +
+    //    "'"
+    //    " AND destroyed_at IS NULL");
+
+    sql.clear();
+    sql.reserve(DatabaseManager::SQLSZ);
+    sql += "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
+        "WHERE destroyed_at IS NULL "
+        "AND game_id=";
+    sql += std::to_string(game_id);
+    sql += " AND owner='";
+    sql.push_back(opponent);
+    sql += "'";
+
+    auto enemy = db.query(sql);
 
     out << ",\"enemy\":[";
     for (size_t i = 0; i < enemy.size(); ++i)
@@ -246,17 +278,27 @@ static std::string getShipsJson(int game_id, char player)
             << ",\"type\":\"" << json_escape(enemy[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(enemy[i][2]) << "\""
             << ",\"system\":\"" << json_escape(enemy[i][3]) << "\""
-            << ",\"name\":\"" << json_escape(enemy[i][4]) << "\"" << "}";
+            << ",\"name\":\"" << json_escape(enemy[i][4]) << "\""
+            << "}";
     }
     out << "]";
 
     // Neutral ships (owner N or X for xeno/third-party)
-    auto neutral =
-        db.query("SELECT ship_code, ship_type, at_hex, at_system FROM ships "
-                 "WHERE game_id=" +
-                 std::to_string(game_id) +
-                 " AND owner NOT IN ('A','B')"
-                 " AND destroyed_at IS NULL");
+    //auto neutral =
+    //    db.query("SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+    //             "WHERE game_id=" +
+    //             std::to_string(game_id) +
+    //             " AND owner NOT IN ('A','B')"
+    //             " AND destroyed_at IS NULL");
+
+    sql.clear();
+    sql.reserve(DatabaseManager::SQLSZ);
+    sql += "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+           " WHERE destroyed_at IS NULL "
+           " AND owner NOT IN ('A','B')"
+           " AND game_id=";
+    sql += std::to_string(game_id);
+    auto neutral = db.query(sql);
 
     out << ",\"neutral\":[";
     for (size_t i = 0; i < neutral.size(); ++i)
@@ -282,6 +324,9 @@ void Telemetry::status(char player, HttpResponse* resp)
 
     // If no game has been started yet, return minimal status but still check
     // peer online
+
+    // BUGBUG this is so broken.
+    // why are we  using game_id as a flag for this??
     if (game_id == 0)
     {
         // Get the requesting user's username from the current request context
@@ -313,10 +358,15 @@ void Telemetry::status(char player, HttpResponse* resp)
         }
 
         std::ostringstream out;
-        out << "{\"ok\":true,\"state\":{" << "\"gameId\":0," << "\"round\":0,"
-            << "\"activePlayer\":\"\"," << "\"phaseIndex\":0,"
-            << "\"phase\":\"\"," << "\"vp\":{\"A\":0,\"B\":0},"
-            << "\"bp\":{\"A\":0,\"B\":0}," << "\"notes\":\"Game not started\""
+        out << "{\"ok\":true,\"state\":{"
+            << "\"gameId\":0,"
+            << "\"round\":0,"
+            << "\"activePlayer\":\"\","
+            << "\"phaseIndex\":0,"
+            << "\"phase\":\"\","
+            << "\"vp\":{\"A\":0,\"B\":0},"
+            << "\"bp\":{\"A\":0,\"B\":0},"
+            << "\"notes\":\"Game not started\""
             << "}";
         out << ",\"self\":{\"owner\":\"" << player << "\"}";
         out << ",\"peer\":{\"online\":" << (peerOnline ? "true" : "false");
@@ -407,9 +457,9 @@ void Telemetry::status(char player, HttpResponse* resp)
     std::ostringstream out;
     out << "{\"ok\":true,\"state\":" << status_json.str()
         << ",\"self\":{\"owner\":\"" << selfOwner << "\",\"username\":\""
-        << json_escape(selfUser) << "\"}" << ",\"peer\":{\"owner\":\""
-        << oppOwner << "\",\"username\":\"" << oppUser
-        << "\",\"online\":" << (oppOnline ? "true" : "false")
+        << json_escape(selfUser) << "\"}"
+        << ",\"peer\":{\"owner\":\"" << oppOwner << "\",\"username\":\""
+        << oppUser << "\",\"online\":" << (oppOnline ? "true" : "false")
         << ",\"last_seen\":\"" << json_escape(oppLastSeen) << "\"}";
 
     // Include queued messages if any

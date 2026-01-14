@@ -235,7 +235,7 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     // operations Commands that require a game will check for valid game state
     if (a.game_id != 0 && a.player == 0)
     {
-        Logger::instance().debug("[require_auth] User " + a.username +
+        Logger::instance().info("[COMMS][require_auth] User " + a.username +
                                  " has game_id=" + std::to_string(a.game_id) +
                                  " but no seat (may be stale session)");
     }

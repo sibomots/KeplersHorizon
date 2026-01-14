@@ -9,6 +9,7 @@
 #define __SERVER_MANAGER_H__
 
 #include "app.h"
+#include "configr.h"
 #include "typedefs.h"
 
 class ServerManager
@@ -37,13 +38,9 @@ class ServerManager
 
     void connect();
 
-    void configure(void* param)
+    void configure()
     {
-        if (param != NULL)
-        {
-            ServerConfig* pconf = static_cast<ServerConfig*>(param);
-            port = pconf->port;
-        }
+        port = Configr::instance().get<Key::port>();
     }
 
     void run(void);
@@ -61,7 +58,8 @@ class ServerManager
     {
         if (server_socket > 0)
         {
-            // close port
+            close(server_socket);
+            server_socket = -1;
         }
     }
 };

@@ -8,12 +8,16 @@
 #ifndef __DB_H__
 #define __DB_H__
 
+#include <mysql/mysql.h>
 #include "app.h"
-#include "db.h"
 #include "typedefs.h"
 
 class DatabaseManager
 {
+
+  public:
+    static const size_t SQLSZ = 1024;
+
   public:
     static DatabaseManager& getInstance()
     {
@@ -32,9 +36,8 @@ class DatabaseManager
     static std::string dbname;
 
     // Setup
-    void configure(void* param);
+    void configure();
     void connect();
-    bool driver_invalid();
 
     // Query tools
     void exec(const std::string& q);
@@ -42,6 +45,8 @@ class DatabaseManager
     std::string esc(const std::string& s);
 
   private:
+    void reconnect();
+    void driver_check();
     static MYSQL* driver;
 
     DatabaseManager()

@@ -44,10 +44,7 @@ bool DeleteCommand::invoke(void)
     // Delete the save
     db.exec("DELETE FROM saved_games WHERE id=" + save_id);
 
-    Logger::instance().info("DELETE: Removed saved game '" + actual_name +
-                            "' (id=" + save_id + ")");
-    Telemetry::getInstance().write("DELETE: Saved game '" + actual_name +
-                                   "' deleted.");
+    Telemetry::getInstance().write("DELETE: game '" + actual_name + "' deleted.");
 
     return true;
 }

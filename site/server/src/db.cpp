@@ -11,70 +11,129 @@
 
 #include "app.h"
 #include "combat.h"
+#include "configr.h"
 #include "logger.h"
 #include "typedefs.h"
 #include "util.h"
 
-// Static variables for the DatabaseManager Singleton
+// Static variables for the DatabaseManager
+// Should be overwritten when the configuration is
+// provided by user command line arguments.
+
 MYSQL* DatabaseManager::driver = 0;
+
 std::string DatabaseManager::dbhost = "127.0.0.1";
 std::string DatabaseManager::dbuser = "dbusr";
 std::string DatabaseManager::dbpass = "dbpass";
 std::string DatabaseManager::dbname = "dbname";
 
-bool DatabaseManager::driver_invalid()
+void DatabaseManager::driver_check()
 {
-    if (!driver)
-    {
-        throw std::runtime_error("mysql_init failed");
-    }
-    return false;
+    static int retry_count = 0;
+
+    try {
+        int rc = mysql_ping(driver);
+        if (rc)
+        {
+            if (++retry_count < 3)
+            {
+                std::cerr << "DatabaseManager: Attempting reconnect #"
+                          << std::to_string(retry_count) << std::endl;
+                reconnect();
+            }
+            else
+            {
+                throw std::runtime_error("\nUnable to recover trying to connect database\n");
+            }
+        }
+        else
+        {
+            retry_count = 0;
+        }
+   }
+   catch (const std::exception& ex) {
+        throw std::runtime_error("\nUnable to recover trying to connect database\n");
+   }
 }
 
 void DatabaseManager::connect()
 {
     driver = mysql_init(NULL);
-    if (driver_invalid())
-    {
-        return;
+
+    try {
+       driver_check();
     }
+    catch(const std::exception& ex) {
+                std::string err = "Unable to recover trying to connect database";
+                throw std::runtime_error(err.c_str());
+    }
+
     if (!mysql_real_connect(driver, dbhost.c_str(), dbuser.c_str(),
                             dbpass.c_str(), dbname.c_str(), 0, NULL, 0))
     {
-        throw std::runtime_error(std::string("mysql_real_connect failed: ") +
-                                 mysql_error(driver));
+        std::string err = "mysql_real_connect failed";
+        throw std::runtime_error(err.c_str());
+    }
+    mysql_set_character_set(driver, "utf8mb4");
+}
+
+void DatabaseManager::reconnect()
+{
+    try {
+       driver = mysql_init(NULL);
+    }
+    catch(const std::exception& ex) {
+        std::string err = "mysql_init failed";
+        throw std::runtime_error(err.c_str());
+
+    }
+
+    if (!mysql_real_connect(driver, dbhost.c_str(), dbuser.c_str(),
+                            dbpass.c_str(), dbname.c_str(), 0, NULL, 0))
+    {
+        std::string err = "mysql_real_connect failed";
+        throw std::runtime_error(err.c_str());
     }
     mysql_set_character_set(driver, "utf8mb4");
 }
 
 void DatabaseManager::exec(const std::string& q)
 {
-    if (driver_invalid())
-    {
-        return;
+    try {
+       driver_check();
     }
-
+    catch(const std::exception& ex) {
+                std::string err = "Unable to recover trying to connect database";
+                throw std::runtime_error(err.c_str());
+    }
     if (mysql_query(driver, q.c_str()))
     {
-        Logger::instance().info("QUERY: " + q );
-        throw std::runtime_error(std::string("mysql_query: ") +
-                                 mysql_error(driver));
+        Logger::instance().info("[DB] QUERY Failed: " + q);
+        std::string err = "exec failed:";
+        err.append(q.c_str());
+        throw std::runtime_error(err.c_str());
     }
 }
 
 std::vector<std::vector<std::string>>
 DatabaseManager::query(const std::string& q)
 {
-    if (driver_invalid())
-    {
-        return {};
+    try {
+       driver_check();
     }
+    catch(const std::exception& ex) {
+                std::string err = "Unable to recover trying to connect database";
+                throw std::runtime_error(err.c_str());
+    }
+
     if (mysql_query(driver, q.c_str()))
     {
-        Logger::instance().info("QUERY: " + q );
-        throw std::runtime_error(std::string("mysql_query: ") +
-                                 mysql_error(driver));
+        Logger::instance().info("QUERY: " + q);
+        std::string err = "query failed";
+        err.append(q.c_str());
+        throw std::runtime_error(err.c_str());
     }
+
     MYSQL_RES* res = mysql_store_result(driver);
     if (!res)
     {
@@ -115,14 +174,10 @@ std::string DatabaseManager::esc(const std::string& s)
     return out;
 }
 
-void DatabaseManager::configure(void* param)
+void DatabaseManager::configure()
 {
-    if (param != NULL)
-    {
-        DBConfig* pconf = static_cast<DBConfig*>(param);
-        dbhost = std::string(pconf->dbhost);
-        dbuser = std::string(pconf->dbuser);
-        dbpass = std::string(pconf->dbpass);
-        dbname = std::string(pconf->dbname);
-    }
+    dbhost = Configr::instance().get<Key::dbhost>();
+    dbuser = Configr::instance().get<Key::dbusr>();
+    dbpass = Configr::instance().get<Key::dbpass>();
+    dbname = Configr::instance().get<Key::dbname>();
 }

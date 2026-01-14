@@ -17,7 +17,6 @@
 #include <cstring>
 #include <ctime>
 #include <map>
-#include <mysql/mysql.h>
 #include <netinet/in.h>
 #include <set>
 #include <sstream>
