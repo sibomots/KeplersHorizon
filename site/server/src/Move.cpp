@@ -50,14 +50,14 @@ bool DeployCommand::invoke(void)
     std::string sys =
         MapUtil::getInstance().resolve_system_name(m_game_id, m_system_name);
 
-    if (!ship_exists(m_game_id, active_player, m_ship_code))
+    if (!ship_exists_by_code_or_name(m_game_id, active_player, m_ship_code))
     {
         Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " is not in your fleet!");
         return false;
     }
 
-    ShipRow sh = load_ship(m_game_id, active_player, m_ship_code);
+    ShipRow sh = load_ship_by_code_or_name(m_game_id, active_player, m_ship_code);
     if (!sh.racked_in.empty())
     {
         Telemetry::getInstance().write(
@@ -130,7 +130,7 @@ bool DeployCommand::invoke(void)
     }
 
     std::string hex = MapUtil::getInstance().resolve_system_hex(m_game_id, sys);
-    update_ship_location(m_game_id, active_player, m_ship_code, sys, hex, "");
+    update_ship_location_by_code_or_name(m_game_id, active_player, m_ship_code, sys, hex);
 
     // Save game state to persist side assignment
     StateMachine::getInstance().save_game(s);
@@ -154,6 +154,8 @@ bool MoveCommand::invoke(void)
         Telemetry::getInstance().write("Error: " + inhibit_error);
         return false;
     }
+
+    fprintf(stderr, "MOVE - tried to move\n");
 
     DatabaseManager& db = DatabaseManager::getInstance();
     GameState s = StateMachine::getInstance().get_game_state();
@@ -459,7 +461,7 @@ bool MoveCommand::invoke(void)
         finalSystem.clear();
     }
     update_ship_location(m_game_id, active_player, sh.code, finalSystem,
-                         finalHex, "");
+                         finalHex);
     db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
             " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
             std::string(1, active_player) + "'" + " AND ship_code='" +
@@ -964,7 +966,7 @@ bool MoveCommand::invoke(void)
         finalSystem.clear();
     }
     update_ship_location(m_game_id, active_player, sh.code, finalSystem,
-                         finalHex, "");
+                         finalHex);
     db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
             " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
             std::string(1, active_player) + "'" + " AND ship_code='" +

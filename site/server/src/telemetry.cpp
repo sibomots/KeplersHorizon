@@ -6,12 +6,52 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 #include <sstream>
+#include <mutex>
+#include <iomanip>
 
 #include "db.h"
 #include "json.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
+
+typedef enum : int
+{
+   TLM_ADD_MSG,
+   TLM_ADD_TELL,
+   TLM_ADD_BCAST
+} TlmMsgTyp;
+
+static int sequence = 0;
+
+static void seq_log(TlmMsgTyp typ, const std::string& msg)
+{
+    static std::mutex m;
+    std::lock_guard<std::mutex> lock(m);
+    sequence++;
+
+    // jdw
+    std::ostringstream oss;
+    oss << "[";
+    switch(typ) {
+      case TLM_ADD_MSG:  
+        oss << "+MSG |";
+        break;
+      case TLM_ADD_TELL:
+        oss << "TELL |";
+        break;
+      case TLM_ADD_BCAST:
+        oss << "BCAST|";
+        break;
+      default:
+        oss << "???? |";
+        break;
+    }
+    oss << std::setw(6) << std::setfill('0') << sequence;
+    oss << "] ";
+    oss << msg;
+    Logger::instance().info(oss.str());
+}
 
 void Telemetry::clear_messages()
 {
@@ -25,6 +65,7 @@ std::vector<std::string> Telemetry::get_messages()
 
 void Telemetry::add_message(const std::string& msg)
 {
+    seq_log(TLM_ADD_MSG, msg);
     write_buffer.push_back(msg);
 }
 
@@ -41,6 +82,7 @@ void Telemetry::add_tell(int game_id, char player, const std::string& msg)
         return;
     }
 
+    seq_log(TLM_ADD_TELL, msg);
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string target = std::string(1, player);
     std::string ins =
@@ -58,6 +100,7 @@ void Telemetry::add_broadcast(const std::string& msg)
 void Telemetry::add_broadcast(int game_id, const std::string& msg)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
+    seq_log(TLM_ADD_BCAST, msg);
     std::string ins =
         "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
         std::to_string(game_id) + ",'BOTH','" + db.esc(msg) + "')";
@@ -140,35 +183,49 @@ void Telemetry::mark_messages_sent(const QueuedMessages& msgs)
     }
 }
 
-std::string Telemetry::write(const std::string& msg)
+void Telemetry::write(const std::string& msg)
 {
     // Add message to buffer for later retrieval
     add_message(msg);
 
     std::ostringstream oss;
-    oss << "[TLM:W] ";
-    oss << msg;
+}
 
-    Logger::instance().info(oss.str());
 
-    std::ostringstream o;
-    o << "{";
-    o << "\"ok\":true,";
-    o << "\"event\":\"" << json_escape(msg) << "\"";
+void Telemetry::source_messages(std::string& result_msg)
+{
+    // Get accumulated telemetry messages and combine them
+    std::string event_msg;
+
+    std::ostringstream combined;
+    for (size_t i = 0; i < write_buffer.size(); ++i)
+    {
+        if (i > 0)
+        {
+             combined << "\n";
+        }
+        combined << write_buffer[i];
+    }
+    event_msg = combined.str().empty() ? "Command executed\n" : combined.str();
+
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"ok\":true,";
+    oss << "\"event\":\"" << json_escape(event_msg) << "\"";
 
     // Only include state if a game has been started
     int game_id = StateMachine::getInstance().get_game_id();
     if (game_id != 0)
     {
         GameState s = StateMachine::getInstance().get_game_state();
-        o << ",\"state\":" << s.to_json();
+        oss << ",\"state\":" << s.to_json();
     }
 
-    o << "}";
-    return o.str();
+    oss << "}";
+    result_msg = oss.str();
 }
 
-std::string Telemetry::tell(PlayerTarget target, const std::string& msg)
+void Telemetry::tell(PlayerTarget target, const std::string& msg)
 {
     // Queue message for specific player (delivered via heartbeat)
     // ME = the player who made this request (from set_current_player)
@@ -177,28 +234,25 @@ std::string Telemetry::tell(PlayerTarget target, const std::string& msg)
     char target_player = (target == PlayerTarget::ME)
                              ? requesting_player
                              : (requesting_player == 'A' ? 'B' : 'A');
-    add_tell(target_player, msg);
+
 
     std::ostringstream oss;
-    oss << "[TLM: " << requesting_player << "->" << target_player << "] "
-        << msg.c_str();
-
+    oss << "[TLM: " << requesting_player << "->" << target_player << "] " << msg.c_str();
     Logger::instance().info(oss.str());
+
+    add_tell(target_player, msg);
 
     // Don't return via write() - tell() is for async delivery via heartbeat
     // only Returning empty so the caller's response isn't duplicated
-    return "";
 }
 
-std::string Telemetry::broadcast(const std::string& msg)
+void Telemetry::broadcast(const std::string& raw_msg)
 {
     // Queue message for all players (delivered via heartbeat)
-    add_broadcast(msg);
-    std::ostringstream oss;
-    oss << "[TLM:BCAST] ";
-    oss << msg;
-    Logger::instance().info(oss.str());
-    return write(msg);
+    add_broadcast(raw_msg);
+
+    // source_messages(raw_msg, result);
+    // return result;
 }
 
 // Helper: Build ships JSON for map rendering

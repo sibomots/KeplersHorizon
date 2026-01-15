@@ -41,9 +41,11 @@ class Telemetry
     }
 
     // Core methods - return complete JSON response
-    std::string write(const std::string& msg);
-    std::string tell(PlayerTarget target, const std::string& msg);
-    std::string broadcast(const std::string& msg);
+    void write(const std::string& msg);
+    void tell(PlayerTarget target, const std::string& msg);
+    void broadcast(const std::string& msg);
+
+    void source_messages(std::string& result);
 
     // Status response - called by heartbeat handler
     void status(char player, HttpResponse* resp);

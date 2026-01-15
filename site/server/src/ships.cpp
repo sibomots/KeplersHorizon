@@ -94,6 +94,25 @@ bool ship_exists(int game_id, char owner, const std::string& code)
     return !rows.empty();
 }
 
+bool ship_exists_by_code_or_name(int game_id, char owner, const std::string& code)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto rows = db.query(
+          "SELECT id FROM ships "
+          "WHERE game_id=" + std::to_string(game_id) +
+          "  AND destroyed_at IS NULL " + 
+          "  AND owner='" + std::string(1, owner) + "' "
+          "  AND "
+          "  ( "
+          "   ship_code='" + db.esc(code) + "' "
+          "      OR "
+          "   ship_name='" + db.esc(code) + "' "
+          "  ) "
+          " LIMIT 1");
+
+    return !rows.empty();
+}
+
 std::vector<DraftRow> load_drafts_by_owner(int game_id, char owner)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
@@ -248,20 +267,10 @@ std::vector<ShipRow> load_ships(int game_id, char owner)
     return out;
 }
 
-/* CP */ ShipRow load_ship(int game_id, char owner, const std::string& code)
+
+ShipRow prepare_ship_row_from_row(std::vector<std::string> row)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query(
-        "SELECT "
-        "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
-        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
-        "FROM ships WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
-        "' AND ship_code='" + db.esc(code) +
-        "' AND destroyed_at IS NULL LIMIT 1");
-    if (rows.empty())
-        throw std::runtime_error("ship not found");
-    auto& r = rows[0];
+    auto& r = row;
     ShipRow s;
     s.code = r[0];
     s.name = r[1];
@@ -279,6 +288,58 @@ std::vector<ShipRow> load_ships(int game_id, char owner)
     s.racked_in = r[13];
     s.pd_spent = std::atoi(r[14].c_str());
     return s;
+}
+
+ShipRow load_ship_by_code_or_name(int game_id, char owner, const std::string& code)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto rows = db.query(
+        "SELECT "
+        "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
+        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
+        "FROM ships WHERE game_id=" +
+        std::to_string(game_id) + 
+        " AND owner='" + std::string(1, owner) + "' "
+        " AND "
+        " ( "
+        "    ship_code='" + db.esc(code) + "' "
+        "      OR "
+        "    ship_name='" + db.esc(code) + "' "
+        "  )  "
+        " AND destroyed_at IS NULL "
+        " LIMIT 1");
+    if (rows.empty()) {
+        throw std::runtime_error("ship not found");
+    }
+    else
+    {
+       return prepare_ship_row_from_row(rows[0]);
+    }
+}
+
+ShipRow load_ship(int game_id, char owner, const std::string& code)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    auto rows = db.query(
+        "SELECT "
+        "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
+        "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
+        "FROM ships WHERE game_id=" +
+        std::to_string(game_id) + 
+        " AND owner='" + std::string(1, owner) + "' "
+        " AND "
+        " ( "
+        "    ship_code='" + db.esc(code) + "' "
+        "  )  "
+        " AND destroyed_at IS NULL "
+        " LIMIT 1");
+    if (rows.empty()) {
+        throw std::runtime_error("ship not found");
+    }
+    else 
+    {
+        return prepare_ship_row_from_row(rows[0]);
+    }
 }
 
 /* CP */ int count_racked_in(int game_id, char owner,
@@ -319,11 +380,11 @@ void insert_ship(int game_id, char owner, const ShipRow& ship)
     db.exec(q);
 }
 
-/* CP */ void update_ship_location(int game_id, char owner,
-                                   const std::string& code,
-                                   const std::string& at_system,
-                                   const std::string& at_hex,
-                                   const std::string& racked_in)
+void update_ship_location(int game_id, char owner,
+                          const std::string& code,
+                          const std::string& at_system,
+                          const std::string& at_hex,
+                          const std::string& racked_in)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     std::string q =
@@ -334,6 +395,31 @@ void insert_ship(int game_id, char owner, const ShipRow& ship)
         (racked_in.empty() ? "NULL" : ("'" + db.esc(racked_in) + "'")) +
         " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
         std::string(1, owner) + "' AND ship_code='" + db.esc(code) + "'";
+    db.exec(q);
+}
+
+void update_ship_location_by_code_or_name(int game_id, char owner,
+                          const std::string& code,
+                          const std::string& at_system,
+                          const std::string& at_hex,
+                          const std::string& racked_in)
+{
+    DatabaseManager& db = DatabaseManager::getInstance();
+    std::string q =
+        "UPDATE ships SET at_system=" +
+        (at_system.empty() ? "NULL" : ("'" + db.esc(at_system) + "'")) +
+        ",at_hex=" + (at_hex.empty() ? "NULL" : ("'" + db.esc(at_hex) + "'")) +
+        ",racked_in=" +
+        (racked_in.empty() ? "NULL" : ("'" + db.esc(racked_in) + "'")) +
+        " WHERE game_id=" + std::to_string(game_id) +
+        " AND owner='" + std::string(1, owner) + "' "
+        " AND "
+        " ( "
+        "     ship_code='" + db.esc(code) + "' "
+        "       OR  "
+        "     ship_name='" + db.esc(code) + "' "
+        " ) ";
+
     db.exec(q);
 }
 
@@ -420,11 +506,20 @@ static void put_title(std::ostringstream& out,
 }
 
 // DRAFT HEADER (Shipyard)
-void append_draft_header(std::ostringstream& out, int vessels_in_production) {
+void append_draft_header(std::ostringstream& out, size_t vessels_in_production) {
+
+  if ( vessels_in_production > 0)
+  {
   put_title(out,
             "SHIPYARD",
             itos(vessels_in_production) + " vessels in production",
             50);
+  }
+  else
+  {
+     pstxt(out, "SHIPYARD", 8);
+     out << "\n";
+  }
 
   pstxt(out, "HULL", 4); out << ' ';
   pstxt(out, "DESIGNATION", 17); out << ' ';
@@ -537,7 +632,7 @@ void append_fleet_row(std::ostringstream& out, const ShipRow& r) {
 }
 
 // Builds the whole report string. You can add rows by calling append_row.
-void build_draft_report(std::ostringstream& out, std::vector<DraftRow>& drafts)
+void build_drafts_report(std::ostringstream& out, std::vector<DraftRow>& drafts)
 {
   append_draft_header(out, drafts.size());
   for (auto& d : drafts)

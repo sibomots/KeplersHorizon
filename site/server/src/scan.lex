@@ -75,7 +75,6 @@ static void advance_col()
 "status"   { set_loc_for_token(); advance_col(); return TOK_STATUS; }
 "drafts"   { set_loc_for_token(); advance_col(); return TOK_DRAFTS; }
 
-"stats"    { set_loc_for_token(); advance_col(); return TOK_STATS; }
 "fleet"    { set_loc_for_token(); advance_col(); return TOK_FLEET; }
 "hex"      { set_loc_for_token(); advance_col(); return TOK_HEX; }
 "system"   { set_loc_for_token(); advance_col(); return TOK_SYSTEM; }
@@ -100,11 +99,10 @@ static void advance_col()
 "transfer" { set_loc_for_token(); advance_col(); return TOK_TRANSFER; }
 "ts"       { set_loc_for_token(); advance_col(); return TOK_TRANSFER; }
 "salvage"  { set_loc_for_token(); advance_col(); return TOK_SALVAGE; }
-"j"        { set_loc_for_token(); advance_col(); return TOK_SALVAGE; }
+"jk"       { set_loc_for_token(); advance_col(); return TOK_SALVAGE; }
 "galaxy"   { set_loc_for_token(); advance_col(); return TOK_GALAXY; }
 "gx"       { set_loc_for_token(); advance_col(); return TOK_GALAXY; }
 "cargo"    { set_loc_for_token(); advance_col(); return TOK_CARGO; }
-"hold"     { set_loc_for_token(); advance_col(); return TOK_CARGO; }
 
 "next"     { set_loc_for_token(); advance_col(); return TOK_NEXT; }
 "n"        { set_loc_for_token(); advance_col(); return TOK_NEXT; }
@@ -115,7 +113,7 @@ static void advance_col()
 "commit"   { set_loc_for_token(); advance_col(); return TOK_COMMIT; }
 
 "combat"   { set_loc_for_token(); advance_col(); return TOK_COMBAT; }
-"c"        { set_loc_for_token(); advance_col(); return TOK_COMBAT; }
+"cm"       { set_loc_for_token(); advance_col(); return TOK_COMBAT; }
 "cd"       { set_loc_for_token(); advance_col(); return TOK_COMBAT_DRAFTS; }
 "order"    { set_loc_for_token(); advance_col(); return TOK_ORDER; }
 "co"       { set_loc_for_token(); advance_col(); return TOK_COMBAT_ORDER; }
@@ -131,7 +129,7 @@ static void advance_col()
 "e"        { set_loc_for_token(); advance_col(); return TOK_ESCAPE; }
 
 "build"    { set_loc_for_token(); advance_col(); return TOK_BUILD; }
-"b"        { set_loc_for_token(); advance_col(); return TOK_BUILD; }
+"bb"       { set_loc_for_token(); advance_col(); return TOK_BUILD; }
 "bc"       { set_loc_for_token(); advance_col(); return TOK_BUILD_COMMIT; }
 "new"      { set_loc_for_token(); advance_col(); return TOK_NEW; }
 "bn"       { set_loc_for_token(); advance_col(); return TOK_BUILD_NEW; }
@@ -146,9 +144,9 @@ static void advance_col()
 "move"     { set_loc_for_token(); advance_col(); return TOK_MOVE; }
 "m"        { set_loc_for_token(); advance_col(); return TOK_MOVE; }
 "pick"     { set_loc_for_token(); advance_col(); return TOK_PICK; }
-"p"        { set_loc_for_token(); advance_col(); return TOK_PICK; }
+"pu"       { set_loc_for_token(); advance_col(); return TOK_PICK; }
 "drop"     { set_loc_for_token(); advance_col(); return TOK_DROP; }
-"dd"       { set_loc_for_token(); advance_col(); return TOK_DROP; }
+"do"       { set_loc_for_token(); advance_col(); return TOK_DROP; }
 
 "repair"   { set_loc_for_token(); advance_col(); return TOK_REPAIR; }
 "rp"       { set_loc_for_token(); advance_col(); return TOK_REPAIR; }

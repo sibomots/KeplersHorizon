@@ -284,24 +284,30 @@ void update_draft_attrs(int did, int game_id, char owner, const std::string& cod
 void delete_draft(int did, int game_id, char owner, const std::string& code);
 std::vector<ShipRow> load_ships(int game_id, char owner);
 ShipRow load_ship(int game_id, char owner, const std::string& code);
+ShipRow load_ship_by_code_or_name(int game_id, char owner, const std::string& code);
 int count_racked_in(int game_id, char owner, const std::string& warpship_code);
 void insert_ship(int game_id, char owner, const ShipRow& s);
 void update_ship_location(int game_id, char owner, const std::string& code,
                           const std::string& at_system,
                           const std::string& at_hex,
-                          const std::string& racked_in);
+                          const std::string& racked_in = "");
 
-
+void update_ship_location_by_code_or_name(int game_id, char owner,
+                          const std::string& code,
+                          const std::string& at_system,
+                          const std::string& at_hex,
+                          const std::string& racked_in = "");
 
 bool get_draft_by_spec(int& did, int gid, char owner, std::string target);
 bool load_ship_draft_by_spec(DraftRow& row, int did, int game_id, char owner, const std::string& code);
 bool test_ship_draft_candidate(DraftRow& drow , std::vector<std::string>& report);
+bool ship_exists_by_code_or_name(int game_id, char owner, const std::string& code);
 
-void append_draft_header(std::ostringstream& out, int vessels_in_production);
+void append_draft_header(std::ostringstream& out, size_t num_production = 0);
 void append_draft_row(std::ostringstream& out, const DraftRow& row);
 void append_fleet_header(std::ostringstream& out, int vessels_operational);
 void append_fleet_row(std::ostringstream& out, const ShipRow& row);
-void build_draft_report(std::ostringstream& out, std::vector<DraftRow>& drafts);
+void build_drafts_report(std::ostringstream& out, std::vector<DraftRow>& drafts);
 
 #endif
 

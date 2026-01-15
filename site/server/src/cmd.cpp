@@ -91,21 +91,9 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
             GameState s = StateMachine::getInstance().load_game(new_game_id);
         }
 
-        // Get accumulated telemetry messages and combine them
-        auto messages = Telemetry::getInstance().get_messages();
-        std::ostringstream combined;
-        for (size_t i = 0; i < messages.size(); ++i)
-        {
-            if (i > 0)
-            {
-                combined << "\n";
-            }
-            combined << messages[i];
-        }
-        std::string event_msg =
-            combined.str().empty() ? "Command executed\n" : combined.str();
-
-        resp->body = Telemetry::getInstance().write(event_msg);
+        std::string event_msg; // = combined.str().empty() ? "Command executed\n" : combined.str();
+        Telemetry::getInstance().source_messages(event_msg);
+        resp->body = event_msg; //  Telemetry::getInstance().source_messages(event_msg);
     }
     else {
           std::string err;

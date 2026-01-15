@@ -29,13 +29,13 @@ class DeployCommand : public ICmd
         {
         }
 
-        Builder& ship_code(const std::string& code)
+        Builder& target(const std::string& code)
         {
             _ship_code = code;
             return *this;
         }
 
-        Builder& system_name(const std::string& sys)
+        Builder& system(const std::string& sys)
         {
             _system_name = sys;
             return *this;

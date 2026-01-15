@@ -140,7 +140,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_NEW
 %token TOK_NEXT
 %token TOK_NEXT_SHORT
-%token TOK_ONLINE
 %token TOK_ORDER
 %token TOK_PICK
 %token TOK_POWER_DRIVE
@@ -164,7 +163,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_TRANSFER
 %token TOK_SALVAGE
 %token TOK_SET_ATTR
-%token TOK_STATS
 %token TOK_STATUS
 %token TOK_SYSTEM
 %token TOK_SURVEY
@@ -306,12 +304,6 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
       delete $2;
-  }
-  | TOK_ONLINE {
-      Logger::instance().info("[LANG] Who's online and when?");
-  }
-  | TOK_STATS {
-      Logger::instance().info("[LANG] Statistics about game, fleet, opponent");
   }
   | TOK_FLEET {
       ICmd* pCmd = FleetCommand::Builder().build();
@@ -511,7 +503,7 @@ combat_cmd:
    // combat
    // c
    TOK_COMBAT {
-      Logger::instance().info("[LANG] Status of combat situation");
+      // [LANG] Status of combat situation
    }
 
    // combat drafts
@@ -984,15 +976,10 @@ deploy_cmd:
    }
    | TOK_DEPLOY deployable_ship TOK_STRING {
        std::string ship(*$2);
-       std::string destination(*$3);
-       Logger::instance().info("Attempt to deploy ship "
-                               ">" + ship + "<" 
-                               " at destination: "
-                               ">" + destination + "<");
-
+       std::string dest(*$3);
        ICmd* pCmd = DeployCommand::Builder()
-                    .ship_code(ship)
-                    .system_name(destination)
+                    .target(ship)
+                    .system(dest)
                     .build();
 
        if (pCmd && pCmd->invoke()) { /* success */ }
@@ -1006,9 +993,8 @@ deploy_cmd:
 
 target_systemship:
   TOK_STRING {
+      // BUGBUG 
       std::string ship_id(*$1);
-      Logger::instance().info("[LANG] Target SystemShip: "
-                              ">" + ship_id + "<");
   }
   ;
 
@@ -1020,8 +1006,6 @@ chain_move_location:
    }
    | TOK_STRING chain_move_location {
        std::string waypoint(*$1);
-       Logger::instance().info("[LANG] Additional waypoint on chain: >"
-                                + waypoint + "<");
        $$ = $2;
        $$->insert($$->begin(), waypoint);
        SafeDelete($1);
@@ -1049,11 +1033,6 @@ move_cmd:
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
        
-       Logger::instance().info("Moving ship >" 
-                               + ship 
-                               + "< to >" 
-                               + first_dest + "<");
-       
        // Build move command with all destinations
        ICmd* pCmd = MoveCommand::Builder()
             .ship_code(ship)
@@ -1079,15 +1058,11 @@ move_cmd:
 warpship_pick_destination:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Pick destination warpship: "
-                              ">" + ship_id + "<");
   }
   ;
 warpship_drop_source:
   TOK_STRING {
       std::string ship_id(*$1);
-      Logger::instance().info("Drop source warpship: "
-                              ">" + ship_id + "<");
   }
   ;
 pickdrop_cmd:
@@ -1095,29 +1070,22 @@ pickdrop_cmd:
   // p
   TOK_PICK TOK_STRING {
      std::string location(*$2);
-     Logger::instance().info("Status of what can be picked up at hex "
-                 ">" + location + "<");
   }
-  // syntax: drop WARPSHIP_ID
   // pick ...
   // p ...
   | TOK_DROP warpship_drop_source {
-     Logger::instance().info("Only list what may be dropped from "
-                             "target WarpShip");
+     // Only list what may be dropped from target WarpShip
   }
   // syntax: pick SOURCE DESTINATION */
   // pick ...
   // p ...
   | TOK_PICK target_systemship warpship_pick_destination {
-     Logger::instance().info("Picking up SystemShip to rack "
-                             "in target WarpShip");
-
+     // Picking up SystemShip to rack in target WarpShip
   }
   // drop ...
   // d ...
   | TOK_DROP target_systemship warpship_drop_source {
-     Logger::instance().info("Dropping target SystemShipship from "
-                             "target WarpShip");
+     // Dropping target SystemShipship from target WarpShip
   }
   
 | TOK_PICK error { yyerror(&@1, "pick: usage: pick <ship> <item>"); YYABORT; }
@@ -1279,10 +1247,16 @@ bool get_parser_error(std::string& err)
     return result;
 }
 
-void yyerror(const char*) //  msg)
+void yyerror(const char* msg)
 {
     // If location tracking is enabled, yylloc is the best available hint.
     // yyerror(&yylloc, msg);
+    if (msg) {
+       fprintf(stderr, "yyerror: %s\n", msg);
+    }
+    else {
+       fprintf(stderr, "yyerror: (null)\n");
+    }
 }
 
 // Richer helper used by our grammar actions.
@@ -1291,10 +1265,12 @@ void yyerror(YYLTYPE* loc, const char* msg)
     //BUGBUG roll over
     error_state.error_count++;
     std::ostringstream oerr;
+    bool hasloc = false;
     if (loc)
     {
         oerr << msg << "\n";
         error_state.user_errors.push_back(oerr.str());
+        hasloc = true;
     }
     else
     {
@@ -1302,5 +1278,10 @@ void yyerror(YYLTYPE* loc, const char* msg)
         oerr  << msg << "\n";
         error_state.user_errors.push_back(oerr.str());
     }
+    std::string dbgstr = oerr.str();
+    fprintf(stderr, "yyerror %s%s: %s\n",
+            (const char*)((hasloc)?"(loc,":"("),
+            (const char*)((!hasloc)?"(msg)":",msg)"),
+            dbgstr.c_str());
 }
 

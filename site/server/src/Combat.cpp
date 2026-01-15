@@ -962,6 +962,16 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             log << "STALEMATE: 3 rounds with no damage!\n";
             log << "Initiative player must withdraw all ships from this "
                    "hex.\n";
+                // Mark for retreat - user must issue 'retreat <ship> <hex>'
+                // command
+
+ // jdw need to get a list of ships owner (initiator) has and then
+// force their retreat...
+#if 0
+                db.exec("UPDATE ships SET escape_pending=1 WHERE game_id=" +
+                        std::to_string(game_id) + " AND ship_code='" +
+                        db.esc(ship.code) + "'");
+#endif
 
             // Notify initiative player they must retreat
             char initiative = StateMachine::getInstance().get_current_player();
