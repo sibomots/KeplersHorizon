@@ -347,7 +347,7 @@ static std::string getShipsJson(int game_id, char player)
 
     sql.clear();
     sql.reserve(DatabaseManager::SQLSZ);
-    sql += "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+    sql += "SeLeCt ship_code, ship_type, at_hex, at_system FROM ships "
            " WHERE destroyed_at IS NULL "
            " AND owner NOT IN ('A','B')"
            " AND game_id=";

@@ -106,6 +106,7 @@ void DatabaseManager::exec(const std::string& q)
                 std::string err = "Unable to recover trying to connect database";
                 throw std::runtime_error(err.c_str());
     }
+    fprintf(stderr, "DB::EXEC: %s\n", q.c_str());
     if (mysql_query(driver, q.c_str()))
     {
         Logger::instance().info("[DB] QUERY Failed: " + q);
@@ -126,6 +127,7 @@ DatabaseManager::query(const std::string& q)
                 throw std::runtime_error(err.c_str());
     }
 
+    fprintf(stderr, "DB::QUERY: %s\n", q.c_str());
     if (mysql_query(driver, q.c_str()))
     {
         Logger::instance().info("QUERY: " + q);
@@ -161,6 +163,7 @@ DatabaseManager::query(const std::string& q)
         out.push_back(r);
     }
     mysql_free_result(res);
+    dump(out);
     return out;
 }
 
@@ -180,4 +183,38 @@ void DatabaseManager::configure()
     dbuser = Configr::instance().get<Key::dbusr>();
     dbpass = Configr::instance().get<Key::dbpass>();
     dbname = Configr::instance().get<Key::dbname>();
+}
+
+void DatabaseManager::dump(const std::vector<std::vector<std::string> >& rows )
+{
+
+   if (rows.empty()) {
+      return;
+   }
+
+   fprintf(stderr, "\nDUMP:\n"); 
+   for(std::vector<std::vector<std::string> >::const_iterator itr = rows.begin();
+           itr != rows.end(); 
+           ++itr)
+   {
+       bool seencol = false;
+       const std::vector<std::string> row = (*itr);
+       for(std::vector<std::string>::const_iterator inner = row.begin();
+           inner != row.end();
+           ++inner)
+       {
+           if (seencol) {
+             fprintf(stderr, "\t");
+           }
+           else {
+              seencol = true;
+           } 
+           fprintf(stderr, "%s", (*inner).c_str());
+       }
+       if (seencol) {
+          fprintf(stderr, "\n");
+       }
+   }
+   fprintf(stderr, "\n"); 
+
 }

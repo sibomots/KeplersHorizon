@@ -43,6 +43,7 @@ class DatabaseManager
     void exec(const std::string& q);
     std::vector<std::vector<std::string>> query(const std::string& q);
     std::string esc(const std::string& s);
+    void dump(const std::vector<std::vector<std::string> >& rows);
 
   private:
     void reconnect();

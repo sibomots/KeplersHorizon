@@ -114,9 +114,17 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
       if (e.key === "Enter") runCmd();
     });
 
-    B.appendLine("Kepler's Horizon client loaded.", "");
+    B.appendLine(">> Control Deck operational <<", "");
     B.appendLine("Type 'help' for commands.", "");
-
+    B.appendLine("Main Phases of Turn:", "");
+    B.appendLine("1. Victory Point Check", "");
+    B.appendLine("2. Build Ships", "");
+    B.appendLine("3. Movement", "");
+    B.appendLine("4. Combat (*)", "");
+    B.appendLine("5. Repair/Resupply", "");
+    B.appendLine("Entering Next (N) will transition to next phase.","");
+    B.appendLine("Entering Done (ZZ) will end your turn.", "");
+    B.appendLine("*Combat is only when opponent occupies same star-hex.","");
     // Fetch initial state
     B.apiFetchState().catch(() => { });
   }

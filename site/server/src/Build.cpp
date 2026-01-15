@@ -244,8 +244,6 @@ bool BuildNewCommand::invoke(void)
     else
     {
         GameState s = StateMachine::getInstance().get_game_state();
-        //jdw fprintf(stderr, "Active Player: >%s<\n", s.active_player.c_str());
-
         char active_player =
             (s.active_player.empty() ? 'A' : s.active_player[0]);
 

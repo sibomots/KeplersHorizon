@@ -69,13 +69,11 @@ class BuildNewCommand : public ICmd
         Builder& set_ship_code(const std::string& code)
         {
             _ship_code = code;
-            //jdw fprintf(stderr, "BuildNewCommand: ship_code = >%s<\n", code.c_str());
             return *this;
         }
         Builder& set_ship_name(const std::string& name)
         {
             _ship_name = name;
-            //jdw fprintf(stderr, "BuildNewCommand: ship_name = >%s<\n", name.c_str());
             return *this;
         }
 

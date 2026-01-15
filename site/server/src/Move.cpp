@@ -155,22 +155,22 @@ bool MoveCommand::invoke(void)
         return false;
     }
 
-    fprintf(stderr, "MOVE - tried to move\n");
-
     DatabaseManager& db = DatabaseManager::getInstance();
     GameState s = StateMachine::getInstance().get_game_state();
     int m_game_id = StateMachine::getInstance().get_game_id();
 
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
-    if (!ship_exists(m_game_id, active_player, m_ship_code))
+    bool ship_present = ship_exists_by_code_or_name(m_game_id, active_player, m_ship_code);
+
+    if (!ship_present)
     {
         Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " is not in your fleet!");
         return false;
     }
 
-    ShipRow sh = load_ship(m_game_id, active_player, m_ship_code);
+    ShipRow sh = load_ship_by_code_or_name(m_game_id, active_player, m_ship_code);
 
     if (sh.attr.type != 'W')
     {
@@ -190,7 +190,7 @@ bool MoveCommand::invoke(void)
     if (!sh.racked_in.empty())
     {
         Telemetry::getInstance().write(
-            "Error: Ship is racked and cannot move: " + sh.racked_in);
+            "OPS: Ship is racked and cannot move: " + sh.racked_in);
         return false;
     }
 
@@ -205,7 +205,7 @@ bool MoveCommand::invoke(void)
     {
         Telemetry::getInstance().write(
             "NAV: " + sh.name +
-            " is not deployed. Ship must be in-theater to move.");
+            " is not deployed. It is still in shipyard.");
         return false;
     }
 
@@ -470,6 +470,8 @@ bool MoveCommand::invoke(void)
     // Save game state to persist changes
     StateMachine::getInstance().save_game(s);
 
+    std::string milieu_report;
+
     // Auto-update codex knowledge if entering a new system
     if (!finalSystem.empty())
     {
@@ -515,17 +517,14 @@ bool MoveCommand::invoke(void)
                         "' AND system_name='" + db.esc(finalSystem) + "'");
             }
 
-            Telemetry::getInstance().write("CODEX: " + finalSystem + " now " +
-                                           new_level + ".");
+            milieu_report.append("CODEX: ");
+            milieu_report.append(finalSystem);
+            milieu_report.append(" now ");
+            milieu_report.append(new_level);
+            milieu_report += '.';
         }
     }
 
-    std::ostringstream o;
-    o << "NAV: " << sh.name << " (" << sh.code << ") transit to "
-      << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
-      << "] complete. Power expended: " << totalCost << " PD";
-
-    Telemetry::getInstance().write(o.str());
 
     // Display computed path for inspection
     if (fullPath.size() > 1)
@@ -584,7 +583,7 @@ bool MoveCommand::invoke(void)
         };
 
         std::ostringstream pathOut;
-        pathOut << "NAV: Course plotted: ";
+        pathOut << "NAV: Course plotted. Standby.\n";
         for (size_t i = 0; i < fullPath.size(); ++i)
         {
             // Add connector before all but first
@@ -592,7 +591,7 @@ bool MoveCommand::invoke(void)
             {
                 if (isWarpline(fullPath[i - 1], fullPath[i]))
                 {
-                    pathOut << " = "; // Warpline jump
+                    pathOut << " >> "; // Warpline jump
                 }
                 else
                 {
@@ -617,7 +616,18 @@ bool MoveCommand::invoke(void)
                 pathOut << hex;
             }
         }
+        if (fullPath.size() > 0) {
+            pathOut << "\n";
+        }
         Telemetry::getInstance().write(pathOut.str());
+
+        std::ostringstream o;
+        o << "OPS: " << sh.name << " (" << sh.code << ") transit to "
+          << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
+          << "] complete.\nPower expended: " << totalCost << " PD";
+        Telemetry::getInstance().write(o.str());
+
+        Telemetry::getInstance().write(milieu_report);
     }
 
     // Check for combat trigger: enemy ships in destination hex
@@ -738,481 +748,3 @@ bool MoveCommand::invoke(void)
     return true;
 }
 
-#if 0
-bool MoveCommand::invoke(void)
-{
-    // Check if this command is allowed given current game state
-    MoveParams_t params;
-    params.ship_code = m_ship_code;
-    params.destination = m_destinations.empty() ? "" : m_destinations[0];
-
-    std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::MOVE, &params,
-                                                    inhibit_error))
-    {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
-        return false;
-    }
-
-    DatabaseManager& db = DatabaseManager::getInstance();
-    GameState s = StateMachine::getInstance().get_game_state();
-    int m_game_id = StateMachine::getInstance().get_game_id();
-
-    char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
-
-    if (!ship_exists(m_game_id, active_player, m_ship_code))
-    {
-        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
-                                       " is not in your fleet!");
-        return false;
-    }
-
-    ShipRow sh = load_ship(m_game_id, active_player, m_ship_code);
-
-    if (sh.attr.type != 'W')
-    {
-        Telemetry::getInstance().write(
-            "NAV: Only WarpShip class vessels can engage hyperdrive.");
-        return false;
-    }
-
-    if (sh.attr.PD <= 0)
-    {
-        Telemetry::getInstance().write(
-            "NAV: " + sh.name +
-            " has no power drive capacity. Unable to maneuver.");
-        return false;
-    }
-
-    if (!sh.racked_in.empty())
-    {
-        Telemetry::getInstance().write(
-            "Error: Ship is racked and cannot move: " + sh.racked_in);
-        return false;
-    }
-
-    std::string startHex = sh.at_hex;
-    if (startHex.empty() && !sh.at_system.empty())
-    {
-        startHex =
-            MapUtil::getInstance().resolve_system_hex(m_game_id, sh.at_system);
-    }
-
-    if (startHex.empty())
-    {
-        Telemetry::getInstance().write(
-            "NAV: " + sh.name +
-            " is not deployed. Ship must be in-theater to move.");
-        return false;
-    }
-
-    // Check if trying to move to current location
-    if (!m_destinations.empty())
-    {
-        std::string firstDest = m_destinations[0];
-        // Resolve system name to hex if needed
-        std::string destHex =
-            MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
-
-        if (destHex.empty())
-        {
-            destHex = firstDest; // Use as-is if not a system name
-        }
-
-        if (destHex == startHex)
-        {
-            Telemetry::getInstance().write("NAV: " + sh.name +
-                                           " is already at " + firstDest + ".");
-            return false;
-        }
-    }
-
-    // ============================================================================
-    // PATHFINDING ALGORITHM - PRESERVED EXACTLY FROM LEGACY CODE
-    // ============================================================================
-    MapGraph graph(m_game_id);
-    graph.load_state(active_player);
-
-    // Process multi-step path
-    std::string currentHex = startHex;
-    int totalCost = 0;
-    int allowance = sh.attr.PD - sh.pd_spent;
-    std::string finalSystem = sh.at_system;
-    std::string finalHex = startHex;
-    std::string errorMsg;
-
-    if (allowance <= 0)
-    {
-        Telemetry::getInstance().write(
-            "NAV: " + sh.name + " has exhausted power drive for this turn.");
-        return false;
-    }
-
-    // Collect full path for telemetry display
-    std::vector<std::string> fullPath;
-    fullPath.push_back(startHex);
-
-    for (size_t i = 0; i < m_destinations.size(); ++i)
-    {
-        std::string destTok = m_destinations[i];
-        std::string stepHex = graph.resolve_hex(destTok);
-        std::string stepSys;
-
-        if (!stepHex.empty())
-        {
-            // See if it matches a system name (reverse lookup for
-            // display/logic) - star_systems uses module_id from game
-            int mod = get_module_id_for_game(m_game_id);
-            auto sysr = db.query("SELECT name FROM star_systems WHERE "
-                                 "module_id=" +
-                                 std::to_string(mod) + " AND hex_id='" +
-                                 stepHex + "' LIMIT 1");
-            if (!sysr.empty())
-            {
-                stepSys = sysr[0][0];
-            }
-        }
-        else
-        {
-            errorMsg = "Unknown destination: " + destTok;
-            break;
-        }
-
-        int stepCost =
-            graph.get_path_cost(currentHex, stepHex, allowance - totalCost);
-
-        if (stepCost == -1)
-        {
-            int needed = graph.get_path_cost(currentHex, stepHex, 999);
-            if (needed != -1)
-            {
-                errorMsg = "Cannot reach " + destTok + " from " + currentHex +
-                           ". Needed " + std::to_string(needed) +
-                           " PD, but limit is " +
-                           std::to_string(allowance - totalCost) + ".";
-            }
-            else
-            {
-                errorMsg = "Cannot reach " + destTok + " from " + currentHex +
-                           " (No path or Blocked).";
-            }
-            break;
-        }
-
-        // Get actual path segment for telemetry
-        auto segPath =
-            graph.get_path(currentHex, stepHex, allowance - totalCost);
-        // Skip first element (it's the current hex, already in fullPath)
-        for (size_t j = 1; j < segPath.size(); ++j)
-        {
-            fullPath.push_back(segPath[j]);
-        }
-
-        // Apply system constraint modifiers
-        if (!stepSys.empty())
-        {
-            if (ConstraintEngine::is_movement_blocked(m_game_id, stepSys))
-            {
-                errorMsg = "Movement to " + stepSys +
-                           " is blocked by environmental hazards.";
-                break;
-            }
-
-            int modifier =
-                ConstraintEngine::get_movement_modifier(m_game_id, stepSys);
-
-            // Add star system environmental movement modifier
-            modifier +=
-                StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
-
-            // Add dynamic hex event modifier (NAVIGATION_HAZARD)
-            modifier += HexEventEngine::get_movement_modifier(m_game_id,
-                                                              s.round, stepHex);
-
-            stepCost += modifier;
-            if (stepCost < 1)
-            {
-                stepCost = 1; // Minimum 1 PD
-            }
-        }
-
-        totalCost += stepCost;
-        if (totalCost > allowance)
-        {
-            errorMsg = "Path exceeds PD allowance. Total cost would be " +
-                       std::to_string(totalCost) +
-                       ", remaining=" + std::to_string(allowance);
-            break;
-        }
-
-        currentHex = stepHex;
-        finalHex = stepHex;
-        finalSystem = stepSys;
-    }
-    // ============================================================================
-    // END PATHFINDING ALGORITHM
-    // ============================================================================
-
-    if (!errorMsg.empty())
-    {
-        Logger::instance().error(errorMsg);
-        Telemetry::getInstance().write("Error: " + errorMsg);
-        return false;
-    }
-
-    // Update ship location and PD spent
-    if (finalSystem.empty())
-    {
-        finalSystem.clear();
-    }
-    update_ship_location(m_game_id, active_player, sh.code, finalSystem,
-                         finalHex);
-    db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
-            " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
-            std::string(1, active_player) + "'" + " AND ship_code='" +
-            db.esc(sh.code) + "'");
-
-    // Save game state to persist changes
-    StateMachine::getInstance().save_game(s);
-
-    // Auto-update codex knowledge if entering a new system
-    if (!finalSystem.empty())
-    {
-        // Check current knowledge level
-        auto know = db.query("SELECT knowledge_level FROM codex_entries "
-                             "WHERE game_id=" +
-                             std::to_string(m_game_id) + " AND player='" +
-                             std::string(1, active_player) +
-                             "' AND system_name='" + db.esc(finalSystem) + "'");
-
-        std::string current_level = know.empty() ? "Unknown" : know[0][0];
-
-        // Upgrade if Unknown - check for LRS
-        if (current_level == "Unknown")
-        {
-            auto lrs_check =
-                db.query("SELECT lrs FROM ships WHERE game_id=" +
-                         std::to_string(m_game_id) + " AND owner='" +
-                         std::string(1, active_player) + "' AND ship_code='" +
-                         db.esc(sh.code) + "'");
-
-            int lrs =
-                lrs_check.empty() ? 0 : std::atoi(lrs_check[0][0].c_str());
-            std::string new_level = (lrs > 0) ? "Charted" : "Rumored";
-
-            if (know.empty())
-            {
-                db.exec("INSERT INTO codex_entries(game_id, player, "
-                        "system_name, knowledge_level, last_updated_turn) "
-                        "VALUES(" +
-                        std::to_string(m_game_id) + ",'" +
-                        std::string(1, active_player) + "','" +
-                        db.esc(finalSystem) + "','" + new_level + "'," +
-                        std::to_string(s.round) + ")");
-            }
-            else
-            {
-                db.exec("UPDATE codex_entries SET knowledge_level='" +
-                        new_level +
-                        "', last_updated_turn=" + std::to_string(s.round) +
-                        " WHERE game_id=" + std::to_string(m_game_id) +
-                        " AND player='" + std::string(1, active_player) +
-                        "' AND system_name='" + db.esc(finalSystem) + "'");
-            }
-
-            Telemetry::getInstance().write("CODEX: " + finalSystem + " now " +
-                                           new_level + ".");
-        }
-    }
-
-    std::ostringstream o;
-    o << "NAV: " << sh.name << " (" << sh.code << ") transit to "
-      << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
-      << "] complete. Power expended: " << totalCost << " PD";
-
-    Telemetry::getInstance().write(o.str());
-
-    // Display computed path for inspection
-    if (fullPath.size() > 1)
-    {
-        // Build enhanced path display:
-        // - Star hexes shown as NAME (hex#)
-        // - Warpline traversals use "=" connector
-        // - Regular hex moves use "->" connector
-
-        // Cache system names for hexes
-        std::unordered_map<std::string, std::string> hexToSys;
-        int mod = get_module_id_for_game(m_game_id);
-        auto sysList =
-            db.query("SELECT hex_id, name FROM star_systems WHERE module_id=" +
-                     std::to_string(mod));
-        for (const auto& row : sysList)
-        {
-            hexToSys[row[0]] = row[1];
-        }
-
-        // Check if two hexes are connected by warpline
-        auto isWarpline = [&](const std::string& h1,
-                              const std::string& h2) -> bool {
-            int m = get_module_id_for_game(m_game_id);
-            auto result = db.query(
-                "SELECT 1 FROM warplines WHERE module_id=" + std::to_string(m) +
-                " AND "
-                "((a_hex='" +
-                db.esc(h1) + "' AND b_hex='" + db.esc(h2) +
-                "') OR "
-                "(a_hex='" +
-                db.esc(h2) + "' AND b_hex='" + db.esc(h1) + "')) LIMIT 1");
-            return !result.empty();
-        };
-
-        std::ostringstream pathOut;
-        pathOut << "NAV: Course plotted: ";
-        for (size_t i = 0; i < fullPath.size(); ++i)
-        {
-            // Add connector before all but first
-            if (i > 0)
-            {
-                if (isWarpline(fullPath[i - 1], fullPath[i]))
-                {
-                    pathOut << " = "; // Warpline jump
-                }
-                else
-                {
-                    pathOut << " -> "; // Regular hex move
-                }
-            }
-
-            // Format hex: STARNAME (hex#) or just hex#
-            const std::string& hex = fullPath[i];
-            auto sit = hexToSys.find(hex);
-            if (sit != hexToSys.end())
-            {
-                pathOut << sit->second << " (" << hex << ")";
-            }
-            else
-            {
-                pathOut << hex;
-            }
-        }
-        Telemetry::getInstance().write(pathOut.str());
-    }
-
-    // Check for combat trigger: enemy ships in destination hex
-    char enemy = (active_player == 'A') ? 'B' : 'A';
-    bool litmus = CombatEngine::is_real_combat_state(m_game_id);
-
-    // if (!enemy_ships.empty() && std::atoi(enemy_ships[0][0].c_str()) > 0)
-    if (litmus) //  && std::atoi(enemy_ships[0][0].c_str()) > 0)
-    {
-        // Enemy ships present - trigger combat check
-        CombatEngine ce(m_game_id);
-        ce.check_for_combat_triggers(); // Creates combat if not exists
-
-        // Notify both players
-        std::string sysName = finalSystem.empty() ? finalHex : finalSystem;
-        std::string alertMsg =
-            "TACTICAL ALERT: Contact! Enemy forces detected in " + sysName +
-            "!\n>> Combat will resolve when movement phase ends.";
-
-        Telemetry::getInstance().write(alertMsg);
-        Telemetry::getInstance().tell(PlayerTarget::THEM, alertMsg);
-    }
-    else
-    {
-        // this is not a star-base hex.  So we cannot initiate combat
-        // even if there are enemy ships.  let's see what is there for
-        // alerting the player(s)
-        std::ostringstream inprox;
-        inprox << "SELECT "
-               << " UPPER(s.ship_code), UPPER(s.ship_name),  s.owner, "
-               << " CASE WHEN s.owner='" << std::string(1, active_player)
-               << "' "
-               << "    THEN 1 ELSE 0 END AS is_friendly, "
-               << " CASE WHEN s.owner <> '" << std::string(1, active_player)
-               << "' "
-               << " THEN 1 ELSE 0 END AS is_enemy, "
-               << " 0 AS is_neither_friend_nor_enemy, "
-               << "  hx.ships_in_hex, s.at_hex "
-               << " FROM ships s "
-               << " JOIN ( "
-               << " SELECT "
-               << " s2.at_hex, "
-               << " COUNT(*) AS ships_in_hex "
-               << "  FROM ships s2 "
-               << "  LEFT JOIN star_systems ss "
-               << "    ON ss.hex_id    = s2.at_hex "
-               << "  WHERE s2.game_id=" << std::to_string(m_game_id)
-               << "    AND s2.destroyed_at IS NULL "
-               << "    AND s2.racked_in IS NULL "
-               << "    AND s2.at_hex IS NOT NULL "
-               << "  GROUP BY s2.at_hex "
-               << "  HAVING "
-               << "    SUM(CASE WHEN s2.owner = '"
-               << std::string(1, active_player) << "' "
-               << "   THEN 1 ELSE 0 END) > 0 "
-               << "    AND "
-               << "    SUM(CASE WHEN s2.owner <> '"
-               << std::string(1, active_player) << "' "
-               << "   THEN 1 ELSE 0 END) > 0 "
-               << ") hx "
-               << "  ON hx.at_hex = s.at_hex "
-               << "  WHERE s.game_id=" << std::to_string(m_game_id)
-               << "  AND s.destroyed_at IS NULL "
-               << "  AND s.racked_in IS NULL "
-               << "  AND s.at_hex IS NOT NULL "
-               << "ORDER BY s.at_hex, s.owner, s.ship_code";
-
-        std::vector<std::vector<std::string>> obprox = db.query(inprox.str());
-
-        // If there are opposing forces in any non-star hex, we want to alert
-        // this!
-        if (!obprox.empty())
-        {
-            std::ostringstream pids;
-            pids << "SELECT u.id, UPPER(u.username), u.id, gs.seat "
-                 << " FROM users u, game_seats gs "
-                 << " WHERE gs.user_id = u.id "
-                 << " AND gs.game_id=" << std::to_string(m_game_id) << " AND "
-                 << " (gs.seat='" << std::string(1, active_player) << "' "
-                 << " OR gs.seat = '" << std::string(1, enemy) << "') "
-                 << " ORDER by gs.seat ASC";
-            auto involved = db.query(pids.str());
-
-            std::ostringstream whodat;
-            std::string you("You");
-            std::string them("Enemy");
-            char keyc = 'A';
-
-            // are both players in the game?
-            if (involved.size() == 2)
-            {
-                you = involved[0][1];
-                them = involved[1][1];
-            }
-
-            whodat << "> TACTICAL ALERT:\n"
-                   << "              SCANNERS DETECT\n"
-                   << "  ---------------------------------------\n"
-                   << "  Code  Name                        Owner\n"
-                   << "  ---------------------------------------\n";
-
-            for (std::vector<std::vector<std::string>>::iterator itr =
-                     obprox.begin();
-                 itr != obprox.end(); ++itr)
-            {
-                std::vector<std::string> row = *itr;
-                // s.ship_code, s.ship_name,  s.owner, "
-                whodat << std::left << std::setw(6)  << row[0];
-                whodat << std::left << std::setw(28) << row[1];
-                whodat << std::left << std::setw(5);
-                keyc = (char)(row[2].front());
-                std::string pis = (keyc == 'A') ? you : them;
-                whodat << pis << "\n";
-            }
-            Telemetry::getInstance().broadcast(whodat.str());
-        }
-    }
-    return true;
-}
-#endif

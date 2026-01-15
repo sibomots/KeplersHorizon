@@ -153,7 +153,7 @@ bool NextCommand::invoke(void)
     if (!StateMachine::getInstance().check_inhibits(CommandID::NEXT, &params,
                                                     inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::getInstance().write(inhibit_error);
         return false;
     }
 
@@ -194,24 +194,24 @@ bool NextCommand::invoke(void)
             Telemetry::getInstance().tell(PlayerTarget::THEM,
                                           "It's YOUR turn! " + s.phase_name());
         }
+    }
+    else
+    {
+        if (phase_change)
+        {
+            msg << "Phase: " << s.phase_name();
+            if (round_change)
+            {
+                msg << " Round: " << s.round;
+            }
+            msg_updated = true;
+        }
         else
         {
-            if (phase_change)
+            if (round_change)
             {
-                msg << "Phase: " << s.phase_name();
-                if (round_change)
-                {
-                    msg << " Round: " << s.round;
-                }
+                msg << "Round: " << s.round;
                 msg_updated = true;
-            }
-            else
-            {
-                if (round_change)
-                {
-                    msg << "Round: " << s.round;
-                    msg_updated = true;
-                }
             }
         }
     }

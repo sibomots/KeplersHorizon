@@ -44,9 +44,6 @@ bool get_draft_by_spec(int& did, int gid, char owner, std::string target)
             db.esc(target) +
             "')";
   auto rows = db.query(qry.c_str());
-
-  //jdw fprintf(stderr, "getting draft by spec:\n%s\n", qry.c_str());
-
   size_t sz = rows.size(); 
   if (sz == 0) 
   {
@@ -97,20 +94,27 @@ bool ship_exists(int game_id, char owner, const std::string& code)
 bool ship_exists_by_code_or_name(int game_id, char owner, const std::string& code)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query(
+    std::string q;
+    q.append( 
           "SELECT id FROM ships "
-          "WHERE game_id=" + std::to_string(game_id) +
-          "  AND destroyed_at IS NULL " + 
-          "  AND owner='" + std::string(1, owner) + "' "
-          "  AND "
-          "  ( "
-          "   ship_code='" + db.esc(code) + "' "
-          "      OR "
-          "   ship_name='" + db.esc(code) + "' "
-          "  ) "
-          " LIMIT 1");
-
-    return !rows.empty();
+          "WHERE game_id=");
+    q.append(std::to_string(game_id));
+    q.append(" AND destroyed_at IS NULL " );
+    q.append(" AND owner='");
+    q.append(std::string(1, owner));
+    q.append("' ");
+    q.append( "  AND  ( ");
+    q.append("   ship_code='");
+    q.append(db.esc(code));
+    q.append("' ");
+    q.append(" OR ");
+    q.append(" ship_name='");
+    q.append(db.esc(code));
+    q.append("') LIMIT 1");
+    
+    auto rows = db.query(q.c_str());
+    //jdw db.dump(rows);
+    return (rows.size() != 0);
 }
 
 std::vector<DraftRow> load_drafts_by_owner(int game_id, char owner)
@@ -198,8 +202,6 @@ void insert_draft(int game_id, char owner, const DraftRow& d)
         std::to_string(d.get_B()) + "," + std::to_string(d.get_S()) + "," +
         std::to_string(d.get_T()) + "," + std::to_string(d.get_M()) + "," +
         std::to_string(d.get_SR()) + ")";
-
-    // jdw fprintf(stderr, "Insert Draft:\n%s\n", q.c_str());
     db.exec(q);
 }
 
