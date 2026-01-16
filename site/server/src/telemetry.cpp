@@ -313,7 +313,7 @@ static std::string getShipsJson(int game_id, char player)
 
     sql.clear();
     sql.reserve(DatabaseManager::SQLSZ);
-    sql += "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
+    sql += "SELect ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
         "WHERE destroyed_at IS NULL "
         "AND game_id=";
     sql += std::to_string(game_id);

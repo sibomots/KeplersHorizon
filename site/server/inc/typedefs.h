@@ -75,6 +75,9 @@ typedef int AttributeValue;
 // Map of attributes for commands
 typedef std::map<AttributeID, AttributeValue> AttributeMap;
 
+typedef std::pair<int, int> FiringMissile;
+typedef std::vector<FiringMissile> MissileSet;
+
 // Command IDs for the check_inhibits() system
 enum class CommandID
 {
