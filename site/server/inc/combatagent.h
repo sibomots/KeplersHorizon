@@ -15,73 +15,10 @@
 #include <variant>
 #include <vector>
 
-typedef enum : int
-{
-    KH_CNOP = 0,
-    KH_CSTATUS,
-    KH_CORDER,
-    KH_CCOMMIT,
-    KH_CCANCEL,
-    KH_CAPPLY,
-    KH_CDRAFTS,
-    KH_CRETR
-} CombatOpCode;
-
-typedef enum : int
-{
-    KH_N_TACTIC = 0,
-    KH_A_TACTIC, // attack
-    KH_D_TACTIC, // dodge
-    KH_R_TACTIC, // retreat
-} CombatOpTactic;
-
-typedef enum : int
-{
-    KH_COMBAT_INVALID = 0,
-    KH_COMBAT_INIT,
-    KH_ATTACKER_COMBAT_ORDERS,
-    KH_ATTACKEE_COMBAT_ORDERS,
-    KH_COMBAT_DAMAGE_CALCULATE,
-    KH_ENV_CONSTRAINTS_MOD,
-    KH_TBD_MOD,
-    KH_ATTACKER_ASSIGN_SELF_DAMAGE,
-    KH_ATTACKEE_ASSIGN_SELF_DAMAGE,
-    KH_COMBAT_DESTROY_SHIPS,
-    KH_TEST_STALEMATE,
-    KH_FORCE_RETREAT,
-    KH_COMBAT_EPILOG,
-} CombatStage;
-
-typedef struct CombatSession
-{
-  public:
-    CombatStage combat_stage;
-    int game_id;
-    int module_id;
-    FightingPlayers players;
-
-    CombatSession()
-    {
-        combat_stage = KH_COMBAT_INVALID;
-        game_id = 0;
-        module_id = 0;
-        players = FightingPlayers{0, 0};
-    }
-    CombatSession(CombatStage stage, int gid, int mid,
-                  FightingPlayers combat_players)
-        : combat_stage(stage), game_id(gid), module_id(mid),
-          players(combat_players)
-    {
-    }
-
-    bool operator==(const CombatSession& other) const
-    {
-        return (game_id == other.game_id) && (module_id == other.module_id) &&
-               (players.first == other.players.first) &&
-               (players.second == other.players.second);
-    }
-
-} CombatSession;
+#include "typedefs.h"
+#include "attributemap.h"
+#include "util.h"
+#include "combattypes.h"
 
 class CombatParam
 {
@@ -380,14 +317,14 @@ class CombatOrderParam : public CombatParam
 {
   public:
     CombatOrderParam(int gid, int mid, char user, std::string attacker,
-                     std::string attackee, CombatOpTactic tactic,
+                     std::string attackee, char tactic,
                      AttributeMap attr, MissileSet missiles)
         : CombatParam(gid, mid, user), m_tactic(tactic), m_attacker(attacker),
           m_attackee(attackee), m_attr(attr), m_missiles(missiles)
     {
     }
 
-    CombatOrderParam() : CombatParam(), m_tactic(CombatOpTactic::KH_N_TACTIC)
+    CombatOrderParam() : CombatParam(), m_tactic(0)
     {
     }
 
@@ -422,7 +359,7 @@ class CombatOrderParam : public CombatParam
             attackee = _attackee;
             return *this;
         }
-        Builder& set_tactic(CombatOpTactic _tactic)
+        Builder& set_tactic(char _tactic)
         {
             tactic = _tactic;
             return *this;
@@ -449,7 +386,7 @@ class CombatOrderParam : public CombatParam
         CombatParam::Builder base_builder;
         std::string attacker;
         std::string attackee;
-        CombatOpTactic tactic;
+        char tactic;
         AttributeMap attr;
         MissileSet missiles;
     };
@@ -475,7 +412,7 @@ class CombatOrderParam : public CombatParam
     {
         return m_attackee;
     }
-    CombatOpTactic get_tactic()
+    char get_tactic()
     {
         return m_tactic;
     }
@@ -491,7 +428,7 @@ class CombatOrderParam : public CombatParam
   private:
     std::string m_attacker;
     std::string m_attackee;
-    CombatOpTactic m_tactic;
+    char m_tactic;
     AttributeMap m_attr;
     MissileSet m_missiles;
 };
@@ -668,8 +605,7 @@ class CombatRetreatParam : public CombatParam
 
 typedef std::variant<CombatStatusParam, CombatCancelParam, CombatCommitParam,
                      CombatDraftsParam, CombatRetreatParam, CombatApplyParam,
-                     CombatOrderParam, CombatParam>
-    CombatAgentPayload;
+                     CombatOrderParam, CombatParam> CombatAgentPayload;
 
 class CombatAgentParam
 {
@@ -778,6 +714,10 @@ class CombatAgentParam
     {
         return std::get<CombatDraftsParam>(m_payload);
     }
+    CombatStatusParam& asCombatStatusParam()
+    {
+        return std::get<CombatStatusParam>(m_payload);
+    }
 
     const CombatParam& asCombatParam() const
     {
@@ -869,6 +809,19 @@ class CombatAgent
         return instance;
     }
 
+
+    bool apply(CombatAgentParam& caparam);
+
+    CombatAgent(const CombatAgent&) = delete;
+    CombatAgent& operator=(const CombatAgent&) = delete;
+    CombatAgent(CombatAgent&&) = delete;
+    CombatAgent& operator=(CombatAgent&&) = delete;
+
+  private:
+    CombatAgent() = default;
+    ~CombatAgent() = default;
+
+
     bool apply(CombatParam& param);
     bool apply(CombatOrderParam& param);
     bool apply(CombatApplyParam& param);
@@ -878,14 +831,9 @@ class CombatAgent
     bool apply(CombatDraftsParam& param);
     bool apply(CombatStatusParam& param);
 
-  private:
-    std::vector<CombatSession> m_combats;
 
-    void evolve_combat(void);
-
+    CombatSessionState get_combat_state_at_hex(const int gid, const std::string& hex_id);
     bool is_param_valid(const CombatAgentPayload& param) const;
-    bool find_combat_session(CombatSession& session, int gid, int mid,
-                             char attacker, char attackee);
 };
 
 #endif

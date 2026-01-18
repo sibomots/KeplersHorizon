@@ -9,10 +9,11 @@
 #define __COMBAT_ORDER_COMMAND_H__
 
 #include <string>
-
 #include "icmd.h"
+#include "combattypes.h"
 
-class CombatOrderCommand : public ICmd
+
+class CombatOrderActor : public ICmd
 {
   private:
     std::string m_ship_code;
@@ -22,7 +23,9 @@ class CombatOrderCommand : public ICmd
     int m_power_b;
     int m_power_s;
     int m_power_t;
-    std::string m_missiles_json;
+    int m_power_sr;
+    //jdw std::string m_missiles_json;
+    MissileSet m_firing_missiles;
 
   public:
     class Builder
@@ -30,14 +33,18 @@ class CombatOrderCommand : public ICmd
       public:
         std::string _ship_code;
         std::string _target_id;
-        char _tactic = 'A';
+        char _tactic;
         int _power_d = 0;
         int _power_b = 0;
         int _power_s = 0;
         int _power_t = 0;
-        std::string _missiles_json = "[]";
+        int _power_sr = 0;
+        //jdw std::string _missiles_json = "[]";
+        MissileSet _firing_missiles;
 
-        Builder()
+        Builder() :
+            _tactic(KH_N_TACTIC),
+            _power_d(0), _power_b(0), _power_s(0), _power_t(0), _power_sr(0)
         {
         }
 
@@ -83,27 +90,36 @@ class CombatOrderCommand : public ICmd
             return *this;
         }
 
-        Builder& missiles(const std::string& m)
+        Builder& system_rack_power(int sr)
         {
-            _missiles_json = m;
+            _power_sr = sr;
+            return *this;
+        }
+
+        Builder& missiles(int mp) // const std::string& m)
+        {
+            // _missiles_json = m;
+            _firing_missiles.push_back(mp);
             return *this;
         }
 
         ICmd* build()
         {
-            return new CombatOrderCommand(*this);
+            return new CombatOrderActor(*this);
         }
     };
 
     bool invoke(void) override;
 
   private:
-    CombatOrderCommand(Builder& builder)
+    CombatOrderActor(Builder& builder)
         : m_ship_code(std::move(builder._ship_code)),
           m_target_id(std::move(builder._target_id)), m_tactic(builder._tactic),
           m_power_d(builder._power_d), m_power_b(builder._power_b),
           m_power_s(builder._power_s), m_power_t(builder._power_t),
-          m_missiles_json(std::move(builder._missiles_json))
+          m_power_sr(builder._power_sr),
+          //jdw  m_missiles_json(std::move(builder._missiles_json)),
+          m_firing_missiles(std::move(builder._firing_missiles))
     {
     }
 };

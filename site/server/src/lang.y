@@ -13,13 +13,16 @@
 #include <vector>
 #include <map>
 #include "typedefs.h"
+#include "attributemap.h"
 #include "Build.h"
 #include "logger.h"
 #include "next_command.h"
 #include "done_command.h"
 #include "deploy_command.h"
 #include "move_command.h"
-#include "combat_order_command.h"
+
+#include "combat_order_actor.h"
+
 #include "combat_apply_command.h"
 #include "combat_drafts_command.h"
 #include "combat_commit_command.h"
@@ -65,7 +68,7 @@ extern "C" FILE *yyin;
 	void yyerror(YYLTYPE* loc, const char* msg);
 
 // BUGBUG
-CombatOrderCommand::Builder* g_combat_order_builder = new CombatOrderCommand::Builder();
+CombatOrderActor::Builder* g_combat_order_builder = new CombatOrderActor::Builder();
 CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
 
 // Global builder for repair command
@@ -556,7 +559,7 @@ combat_cmd:
        SafeDelete(pCmd);
        // Reset builder for next command
        delete g_combat_order_builder;
-       g_combat_order_builder = new CombatOrderCommand::Builder();
+       g_combat_order_builder = new CombatOrderActor::Builder();
    }
 
    // co
@@ -567,7 +570,7 @@ combat_cmd:
        SafeDelete(pCmd);
        // Reset builder for next command
        delete g_combat_order_builder;
-       g_combat_order_builder = new CombatOrderCommand::Builder();
+       g_combat_order_builder = new CombatOrderActor::Builder();
    }
 
    // combat apply ...
@@ -657,7 +660,7 @@ combat_order_spec:
       g_combat_order_builder->tube_power($1);
   }
   | TOK_M_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->missiles(std::to_string($1));
+      g_combat_order_builder->missiles($1); // std::to_string($1));
   }
   ;
 
@@ -676,7 +679,7 @@ additional_combat_order_spec:
       g_combat_order_builder->tube_power($1);
   }
   | TOK_M_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->missiles(std::to_string($1));
+      g_combat_order_builder->missiles($1); // std::to_string($1));
   }
   ;
 

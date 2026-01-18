@@ -13,12 +13,22 @@
 #include <iomanip>
 #include <random>
 #include <sstream>
+#include <vector>
 
 #include "db.h"
 
-// These functions are here for utility.
-// Stop trying to re-create them as static functions throughout the software.
-
+std::string join_vector(const std::vector<int>& v, const std::string delim)
+{
+    std::stringstream ss;
+    for(size_t i  = 0 ; i < v.size(); ++i) {
+          ss << std::to_string(v[i]);
+          if ( i < v.size() - 1) {
+             ss << delim;
+          }
+    }
+    return ss.str();
+}
+    
 std::string trim(const std::string& s)
 {
     auto start = s.begin();
