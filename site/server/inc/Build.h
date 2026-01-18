@@ -10,6 +10,7 @@
 
 #include <string>
 #include "typedefs.h"
+#include "attributemap.h"
 #include "icmd.h"
 #include "statemachine.h"
 

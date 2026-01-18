@@ -42,6 +42,8 @@ ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
 # Source files
 set(SRCS
+src/combatagent.cpp
+src/combat_order_actor.cpp
 src/configr.cpp
 src/Build.cpp
 src/Combat.cpp

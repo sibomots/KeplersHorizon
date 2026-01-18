@@ -13,7 +13,10 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <vector>
+#include <utility>
 
+#include "attributemap.h"
 #include "json.h"
 
 // clang-format off
@@ -58,24 +61,8 @@ enum PhaseIndex
     PH_END_TURN = 4
 };
 
-// Ship attribute identifiers
-enum class AttributeID : int
-{
-    POWER_DRIVE,
-    BEAM,
-    SCREEN,
-    TUBE,
-    MISSILE,
-    SYSTEM_RACK
-};
-
-// Attribute value type (all attributes are currently int)
-typedef int AttributeValue;
-
-// Map of attributes for commands
-typedef std::map<AttributeID, AttributeValue> AttributeMap;
-
-typedef std::pair<int, int> FiringMissile;
+      
+typedef int FiringMissile;
 typedef std::vector<FiringMissile> MissileSet;
 
 // Command IDs for the check_inhibits() system
@@ -158,5 +145,8 @@ typedef struct
     int base_price;
 } CommodityItem;
 
-// end typedefs
+
+
+typedef std::pair<char, char> FightingPlayers;
+
 #endif

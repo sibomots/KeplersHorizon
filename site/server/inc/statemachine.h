@@ -13,6 +13,7 @@
 #include "db.h"
 #include "icmd.h"
 #include "typedefs.h"
+#include "attributemap.h"
 
 class GameState
 {
