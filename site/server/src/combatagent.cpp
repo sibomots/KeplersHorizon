@@ -212,7 +212,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
     query_stats_attacker.append(db.esc(attacker));
     query_stats_attacker.append("' OR ship_name='");
     query_stats_attacker.append(db.esc(attacker));
-    query_stats_attacker.append("'");
+    query_stats_attacker.append("')");
     auto attacker_stats = db.query(query_stats_attacker.c_str());
 
     if (attacker_stats.empty() || attacker_stats[0][0].empty())

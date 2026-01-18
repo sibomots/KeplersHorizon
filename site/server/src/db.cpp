@@ -106,7 +106,7 @@ void DatabaseManager::exec(const std::string& q)
                 std::string err = "Unable to recover trying to connect database";
                 throw std::runtime_error(err.c_str());
     }
-    fprintf(stderr, "DB::EXEC: %s\n", q.c_str());
+    //jdw fprintf(stderr, "DB::EXEC: %s\n", q.c_str());
     if (mysql_query(driver, q.c_str()))
     {
         Logger::instance().info("[DB] QUERY Failed: " + q);
@@ -127,7 +127,7 @@ DatabaseManager::query(const std::string& q)
                 throw std::runtime_error(err.c_str());
     }
 
-    fprintf(stderr, "DB::QUERY: %s\n", q.c_str());
+    //jdw fprintf(stderr, "DB::QUERY: %s\n", q.c_str());
     if (mysql_query(driver, q.c_str()))
     {
         Logger::instance().info("QUERY: " + q);
@@ -163,7 +163,7 @@ DatabaseManager::query(const std::string& q)
         out.push_back(r);
     }
     mysql_free_result(res);
-    dump(out);
+    //jdw dump(out);
     return out;
 }
 
