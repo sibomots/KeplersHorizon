@@ -1,163 +1,210 @@
 ##################################################################################
-## This file is part of Kepler's Horizon
-##
-## Licensed under BSD 3-Clause License
-##
-## Copyright (c) 2025, sibomots
-#################################################################################
-cmake_minimum_required(VERSION 3.10)
+## Kepler's Horizon - unified build
+## Constraints satisfied:
+##   - NO file(GLOB ...) anywhere
+##   - NO listing source/header filenames in any CMakeLists.txt
+##   - Subordinate CMakeLists.txt are <= 2 lines (they just register)
+##   - NO sub-libraries: only object compilation + single executable
+##   - Uses git ls-files as the only allowed enumeration mechanism
+##   - CMake 3.10 compatible
+##################################################################################
 
+cmake_minimum_required(VERSION 3.10)
 project(kh LANGUAGES CXX)
 
-# Match original Makefile intent
+# ---- Toolchain / flags ----
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-O0 -pedantic -g)
 
-# Point CMake at the custom tools
+# ---- Custom tool paths ----
 set(BISON_EXECUTABLE "/opt/bison3.8/bin/bison" CACHE FILEPATH "Bison executable")
-set(FLEX_EXECUTABLE  "/opt/flex2.6.4/bin/flex" CACHE FILEPATH "Flex executable")
+set(FLEX_EXECUTABLE  "/opt/flex2.6.4/bin/flex"  CACHE FILEPATH "Flex executable")
 
-# Get Git SHA
+find_package(BISON REQUIRED)
+find_package(FLEX  REQUIRED)
+
+# ---- Git SHA define ----
 execute_process(
-    COMMAND git rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse --short HEAD
     OUTPUT_VARIABLE GIT_SHA
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _gitsha_rc
 )
-if(NOT GIT_SHA)
+if(NOT _gitsha_rc EQUAL 0 OR NOT GIT_SHA)
     set(GIT_SHA "unknown")
 endif()
 add_definitions(-DGIT_SHA="${GIT_SHA}")
 
-find_package(BISON REQUIRED)
-find_package(FLEX REQUIRED)
+# ==============================================================================
+# Registration API (subordinate CMakeLists are 1-liners)
+# ==============================================================================
 
-BISON_TARGET(Parser src/lang.y ${CMAKE_CURRENT_BINARY_DIR}/lang.cpp COMPILE_FLAGS "-d -v -g")
-FLEX_TARGET(Scanner src/scan.lex ${CMAKE_CURRENT_BINARY_DIR}/scan.cpp)
+# Global properties:
+#   KH_MODULE_ROOTS  : list of directory prefixes (relative to CMAKE_SOURCE_DIR)
+#   KH_INCLUDE_DIRS  : include directories to apply to the kh target
+function(kh_register_module)
+    get_filename_component(_abs "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+    file(RELATIVE_PATH _rel "${CMAKE_SOURCE_DIR}" "${_abs}")
+
+    set_property(GLOBAL APPEND PROPERTY KH_MODULE_ROOTS "${_rel}")
+
+    if(EXISTS "${_abs}/inc")
+        set_property(GLOBAL APPEND PROPERTY KH_INCLUDE_DIRS "${_abs}/inc")
+    endif()
+    # If headers in src are included directly, keep this.
+    if(EXISTS "${_abs}/src")
+        set_property(GLOBAL APPEND PROPERTY KH_INCLUDE_DIRS "${_abs}/src")
+    endif()
+endfunction()
+
+function(kh_register_interface)
+    get_filename_component(_abs "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+    file(RELATIVE_PATH _rel "${CMAKE_SOURCE_DIR}" "${_abs}")
+
+    set_property(GLOBAL APPEND PROPERTY KH_MODULE_ROOTS "${_rel}")
+    set_property(GLOBAL APPEND PROPERTY KH_INCLUDE_DIRS "${_abs}")
+endfunction()
+
+function(kh_register_parser)
+    get_filename_component(_abs "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+    file(RELATIVE_PATH _rel "${CMAKE_SOURCE_DIR}" "${_abs}")
+
+    set_property(GLOBAL APPEND PROPERTY KH_MODULE_ROOTS "${_rel}")
+endfunction()
+
+# ==============================================================================
+# Source enumeration WITHOUT GLOB / WITHOUT file lists
+#   - Uses: git ls-files (newline separated; CMake 3.10 cannot handle "\0")
+#   - Filters by: registered module root prefixes (e.g. "app/", "combat/", ...)
+# ==============================================================================
+
+function(kh_collect_git_ls_files out_var)
+    execute_process(
+        COMMAND git -C "${CMAKE_SOURCE_DIR}" ls-files
+        OUTPUT_VARIABLE _out
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE _rc
+    )
+    if(NOT _rc EQUAL 0)
+        message(FATAL_ERROR
+            "git ls-files failed. This build requires a git worktree because GLOB and per-file lists are forbidden."
+        )
+    endif()
+
+    # Convert newline-separated output to a CMake list.
+    # (Assumes no filenames contain newlines; sane repos do not.)
+    string(REPLACE "\n" ";" _files "${_out}")
+    set(${out_var} "${_files}" PARENT_SCOPE)
+endfunction()
+
+function(kh_filter_by_module_roots out_srcs out_hdrs)
+    get_property(_roots GLOBAL PROPERTY KH_MODULE_ROOTS)
+    if(NOT _roots)
+        message(FATAL_ERROR "No module roots registered. Check add_subdirectory(...) list and subordinate CMakeLists.")
+    endif()
+
+    kh_collect_git_ls_files(_all)
+
+    set(_srcs "")
+    set(_hdrs "")
+    set(_has_main FALSE)
+
+    foreach(f IN LISTS _all)
+        # Must be under one of the registered roots.
+        set(_match FALSE)
+        foreach(r IN LISTS _roots)
+            if(f MATCHES "^${r}/")
+                set(_match TRUE)
+                break()
+            endif()
+        endforeach()
+        if(NOT _match)
+            continue()
+        endif()
+
+        if(f MATCHES "\\.(c|cc|cpp|cxx)$")
+            list(APPEND _srcs "${CMAKE_SOURCE_DIR}/${f}")
+            if(f STREQUAL "app/src/main.cpp")
+                set(_has_main TRUE)
+            endif()
+        elseif(f MATCHES "\\.(h|hh|hpp|hxx)$")
+            list(APPEND _hdrs "${CMAKE_SOURCE_DIR}/${f}")
+        elseif(f MATCHES "\\.(y|yy|ypp|l|lex)$")
+            list(APPEND _hdrs "${CMAKE_SOURCE_DIR}/${f}")
+        endif()
+    endforeach()
+
+    if(NOT _srcs)
+        message(FATAL_ERROR
+            "Collected zero C/C++ sources from registered roots. "
+            "Either roots don't match repo paths, or files are not tracked by git."
+        )
+    endif()
+
+    if(NOT _has_main)
+        message(FATAL_ERROR
+            "Did not collect app/src/main.cpp. "
+            "Either it isn't tracked by git, or the app module wasn't registered."
+        )
+    endif()
+
+    set(${out_srcs} "${_srcs}" PARENT_SCOPE)
+    set(${out_hdrs} "${_hdrs}" PARENT_SCOPE)
+endfunction()
+
+# ==============================================================================
+# Subtrees (must match your actual directories)
+# ==============================================================================
+
+add_subdirectory(ships)
+add_subdirectory(misc)
+add_subdirectory(combat)
+add_subdirectory(milieu)
+add_subdirectory(app)
+add_subdirectory(repres)
+add_subdirectory(map)
+add_subdirectory(database)
+add_subdirectory(turn)
+add_subdirectory(move)
+add_subdirectory(interface)
+add_subdirectory(parser)
+
+# Top-level generic headers (non-interface)
+set_property(GLOBAL APPEND PROPERTY KH_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/inc")
+
+# ==============================================================================
+# Parser generation
+# ==============================================================================
+
+BISON_TARGET(Parser
+    ${CMAKE_SOURCE_DIR}/parser/lang.y
+    ${CMAKE_CURRENT_BINARY_DIR}/lang.cpp
+    COMPILE_FLAGS "-d -v -g"
+)
+FLEX_TARGET(Scanner
+    ${CMAKE_SOURCE_DIR}/parser/scan.lex
+    ${CMAKE_CURRENT_BINARY_DIR}/scan.cpp
+)
 ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
 
+# ==============================================================================
+# Build ONE executable (no sub-libraries)
+# ==============================================================================
 
-# Source files
-set(SRCS
-src/combatagent.cpp
-src/combat_order_actor.cpp
-src/configr.cpp
-src/Build.cpp
-src/Combat.cpp
-src/Move.cpp
-src/RepRes.cpp
-src/Turn.cpp
-src/account.cpp
-src/cmd.cpp
-src/comms.cpp
-src/db.cpp
-src/events.cpp
-src/fleet_command.cpp
-src/cargo_command.cpp
-src/system_command.cpp
-src/survey_command.cpp
-src/score_command.cpp
-src/extract_command.cpp
-src/help_command.cpp
-src/crt_command.cpp
-src/status_command.cpp
-src/hex_command.cpp
-src/galaxy_command.cpp
-src/delete_command.cpp
-src/quit_command.cpp
-src/market_command.cpp
-src/trade_command.cpp
-src/fabricate_command.cpp
-src/outfit_command.cpp
-src/constraints.cpp
-src/salvage_command.cpp
-src/retreat_command.cpp
-src/facilities.cpp
-src/turn_end.cpp
-src/hex_events.cpp
-src/init.cpp
-src/json.cpp
-src/logger.cpp
-src/main.cpp
-src/mapgraph.cpp
-src/maputil.cpp
-src/moduleutil.cpp
-src/roommanager.cpp
-src/rooms_api.cpp
-src/save_command.cpp
-src/ships.cpp
-src/srvmgr.cpp
-src/star_system_constraints.cpp
-src/state.cpp
-src/statemachine.cpp
-src/telemetry.cpp
-src/util.cpp
-${BISON_Parser_OUTPUTS}
-${FLEX_Scanner_OUTPUTS}
-)
-
-# Header files (not required for build, but useful for IDEs)
-set(HDRS
-inc/configr.h
-inc/app.h
-inc/Build.h
-inc/cmd.h
-inc/combat.h
-inc/comms.h
-inc/db.h
-inc/deploy_command.h
-inc/done_command.h
-inc/events.h
-inc/ships.h
-inc/icmd.h
-inc/init.h
-inc/json.h
-inc/logger.h
-inc/mapgraph.h
-inc/maputil.h
-inc/move_command.h
-inc/next_command.h
-inc/repair_command.h
-inc/resupply_command.h
-inc/roommanager.h
-inc/ships.h
-inc/srvmgr.h
-inc/cargo_command.h
-inc/system_command.h
-inc/survey_command.h
-inc/score_command.h
-inc/extract_command.h
-inc/help_command.h
-inc/market_command.h
-inc/trade_command.h
-inc/fabricate_command.h
-inc/constraints.h
-inc/salvage_command.h
-inc/facilities.h
-inc/turn_end.h
-inc/state.h
-inc/statemachine.h
-inc/telemetry.h
-inc/typedefs.h
-inc/util.h
-)
+kh_filter_by_module_roots(KH_SRCS KH_HDRS)
 
 add_executable(kh
-    ${SRCS}
-    ${HDRS}
+    ${KH_SRCS}
+    ${KH_HDRS}
+    ${BISON_Parser_OUTPUTS}
+    ${FLEX_Scanner_OUTPUTS}
 )
 
-# Make headers visible to all source files
-target_include_directories(kh
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc
-)
+get_property(KH_INCLUDE_DIRS GLOBAL PROPERTY KH_INCLUDE_DIRS)
+target_include_directories(kh PRIVATE ${KH_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
-# Link MySQL client (exact Makefile equivalent)
-target_link_libraries(kh
-    mysqlclient
-)
+target_link_libraries(kh mysqlclient)
 

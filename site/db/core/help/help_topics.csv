@@ -1,21 +1,21 @@
 1,"TOPIC: GENERAL
 SYNOPSIS:
   HELP           Show this help
-  HELP {topic}   Show detailed help on a topic
+  HELP <topic>   Show detailed help on a topic
   HELP TOPICS    List available topics
 DESCRIPTION:
   Kepler's Horizon - A two-player tactical game of space combat.
-  Players build ships, move them, and resolve combat without dice.
+  Players build ships, move them, and resolve combat.
   The objective is to occupy your opponent's base star(s).
-  For complete documentation: github.com/sibomots/KeplersHorizon/wiki
+  For complete documentation: http://keplershorizon.com
 SEE ALSO: build, move, combat, economy, info, turn"
 2,"TOPIC: BUILD
 SYNOPSIS:
-  BN W/S {name}       Build new Warpship (W) or Systemship (S)
-  BS {ship} {specs}   Set ship specifications
-  BC                  Commit draft to fleet
-  BX                  Cancel current draft
-  BD                  Show pending drafts
+  BN <W|S> <name>       Build new Warpship (W) or Systemship (S)
+  BS <ship> <specs>   Set ship specifications
+  BC <ship>           Commit draft to fleet
+  BX <ship>           Cancel current draft
+  BD [ship]           Show pending drafts, or draft of [ship]
 DESCRIPTION:
   Create and configure new ships during the Build Ships phase.
   Attributes and costs:
@@ -30,15 +30,15 @@ DESCRIPTION:
   Systemships operate within star hexes, cannot use Warplines.
 EXAMPLES:
   > bn w Falcon
-  > bs W1 pd=9 b=3 s=2 t=1 m=3
+  > bs Falcon pd=9 b=3 s=2 t=1 m=3
   > bc
 SEE ALSO: fleet, deploy, ship"
 3,"TOPIC: MOVE
 SYNOPSIS:
-  M {ship} {dest...}      Move ship through waypoints
-  PICK {ship}             Rack systemship into warpship
-  DROP {ship}             Unrack systemship from warpship
-  DEPLOY {ship} {system}  Deploy ship to star system
+  M <ship> <dest...>      Move ship through waypoints
+  PICK <ship> <dest>      Rack systemship <ship> into warpship <dest>
+  DROP <ship>             Unrack systemship from warpship
+  DEPLOY <ship> <system>  Deploy ship to star system
 DESCRIPTION:
   Movement is governed by Power/Drive (PD).
   Each PD point allows one of:
@@ -46,25 +46,24 @@ DESCRIPTION:
     - Move full distance along a Warpline
     - Pick up one Systemship (costs 1 PD)
     - Drop off one Systemship (costs 1 PD)
-  Warpships must stop on any Star Hex occupied by enemy ships.
-  Systemships cannot move under their own power.
+  Warpships are forced to stop on any Star Hex occupied
+  by enemy ships.  Systemships cannot move under their own power.
 EXAMPLES:
   > m W1 BELIX
-  > pick S1
-  > deploy W1 ARVEN
+  > pick S1 W1
+  > deploy W4 ARVEN
 SEE ALSO: fleet, system, galaxy"
 4,"TOPIC: COMBAT
 SYNOPSIS:
-  C                       Show active combat status
-  CO {ship} A {target}    Order ship to ATTACK target
-  CO {ship} D             Order ship to DODGE
-  CO {ship} E             Order ship to RETREAT (Warpships only)
+  CO <ship> A <target>    Order ship to ATTACK target
+  CO <ship> D             Order ship to DODGE
+  CO <ship> E             Order ship to RETREAT (Warpships only)
   CC                      Commit combat orders
   CX                      Cancel combat orders
 DESCRIPTION:
   Combat occurs when opposing ships occupy the same star hex.
   Each combat round, players write orders including:
-    - Tactic: Attack, Dodge, or Retreat
+    - Tactic: (A) Attack, (D) Dodge, or (E) Retreat
     - Target for Beam fire
     - Target for each Missile and its drive setting
     - Power allocation: PD to Drive, Beams, Screens, Tubes
@@ -72,18 +71,18 @@ DESCRIPTION:
   Beams and Screens cannot be used when firing Missiles.
   Systemships may never select Retreat.
 EXAMPLES:
-  > co W1 a E1
-  > cc
+  > CO W1 A S1 PD=2 B=1
+  > CC
 SEE ALSO: crt, ship, fleet"
 5,"TOPIC: ECONOMY
 SYNOPSIS:
   EXTRACT SCAN            Scan for harvestable resources
-  EXTRACT {ship} {type}   Harvest resource (e.g., extract W1 rare earth)
+  EXTRACT <ship> <type>   Harvest resource (e.g., extract W1 rare earth)
   MARKET                  View market prices
-  TRADE BUY {type} {qty}  Buy resources
-  TRADE SELL {type} {qty} Sell resources
+  TRADE BUY <type> <qty>  Buy resources
+  TRADE SELL <type> <qty> Sell resources
   FABRICATE               List fabrication recipes
-  FAB {recipe} {ship}     Fabricate items
+  FAB <recipe> <ship>     Fabricate items
 DESCRIPTION:
   Resources: FERROUS, RARE_EARTH, RADIOACTIVE, CRYSTALLINE,
              VOLATILE, WATER, ORGANIC, EXOTIC
@@ -98,8 +97,8 @@ SYNOPSIS:
   STATUS           Display current game state
   FLEET            List your ships and their status
   SCORE            Show victory points and credits
-  SYSTEM {name}    Show details for a star system
-  SURVEY {system}  Survey a system for intel
+  SYSTEM <name>    Show details for a star system
+  SURVEY <system>  Survey a system for intel
   CRT              Display Combat Results Table
   GALAXY           Show galaxy map
 DESCRIPTION:
@@ -130,7 +129,7 @@ SEE ALSO: score, build, move, combat"
 8,"TOPIC: SHIP
 SYNOPSIS:
   FLEET          List all your ships
-  CARGO {ship}   View ship cargo manifest
+  CARGO <ship>   View ship cargo manifest
 DESCRIPTION:
   Ship Types:
     WARPSHIP (W) - Has Warp Generator, travels via Warplines
@@ -165,8 +164,8 @@ EXAMPLES:
 SEE ALSO: combat, ship"
 10,"TOPIC: MISSILES
 SYNOPSIS:
-  FAB missiles {ship}   Fabricate Missiles
-  RESUPPLY {ship}       Resupply Missiles at base
+  FAB missiles <ship>   Fabricate Missiles
+  RESUPPLY <ship>       Resupply Missiles at base
 DESCRIPTION:
   Missiles are fired through Tubes at enemy ships.
   Each Tube fires one Missile per combat round.

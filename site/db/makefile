@@ -1,10 +1,15 @@
-DBUSR=frog
+USR=frog
+PASS=foobar
+DB=mysql -vv -u $(USR) -D mysql -p$(PASS) 
+
+DBUSR=borusr
 DBPASS=foobar
-DB=mysql -vv -u $(DBUSR) -D mysql -p$(DBPASS) 
+DB_PROD=mysql -vv -u $(DBUSR) -D khdb2 -p$(DBPASS) 
 it:
-	cat ./Game.sql | $(DB)
-	cat ./core/Load.sql | $(DB)
-	cat ./modules/kh/LoadModule.sql | $(DB)
-	cat ./99-fix.sql | $(DB)
-	cat 99-fix.sql | $(DB)
+	cat ./Init.sql | $(DB)
+	cat ./Game.sql | $(DB_PROD)
+	cat ./core/Load.sql | $(DB_PROD)
+	cat ./modules/kh/LoadModule.sql | $(DB_PROD)
+	cat ./99-fix.sql | $(DB_PROD)
+	cat 99-fix.sql | $(DB_PROD)
 

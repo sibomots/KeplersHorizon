@@ -1,0 +1,24 @@
+while ($x = <DATA>)
+{
+   chomp $x;
+  #  print "mkdir -p $x/inc\n",
+  #       "mkdir -p $x/src\n";
+
+  $line = "kh_register_module()";
+  open(CM, "> $x/CMakeLists.txt");
+  print CM $line, "\n";
+  close CM;
+}
+
+__END__
+ships
+misc
+combat
+milieu
+app
+repres
+map
+database
+turn
+parser
+move
