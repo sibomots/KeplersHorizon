@@ -56,8 +56,27 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 
     // Configure StateMachine with DB context
     StateMachine::getInstance().set_game_id(a.game_id);
+
+    // BEGIN BUGBUG
+    // This is probably OK --- the server is single threaded -
+    //   When a new command comes in from either player, we need to know
+    //   which player is issuing _that_ command and that's why we set
+    //   the statemachine to the 'current' player to this player.
+    // The thread of control completes and the next command that is
+    //  handled by this routine will set the 'current' player to whomever
+    //  is sending the command.
+    //
+    // This does not affect the state of the "active player" -- the player who
+    //  owns the turn being played.
+    // This game loop will take commands from either player at any time.
+    //   ==> Handling per user commands is tied to the current_player
+    //   ==> The state machine keeps track of the active player (the turn holding
+    //       player).  All State Machine inhibits are based on the turn-holding
+    //       player compared to the 'current' player issuing the candidate command.
+
     StateMachine::getInstance().set_current_player(a.player);
     StateMachine::getInstance().set_current_user_id(a.user_id);
+    // END BUGBUG
 
     // Clear telemetry message buffer before command execution
     Telemetry::getInstance().clear_messages();

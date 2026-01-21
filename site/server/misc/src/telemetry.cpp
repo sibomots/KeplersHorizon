@@ -228,7 +228,7 @@ void Telemetry::source_messages(std::string& result_msg)
 void Telemetry::tell(PlayerTarget target, const std::string& msg)
 {
     // Queue message for specific player (delivered via heartbeat)
-    // ME = the player who made this request (from set_current_player)
+    // ME = the player who made this request (from get_current_player)
     // THEM = the other player
     char requesting_player = StateMachine::getInstance().get_current_player();
     char target_player = (target == PlayerTarget::ME)
@@ -451,7 +451,11 @@ void Telemetry::status(char player, HttpResponse* resp)
 
     if (!s.combat_summary_json.empty())
     {
+
+        Logger::instance().info(">>>COMBAT TO SEND:");
+        Logger::instance().info(s.combat_summary_json);
         status_json << "\"combat\":" << s.combat_summary_json << ",";
+        Logger::instance().info("<<<COMBAT SUMMARY SENT");
     }
 
     status_json << "\"notes\":\"" << json_escape(s.notes()) << "\"";
