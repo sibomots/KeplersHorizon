@@ -1,1 +1,1 @@
-kh_register_module()
+kh_register_module_cpp()

@@ -13,7 +13,6 @@
 #include "typedefs.h"
 #include "kherr.h"
 #include "localization.h"
-#include "costs.h"
 
 class ShipAttributes
 {
@@ -143,7 +142,7 @@ class DraftRow
        switch(attr.type)
        {
          case 'W':
-             subtotal += K_WARPDRIVE_COST; // WarpDrive
+             subtotal += 5; // Warp Drive Cost
          default:
              subtotal += 0; // No Warp Drive
        }
