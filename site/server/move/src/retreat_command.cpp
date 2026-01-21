@@ -15,6 +15,7 @@
 #include "moduleutil.h"
 #include "statemachine.h"
 #include "telemetry.h"
+#include "logger.h"
 
 bool RetreatCommand::invoke(void)
 {
@@ -105,6 +106,7 @@ bool RetreatCommand::invoke(void)
             "', escape_pending=0 WHERE game_id=" + std::to_string(s.game_id) +
             " AND ship_code='" + db.esc(ship_code) + "'");
 
+
     // Get destination system name for message
     int mod = get_module_id_for_game(s.game_id);
     auto dest_sys = db.query("SELECT name FROM star_systems WHERE module_id=" +
@@ -119,6 +121,49 @@ bool RetreatCommand::invoke(void)
 
     Telemetry::getInstance().write("RETREAT: " + ship_code +
                                    " withdraws to " + dest_name);
+
+    // Update the combat status -
+    // The retreat might  have left the hex
+    // in combat no longer in combat.
+
+    // Sanity check. Is the 'owner' and the 'active player' the same?
+
+    // BUGBUG WHY ARE WE STILL HOLDING ACTIVE PLAYER AS A/B WITH A STRING?
+    char test_active_player = (s.active_player)[0];
+
+    std::string santest;
+    santest.append("Current player [owner]: ");
+    santest += owner;
+    santest.append("  Active player: ");
+    santest += test_active_player;
+    Logger::instance().info("Sanity Check: Is Active player = Current Player");
+    Logger::instance().info(santest);
+
+    // BUGBUG: Update the DB here.  JDWJDW
+    std::string clear_combats;
+    clear_combats.append("UPDATE combat_state AS cs "
+                         "JOIN ( "
+                         " SELECT DISTINCT game_id, at_hex "
+                         " FROM ships "
+                         " WHERE game_id =");
+    clear_combats.append(std::to_string(s.game_id));
+    clear_combats.append(" AND owner ='");
+    clear_combats += owner;
+    clear_combats.append("' ");
+    clear_combats.append(" AND at_hex='");
+    clear_combats.append(current_hex);
+    clear_combats.append("' ");
+    clear_combats.append(" AND escape_pending = 1 "
+                         " ) AS s "
+                         " ON s.game_id = cs.game_id "
+                         " AND s.at_hex = cs.hex_id "
+                         " SET cs.attacker_remains = 0 "
+                         " WHERE cs.attacker_remains = 1 "
+                         " AND cs.stalemate_counter > 2");
+    Logger::instance().info("Trying to clear combats:");
+    Logger::instance().info(clear_combats.c_str());
+
+    db.exec(clear_combats.c_str());
 
     return true;
 }

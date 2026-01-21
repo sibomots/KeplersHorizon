@@ -5,8 +5,6 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include "statemachine.h"
-
 #include <iostream>
 
 #include "combat.h"
@@ -14,6 +12,7 @@
 #include "logger.h"
 #include "moduleutil.h"
 #include "ships.h"
+#include "statemachine.h"
 #include "telemetry.h"
 #include "turn_end.h"
 
@@ -172,36 +171,39 @@ GameState StateMachine::load_game(int game_id)
     }
 
     // Load Combat Summary
+    CombatEngine ce(game_id);
+    auto combats = ce.get_active_combats();
+    if (!combats.empty())
     {
-        CombatEngine ce(game_id);
-        auto combats = ce.get_active_combats();
-        if (!combats.empty())
+        Logger::instance().info("[SM] checking combats: True");
+        std::ostringstream c;
+        c << "{";
+        c << "\"active_hexes\":[";
+        for (size_t i = 0; i < combats.size(); ++i)
         {
-            std::ostringstream c;
-            c << "{";
-            c << "\"active_hexes\":[";
-            for (size_t i = 0; i < combats.size(); ++i)
-            {
-                if (i > 0)
-                    c << ",";
-                c << "\"" << combats[i].hex_id << "\"";
-            }
-            c << "],";
-            c << "\"combats\":[";
-            for (size_t i = 0; i < combats.size(); ++i)
-            {
-                if (i > 0)
-                    c << ",";
-                c << "{\"hex\":\"" << combats[i].hex_id << "\",";
-                c << "\"log\":\"" << json_escape(combats[i].last_log) << "\",";
-                c << "\"stage\":" << combats[i].stage; // useful for UI
-                c << "}";
-            }
-            c << "],";
-            c << "\"count\":" << combats.size();
-            c << "}";
-            s.combat_summary_json = c.str();
+            if (i > 0)
+                c << ",";
+            c << "\"" << combats[i].hex_id << "\"";
         }
+        c << "],";
+        c << "\"combats\":[";
+        for (size_t i = 0; i < combats.size(); ++i)
+        {
+            if (i > 0)
+                c << ",";
+            c << "{\"hex\":\"" << combats[i].hex_id << "\",";
+            c << "\"log\":\"" << json_escape(combats[i].last_log) << "\",";
+            c << "\"stage\":" << combats[i].stage; // useful for UI
+            c << "}";
+        }
+        c << "],";
+        c << "\"count\":" << combats.size();
+        c << "}";
+        s.combat_summary_json = c.str();
+    }
+    else
+    {
+        Logger::instance().info("[SM] checking combats: None");
     }
 
     return s;
@@ -280,7 +282,7 @@ void StateMachine::apply_start_of_turn(GameState& s)
     bool is_first_player_first_turn = (s.round == 1 && me == 'A');
     if (!is_first_player_first_turn)
     {
-        if (me == 'A') 
+        if (me == 'A')
         {
             s.creditsA += 200; // 10 × 20 (inflated)
         }
@@ -299,19 +301,21 @@ void StateMachine::apply_start_of_turn(GameState& s)
 void StateMachine::advance_next(GameState& s)
 {
     if (s.game_over)
+    {
         return;
+    }
 
     if (s.phase_index < PH_END_TURN)
     {
-
         // --- Prevent skipping active combat ---
         if (s.phase_index == PH_RESOLVE_COMBAT)
         {
             CombatEngine ce(s.game_id);
             if (!ce.get_active_combats().empty())
-            {
+            {   
+                // Cannot advance until all combats resolved
                 Logger::instance().info("[SM] Combat is still active.");
-                return; // Cannot advance until all combats resolved
+                return; 
             }
         }
 
@@ -332,14 +336,14 @@ void StateMachine::advance_next(GameState& s)
             if (combats.empty())
             {
                 // No combat? Auto-skip to next phase
-                Logger::instance().info(
-                    "[SM][advance_next] No combat, skipping to Pick/Drop phase");
+                Logger::instance().info("[SM][advance_next] No combat, "
+                                        "skipping to Pick/Drop phase");
                 s.phase_index = PH_SYSTEM_PICKDROP;
             }
             else
             {
-                Logger::instance().info(
-                    "[SM][advance_next] Combat detected! Pausing at Combat phase");
+                Logger::instance().info("[SM][advance_next] Combat detected! "
+                                        "Pausing at Combat phase");
 
                 // Notify BOTH players about combat detection with detailed
                 // listing
@@ -429,8 +433,6 @@ void StateMachine::advance_next(GameState& s)
                 }
             }
         }
-        // ----------------------------
-
         return;
     }
 
@@ -472,11 +474,11 @@ int StateMachine::next_event_seq(int game_id)
 std::string StateMachine::get_player_name(int game_id, const std::string& seat)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
-    auto rows = db.query(
-        "SELECT u.username FROM game_seats gs "
-        "JOIN users u ON gs.user_id = u.id "
-        "WHERE gs.game_id=" + std::to_string(game_id) +
-        " AND gs.seat='" + db.esc(seat) + "'");
+    auto rows = db.query("SELECT u.username FROM game_seats gs "
+                         "JOIN users u ON gs.user_id = u.id "
+                         "WHERE gs.game_id=" +
+                         std::to_string(game_id) + " AND gs.seat='" +
+                         db.esc(seat) + "'");
     return rows.empty() ? seat : rows[0][0];
 }
 
@@ -644,7 +646,8 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
             error_msg = "Combat fire only allowed during Combat phase";
             return false;
         }
-        // Note: Order commitment enforced by CombatEngine::all_orders_committed()
+        // Note: Order commitment enforced by
+        // CombatEngine::all_orders_committed()
         return true;
     }
     break;

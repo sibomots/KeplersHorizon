@@ -133,7 +133,6 @@ bool DoneCommand::invoke(void)
 
     // Save game state to persist changes
     StateMachine::getInstance().save_game(s);
-
     return true;
 }
 
