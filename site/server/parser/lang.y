@@ -68,7 +68,6 @@ extern "C" FILE *yyin;
 	void yyerror(YYLTYPE* loc, const char* msg);
 
 // BUGBUG
-CombatOrderActor::Builder* g_combat_order_builder = new CombatOrderActor::Builder();
 CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
 
 // Global builder for repair command
@@ -91,17 +90,22 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
    std::string* sval;
    std::vector<std::string>* vec_sval;
    AttributeMap* vec_attr;
+   std::pair<AttributeMap*, MissileSet*>* combat_pair;
 }
 
 %type <vec_attr> build_attr_spec
+%type <combat_pair> new_combat_order_attr_spec
+%type <sval> combat_initiator_ship
+%type <sval> deployable_ship
+%type <sval> building_draft_ship
+%type <vec_sval> chain_move_location
+%type <vec_sval> chain_resource_words
+%type <sval> build_optional_target
+%type <ival> combat_tactic;
+%type <sval> combat_target_ship
 
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
-%type  <sval> deployable_ship
-%type  <sval> building_draft_ship
-%type  <vec_sval> chain_move_location
-%type  <vec_sval> chain_resource_words
-%type <sval> build_optional_target
 %token TOK_APPLY
 %token TOK_ATTACK
 %token TOK_BEAM
@@ -508,7 +512,6 @@ combat_cmd:
    TOK_COMBAT {
       // [LANG] Status of combat situation
    }
-
    // combat drafts
    | TOK_COMBAT TOK_DRAFTS {
        ICmd* pCmd = CombatDraftsCommand::Builder().build();
@@ -521,58 +524,80 @@ combat_cmd:
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
-
-
    // combat commit
    | TOK_COMBAT TOK_COMMIT {
        ICmd* pCmd = CombatCommitCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
-
    // cc
    | TOK_COMBAT_COMMIT {
        ICmd* pCmd = CombatCommitCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
-
    // combat cancel
    | TOK_COMBAT TOK_CANCEL {
        ICmd* pCmd = CombatCancelCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
-
    // cx
    | TOK_COMBAT_CANCEL {
        ICmd* pCmd = CombatCancelCommand::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
-
-   // combat order ...
-   | TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship combat_order_spec {
+   | TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
        // Build and invoke combat order command
-       ICmd* pCmd = g_combat_order_builder->build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-       // Reset builder for next command
-       delete g_combat_order_builder;
-       g_combat_order_builder = new CombatOrderActor::Builder();
-   }
+       std::string* attacker_ship = $3;
+       std::string* attackee_ship = $5;
+       char tact = $4;
+       std::pair<AttributeMap*, MissileSet*>* compair = $6;
+       AttributeMap* patmap = compair->first;
+       MissileSet* pmisset  = compair->second;
 
-   // co
-   | TOK_COMBAT_ORDER combat_initiator_ship combat_tactic combat_target_ship combat_order_spec {
+       ICmd* pCmd = CombatOrderActor::Builder()
+                                .ship_code(*attacker_ship)
+                                .target(*attackee_ship)
+                                .tactic(tact)
+                                .set_missiles(*pmisset)
+                                .set_attributes(*patmap)
+                                .build(); 
+       if (pCmd && pCmd->invoke()) {
+       }
+       SafeDelete(patmap);
+       SafeDelete(pmisset);
+       SafeDelete(compair);
+       SafeDelete(attacker_ship);
+       SafeDelete(attackee_ship);
+       SafeDelete(pCmd);
+   }
+   | TOK_COMBAT_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
        // Build and invoke combat order command
-       ICmd* pCmd = g_combat_order_builder->build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-       // Reset builder for next command
-       delete g_combat_order_builder;
-       g_combat_order_builder = new CombatOrderActor::Builder();
-   }
+       std::string* attacker_ship = $2;
+       std::string* attackee_ship = $4;
+       char tact = $3;
+       std::pair<AttributeMap*, MissileSet*>* compair = $5;
+       AttributeMap* patmap = compair->first;
+       MissileSet* pmisset  = compair->second;
 
+       ICmd* pCmd = CombatOrderActor::Builder()
+                                .ship_code(*attacker_ship)
+                                .target(*attackee_ship)
+                                .tactic(tact)
+                                .set_missiles(*pmisset)
+                                .set_attributes(*patmap)
+                                .build(); 
+       if (pCmd && pCmd->invoke()) {
+       }
+       SafeDelete(patmap);
+       SafeDelete(pmisset);
+       SafeDelete(compair);
+       SafeDelete(attacker_ship);
+       SafeDelete(attackee_ship);
+       SafeDelete(pCmd);
+   }
    // combat apply ...
    | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_application_spec {
        // Build and invoke combat apply command
@@ -583,7 +608,6 @@ combat_cmd:
        delete g_combat_apply_builder;
        g_combat_apply_builder = new CombatApplyCommand::Builder();
    }
-
    // ca ...
    | TOK_COMBAT_APPLY combat_damaged_ship combat_application_spec {
        // Build and invoke combat apply command
@@ -594,15 +618,13 @@ combat_cmd:
        delete g_combat_apply_builder;
        g_combat_apply_builder = new CombatApplyCommand::Builder();
    }
-  
-| TOK_COMBAT error { yyerror(&@1, "combat: usage: combat (see help combat)"); YYABORT; }
-| TOK_COMBAT_DRAFTS error { yyerror(&@1, "cd: usage: cd"); YYABORT; }
-| TOK_COMBAT_ORDER error { yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n B=n S=n T=n M=n SR=n]"); YYABORT; }
-| TOK_COMBAT_APPLY error { yyerror(&@1, "ca: usage: ca <draft_id> <damage_spec...>"); YYABORT; }
-| TOK_COMBAT_COMMIT error { yyerror(&@1, "cc: usage: cc <draft_id>"); YYABORT; }
-| TOK_COMBAT_CANCEL error { yyerror(&@1, "cx: usage: cx <draft_id>"); YYABORT; }
-;
-
+   | TOK_COMBAT error { yyerror(&@1, "combat: usage: combat (see help combat)"); YYABORT; }
+   | TOK_COMBAT_DRAFTS error { yyerror(&@1, "cd: usage: cd"); YYABORT; }
+   | TOK_COMBAT_ORDER error { yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n B=n S=n T=n M=n SR=n]"); YYABORT; }
+   | TOK_COMBAT_APPLY error { yyerror(&@1, "ca: usage: ca <draft_id> <damage_spec...>"); YYABORT; }
+   | TOK_COMBAT_COMMIT error { yyerror(&@1, "cc: usage: cc <draft_id>"); YYABORT; }
+   | TOK_COMBAT_CANCEL error { yyerror(&@1, "cx: usage: cx <draft_id>"); YYABORT; }
+   ;
 
 building_draft_ship:
   TOK_STRING {
@@ -612,9 +634,7 @@ building_draft_ship:
 
 combat_initiator_ship:
   TOK_STRING {
-      std::string ship_id(*$1);
-      g_combat_order_builder->ship_code(ship_id);
-      delete $1;
+      $$ = $1;
   }
   ;
 
@@ -628,60 +648,70 @@ combat_damaged_ship:
 
 combat_tactic:
   TOK_ATTACK {
-      g_combat_order_builder->tactic('A');
+      $$ = 'A';
   }
   | TOK_DODGE {
-      g_combat_order_builder->tactic('D');
+      $$ = 'D';
   }
   | TOK_ESCAPE {
-      g_combat_order_builder->tactic('R');
+      $$ = 'R';
   }
   ;
 
 combat_target_ship:
   TOK_STRING {
-      std::string ship_id(*$1);
-      g_combat_order_builder->target(ship_id);
-      delete $1;
+      $$ = $1;
   }
   ;
 
-combat_order_spec:
-  TOK_PD_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->drive_power($1);
+
+// jdw
+new_combat_order_attr_spec: {  
+     $$ = new std::pair<AttributeMap*,  MissileSet*>;
+     $$->first = new AttributeMap;
+     $$->second = new MissileSet;
   }
-  | TOK_B_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->beam_power($1);
+  | new_combat_order_attr_spec TOK_PD_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->first->insert({AttributeID::POWER_DRIVE, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate POWER_DRIVE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_S_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->screen_power($1);
+  | new_combat_order_attr_spec TOK_B_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->first->insert({AttributeID::BEAM, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate BEAM assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_T_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->tube_power($1);
+  | new_combat_order_attr_spec TOK_S_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->first->insert({AttributeID::SCREEN, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate SCREEN assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_M_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->missiles($1); // std::to_string($1));
+  | new_combat_order_attr_spec TOK_T_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->first->insert({AttributeID::TUBE, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate TUBE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
+  }
+  | new_combat_order_attr_spec TOK_M_ASSIGN {
+      $$ = $1;
+      // Missile power per missile is inserted into the vector of MissileSet
+      // The AttributeMap[MISSILE] value is left alone. We don't
+      // use it for combat per se. 
+      $$->second->push_back($2);
   }
   ;
 
-additional_combat_order_spec:
-  /* empty - no more specs */
-  | TOK_PD_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->drive_power($1);
-  }
-  | TOK_B_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->beam_power($1);
-  }
-  | TOK_S_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->screen_power($1);
-  }
-  | TOK_T_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->tube_power($1);
-  }
-  | TOK_M_ASSIGN additional_combat_order_spec {
-      g_combat_order_builder->missiles($1); // std::to_string($1));
-  }
-  ;
 
 combat_application_spec:
   TOK_PD_ASSIGN additional_combat_application_spec {

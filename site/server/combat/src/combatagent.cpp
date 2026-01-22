@@ -112,6 +112,8 @@ bool CombatAgent::apply(CombatAgentParam& caparam)
 
 ////////////////////////////////////////////////////////////////////////////
 
+
+// We don't have a use for the bare command: "combat" yet..
 bool CombatAgent::apply(CombatParam& param)
 {
     return false;

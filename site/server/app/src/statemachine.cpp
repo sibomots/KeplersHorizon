@@ -487,8 +487,7 @@ std::string StateMachine::get_player_name(int game_id, const std::string& seat)
 // Check priority: 1) Initiative, 2) Phase, 3) Intra-phase state
 //------------------------------------------------------------------------------
 
-bool StateMachine::check_inhibits(CommandID cmd, void* params,
-                                  std::string& error_msg)
+bool StateMachine::check_inhibits(CommandID cmd, std::string& error_msg)
 {
     GameState s = get_game_state();
     char requesting_player = data.current_player;
@@ -514,8 +513,6 @@ bool StateMachine::check_inhibits(CommandID cmd, void* params,
             error_msg = "Building only allowed during Build Ships phase";
             return false;
         }
-        // 3. Parameter-specific checks could go here using:
-        // auto* p = static_cast<BuildNewParams_t*>(params);
         return true;
     }
     break;

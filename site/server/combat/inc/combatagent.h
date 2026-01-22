@@ -59,7 +59,6 @@ class CombatParam
         {
             return CombatParam(gid, mid, player);
         }
-
       protected:
         int mid;
         int gid;

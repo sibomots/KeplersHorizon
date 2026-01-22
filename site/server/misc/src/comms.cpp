@@ -15,55 +15,48 @@
 #include "state.h"
 #include "util.h"
 
-void dispatch_request(const HttpRequest* req, HttpResponse* resp)
+bool dispatch_request(const HttpRequest* req, HttpResponse* resp)
 {
+    bool done = false;
     if (req->path == "/api/login")
     {
         handle_login(req, resp);
-        return;
     }
     else if (req->path == "/api/register")
     {
         handle_register(req, resp);
-        return;
     }
     else if (req->path == "/api/logout")
     {
         handle_logout(req, resp);
-        return;
     }
     else if (req->path == "/api/state")
     {
         handle_state(req, resp);
-        return;
     }
     else if (req->path == "/api/command")
     {
-        handle_usr_command(req, resp);
-        return;
+        done = handle_usr_command(req, resp);
     }
     else if (req->path == "/api/events")
     {
         // Optional: events for console persistence
         handle_events(req, resp);
-        return;
     }
     else if (req->path == "/api/modules")
     {
         handle_modules_list(req, resp);
-        return;
     }
     else if (req->path == "/api/rooms" || starts_with(req->path, "/api/rooms/"))
     {
         handle_rooms(req, resp);
-        return;
     }
     else
     {
         resp->status = 404;
         resp->body = json_error("not found");
     }
-    return;
+    return done;
 }
 
 std::string status_text(int code)

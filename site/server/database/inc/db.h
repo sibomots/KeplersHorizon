@@ -58,6 +58,7 @@ class DatabaseManager
     {
         if (driver)
         {
+            fprintf(stderr, "Closing the driver to MySQL\n");
             mysql_close(driver);
         }
     }

@@ -29,20 +29,20 @@ extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 extern "C" int yyparse();
 extern bool get_parser_error(std::string& err);
 
-void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
+bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 {
     if (req->method != "POST")
     {
         resp->status = 405;
         resp->body = json_error("method");
-        return;
+        return false; // not done
     }
 
     AuthContext a = require_auth((const HttpRequest*)req, resp);
 
     if (resp->status != 200)
     {
-        return;
+        return false; // not done
     }
 
     std::string cmdline = trim(json_get_string(req->body, "command"));
@@ -51,9 +51,14 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     {
         resp->status = 400;
         resp->body = json_error("empty command");
-        return;
+        return false; // not done
     }
 
+    // DEBUG BUGBUG
+    if (cmdline.compare("malloc") == 0) {
+        // forcing the mtrace to account
+        return true; // is done
+    }
     // Configure StateMachine with DB context
     StateMachine::getInstance().set_game_id(a.game_id);
 
@@ -117,6 +122,9 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     else {
           std::string err;
           bool found_cause = get_parser_error(err);
+          if (!found_cause && err.empty()) {
+             err = "Parser provided no error message";
+          }
           // Parser failed
           resp->status = 400;
           resp->body = json_error(err);
@@ -124,5 +132,5 @@ void handle_usr_command(const HttpRequest* req, HttpResponse* resp)
           Logger::instance().info("[CMD] Parser error: " + err);
     }
 
-    return;
+    return false; // not done
 }

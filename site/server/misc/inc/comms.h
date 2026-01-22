@@ -41,7 +41,7 @@ typedef struct
 AuthContext require_auth(const HttpRequest* req, HttpResponse* resp);
 std::string pick_bearer(const HttpRequest* req);
 std::string http_serialize(const HttpResponse& r);
-void dispatch_request(const HttpRequest* req, HttpResponse* resp);
+bool dispatch_request(const HttpRequest* req, HttpResponse* resp);
 HttpRequest http_parse(int fd);
 bool authenticated(const HttpRequest* req, HttpResponse* resp);
 

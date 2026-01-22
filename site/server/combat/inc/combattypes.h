@@ -9,6 +9,7 @@
 #define __KH_COMBAT_TYPES_H__
 
 #include <string>
+#include <variant>
 
 typedef enum : int
 {

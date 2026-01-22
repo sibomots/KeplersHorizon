@@ -1402,8 +1402,8 @@ bool CombatApplyCommand::invoke(void)
     params.order_type = 0;
 
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::COMBAT_FIRE,
-                                                    &params, inhibit_error))
+    if (!StateMachine::getInstance()
+                      .check_inhibits(CommandID::COMBAT_FIRE, inhibit_error))
     {
         Telemetry::getInstance().write("Error: " + inhibit_error);
         return false;

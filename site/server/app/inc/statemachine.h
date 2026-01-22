@@ -319,7 +319,7 @@ class StateMachine
     // Command inhibit checking - determines if a command is allowed
     // based on current game state, phase, and initiative.
     // Returns true if allowed, false if inhibited (error_msg set)
-    bool check_inhibits(CommandID cmd, void* params, std::string& error_msg);
+    bool check_inhibits(CommandID cmd, std::string& error_msg);
 
     // Get player username from game_seats table (returns seat letter if not found)
     std::string get_player_name(int game_id, const std::string& seat);

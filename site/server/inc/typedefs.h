@@ -51,14 +51,13 @@ typedef struct DataConfig
 // Kepler's Horizon phase sequencing:
 //  VP count is implicit at start-of-turn;
 //  player-facing phases begin at Build Ships.
-
 enum PhaseIndex
 {
     PH_BUILD_SHIPS = 0,
-    PH_MOVEMENT = 1,
-    PH_RESOLVE_COMBAT = 2,
-    PH_SYSTEM_PICKDROP = 3,
-    PH_END_TURN = 4
+    PH_MOVEMENT,
+    PH_RESOLVE_COMBAT,
+    PH_SYSTEM_PICKDROP,
+    PH_END_TURN
 };
 
       

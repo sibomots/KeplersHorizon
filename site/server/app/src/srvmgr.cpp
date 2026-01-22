@@ -52,7 +52,8 @@ void ServerManager::connect()
 
 void ServerManager::run(void)
 {
-    while (1)
+    bool done = false;
+    while (!done)
     {
         sockaddr_in cli;
         socklen_t clen = sizeof(cli);
@@ -69,7 +70,7 @@ void ServerManager::run(void)
         try
         {
             // Do something with this request
-            dispatch_request((const HttpRequest*)&req, (HttpResponse*)&resp);
+            done = dispatch_request((const HttpRequest*)&req, (HttpResponse*)&resp);
         }
         catch (const std::exception& ex)
         {

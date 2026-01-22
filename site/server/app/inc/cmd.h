@@ -10,7 +10,7 @@
 
 #include "comms.h"
 
-void handle_usr_command(const HttpRequest* req, HttpResponse* resp);
+bool handle_usr_command(const HttpRequest* req, HttpResponse* resp);
 void handle_login(const HttpRequest* req, HttpResponse* resp);
 void handle_logout(const HttpRequest* req, HttpResponse* resp);
 

@@ -235,8 +235,8 @@ bool BuildNewCommand::invoke(void)
     params.ship_name = m_ship_name;
 
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::BUILD_NEW,
-                                                    &params, inhibit_error))
+    if (!StateMachine::getInstance()
+            .check_inhibits(CommandID::BUILD_NEW, inhibit_error))
     {
         Telemetry::getInstance().write(inhibit_error);
         result = false;

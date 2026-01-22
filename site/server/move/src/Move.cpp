@@ -34,8 +34,7 @@ bool DeployCommand::invoke(void)
     params.destination = m_system_name;
 
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::DEPLOY, &params,
-                                                    inhibit_error))
+    if (!StateMachine::getInstance().check_inhibits(CommandID::DEPLOY, inhibit_error))
     {
         Telemetry::getInstance().write("Error: " + inhibit_error);
         return false;
@@ -148,8 +147,7 @@ bool MoveCommand::invoke(void)
     params.destination = m_destinations.empty() ? "" : m_destinations[0];
 
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::MOVE, &params,
-                                                    inhibit_error))
+    if (!StateMachine::getInstance().check_inhibits(CommandID::MOVE, inhibit_error))
     {
         Telemetry::getInstance().write("Error: " + inhibit_error);
         return false;

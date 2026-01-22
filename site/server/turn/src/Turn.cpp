@@ -23,8 +23,7 @@ bool DoneCommand::invoke(void)
     // Check if this command is allowed given current game state
     DoneParams_t params;
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::DONE, &params,
-                                                    inhibit_error))
+    if (!StateMachine::getInstance().check_inhibits(CommandID::DONE, inhibit_error))
     {
         Telemetry::getInstance().write("Error: " + inhibit_error);
         return false;
@@ -149,8 +148,7 @@ bool NextCommand::invoke(void)
         int round;
     } TurnMetrics;
 
-    if (!StateMachine::getInstance().check_inhibits(CommandID::NEXT, &params,
-                                                    inhibit_error))
+    if (!StateMachine::getInstance().check_inhibits(CommandID::NEXT, inhibit_error))
     {
         Telemetry::getInstance().write(inhibit_error);
         return false;
