@@ -22,11 +22,11 @@
 #include "move_command.h"
 
 #include "combat_order_actor.h"
+#include "combat_apply_actor.h"
+#include "combat_drafts_actor.h"
+#include "combat_commit_actor.h"
+#include "combat_cancel_actor.h"
 
-#include "combat_apply_command.h"
-#include "combat_drafts_command.h"
-#include "combat_commit_command.h"
-#include "combat_cancel_command.h"
 #include "fleet_command.h"
 #include "cargo_command.h"
 #include "system_command.h"
@@ -58,17 +58,17 @@ extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
 
-	// Forward decl so we can declare yyerror before bison defines YYLTYPE.
-	typedef struct YYLTYPE YYLTYPE;
-	extern YYLTYPE yylloc;
+// Forward decl so we can declare yyerror before bison defines YYLTYPE.
+typedef struct YYLTYPE YYLTYPE;
+extern YYLTYPE yylloc;
 
-	// Bison will call yyerror(const char*) for its own diagnostics.
-	void yyerror(const char* msg);
-	// Our richer helper (used by actions) that can report source location.
-	void yyerror(YYLTYPE* loc, const char* msg);
+// Bison will call yyerror(const char*) for its own diagnostics.
+void yyerror(const char* msg);
+// Our richer helper (used by actions) that can report source location.
+void yyerror(YYLTYPE* loc, const char* msg);
 
 // BUGBUG
-CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
+//JDW  CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
 
 // Global builder for repair command
 RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();

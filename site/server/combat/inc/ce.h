@@ -23,7 +23,6 @@ struct CombatState
     int stage; // 0=ORDERS, 1=RESOLVE_READY, 2=DAMAGE_PENDING, 3=RETREAT_PENDING
     bool attacker_remains;
     int stalemate_counter;
-    std::string pending_damage_json;
     std::string last_log;
 
     CombatState()
@@ -33,10 +32,9 @@ struct CombatState
     }
 
     CombatState(int gid, std::string hex, int rnd, int stg, bool att, int stale,
-                std::string pend, std::string log)
+                std::string log)
         : game_id(gid), hex_id(hex), round(rnd), stage(stg),
-          attacker_remains(att), stalemate_counter(stale),
-          pending_damage_json(pend), last_log(log)
+          attacker_remains(att), stalemate_counter(stale), last_log(log)
     {
     }
 };
@@ -82,7 +80,7 @@ class CombatEngine
 
     // Damage Assignment
     std::string apply_damage(char owner, const std::string& ship_code,
-                             const std::map<std::string, int>& assignments);
+                             const AttributeMap& assignments);
 
     // Commit checking
     bool all_orders_committed(const std::string& hex_id, int round);

@@ -1,5 +1,9 @@
 #include "combatagent.h"
+#include "ce.h"
 #include "db.h"
+#include "telemetry.h"
+#include "logger.h"
+#include <sstream>
 
 CombatSessionState
 CombatAgent::get_combat_state_at_hex(const int gid, const std::string& hex_id)
@@ -395,24 +399,228 @@ bool CombatAgent::apply(CombatOrderParam& param)
 
 bool CombatAgent::apply(CombatApplyParam& param)
 {
-    return false;
+    DatabaseManager& db = DatabaseManager::getInstance();
+    
+    int gid = param.get_game_id();
+    char owner = param.get_player();
+    std::string target_ship = param.get_target_ship();
+    AttributeMap assignments = param.get_assignments();
+    
+    // Apply damage via combat engine
+    CombatEngine ce(gid);
+    std::string result = ce.apply_damage(owner, target_ship , assignments);
+
+    Telemetry::getInstance().write(result);
+    return true;
 }
+
 bool CombatAgent::apply(CombatRetreatParam& param)
 {
     return false;
 }
+
 bool CombatAgent::apply(CombatCommitParam& param)
 {
-    return false;
+    DatabaseManager& db = DatabaseManager::getInstance();
+    
+    int gid = param.get_game_id();
+    char owner = param.get_player();
+
+    // Get the active combat hex
+    auto gameRow = db.query("SELECT active_combat_hex FROM games WHERE id=" +
+                            std::to_string(gid));
+
+    std::string activeHex;
+    if (!gameRow.empty() && !gameRow[0][0].empty())
+    {
+        activeHex = gameRow[0][0];
+    }
+
+    // Get all hexes with uncommitted orders for this player
+    auto hexRows = db.query("SELECT DISTINCT s.at_hex FROM combat_orders co "
+                            "JOIN ships s ON s.game_id=co.game_id AND "
+                            "s.owner=co.owner AND s.ship_code=co.ship_code "
+                            "WHERE co.game_id=" +
+                            std::to_string(gid) + " AND co.owner='" +
+                            std::string(1, owner) +
+                            "' AND co.committed=0 AND s.destroyed_at IS NULL");
+
+    if (hexRows.empty())
+    {
+        Telemetry::getInstance().write("TACTICAL: No combat orders queued.");
+        return true;
+    }
+
+    // Validate orders are for active hex (if one is set)
+    if (!activeHex.empty())
+    {
+        for (const auto& row : hexRows)
+        {
+            if (row[0] != activeHex)
+            {
+                Telemetry::getInstance().write(
+                    "Error: Orders pending for hex " + row[0] +
+                    " but active combat is in hex " + activeHex);
+                return false;
+            }
+        }
+    }
+
+    // Mark all uncommitted orders as committed
+    db.exec("UPDATE combat_orders SET committed=1 WHERE game_id=" +
+            std::to_string(gid) + " AND owner='" + std::string(1, owner) +
+            "' AND committed=0");
+
+    Telemetry::getInstance().write("TACTICAL: Combat orders transmitted.");
+
+    // Check each affected hex for resolution
+    CombatEngine ce(gid);
+    for (const auto& row : hexRows)
+    {
+        std::string hex_id = row[0];
+        auto cs = ce.get_combat_state(hex_id);
+
+        if (ce.all_orders_committed(hex_id, cs.round))
+        {
+            // Reveal all orders to both players before resolution (per rules)
+            auto orders = db.query(
+                "SELECT co.owner, co.ship_code, co.tactic, co.target_id, "
+                "co.power_d, co.power_b, co.power_s, co.power_t "
+                "FROM combat_orders co "
+                "JOIN ships s ON s.game_id=co.game_id AND "
+                "s.ship_code=co.ship_code AND s.owner=co.owner "
+                "WHERE co.game_id=" +
+                std::to_string(gid) + " AND s.at_hex='" + hex_id +
+                "' AND co.round=" + std::to_string(cs.round) +
+                " AND s.destroyed_at IS NULL ORDER BY co.owner, co.ship_code");
+
+            std::ostringstream reveal;
+            reveal << "=== COMBAT ORDERS REVEALED ===\n";
+            for (const auto& ord : orders)
+            {
+                char t = ord[2][0];
+                std::string tactic;
+                switch (t)
+                {
+                case 'A':
+                    tactic = "Attack";
+                    break;
+                case 'D':
+                    tactic = "Attack";
+                    break;
+                case 'E':
+                    tactic = "Attack";
+                    break;
+                }
+                reveal << "  " << ord[0] << ":" << ord[1] << " " << tactic
+                       << " " << ord[3] << " [D=" << ord[4] << " B=" << ord[5]
+                       << " S=" << ord[6] << " T=" << ord[7] << "]\n";
+            }
+            reveal << "==============================";
+            Telemetry::getInstance().add_broadcast(gid, reveal.str());
+
+            std::string result = ce.resolve_round(hex_id);
+            Telemetry::getInstance().write(result);
+        }
+        else
+        {
+            // Notify opponent that this player has committed
+            char opponent = (owner == 'A') ? 'B' : 'A';
+            Telemetry::getInstance().add_tell(
+                opponent, "Player " + std::string(1, owner) +
+                              " has committed combat orders for hex " + hex_id +
+                              ". Use 'combat order' then 'combat commit' for "
+                              "your ships.");
+
+            Telemetry::getInstance().write("TACTICAL: Sector " + hex_id +
+                                           " - Awaiting enemy orders.");
+        }
+    }
+    return true;
 }
+
 bool CombatAgent::apply(CombatCancelParam& param)
 {
-    return false;
+    DatabaseManager& db = DatabaseManager::getInstance();
+    
+    int gid = param.get_game_id();
+    char owner = param.get_player();
+
+    // Check if there are any uncommitted orders to cancel (Bug #1)
+    auto orderRows =
+        db.query("SELECT COUNT(*) FROM combat_orders WHERE game_id=" +
+                 std::to_string(gid) + " AND owner='" +
+                 std::string(1, owner) + "' AND committed=0");
+
+    if (orderRows.empty() || orderRows[0][0] == "0")
+    {
+        Telemetry::getInstance().write(
+            "TACTICAL: No combat orders have been received.");
+        return true;
+    }
+
+    // Delete all uncommitted orders for this player
+    db.exec(
+        "DELETE FROM combat_orders WHERE game_id=" + std::to_string(gid) +
+        " AND owner='" + std::string(1, owner) + "' AND committed=0");
+
+    Telemetry::getInstance().write(
+        "TACTICAL: Orders rescinded. Issue new commands.");
+    return true;
 }
+
 bool CombatAgent::apply(CombatDraftsParam& param)
 {
-    return false;
+    DatabaseManager& db = DatabaseManager::getInstance();
+    
+    int gid = param.get_game_id();
+    char owner = param.get_player();
+
+    // Query uncommitted orders for this player, grouped by hex
+    auto rows = db.query(
+        "SELECT s.at_hex, co.ship_code, co.tactic, co.target_id, "
+        "co.power_d, co.power_b, co.power_s, co.power_t, co.missiles_data "
+        "FROM combat_orders co "
+        "JOIN ships s ON s.game_id=co.game_id AND s.owner=co.owner AND "
+        "s.ship_code=co.ship_code "
+        "WHERE co.game_id=" +
+        std::to_string(gid) + " AND co.owner='" + std::string(1, owner) +
+        "' AND co.committed=0 AND s.destroyed_at IS NULL "
+        "ORDER BY s.at_hex, co.ship_code");
+
+    if (rows.empty())
+    {
+        Telemetry::getInstance().write("No pending combat orders.");
+        return true;
+    }
+
+    std::ostringstream out;
+    out << "Pending Combat Orders:\n";
+    std::string lastHex;
+    for (const auto& r : rows)
+    {
+        if (r[0] != lastHex)
+        {
+            out << "  Hex " << r[0] << ":\n";
+            lastHex = r[0];
+        }
+        char tactic = r[2].empty() ? 'A' : r[2][0];
+        std::string tacticName = (tactic == 'A')   ? "Attack"
+                                 : (tactic == 'D') ? "Dodge"
+                                                   : "Escape";
+        out << "    " << r[1] << ": " << tacticName << " -> "
+            << (r[3].empty() ? "(none)" : r[3]) << " [D=" << r[4]
+            << " B=" << r[5] << " S=" << r[6] << " T=" << r[7];
+        if (!r[8].empty())
+        {
+            out << " M=" << r[8];
+        }
+        out << "]\n";
+    }
+    Telemetry::getInstance().write(out.str());
+    return true;
 }
+
 bool CombatAgent::apply(CombatStatusParam& param)
 {
     return false;

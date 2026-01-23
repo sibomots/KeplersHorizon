@@ -8,7 +8,7 @@
 #include "ships.h"
 
 #include "app.h"
-#include "combat.h"
+#include "ce.h"
 #include "db.h"
 
 std::string get_current_draft(int game_id, char owner)
@@ -357,28 +357,51 @@ ShipRow load_ship(int game_id, char owner, const std::string& code)
     return std::atoi(rows[0][0].c_str());
 }
 
+
 void insert_ship(int game_id, char owner, const ShipRow& ship)
 {
     ShipRow s(ship);
     DatabaseManager& db = DatabaseManager::getInstance();
+    
+    // Get the attribute values (used for both current and max)
+    int pd = s.get_PD();
+    int beam = s.get_B();
+    int screen = s.get_S();
+    int tube = s.get_T();
+    int missiles = s.get_M();
+    int sr = s.get_SR();
+    
     std::string q =
         "INSERT INTO "
         "ships(game_id,owner,ship_code,ship_name,ship_type,tech_level,"
-        "built_turn,pd,beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,"
-        "pd_spent) "
+        "built_turn,"
+        "pd,pd_max,"              // Set both current and max
+        "beam,beam_max,"          // Set both current and max
+        "screen,screen_max,"      // Set both current and max
+        "tube,tube_max,"          // Set both current and max
+        "missiles,missiles_max,"  // Set both current and max
+        "sr,sr_max,"              // Set both current and max
+        "at_system,at_hex,racked_in,pd_spent) "
         "VALUES(" +
-        std::to_string(game_id) + ",'" + std::string(1, owner) + "','" +
-        db.esc(s.code) + "','" + db.esc(s.name) + "','" +
-        std::string(1, s.get_type()) + "'," + std::to_string(s.get_tech()) +
-        ",'" + db.esc(s.built_turn) + "'," + std::to_string(s.get_PD()) + "," +
-        std::to_string(s.get_B()) + "," + std::to_string(s.get_S()) + "," +
-        std::to_string(s.get_T()) + "," + std::to_string(s.get_M()) + "," +
-        std::to_string(s.get_SR()) + "," +
-        (s.at_system.empty() ? "NULL" : ("'" + db.esc(s.at_system) + "'")) +
-        "," + (s.at_hex.empty() ? "NULL" : ("'" + db.esc(s.at_hex) + "'")) +
-        "," +
-        (s.racked_in.empty() ? "NULL" : ("'" + db.esc(s.racked_in) + "'")) +
-        ", 0)";
+        std::to_string(game_id) + ",'" + 
+        std::string(1, owner) + "','" +
+        db.esc(s.code) + "','" + 
+        db.esc(s.name) + "','" +
+        std::string(1, s.get_type()) + "'," + 
+        std::to_string(s.get_tech()) + ",'" + 
+        db.esc(s.built_turn) + "'," + 
+        // Set current and max values (same at build time)
+        std::to_string(pd) + "," + std::to_string(pd) + "," +
+        std::to_string(beam) + "," + std::to_string(beam) + "," +
+        std::to_string(screen) + "," + std::to_string(screen) + "," +
+        std::to_string(tube) + "," + std::to_string(tube) + "," +
+        std::to_string(missiles) + "," + std::to_string(missiles) + "," +
+        std::to_string(sr) + "," + std::to_string(sr) + "," +
+        (s.at_system.empty() ? "NULL" : ("'" + db.esc(s.at_system) + "'")) + "," + 
+        (s.at_hex.empty() ? "NULL" : ("'" + db.esc(s.at_hex) + "'")) + "," +
+        (s.racked_in.empty() ? "NULL" : ("'" + db.esc(s.racked_in) + "'")) + "," +
+        "0)";
+    
     db.exec(q);
 }
 

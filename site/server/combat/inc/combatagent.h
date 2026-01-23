@@ -437,7 +437,7 @@ class CombatApplyParam : public CombatParam
   public:
     CombatApplyParam(int gid, int mid, char user, std::string target_ship,
                      AttributeMap attr)
-        : CombatParam(gid, mid, user), m_target_ship(target_ship), m_attr(attr)
+        : CombatParam(gid, mid, user), m_target_ship(target_ship), m_assignments(attr)
     {
     }
 
@@ -471,7 +471,7 @@ class CombatApplyParam : public CombatParam
             target_ship = _target_ship;
             return *this;
         }
-        Builder& set_attr(AttributeMap _attr)
+        Builder& set_assignments(AttributeMap _attr)
         {
             attr = _attr;
             return *this;
@@ -487,6 +487,7 @@ class CombatApplyParam : public CombatParam
         std::string target_ship;
         AttributeMap attr;
     };
+
     int get_game_id()
     {
         return m_gid;
@@ -505,14 +506,14 @@ class CombatApplyParam : public CombatParam
         return m_target_ship;
     }
 
-    AttributeMap get_attr()
+    AttributeMap get_assignments()
     {
-        return m_attr;
+        return m_assignments;
     }
 
   private:
     std::string m_target_ship;
-    AttributeMap m_attr;
+    AttributeMap m_assignments;
 };
 
 class CombatRetreatParam : public CombatParam

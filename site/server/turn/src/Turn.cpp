@@ -8,7 +8,7 @@
 
 #include <sstream>
 
-#include "combat.h"
+#include "ce.h"
 #include "db.h"
 #include "done_command.h"
 #include "logger.h"

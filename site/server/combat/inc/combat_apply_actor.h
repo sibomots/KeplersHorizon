@@ -5,26 +5,26 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#ifndef __COMBAT_APPLY_COMMAND_H__
-#define __COMBAT_APPLY_COMMAND_H__
+#ifndef __COMBAT_APPLY_ACTOR_H__
+#define __COMBAT_APPLY_ACTOR_H__
 
 #include <map>
 #include <string>
-
+#include "attributemap.h"
 #include "icmd.h"
 
-class CombatApplyCommand : public ICmd
+class CombatApplyActor : public ICmd
 {
   private:
     std::string m_ship_code;
-    std::map<std::string, int> m_assignments;
+    AttributeMap m_assignments;
 
   public:
     class Builder
     {
       public:
         std::string _ship_code;
-        std::map<std::string, int> _assignments;
+        AttributeMap _assignments;
 
         Builder()
         {
@@ -36,22 +36,22 @@ class CombatApplyCommand : public ICmd
             return *this;
         }
 
-        Builder& assign(const std::string& attr, int damage)
+        Builder& set_assignments(const AttributeMap& damage)
         {
-            _assignments[attr] = damage;
+            _assignments = damage;
             return *this;
         }
 
         ICmd* build()
         {
-            return new CombatApplyCommand(*this);
+            return new CombatApplyActor(*this);
         }
     };
 
     bool invoke(void) override;
 
   private:
-    CombatApplyCommand(Builder& builder)
+    CombatApplyActor(Builder& builder)
         : m_ship_code(std::move(builder._ship_code)),
           m_assignments(std::move(builder._assignments))
     {

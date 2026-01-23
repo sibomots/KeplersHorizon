@@ -5,12 +5,12 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#ifndef __COMBAT_COMMIT_COMMAND_H__
-#define __COMBAT_COMMIT_COMMAND_H__
+#ifndef __COMBAT_CANCEL_ACTOR_H__
+#define __COMBAT_CANCEL_ACTOR_H__
 
 #include "icmd.h"
 
-class CombatCommitCommand : public ICmd
+class CombatCancelActor : public ICmd
 {
   public:
     class Builder
@@ -21,14 +21,14 @@ class CombatCommitCommand : public ICmd
         }
         ICmd* build()
         {
-            return new CombatCommitCommand();
+            return new CombatCancelActor();
         }
     };
 
     bool invoke(void) override;
 
   private:
-    CombatCommitCommand()
+    CombatCancelActor()
     {
     }
 };

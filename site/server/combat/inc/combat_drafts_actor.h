@@ -5,12 +5,12 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#ifndef __COMBAT_DRAFTS_COMMAND_H__
-#define __COMBAT_DRAFTS_COMMAND_H__
+#ifndef __COMBAT_DRAFTS_ACTOR_H__
+#define __COMBAT_DRAFTS_ACTOR_H__
 
 #include "icmd.h"
 
-class CombatDraftsCommand : public ICmd
+class CombatDraftsActor : public ICmd
 {
   public:
     class Builder
@@ -21,14 +21,14 @@ class CombatDraftsCommand : public ICmd
         }
         ICmd* build()
         {
-            return new CombatDraftsCommand();
+            return new CombatDraftsActor();
         }
     };
 
     bool invoke(void) override;
 
   private:
-    CombatDraftsCommand()
+    CombatDraftsActor()
     {
     }
 };

@@ -8,7 +8,7 @@
 #include <iomanip>
 
 #include "app.h"
-#include "combat.h"
+#include "ce.h"
 #include "db.h"
 #include "typedefs.h"
 #include "kherr.h"

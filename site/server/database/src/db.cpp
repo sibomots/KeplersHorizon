@@ -10,7 +10,7 @@
 #include <iostream>
 
 #include "app.h"
-#include "combat.h"
+#include "ce.h"
 #include "configr.h"
 #include "logger.h"
 #include "typedefs.h"

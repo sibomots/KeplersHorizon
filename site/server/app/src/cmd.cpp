@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "app.h"
-#include "combat.h"
+#include "ce.h"
 #include "comms.h"
 #include "db.h"
 #include "events.h"

@@ -10,7 +10,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "combat.h"
+#include "ce.h"
 #include "constraints.h"
 #include "db.h"
 #include "deploy_command.h"

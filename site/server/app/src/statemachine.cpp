@@ -7,7 +7,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include <iostream>
 
-#include "combat.h"
+#include "ce.h"
 #include "db.h"
 #include "logger.h"
 #include "moduleutil.h"
@@ -630,6 +630,53 @@ bool StateMachine::check_inhibits(CommandID cmd, std::string& error_msg)
         if (s.phase_index != PH_RESOLVE_COMBAT)
         {
             error_msg = "Combat orders only allowed during Combat phase";
+            return false;
+        }
+        return true;
+    }
+    break;
+
+    case CommandID::COMBAT_APPLY:
+    {
+        if (s.phase_index != PH_RESOLVE_COMBAT)
+        {
+            error_msg = "Combat apply damage only allowed during Combat phase "
+                        "after damage has been assessed. TBD";
+            return false;
+        }
+        return true;
+    }
+    break;
+
+    case CommandID::COMBAT_DRAFTS:
+    {
+        if (s.phase_index != PH_RESOLVE_COMBAT)
+        {
+            error_msg = "Combat drafts is allowed when making combat orders only.";
+            return false;
+        }
+        return true;
+    }
+    break;
+
+    case CommandID::COMBAT_CANCEL:
+    {
+        if (s.phase_index != PH_RESOLVE_COMBAT)
+        {
+            error_msg = "Combat cancel is allowed when making combat orders and "
+                        "there are pending combat orders to cancel.";
+            return false;
+        }
+        return true;
+    }
+    break;
+
+    case CommandID::COMBAT_COMMIT:
+    {
+        if (s.phase_index != PH_RESOLVE_COMBAT)
+        {
+            error_msg = "Combat commit is allowed when making combat orders and "
+                        "there are pending combat orders to commit.";
             return false;
         }
         return true;

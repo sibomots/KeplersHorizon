@@ -156,6 +156,16 @@ UNIQUE KEY uniq_ship (game_id, owner, ship_code),
 FOREIGN KEY (game_id) REFERENCES games(id)
 );
 
+
+ALTER TABLE ships 
+ADD COLUMN pd_max INT NOT NULL DEFAULT 0 COMMENT 'Original Power Drive rating' AFTER pd,
+ADD COLUMN beam_max INT NOT NULL DEFAULT 0 COMMENT 'Original Beam rating' AFTER beam,
+ADD COLUMN screen_max INT NOT NULL DEFAULT 0 COMMENT 'Original Screen rating' AFTER screen,
+ADD COLUMN tube_max INT NOT NULL DEFAULT 0 COMMENT 'Original Tube rating' AFTER tube,
+ADD COLUMN missiles_max INT NOT NULL DEFAULT 0 COMMENT 'Original Missile capacity' AFTER missiles,
+ADD COLUMN sr_max INT NOT NULL DEFAULT 0 COMMENT 'Original System Rack rating' AFTER sr;
+
+
 CREATE TABLE IF NOT EXISTS sightings (
 id BIGINT AUTO_INCREMENT PRIMARY KEY,
 game_id INT NOT NULL,
@@ -401,7 +411,7 @@ round INT NOT NULL DEFAULT 1,
 stage INT NOT NULL DEFAULT 0,
 attacker_remains BOOLEAN NOT NULL DEFAULT 0,
 stalemate_counter INT NOT NULL DEFAULT 0,
-pending_damage_json TEXT DEFAULT NULL,
+-- REMOVED:  pending_damage_json TEXT DEFAULT NULL,
 damage_assigned_A BOOLEAN NOT NULL DEFAULT 0,
 damage_assigned_B BOOLEAN NOT NULL DEFAULT 0,
 last_log TEXT DEFAULT NULL,
@@ -684,3 +694,33 @@ expires_turn INT NOT NULL,
 FOREIGN KEY (game_id) REFERENCES games(id),
 INDEX idx_hex_events (game_id, hex_id)
 );
+
+
+-- appending for new pending damage table work
+
+CREATE TABLE IF NOT EXISTS pending_damage (
+    game_id INT NOT NULL,
+    hex_id VARCHAR(8) NOT NULL,
+    round INT NOT NULL,
+    ship_code VARCHAR(4) NOT NULL,
+    owner CHAR(1) NOT NULL,
+    damage_amount INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (game_id, hex_id, round, ship_code, owner),
+    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    FOREIGN KEY (game_id, hex_id) REFERENCES combat_state(game_id, hex_id) ON DELETE CASCADE,
+    FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code) ON DELETE CASCADE,
+    INDEX idx_pending_owner (game_id, hex_id, owner),
+    INDEX idx_pending_ship (game_id, ship_code),
+    INDEX idx_pending_round (game_id, hex_id, round)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Index for finding all damage for a player in a hex
+CREATE INDEX IF NOT EXISTS idx_pending_player_hex 
+ON pending_damage(game_id, hex_id, owner);
+
+-- Index for checking if a specific ship has pending damage
+CREATE INDEX IF NOT EXISTS idx_pending_ship_check 
+ON pending_damage(game_id, ship_code, owner);
+
+
