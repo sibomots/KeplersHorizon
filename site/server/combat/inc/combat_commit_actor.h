@@ -21,7 +21,7 @@ class CombatCommitActor : public ICmd
         }
         ICmd* build()
         {
-            return new CombatCommitActor();
+            return new CombatCommitActor;
         }
     };
 

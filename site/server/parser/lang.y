@@ -67,9 +67,6 @@ void yyerror(const char* msg);
 // Our richer helper (used by actions) that can report source location.
 void yyerror(YYLTYPE* loc, const char* msg);
 
-// BUGBUG
-//JDW  CombatApplyCommand::Builder* g_combat_apply_builder = new CombatApplyCommand::Builder();
-
 // Global builder for repair command
 RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
@@ -93,16 +90,18 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
    std::pair<AttributeMap*, MissileSet*>* combat_pair;
 }
 
-%type <vec_attr> build_attr_spec
-%type <combat_pair> new_combat_order_attr_spec
+%type <ival> combat_tactic;
+%type <sval> build_optional_target
 %type <sval> combat_initiator_ship
 %type <sval> deployable_ship
 %type <sval> building_draft_ship
+%type <sval> combat_target_ship
+%type <sval> combat_damaged_ship
 %type <vec_sval> chain_move_location
 %type <vec_sval> chain_resource_words
-%type <sval> build_optional_target
-%type <ival> combat_tactic;
-%type <sval> combat_target_ship
+%type <vec_attr> combat_apply_spec
+%type <vec_attr> build_attr_spec
+%type <combat_pair> new_combat_order_attr_spec
 
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
@@ -514,37 +513,37 @@ combat_cmd:
    }
    // combat drafts
    | TOK_COMBAT TOK_DRAFTS {
-       ICmd* pCmd = CombatDraftsCommand::Builder().build();
+       ICmd* pCmd = CombatDraftsActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    //  cd
    | TOK_COMBAT_DRAFTS {
-       ICmd* pCmd = CombatDraftsCommand::Builder().build();
+       ICmd* pCmd = CombatDraftsActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // combat commit
    | TOK_COMBAT TOK_COMMIT {
-       ICmd* pCmd = CombatCommitCommand::Builder().build();
+       ICmd* pCmd = CombatCommitActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // cc
    | TOK_COMBAT_COMMIT {
-       ICmd* pCmd = CombatCommitCommand::Builder().build();
+       ICmd* pCmd = CombatCommitActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // combat cancel
    | TOK_COMBAT TOK_CANCEL {
-       ICmd* pCmd = CombatCancelCommand::Builder().build();
+       ICmd* pCmd = CombatCancelActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // cx
    | TOK_COMBAT_CANCEL {
-       ICmd* pCmd = CombatCancelCommand::Builder().build();
+       ICmd* pCmd = CombatCancelActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
@@ -599,24 +598,38 @@ combat_cmd:
        SafeDelete(pCmd);
    }
    // combat apply ...
-   | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_application_spec {
-       // Build and invoke combat apply command
-       ICmd* pCmd = g_combat_apply_builder->build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
+   | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_apply_spec {
+       // $3 is target ship to apply on
+       // $4 is AttributeMap to use.  We do allow repairing "M"
+       std::string* target_ship = $3;
+       AttributeMap* patmap = $4;
+       ICmd* pCmd = CombatApplyActor::Builder()
+                              .ship_code(*target_ship)
+                              .set_assignments(*patmap)
+                              .build();
+       if (pCmd) {
+           pCmd->invoke();
+       }
+       SafeDelete(target_ship);
+       SafeDelete(patmap);
        SafeDelete(pCmd);
-       // Reset builder for next command
-       delete g_combat_apply_builder;
-       g_combat_apply_builder = new CombatApplyCommand::Builder();
    }
    // ca ...
-   | TOK_COMBAT_APPLY combat_damaged_ship combat_application_spec {
-       // Build and invoke combat apply command
-       ICmd* pCmd = g_combat_apply_builder->build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
+   | TOK_COMBAT_APPLY combat_damaged_ship combat_apply_spec {
+       // $2 is target ship to apply on
+       // $3 is AttributeMap to use.  We do allow repairing "M"
+       std::string* target_ship = $2;
+       AttributeMap* patmap = $3;
+       ICmd* pCmd = CombatApplyActor::Builder()
+                              .ship_code(*target_ship)
+                              .set_assignments(*patmap)
+                              .build();
+       if (pCmd) {
+           pCmd->invoke();
+       }
+       SafeDelete(target_ship);
+       SafeDelete(patmap);
        SafeDelete(pCmd);
-       // Reset builder for next command
-       delete g_combat_apply_builder;
-       g_combat_apply_builder = new CombatApplyCommand::Builder();
    }
    | TOK_COMBAT error { yyerror(&@1, "combat: usage: combat (see help combat)"); YYABORT; }
    | TOK_COMBAT_DRAFTS error { yyerror(&@1, "cd: usage: cd"); YYABORT; }
@@ -640,9 +653,7 @@ combat_initiator_ship:
 
 combat_damaged_ship:
   TOK_STRING {
-      std::string ship_id(*$1);
-      g_combat_apply_builder->ship_code(ship_id);
-      delete $1;
+      $$ = $1;
   }
   ;
 
@@ -713,40 +724,52 @@ new_combat_order_attr_spec: {
   ;
 
 
-combat_application_spec:
-  TOK_PD_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("D", $1);
+combat_apply_spec: {
+     $$ = new AttributeMap;
   }
-  | TOK_B_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("B", $1);
+  | combat_apply_spec TOK_PD_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate POWER_DRIVE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_S_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("S", $1);
+  | combat_apply_spec TOK_B_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate BEAM assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_T_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("T", $1);
+  | combat_apply_spec TOK_S_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate SCREEN assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  | TOK_M_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("M", $1);
+  | combat_apply_spec TOK_T_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate TUBE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
-  ;
-
-additional_combat_application_spec:
-  /* empty - no more specs */
-  | TOK_PD_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("D", $1);
-  }
-  | TOK_B_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("B", $1);
-  }
-  | TOK_S_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("S", $1);
-  }
-  | TOK_T_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("T", $1);
-  }
-  | TOK_M_ASSIGN additional_combat_application_spec {
-      g_combat_apply_builder->assign("M", $1);
+  | combat_apply_spec TOK_M_ASSIGN {
+      $$ = $1;
+      $$ = $1;
+      // Allow the damage to hit the "Missile" enterprise of the
+      // ship. Effectively destroys missiles.  BUGBUG -- should
+      // be somewhat more catastrophic than this.
+      auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate TUBE assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
   }
   ;
 

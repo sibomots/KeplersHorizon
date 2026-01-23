@@ -196,11 +196,6 @@ std::vector<CombatState> CombatEngine::get_active_combats()
                          " GROUP BY s.game_id, s.at_hex "
                          " HAVING COUNT(DISTINCT s.owner)>1)");
 
-    // auto rows = db.query("SELECT hex_id, round, stage, attacker_remains, "
-    //                     "stalemate_counter, pending_damage_json, last_log "
-    //                     "FROM combat_state WHERE game_id=" +
-    //                     std::to_string(game_id));
-
     // Logger::instance().info("[COMBAT][get_active_combat] via:");
     // Logger::instance().info(active_combat.c_str());
 
@@ -885,15 +880,6 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
     }
 
-    // Update combat state - no JSON field to update!
-    db.exec("UPDATE combat_state SET round=" + std::to_string(next_round) +
-        ", stage=" + std::to_string(next_stage) +
-        ", stalemate_counter=" + std::to_string(next_stalemate) +
-        ", damage_assigned_A=0, damage_assigned_B=0" + 
-        ", last_log='" + db.esc(log.str()) + "'" + 
-        " WHERE game_id=" + std::to_string(game_id) +
-        " AND hex_id='" + hex_id + "'");
-
     // 5. Update State
     int next_round = cs.round;
     int next_stage = 0; // Back to ORDERS
@@ -1065,9 +1051,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     return log.str();
 }
 
-std::string CombatEngine::apply_damage(char owner, 
-                                      const std::string& ship_code,
-                                      const AttributeMap& assignments)
+
+std::string
+CombatEngine::apply_damage(char owner, const std::string& ship_code,
+                           const AttributeMap& assignments)
 {
     DatabaseManager& db = DatabaseManager::getInstance();
     
@@ -1111,11 +1098,11 @@ std::string CombatEngine::apply_damage(char owner,
     
     int damage_needed = std::atoi(dmg_rows[0][0].c_str());
     
-    // 4. Validate assignments
+    // 4. Validate assignments - iterate through AttributeMap.data
     int current_hp = cur_pd + cur_beam + cur_screen + cur_tube;
     int assigned = 0;
     
-    for (const auto& [attr_id, dmg] : assignments) {
+    for (const auto& [attr_id, dmg] : assignments.data) {
         assigned += dmg;
     }
     
@@ -1137,11 +1124,11 @@ std::string CombatEngine::apply_damage(char owner,
     // 5. Apply damage to ship attributes
     std::vector<std::string> updates;
     
-    auto apply_attr = [&](const std::string& attr_id, int cur_val, 
+    auto apply_attr = [&](AttributeID attr_id, int cur_val, 
                          const std::string& col_name) 
     {
-        auto it = assignments.find(attr_id);
-        if (it != assignments.end()) {
+        auto it = assignments.data.find(attr_id);
+        if (it != assignments.data.end()) {
             int dmg = it->second;
             int new_val;
             
@@ -1168,11 +1155,14 @@ std::string CombatEngine::apply_damage(char owner,
     
     // 6. Execute ship updates
     if (!updates.empty()) {
-        std::string update_sql = "UPDATE ships SET " + 
-                                join_vector(updates, ", ") +
-                                " WHERE game_id=" + std::to_string(game_id) +
-                                " AND ship_code='" + db.esc(ship_code) + "' " +
-                                " AND owner='" + std::string(1, owner) + "'";
+        std::string update_sql = "UPDATE ships SET ";
+        for (size_t i = 0; i < updates.size(); i++) {
+            if (i > 0) update_sql += ", ";
+            update_sql += updates[i];
+        }
+        update_sql += " WHERE game_id=" + std::to_string(game_id) +
+                     " AND ship_code='" + db.esc(ship_code) + "' " +
+                     " AND owner='" + std::string(1, owner) + "'";
         db.exec(update_sql);
     }
     
@@ -1210,7 +1200,7 @@ std::string CombatEngine::apply_damage(char owner,
             std::string(1, owner) + " at hex " + hex);
     }
     
-    // 8. Delete pending damage entry for this ship - ONE SIMPLE DELETE!
+    // 8. Delete pending damage entry for this ship
     db.exec("DELETE FROM pending_damage "
             "WHERE game_id=" + std::to_string(game_id) +
             " AND hex_id='" + db.esc(hex) + "' "
@@ -1218,7 +1208,7 @@ std::string CombatEngine::apply_damage(char owner,
             " AND ship_code='" + db.esc(ship_code) + "' "
             " AND owner='" + std::string(1, owner) + "'");
     
-    // 9. Check if player has more pending damage - ONE SIMPLE COUNT!
+    // 9. Check if player has more pending damage
     auto remaining_rows = db.query(
         "SELECT COUNT(*) FROM pending_damage "
         "WHERE game_id=" + std::to_string(game_id) +

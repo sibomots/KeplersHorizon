@@ -21,7 +21,7 @@ class CombatCancelActor : public ICmd
         }
         ICmd* build()
         {
-            return new CombatCancelActor();
+            return new CombatCancelActor;
         }
     };
 

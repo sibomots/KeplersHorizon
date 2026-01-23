@@ -51,7 +51,6 @@ typedef struct CombatSessionState
     int stage;
     bool attacker_remains;
     int stalemate_counter;
-    std::string pending_damage_json;
     std::string last_log;
 
     CombatSessionState()
@@ -60,15 +59,13 @@ typedef struct CombatSessionState
     {
          // BUGBUG via other c'tor {0, "", 0, 0, false, 0, "", ""};
          hex_id = {};
-         pending_damage_json = {};
          last_log = {};
     }
 
-    CombatSessionState(int gid, std::string hex, int rnd, int stg, bool att, int stale,
-                std::string pend, std::string log)
+    CombatSessionState(int gid, std::string hex, int rnd, int stg, bool att, int stale, std::string log)
         : game_id(gid), hex_id(hex), round(rnd), stage(stg),
           attacker_remains(att), stalemate_counter(stale),
-          pending_damage_json(pend), last_log(log)
+          last_log(log)
     {
     }
 } CombatSessionState;

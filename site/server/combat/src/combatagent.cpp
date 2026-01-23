@@ -14,28 +14,20 @@ CombatAgent::get_combat_state_at_hex(const int gid, const std::string& hex_id)
     // found. module id and players involved?
     auto rows =
         db.query("SELECT round, stage, attacker_remains, stalemate_counter, "
-                 "pending_damage_json, last_log "
+                 "last_log "
                  "FROM combat_state WHERE game_id=" +
                  std::to_string(gid) + " AND hex_id='" + hex_id + "'");
     if (rows.empty())
     {
-        // {0, "", 0, 0, false, 0, "", ""};
         return CombatSessionState();
     }
 
     return CombatSessionState(gid, hex_id,
-                              // rows[0][0] == round
                               std::atoi(rows[0][0].c_str()),
-                              // rows[0][1] == stage
                               std::atoi(rows[0][1].c_str()),
-                              // rows[0][2] == attacker_remains (bool)
                               (rows[0][2] == "1"),
-                              // rows[0][3] == stalemate_counter
                               std::atoi(rows[0][3].c_str()),
-                              // rows[0][4] == pending_damage_gson
-                              rows[0][4],
-                              // rows[0][5] == pending_damage
-                              rows[0][5]);
+                              rows[0][4]);
 }
 
 bool CombatAgent::is_param_valid(const CombatAgentPayload& param) const

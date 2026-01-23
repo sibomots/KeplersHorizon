@@ -21,7 +21,7 @@ class CombatDraftsActor : public ICmd
         }
         ICmd* build()
         {
-            return new CombatDraftsActor();
+            return new CombatDraftsActor;
         }
     };
 

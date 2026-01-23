@@ -707,20 +707,16 @@ CREATE TABLE IF NOT EXISTS pending_damage (
     damage_amount INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (game_id, hex_id, round, ship_code, owner),
-    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-    FOREIGN KEY (game_id, hex_id) REFERENCES combat_state(game_id, hex_id) ON DELETE CASCADE,
-    FOREIGN KEY (game_id, owner, ship_code) REFERENCES ships(game_id, owner, ship_code) ON DELETE CASCADE,
     INDEX idx_pending_owner (game_id, hex_id, owner),
-    INDEX idx_pending_ship (game_id, ship_code),
-    INDEX idx_pending_round (game_id, hex_id, round)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    INDEX idx_pending_ship (game_id, ship_code)
+);
 
 -- Index for finding all damage for a player in a hex
-CREATE INDEX IF NOT EXISTS idx_pending_player_hex 
-ON pending_damage(game_id, hex_id, owner);
+-- CREATE INDEX IF NOT EXISTS idx_pending_player_hex 
+-- ON pending_damage(game_id, hex_id, owner);
 
 -- Index for checking if a specific ship has pending damage
-CREATE INDEX IF NOT EXISTS idx_pending_ship_check 
-ON pending_damage(game_id, ship_code, owner);
+-- CREATE INDEX IF NOT EXISTS idx_pending_ship_check 
+-- ON pending_damage(game_id, ship_code, owner);
 
 
