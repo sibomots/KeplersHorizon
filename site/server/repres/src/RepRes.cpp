@@ -28,17 +28,17 @@ bool RepairCommand::invoke(void)
         auto rows = db.query(
             "SELECT s.ship_code, s.ship_name, s.at_hex, s.pd, s.beam, "
             "s.screen, "
-            "s.tube, s.missiles, s.pd_orig, s.beam_orig, s.screen_orig, "
-            "s.tube_orig, s.missiles_orig FROM ships s "
+            "s.tube, s.missiles, s.pd_max, s.beam_max, s.screen_max, "
+            "s.tube_max, s.missiles_max FROM ships s "
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = "
             "s.game_id "
             "WHERE s.game_id=" +
             std::to_string(s.game_id) + " AND s.owner='" +
             std::string(1, owner) + "' AND bs.owner='" + std::string(1, owner) +
             "' AND s.destroyed_at IS NULL AND ("
-            "s.pd < s.pd_orig OR s.beam < s.beam_orig OR "
-            "s.screen < s.screen_orig OR s.tube < s.tube_orig OR "
-            "s.missiles < s.missiles_orig)");
+            "s.pd < s.pd_max OR s.beam < s.beam_max OR "
+            "s.screen < s.screen_max OR s.tube < s.tube_max OR "
+            "s.missiles < s.missiles_max)");
 
         if (rows.empty())
         {
@@ -63,7 +63,7 @@ bool RepairCommand::invoke(void)
     // facility
     auto shipRow = db.query(
         "SELECT s.at_hex, s.pd, s.beam, s.screen, s.tube, s.missiles, "
-        "s.pd_orig, s.beam_orig, s.screen_orig, s.tube_orig, s.missiles_orig, "
+        "s.pd_max, s.beam_max, s.screen_max, s.tube_max, s.missiles_max, "
         "ss.name "
         "FROM ships s "
         "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.module_id = "
@@ -117,22 +117,22 @@ bool RepairCommand::invoke(void)
     if (m_attribute == "pd" || m_attribute == "d")
     {
         col = "pd";
-        origCol = "pd_orig";
+        origCol = "pd_max";
     }
     else if (m_attribute == "b" || m_attribute == "beam")
     {
         col = "beam";
-        origCol = "beam_orig";
+        origCol = "beam_max";
     }
     else if (m_attribute == "s" || m_attribute == "screen")
     {
         col = "screen";
-        origCol = "screen_orig";
+        origCol = "screen_max";
     }
     else if (m_attribute == "t" || m_attribute == "tube")
     {
         col = "tube";
-        origCol = "tube_orig";
+        origCol = "tube_max";
     }
     else
     {
@@ -220,14 +220,14 @@ bool ResupplyCommand::invoke(void)
         // Find ships at player's base stars that can take missiles
         auto rows = db.query(
             "SELECT s.ship_code, s.ship_name, s.at_hex, s.missiles, "
-            "s.missiles_orig "
+            "s.missiles_max "
             "FROM ships s "
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = "
             "s.game_id "
             "WHERE s.game_id=" +
             std::to_string(s.game_id) + " AND s.owner='" +
             std::string(1, owner) + "' AND bs.owner='" + std::string(1, owner) +
-            "' AND s.missiles < s.missiles_orig AND s.destroyed_at IS NULL");
+            "' AND s.missiles < s.missiles_max AND s.destroyed_at IS NULL");
 
         if (rows.empty())
         {
@@ -253,7 +253,7 @@ bool ResupplyCommand::invoke(void)
 
     // Validate ship exists and is at player's base star
     auto shipRow = db.query(
-        "SELECT s.missiles, s.missiles_orig, s.at_hex "
+        "SELECT s.missiles, s.missiles_max, s.at_hex "
         "FROM ships s "
         "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
         "WHERE s.game_id=" +
