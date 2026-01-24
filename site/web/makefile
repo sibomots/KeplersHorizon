@@ -1,6 +1,6 @@
 it:
-	rm /var/www/sibomots/kh/*
-	cp * /var/www/sibomots/kh
+	rm -rf /var/www/kepler/bkhZZ/*
+	cp * /var/www/kepler/bkhZZ
 
 #it:
 #	mkdir -p /var/www/kepler/kh

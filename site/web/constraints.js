@@ -35,6 +35,6 @@
 
 window.KEPLERHORIZON = window.KEPLERHORIZON || {};
 window.KEPLERHORIZON.constraints = {
-  apiBase: "/kh/api",           // with <base href="/kh/">, this becomes /kh/api
+  apiBase: "/bkhZZ/api",           // with <base href="/kh/">, this becomes /kh/api
   maxConsoleLines: 500
 };

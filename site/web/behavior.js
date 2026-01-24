@@ -49,7 +49,7 @@
   }
 
   function apiUrl(path) {
-    const base = (C && C.apiBase) ? C.apiBase : "/kh/api";
+    const base = (C && C.apiBase) ? C.apiBase : "/bkhZZ/api";
     const p = path.startsWith("/") ? path : ("/" + path);
     return base + p;
   }

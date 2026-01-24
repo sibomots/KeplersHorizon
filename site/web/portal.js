@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    const API_BASE = '/kh/api';
+    const API_BASE = '/bkhZZ/api';
 
     function showAlert(message, type) {
         const box = document.getElementById('alertBox');

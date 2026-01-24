@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    const API_BASE = '/kh/api';
+    const API_BASE = '/bkhZZ/api';
     let roomCode = null;
     let pollTimer = null;
     let currentUserId = null;
