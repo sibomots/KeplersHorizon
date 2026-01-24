@@ -13,19 +13,30 @@
 #include <vector>
 #include <map>
 #include "typedefs.h"
-#include "attributemap.h"
-#include "Build.h"
 #include "logger.h"
-#include "next_command.h"
-#include "done_command.h"
-#include "deploy_command.h"
-#include "move_command.h"
 
+#include "attributemap.h"
+
+// Building ship actors
+#include "build_commit_actor.h"
+#include "build_new_actor.h"
+#include "build_set_actor.h"
+#include "build_commit_actor.h"
+#include "build_cancel_actor.h"
+#include "build_show_draft_actor.h"
+#include "build_drafts_actor.h"
+
+// Combat actors
 #include "combat_order_actor.h"
 #include "combat_apply_actor.h"
 #include "combat_drafts_actor.h"
 #include "combat_commit_actor.h"
 #include "combat_cancel_actor.h"
+
+#include "next_command.h"
+#include "done_command.h"
+#include "deploy_command.h"
+#include "move_command.h"
 
 #include "fleet_command.h"
 #include "cargo_command.h"
@@ -91,7 +102,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 }
 
 %type <ival> combat_tactic;
-%type <sval> build_optional_target
+%type <sval> build_target
 %type <sval> combat_initiator_ship
 %type <sval> deployable_ship
 %type <sval> building_draft_ship
@@ -774,104 +785,105 @@ combat_apply_spec: {
   ;
 
 build_cmd:
+  // With no arguments, treat this as 'build drafts' 
   // build
   // b
   TOK_BUILD {
-      ICmd *pCmd = BuildListDraftsCommand::Builder().build();
+      ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
   // build new W|S NAME
+  // Example:  BN W FooShip
+  // Example:  BN S BarShip
+  // Example:  BN W4 AnotherShip
+  // Example:  BN S11 yetAnotherShip
+
   | TOK_BUILD TOK_NEW TOK_STRING TOK_STRING {
-      std::string code(*$3);
-      std::string name(*$4);
-      ICmd *pCmd = BuildNewCommand::Builder()
-                  .set_ship_code(code)
-                  .set_ship_name(name)
+      ICmd* pCmd = BuildNewActor::Builder()
+                  .set_ship_code(*$3)
+                  .set_ship_name(*$4)
                   .build();
       pCmd->invoke();
+      SafeDelete($3);
+      SafeDelete($4);
       SafeDelete(pCmd);
   }
   // bn ...
   // bn W|S NAME
   | TOK_BUILD_NEW TOK_STRING TOK_STRING {
-      std::string code(*$2);
-      std::string name(*$3);
-      ICmd *pCmd = BuildNewCommand::Builder()
-                  .set_ship_code(code)
-                  .set_ship_name(name)
+      ICmd *pCmd = BuildNewActor::Builder()
+                  .set_ship_code(*$2)
+                  .set_ship_name(*$3)
                   .build();
       pCmd->invoke();
+      SafeDelete($2);
+      SafeDelete($3);
       SafeDelete(pCmd);
   }
   // build drafts
   | TOK_BUILD TOK_DRAFTS {
-      ICmd *pCmd = BuildListDraftsCommand::Builder().build();
+      ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
   // bd
   | TOK_BUILD_DRAFTS {
-      ICmd *pCmd = BuildListDraftsCommand::Builder().build();
+      ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-
-  // build drafts SHIP_ID
-  // build drafts SHIP_NAME
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
       // can also be a name, but we will take it as it comes.
-      ICmd *pCmd = BuildShowDraftCommand::Builder()
-                  .set_draft_target(*$3)
+      ICmd *pCmd = BuildShowDraftActor::Builder()
+                  .set_target(*$3)
                   .build();
       pCmd->invoke();
+      SafeDelete($3);
       SafeDelete(pCmd);
   }
-
   // bd SHIP_ID
   // bd SHIP_NAME
   | TOK_BUILD_DRAFTS building_draft_ship {
       // can also be a name, but we will take it as it comes.
-      ICmd *pCmd = BuildShowDraftCommand::Builder()
-                  .set_draft_target(*$2)
+      ICmd *pCmd = BuildShowDraftActor::Builder()
+                  .set_target(*$2)
                   .build();
       pCmd->invoke();
+      SafeDelete($2);
       SafeDelete(pCmd);
   }
 
 
   // build set ...
-  | TOK_BUILD build_optional_target TOK_SET_ATTR build_attr_spec {
+  | TOK_BUILD build_target TOK_SET_ATTR build_attr_spec {
       // $2 is the optional target
       //   can be ship_code or  ship name .. dealt with by invoke() later.
       // $3 is "SET" subcommand, we ignore that.
       // $4 is map of ship attributes
 
-      ICmd *pCmd = BuildSetAttributeCommand::Builder()
-                    .set_draft_target($2)
-                    .set_attributes($4)
+      ICmd *pCmd = BuildSetActor::Builder()
+                    .set_target(*$2)
+                    .set_attributes(*$4)
                     .build();
-
       pCmd->invoke(); 
-
       SafeDelete($4)
       SafeDelete($2)
       SafeDelete(pCmd);
   }
 
   // bs ...
-  | TOK_BUILD_SET_ATTR build_optional_target build_attr_spec {
+  | TOK_BUILD_SET_ATTR build_target build_attr_spec {
       // Using alias, already know it's the SET subcommand of BUILD.
       // $2 is the optional target
       //   can be ship_code or
       //   ship name 
       // $3 is vector of ship attributes
-      ICmd *pCmd = BuildSetAttributeCommand::Builder()
-                    .set_draft_target($2)
-                    .set_attributes($3)
+      ICmd *pCmd = BuildSetActor::Builder()
+                    .set_target(*$2)
+                    .set_attributes(*$3)
                     .build();
-
       pCmd->invoke();
       SafeDelete($3)
       SafeDelete($2)
@@ -880,41 +892,45 @@ build_cmd:
 
   // build commit
   // build commit CODE|NAME
-  | TOK_BUILD TOK_COMMIT build_optional_target {
-      // $3 is the code or name of a ship, or null
-      ICmd *pCmd = BuildCommitCommand::Builder()
-                  .set_draft_target($3)
+  | TOK_BUILD TOK_COMMIT build_target {
+      // $3 is the pointer to the string holding the code or name of a ship,
+      ICmd *pCmd = BuildCommitActor::Builder()
+                  .set_target(*$3)
                   .build();
       pCmd->invoke();
+      SafeDelete($3);
       SafeDelete(pCmd);
   }
 
   // bc
-  | TOK_BUILD_COMMIT build_optional_target {
+  | TOK_BUILD_COMMIT build_target {
       // $2 is the code or name of a ship, or null
-      ICmd *pCmd = BuildCommitCommand::Builder()
-                   .set_draft_target($2)
+      ICmd *pCmd = BuildCommitActor::Builder()
+                   .set_target(*$2)
                    .build();
       pCmd->invoke();
+      SafeDelete($2);
       SafeDelete(pCmd);
   }
 
-  | TOK_BUILD TOK_CANCEL build_optional_target {
+  | TOK_BUILD TOK_CANCEL build_target {
       // $3 is the code or name of a ship, or null
-      ICmd *pCmd = BuildCancelCommand::Builder()
-                  .set_draft_target($3)
+      ICmd *pCmd = BuildCancelActor::Builder()
+                  .set_target(*$3)
                   .build();
       pCmd->invoke();
+      SafeDelete($3);
       SafeDelete(pCmd);
   }
 
   // bx
-  | TOK_BUILD_CANCEL build_optional_target {
+  | TOK_BUILD_CANCEL build_target {
       // $2 is the code or name of a ship, or null
-      ICmd *pCmd = BuildCancelCommand::Builder()
-                  .set_draft_target($2)
+      ICmd *pCmd = BuildCancelActor::Builder()
+                  .set_target(*$2)
                   .build();
       pCmd->invoke();
+      SafeDelete($2);
       SafeDelete(pCmd);
   }
   
@@ -926,12 +942,8 @@ build_cmd:
 | TOK_BUILD_SET_ATTR error { yyerror(&@1, "build set: usage: bs [attr=# [attr=#] ... ]"); YYABORT; }
 ;
 
-build_optional_target:
-  {
-     $$ = 0;
-     // nothing, or
-  }
-  | TOK_STRING
+build_target:
+  TOK_STRING
   {
      $$ = $1;
   }
@@ -995,7 +1007,6 @@ build_attr_spec: {
 // "deploy" { return TOK_DEPLOY; }
 deployable_ship:
   TOK_STRING {
-      std::string ship_id(*$1);
       $$ = $1;
   }
   ;

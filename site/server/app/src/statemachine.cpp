@@ -63,7 +63,9 @@ GameState StateMachine::load_game(int game_id)
         std::string pat = "\"" + key + "\":";
         size_t p = state_json.find(pat);
         if (p == std::string::npos)
+        {
             return fallback;
+        }
         p += pat.size();
         while (p < state_json.size() &&
                std::isspace((unsigned char)state_json[p]))
@@ -89,12 +91,19 @@ GameState StateMachine::load_game(int game_id)
         std::string pat = "\"" + key + "\":\"";
         size_t p = state_json.find(pat);
         if (p == std::string::npos)
+        {
             return fallback;
-        p += pat.size();
-        size_t e = state_json.find("\"", p);
-        if (e == std::string::npos)
-            return fallback;
-        return state_json.substr(p, e - p);
+        }
+        else
+        {
+            p += pat.size();
+            size_t e = state_json.find("\"", p);
+            if (e == std::string::npos)
+            {
+                return fallback;
+            }
+            return state_json.substr(p, e - p);
+        }
     };
 
     s.round = std::max(1, find_int("round", s.round));
@@ -108,14 +117,17 @@ GameState StateMachine::load_game(int game_id)
         std::string op = "\"" + objKey + "\":{";
         size_t p = state_json.find(op);
         if (p == std::string::npos)
+        {
             return fallback;
+        }
         size_t end = state_json.find("}", p + op.size());
         if (end == std::string::npos)
+        {
             return fallback;
+        }
         std::string sub = state_json.substr(p, end - p + 1);
-        return find_int(
-            fieldKey,
-            fallback); // re-use global find_int (ok for now; small JSON)
+        // re-use global find_int (ok for now; small JSON)
+        return find_int( fieldKey, fallback);
     };
 
     // We'll do simple direct searches for "vp":{"A":X,"B":Y} etc.
@@ -129,7 +141,9 @@ GameState StateMachine::load_game(int game_id)
             std::string pat = "\"" + k + "\":";
             size_t p = vpSub.find(pat);
             if (p == std::string::npos)
+            {
                 return 0;
+            }
             p += pat.size();
             while (p < vpSub.size() && std::isspace((unsigned char)vpSub[p]))
                 p++;
@@ -154,7 +168,9 @@ GameState StateMachine::load_game(int game_id)
             std::string pat = "\"" + k + "\":";
             size_t p = bpSub.find(pat);
             if (p == std::string::npos)
+            {
                 return 0;
+            }
             p += pat.size();
             while (p < bpSub.size() && std::isspace((unsigned char)bpSub[p]))
                 p++;
@@ -175,37 +191,35 @@ GameState StateMachine::load_game(int game_id)
     auto combats = ce.get_active_combats();
     if (!combats.empty())
     {
-        Logger::instance().info("[SM] checking combats: True");
         std::ostringstream c;
-        c << "{";
-        c << "\"active_hexes\":[";
+        c << "{"
+             "\"active_hexes\":[";
         for (size_t i = 0; i < combats.size(); ++i)
         {
-            if (i > 0)
+            if (i > 0) 
+            {
                 c << ",";
+            }
             c << "\"" << combats[i].hex_id << "\"";
         }
-        c << "],";
-        c << "\"combats\":[";
+        c << "],"
+             "\"combats\":[";
         for (size_t i = 0; i < combats.size(); ++i)
         {
             if (i > 0)
+            {
                 c << ",";
+            }
             c << "{\"hex\":\"" << combats[i].hex_id << "\",";
             c << "\"log\":\"" << json_escape(combats[i].last_log) << "\",";
             c << "\"stage\":" << combats[i].stage; // useful for UI
             c << "}";
         }
-        c << "],";
-        c << "\"count\":" << combats.size();
+        c << "],"
+             "\"count\":" << combats.size();
         c << "}";
         s.combat_summary_json = c.str();
     }
-    else
-    {
-        Logger::instance().info("[SM] checking combats: None");
-    }
-
     return s;
 }
 
@@ -218,9 +232,8 @@ GameState StateMachine::new_game_state()
     s.vpA = 0;
     s.vpB = 0;
 
-    // Starting credits (400 CR = 20 BP × 20 inflation factor)
-    s.creditsA = 400;
-    s.creditsB = 400;
+    s.creditsA = 40;
+    s.creditsB = 40;
 
     return s;
 }
@@ -233,7 +246,10 @@ void StateMachine::apply_start_of_turn(GameState& s)
     // 2) Award BP (+10) at start of each player-turn after the first.
 
     if (s.game_over)
+    {
+        // BUGBUG not sure what happens.
         return;
+    }
 
     // VP: +1 for each enemy base system occupied at start of your turn.
     char me = s.active_player.empty() ? 'A' : s.active_player[0];
@@ -248,23 +264,28 @@ void StateMachine::apply_start_of_turn(GameState& s)
             "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND "
             "ss.module_id=" +
             std::to_string(mod) +
-            " "
-            "WHERE sh.game_id=" +
+            " WHERE sh.game_id=" +
             std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
             "' AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
             " AND ss.is_base=1 AND ss.base_owner='" +
             std::string(1, enemy) + "'";
         auto r = db.query(q);
         if (!r.empty() && !r[0].empty())
+        {
             vp_gain = std::atoi(r[0][0].c_str());
+        }
     }
 
     if (vp_gain > 0)
     {
         if (me == 'A')
+        {
             s.vpA += vp_gain;
+        }
         else
+        {
             s.vpB += vp_gain;
+        }
     }
 
     // VP needed to win (advanced mode: 3 VP)
@@ -312,10 +333,10 @@ void StateMachine::advance_next(GameState& s)
         {
             CombatEngine ce(s.game_id);
             if (!ce.get_active_combats().empty())
-            {   
+            {
                 // Cannot advance until all combats resolved
                 Logger::instance().info("[SM] Combat is still active.");
-                return; 
+                return;
             }
         }
 
@@ -383,7 +404,6 @@ void StateMachine::advance_next(GameState& s)
                         char enemyOwner = (viewer == 'A') ? 'B' : 'A';
 
                         std::ostringstream combatMsg;
-                        combatMsg << "COMBAT DETECTED!\n";
                         combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName
                                   << " [" << combat.hex_id << "]\n";
                         combatMsg << "     SHIPS IN SYSTEM " << sysName << "\n";
@@ -401,7 +421,7 @@ void StateMachine::advance_next(GameState& s)
                                 combatMsg
                                     << "             " << blueNum++ << ". "
                                     << shipClass << " class " << ship[0]
-                                    << " The " << ship[1] << " (PD:" << ship[4]
+                                    << " " << ship[1] << " (PD:" << ship[4]
                                     << " B:" << ship[5] << " S:" << ship[6]
                                     << " T:" << ship[7] << " M:" << ship[8]
                                     << ")\n";
@@ -420,7 +440,7 @@ void StateMachine::advance_next(GameState& s)
                                                             : "SystemShip";
                                 combatMsg << "             " << redNum++ << ". "
                                           << shipClass << " class " << ship[0]
-                                          << " The " << ship[1] << "\n";
+                                          << " " << ship[1] << "\n";
                             }
                         }
 
@@ -652,7 +672,8 @@ bool StateMachine::check_inhibits(CommandID cmd, std::string& error_msg)
     {
         if (s.phase_index != PH_RESOLVE_COMBAT)
         {
-            error_msg = "Combat drafts is allowed when making combat orders only.";
+            error_msg =
+                "Combat drafts is allowed when making combat orders only.";
             return false;
         }
         return true;
@@ -663,8 +684,9 @@ bool StateMachine::check_inhibits(CommandID cmd, std::string& error_msg)
     {
         if (s.phase_index != PH_RESOLVE_COMBAT)
         {
-            error_msg = "Combat cancel is allowed when making combat orders and "
-                        "there are pending combat orders to cancel.";
+            error_msg =
+                "Combat cancel is allowed when making combat orders and "
+                "there are pending combat orders to cancel.";
             return false;
         }
         return true;
@@ -675,8 +697,9 @@ bool StateMachine::check_inhibits(CommandID cmd, std::string& error_msg)
     {
         if (s.phase_index != PH_RESOLVE_COMBAT)
         {
-            error_msg = "Combat commit is allowed when making combat orders and "
-                        "there are pending combat orders to commit.";
+            error_msg =
+                "Combat commit is allowed when making combat orders and "
+                "there are pending combat orders to commit.";
             return false;
         }
         return true;
