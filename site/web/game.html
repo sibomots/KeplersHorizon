@@ -42,11 +42,12 @@ Copyright (c) 2025, sibomots
         </h2>
 
         <div class="viewport">
-          <div id="consoleLog"></div>
-
+          <!-- Map FIRST in DOM order so console can render on top -->
           <div id="mapView">
             <iframe id="mapFrame" src="map_view.html" title="Kepler's Horizon Map"></iframe>
           </div>
+
+          <div id="consoleLog"></div>
         </div>
 
         <div class="inputRow">

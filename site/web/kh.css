@@ -97,12 +97,13 @@ button:hover {
 /* Panels */
 .panel {
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 0px;
   background: rgba(17, 17, 26, .9);
   box-shadow: 0 12px 28px rgba(0, 0, 0, .35);
   min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  overflow: visible;
 }
 
 .panel h2 {
@@ -117,20 +118,21 @@ button:hover {
   text-shadow: 0 0 5px rgba(34, 170, 34, 0.6);
 }
 
-/* Viewport (console + map split view) */
+/* Viewport (console + map split view) - MODIFIED for overlay */
 .viewport {
   min-height: 0;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
-/* Console Log - scrollbar on left via rtl direction */
+/* Console Log - MODIFIED to overlay map with full width */
 #consoleLog {
   height: calc(100% - 70px);
   overflow-y: auto;
+  overflow-x: visible;
   padding: 10px 12px;
   padding-bottom: 2em;
   /* Extra space to prevent overlap with input */
@@ -140,17 +142,29 @@ button:hover {
   font-size: 14px;
   line-height: 1.2;
   /* Tighter line spacing */
-  white-space: pre-wrap;
+  white-space: pre;
   color: #5f5;
   text-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow), 0 0 40px rgba(50, 255, 50, 0.3);
-  position: relative;
+  position: absolute;
   direction: rtl;
   /* Moves scrollbar to left */
+  width: 100%;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  background: transparent;
+  isolation: isolate;
+  pointer-events: none;
 }
 
 /* Restore left-to-right text inside console */
 #consoleLog>* {
   direction: ltr;
+  display: block;
+  white-space: pre;
+  overflow: visible;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* --- Custom Scrollbar (WebKit/Blink Browsers) --- */
@@ -209,19 +223,16 @@ button:hover {
   pointer-events: none;
 }
 
-/* Flicker Overlay - Console Only */
+/* Passthrough overlay - allows clicks on right 50% to reach map */
 #consoleLog::after {
   content: "";
   position: absolute;
   top: 0;
-  left: 0;
-  width: 100%;
+  right: 0;
+  width: 50%;
   height: 100%;
-  background: rgba(18, 16, 16, 0.15);
-  opacity: 0;
-  z-index: 3;
   pointer-events: none;
-  animation: crt-flicker 0.15s infinite;
+  z-index: 5;
 }
 
 @keyframes crt-flicker {
@@ -277,14 +288,19 @@ button:hover {
   text-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 8px rgba(255,176,32,0.7);
 }
 
-/* Map View - Always visible in split layout */
+/* Map View - MODIFIED to position absolutely on right 50% */
 #mapView {
   height: 100%;
-  width: 100%;
+  width: 50%;
   display: block;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 
 #mapFrame {
@@ -292,6 +308,7 @@ button:hover {
   height: 100%;
   border: 0;
   background: var(--bg);
+  pointer-events: auto;
 }
 
 /* Input Row */

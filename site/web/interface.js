@@ -131,3 +131,62 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
 
   window.addEventListener("DOMContentLoaded", wire);
 })();
+
+
+// Add to interface.js or behavior.js
+// Enable console scrolling with Page Up/Down and Arrow keys
+
+(function() {
+  const consoleLog = document.getElementById('consoleLog');
+  
+  // Keyboard scrolling
+  document.addEventListener('keydown', (e) => {
+    if (!consoleLog) return;
+    
+    switch(e.key) {
+      case 'PageUp':
+        e.preventDefault();
+        consoleLog.scrollTop -= consoleLog.clientHeight * 0.8;
+        break;
+      case 'PageDown':
+        e.preventDefault();
+        consoleLog.scrollTop += consoleLog.clientHeight * 0.8;
+        break;
+      case 'Home':
+        if (e.ctrlKey) {
+          e.preventDefault();
+          consoleLog.scrollTop = 0;
+        }
+        break;
+      case 'End':
+        if (e.ctrlKey) {
+          e.preventDefault();
+          consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+        break;
+    }
+  });
+  
+  // Mouse wheel scrolling on the console area (left side)
+  // Create invisible scrollable overlay on left 50%
+  const scrollOverlay = document.createElement('div');
+  scrollOverlay.style.cssText = `
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 50%;
+    height: calc(100% - 70px);
+    z-index: 3;
+    pointer-events: auto;
+  `;
+  
+  scrollOverlay.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    consoleLog.scrollTop += e.deltaY;
+  });
+  
+  const viewport = document.querySelector('.viewport');
+  if (viewport) {
+    viewport.appendChild(scrollOverlay);
+  }
+})();
