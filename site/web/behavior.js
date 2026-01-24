@@ -73,7 +73,7 @@
     return j;
   }
 
-  function appendLine(text, cls) {
+  function xxappendLine(text, cls) {
     const log = $("consoleLog");
     if (!log) {
       return;
@@ -91,6 +91,71 @@
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;
   }
+
+///////////////////////////////////////////////////////////////////////////////////
+// QUEUED TYPEWRITER appendLine function for behavior.js
+// Lines type one at a time in queue (no simultaneous typing)
+///////////////////////////////////////////////////////////////////////////////////
+
+// ADD this at the top of behavior.js (inside the IIFE, after "use strict"):
+const typewriterQueue = [];
+let isTyping = false;
+
+function processTypewriterQueue() {
+  if (isTyping || typewriterQueue.length === 0) return;
+  
+  isTyping = true;
+  const { text, cls, div, log } = typewriterQueue.shift();
+  
+  const CHARS_PER_SECOND = 960; 
+  const MS_PER_CHAR = 1000 / CHARS_PER_SECOND;
+  
+  let charIndex = 0;
+  const typewriterInterval = setInterval(() => {
+    if (charIndex < text.length) {
+      div.textContent += text[charIndex];
+      charIndex++;
+      log.scrollTop = log.scrollHeight;
+    } else {
+      clearInterval(typewriterInterval);
+      isTyping = false;
+      processTypewriterQueue(); // Process next in queue
+    }
+  }, 1); // MS_PER_CHAR);
+}
+
+// REPLACE the existing appendLine function with this:
+function appendLine(text, cls) {
+  const log = $("consoleLog");
+  if (!log) return;
+
+  // Check for clear screen escape sequence (ESC[2J)
+  if (text && text.includes('\x1b[2J')) {
+    log.innerHTML = '';
+    typewriterQueue.length = 0; // Clear queue
+    isTyping = false;
+    return;
+  }
+
+  const div = document.createElement("div");
+  div.className = cls || "";
+  div.textContent = '';
+  log.appendChild(div);
+  
+  // Add to queue
+  typewriterQueue.push({ text, cls, div, log });
+  processTypewriterQueue();
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+// SPEED VARIATIONS:
+///////////////////////////////////////////////////////////////////////////////////
+// 60 chars/sec  = slow, very dramatic
+// 120 chars/sec = 1200 baud (default)
+// 240 chars/sec = 2400 baud, faster
+// 960 chars/sec = nearly instant
+///////////////////////////////////////////////////////////////////////////////////
+
 
   function setLoginBadge() {
     const b = $("loginBadge");
