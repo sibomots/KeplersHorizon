@@ -2,7 +2,7 @@
 -- Run this to create/reset the database
 -- Module data (CSV files) loaded separately as admin choice
 
-USE khdb2;
+USE khdb;
 
 CREATE TABLE IF NOT EXISTS users (
 id INT AUTO_INCREMENT PRIMARY KEY,

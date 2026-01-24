@@ -2,7 +2,7 @@
 -- Copy this file and customize for your module
 -- Usage: mysql --local-infile=1 -u <user> -p khdb < modules/your_module/LoadModule.sql
 
-USE khdb2;
+USE khdb;
 START TRANSACTION;
 
 -- Change this to your module_id from the modules table

@@ -2,7 +2,7 @@
 -- This script loads all milieu data for the Kepler's Horizon module (module_id=1)
 -- Run from site/db/ with: mysql --local-infile=1 -u <user> -p khdb < modules/kh/LoadModule.sql
 
-USE khdb2;
+USE khdb;
 START TRANSACTION;
 
 SET @module = 1;

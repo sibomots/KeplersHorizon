@@ -4,7 +4,7 @@ DB=mysql -vv -u $(USR) -D mysql -p$(PASS)
 
 DBUSR=borusr
 DBPASS=foobar
-DB_PROD=mysql -vv -u $(DBUSR) -D khdb2 -p$(DBPASS) 
+DB_PROD=mysql -vv -u $(DBUSR) -D khdb -p$(DBPASS) 
 it:
 	cat ./Init.sql | $(DB)
 	cat ./Game.sql | $(DB_PROD)
