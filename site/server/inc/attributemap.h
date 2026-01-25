@@ -17,20 +17,11 @@ enum class AttributeID : int
 // Attribute value type (all attributes are currently int)
 typedef int AttributeValue;
 
-// Map of attributes for commands
-//typedef std::map<AttributeID, AttributeValue> AttributeMap;
-
 typedef struct AttributeMap
 {
     std::map<AttributeID, AttributeValue> data;
     AttributeMap()
     {
-        data[AttributeID::POWER_DRIVE] =
-            data[AttributeID::BEAM] =
-            data[AttributeID::SCREEN] =
-            data[AttributeID::TUBE] =
-            data[AttributeID::MISSILE] =
-            data[AttributeID::SYSTEM_RACK] = 0;
     }
 
     AttributeMap(int pd, int b, int s, int t, int sr = 0, int m = 0) {
@@ -38,8 +29,12 @@ typedef struct AttributeMap
         data[AttributeID::BEAM] = b;
         data[AttributeID::SCREEN] = s;
         data[AttributeID::TUBE] = t;
-        data[AttributeID::MISSILE] = m;
-        data[AttributeID::SYSTEM_RACK] = sr;
+        if (m > 0) {
+           data[AttributeID::MISSILE] = m;
+        }
+        if (sr > 0) { 
+          data[AttributeID::SYSTEM_RACK] = sr;
+        }
     }
 
     AttributeMap(const AttributeMap& rhs) = default;
