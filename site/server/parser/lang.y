@@ -934,12 +934,12 @@ build_cmd:
       SafeDelete(pCmd);
   }
   
-| TOK_BUILD error { yyerror(&@1, "build: usage: build new W|S name | build drafts | build commit [#] | build cancel [#] | bs [attr=#] ..."); YYABORT; }
-| TOK_BUILD_NEW error { yyerror(&@1, "build new: usage: bn W|S name"); YYABORT; }
-| TOK_BUILD_DRAFTS error { yyerror(&@1, "build drafts: usage: bd"); YYABORT; }
-| TOK_BUILD_COMMIT error { yyerror(&@1, "build commit: usage: bc [#]"); YYABORT; }
-| TOK_BUILD_CANCEL error { yyerror(&@1, "build cancel: usage: bx [#]"); YYABORT; }
-| TOK_BUILD_SET_ATTR error { yyerror(&@1, "build set: usage: bs [attr=# [attr=#] ... ]"); YYABORT; }
+| TOK_BUILD error { yyerror(&@1,          "build syntax               > HELP BUILD"); YYABORT; }
+| TOK_BUILD_NEW error { yyerror(&@1,      "usage: bn {W|S} name       > HELP BN"); YYABORT; }
+| TOK_BUILD_DRAFTS error { yyerror(&@1,   "usage: bd {NAME|HULL}      > HELP BD"); YYABORT; }
+| TOK_BUILD_COMMIT error { yyerror(&@1,   "usage: bc {NAME|HULL}      > HELP BC"); YYABORT; }
+| TOK_BUILD_CANCEL error { yyerror(&@1,   "usage: bx {NAME|HULL}      > HELP BX"); YYABORT; }
+| TOK_BUILD_SET_ATTR error { yyerror(&@1, "usage: bs [attr=# ... ]    > HELP BS"); YYABORT; }
 ;
 
 build_target:
@@ -956,7 +956,7 @@ build_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
       if (!inserted) {
-        yyerror(&@2, "build set: duplicate POWER_DRIVE assignment");
+        // yyerror(&@2, "build set: duplicate POWER_DRIVE assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -964,7 +964,7 @@ build_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
       if (!inserted) {
-        yyerror(&@2, "build set: duplicate BEAM assignment");
+        // yyerror(&@2, "build set: duplicate BEAM assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -972,7 +972,7 @@ build_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
       if (!inserted) {
-        yyerror(&@2, "build set: duplicate SCREEN assignment");
+        // yyerror(&@2, "build set: duplicate SCREEN assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -980,7 +980,7 @@ build_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
       if (!inserted) {
-        yyerror(&@2, "build set: duplicate TUBE assignment");
+        // yyerror(&@2, "build set: duplicate TUBE assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -988,7 +988,7 @@ build_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
       if (!inserted) {
-        yyerror(&@2, "build set: duplicate MISSILE assignment");
+        // yyerror(&@2, "build set: duplicate MISSILE assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -996,7 +996,7 @@ build_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::SYSTEM_RACK, $2});
       if (!inserted) {
-        yyerror(&@2, "build set: duplicate SYSTEM_RACK assignment");
+        // yyerror(&@2, "build set: duplicate SYSTEM_RACK assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
