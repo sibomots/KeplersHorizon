@@ -5,12 +5,12 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#ifndef __FLEET_COMMAND_H__
-#define __FLEET_COMMAND_H__
+#ifndef __FLEET_LIST_ACTOR_H__
+#define __FLEET_LIST_ACTOR_H__
 
 #include "icmd.h"
 
-class FleetCommand : public ICmd
+class BuildFleetListActor: public ICmd
 {
   public:
     class Builder
@@ -18,14 +18,14 @@ class FleetCommand : public ICmd
       public:
         ICmd* build()
         {
-            return new FleetCommand();
+            return new BuildFleetListActor();
         }
     };
 
     bool invoke(void) override;
 
   private:
-    FleetCommand()
+    BuildFleetListActor()
     {
     }
 };

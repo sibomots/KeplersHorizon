@@ -235,6 +235,84 @@ static void advance_col()
     return TOK_SR_ASSIGN; 
 }
 
+"pd"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);  // Store the bad value
+    advance_col();
+    return TOK_PD_ASSIGN_INVALID;
+}
+"d"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);  // Store the bad value
+    advance_col();
+    return TOK_PD_ASSIGN_INVALID;
+}
+"beam"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_B_ASSIGN_INVALID;
+}
+"b"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_B_ASSIGN_INVALID;
+}
+"screen"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_S_ASSIGN_INVALID;
+}
+"s"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_S_ASSIGN_INVALID;
+}
+"tube"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_T_ASSIGN_INVALID;
+}
+"t"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_T_ASSIGN_INVALID;
+}
+"missile"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_M_ASSIGN_INVALID;
+}
+"m"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_M_ASSIGN_INVALID;
+}
+"sr"[ \t]*"="[ \t]*[^ \t\n]+ {
+    set_loc_for_token();
+    char* eq = strchr(yytext, '=');
+    yylval.sval = new std::string(eq + 1);
+    advance_col();
+    return TOK_SR_ASSIGN_INVALID;
+}
+
 [a-zA-Z][\-a-zA-Z0-9]* {
         set_loc_for_token();
         yylval.sval = new std::string(yytext);

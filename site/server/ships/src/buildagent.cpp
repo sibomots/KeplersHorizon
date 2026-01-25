@@ -6,10 +6,9 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 
-#include "buildagent.h"
-
 #include <sstream>
 
+#include "buildagent.h"
 #include "db.h"
 #include "logger.h"
 #include "shipmgr.h"
@@ -44,6 +43,10 @@ bool BuildAgent::apply(BuildAgentParam& param)
                 return this->apply(arg);
             }
             else if constexpr (std::is_same_v<T, BuildShowDraftParam>)
+            {
+                return this->apply(arg);
+            }
+            else if constexpr (std::is_same_v<T, BuildFleetListParam>)
             {
                 return this->apply(arg);
             }
@@ -181,10 +184,10 @@ bool BuildAgent::apply(BuildSetParam& param)
         return false;
     }
 
-    //jdw for (const auto& [attr_id, value] : attributes.data)
-    //jdw {
-    //jdw     fprintf(stderr, "BuildSet: Found Attribute: %d = %d\n", (int)attr_id, value);
-    //jdw }
+    // jdw for (const auto& [attr_id, value] : attributes.data)
+    // jdw {
+    // jdw     fprintf(stderr, "BuildSet: Found Attribute: %d = %d\n",
+    // (int)attr_id, value); jdw }
 
     // Apply attributes using AttributeMap
     for (const auto& [attr_id, value] : attributes.data)
@@ -459,4 +462,81 @@ bool BuildAgent::get_draft_by_spec(int& did, int gid, char owner,
         result = true;
     }
     return result;
+}
+
+bool BuildAgent::apply(BuildFleetListParam& param)
+{
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = param.get_player();
+    int gid = param.get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
+
+    // Join with star_systems table to get star names for at_hex
+    auto rows = db.query(
+        "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
+        "s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, "
+        "ss.name "
+        "FROM ships s "
+        "LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = "
+        "1 "
+        "WHERE s.game_id=" +
+        std::to_string(gid) + " AND s.owner='" + std::string(1, owner) +
+        "' AND s.destroyed_at IS NULL ORDER BY s.ship_code");
+
+    if (rows.empty())
+    {
+        Telemetry::instance().write("FLEET OPS: No ships under your command.");
+    }
+    else
+    {
+        std::ostringstream out;
+        out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
+        out << "HULL  DESIGNATION      SECTOR                PD   B  S  T  M  "
+               "LRS TB DR  TECH\n";
+        out << "----  --------------  -------------------    --  -- -- -- --  "
+               "--- -- --  ----\n";
+
+        for (const auto& r : rows)
+        {
+            // Uppercase the hull designator (ship_code)
+            std::string hull = r[0];
+            std::transform(hull.begin(), hull.end(), hull.begin(), ::toupper);
+
+            // Format location: show star name with hex ID if available
+            std::string loc;
+            if (!r[3].empty())
+            {
+                // Racked in another ship
+                loc = "in " + r[3];
+            }
+            else if (!r[13].empty())
+            {
+                // Have system name from join (index shifted due to lrs/tb/dr)
+                loc = r[13] + " (" + r[2] + ")";
+            }
+            else
+            {
+                // Just hex ID
+                loc = r[2];
+            }
+
+            // Use iomanip for proper formatting with right-justified numbers
+            out << std::left << std::setw(6) << hull;
+            out << std::left << std::setw(16) << r[1].substr(0, 14);
+            out << std::left << std::setw(23) << loc.substr(0, 21);
+            out << std::right << std::setw(2) << r[4];  // pd
+            out << std::right << std::setw(4) << r[5];  // beam
+            out << std::right << std::setw(3) << r[6];  // screen
+            out << std::right << std::setw(3) << r[7];  // tube
+            out << std::right << std::setw(3) << r[8];  // missiles
+            out << std::right << std::setw(4) << r[10]; // lrs
+            out << std::right << std::setw(3) << r[11]; // tb
+            out << std::right << std::setw(3) << r[12]; // dr
+            out << std::right << std::setw(6) << r[9];  // tech_level
+            out << "\n";
+        }
+
+        Telemetry::instance().write(out.str());
+    }
+    return true;
 }

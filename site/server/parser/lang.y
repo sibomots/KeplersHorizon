@@ -25,6 +25,7 @@
 #include "build_cancel_actor.h"
 #include "build_show_draft_actor.h"
 #include "build_drafts_actor.h"
+#include "fleet_actor.h"
 
 // Combat actors
 #include "combat_order_actor.h"
@@ -38,7 +39,6 @@
 #include "deploy_command.h"
 #include "move_command.h"
 
-#include "fleet_command.h"
 #include "cargo_command.h"
 #include "system_command.h"
 #include "survey_command.h"
@@ -108,11 +108,13 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type <sval> building_draft_ship
 %type <sval> combat_target_ship
 %type <sval> combat_damaged_ship
+%type <sval> ship_class
 %type <vec_sval> chain_move_location
 %type <vec_sval> chain_resource_words
 %type <vec_attr> combat_apply_spec
-%type <vec_attr> build_attr_spec
+%type <vec_attr> build_attr_spec_nonempty
 %type <combat_pair> new_combat_order_attr_spec
+
 
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
@@ -193,6 +195,9 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token <ival> TOK_T_ASSIGN
 %token <ival> TOK_M_ASSIGN
 %token <ival> TOK_SR_ASSIGN
+
+%token <sval> TOK_PD_ASSIGN_INVALID TOK_B_ASSIGN_INVALID TOK_S_ASSIGN_INVALID
+%token <sval> TOK_T_ASSIGN_INVALID TOK_M_ASSIGN_INVALID TOK_SR_ASSIGN_INVALID
 
 %token TOK_UNKNOWN
 
@@ -315,17 +320,24 @@ info_cmd:
    ;
 
 looking_cmd:
-  TOK_HEX TOK_STRING {
+  TOK_FLEET TOK_STRING error {
+      // ERROR: Too many arguments
+      yyerror(&@3, "Too many arguments. Usage: fleet > HELP FLEET");
+      SafeDelete($2);
+  }
+  | TOK_FLEET {
+      ICmd* pCmd = BuildFleetListActor::Builder().build();
+      if (pCmd) {
+          pCmd->invoke();
+      }
+      SafeDelete(pCmd);
+  }
+  | TOK_HEX TOK_STRING {
       std::string identifier(*$2);
       ICmd* pCmd = HexCommand::Builder().setLocation(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
       delete $2;
-  }
-  | TOK_FLEET {
-      ICmd* pCmd = FleetCommand::Builder().build();
-      if (pCmd && pCmd->invoke()) { /* success */ }
-      SafeDelete(pCmd);
   }
   | TOK_SYSTEM TOK_STRING {
       std::string identifier(*$2);
@@ -686,8 +698,6 @@ combat_target_ship:
   }
   ;
 
-
-// jdw
 new_combat_order_attr_spec: {  
      $$ = new std::pair<AttributeMap*,  MissileSet*>;
      $$->first = new AttributeMap;
@@ -784,56 +794,277 @@ combat_apply_spec: {
   }
   ;
 
-build_cmd:
-  // With no arguments, treat this as 'build drafts' 
-  // build
-  // b
-  TOK_BUILD {
-      ICmd *pCmd = BuildDraftsActor::Builder().build();
-      pCmd->invoke();
-      SafeDelete(pCmd);
-  }
-  // build new W|S NAME
-  // Example:  BN W FooShip
-  // Example:  BN S BarShip
-  // Example:  BN W4 AnotherShip
-  // Example:  BN S11 yetAnotherShip
+ship_class: TOK_STRING {
+    if (!$1 || $1->empty()) {
+        yyerror(&@1, "Invalid ship class: empty string > HELP BN");
+        SafeDelete($1);
+        YYERROR;
+    }
+    char ship_type = std::toupper((*$1)[0]);
+    if (ship_type != 'W' && ship_type != 'S') {
+        std::string err = "Invalid ship class: "
+                        + *$1
+                        + ". Must start with 'W' or 'S'.";
+        yyerror(&@1, err.c_str());
+        SafeDelete($1);
+        YYERROR;
+    }
+    
+    std::string rest = $1->substr(1);
+    if (!rest.empty()
+         && (rest.length() > 2
+             || !std::all_of(rest.begin(), rest.end(), ::isdigit))) {
+        std::string err = "Invalid ship class: "
+                    + *$1
+                    + ". Number must be 1-2 digits.";
+        yyerror(&@1, err.c_str());
+        SafeDelete($1);
+        YYERROR;
+    }
+    $$ = $1;  // All validation passed
+}
+;
 
-  | TOK_BUILD TOK_NEW TOK_STRING TOK_STRING {
-      ICmd* pCmd = BuildNewActor::Builder()
-                  .set_ship_code(*$3)
-                  .set_ship_name(*$4)
-                  .build();
-      pCmd->invoke();
-      SafeDelete($3);
-      SafeDelete($4);
-      SafeDelete(pCmd);
+build_attr_spec_nonempty:
+  /* Valid assignments - EXISTING RULES */
+  TOK_PD_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::POWER_DRIVE, $1});
   }
-  // bn ...
-  // bn W|S NAME
-  | TOK_BUILD_NEW TOK_STRING TOK_STRING {
-      ICmd *pCmd = BuildNewActor::Builder()
-                  .set_ship_code(*$2)
-                  .set_ship_name(*$3)
-                  .build();
-      pCmd->invoke();
+  | TOK_B_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::BEAM, $1});
+  }
+  | TOK_S_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::SCREEN, $1});
+  }
+  | TOK_T_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::TUBE, $1});
+  }
+  | TOK_M_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::MISSILE, $1});
+  }
+  | TOK_SR_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::SYSTEM_RACK, $1});
+  }
+  
+  /* ADD: Invalid assignments - first attribute */
+  | TOK_PD_ASSIGN_INVALID {
+      std::string err = "Invalid value for PD: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
+  | TOK_B_ASSIGN_INVALID {
+      std::string err = "Invalid value for B: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
+  | TOK_S_ASSIGN_INVALID {
+      std::string err = "Invalid value for S: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
+  | TOK_T_ASSIGN_INVALID {
+      std::string err = "Invalid value for T: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
+  | TOK_M_ASSIGN_INVALID {
+      std::string err = "Invalid value for M: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
+  | TOK_SR_ASSIGN_INVALID {
+      std::string err = "Invalid value for SR: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
+  
+  /* Continuation rules - valid */
+  | build_attr_spec_nonempty TOK_PD_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  | build_attr_spec_nonempty TOK_B_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  | build_attr_spec_nonempty TOK_S_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  | build_attr_spec_nonempty TOK_T_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  | build_attr_spec_nonempty TOK_M_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  | build_attr_spec_nonempty TOK_SR_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::SYSTEM_RACK, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  
+  /* ADD: Continuation rules - invalid (catch errors in middle/end of list) */
+  | build_attr_spec_nonempty TOK_PD_ASSIGN_INVALID {
+      std::string err = "Invalid value for PD: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
+  | build_attr_spec_nonempty TOK_B_ASSIGN_INVALID {
+      std::string err = "Invalid value for B: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
+  | build_attr_spec_nonempty TOK_S_ASSIGN_INVALID {
+      std::string err = "Invalid value for S: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
+  | build_attr_spec_nonempty TOK_T_ASSIGN_INVALID {
+      std::string err = "Invalid value for T: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
+  | build_attr_spec_nonempty TOK_M_ASSIGN_INVALID {
+      std::string err = "Invalid value for M: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
+  | build_attr_spec_nonempty TOK_SR_ASSIGN_INVALID {
+      std::string err = "Invalid value for SR: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
+;
+
+build_cmd:
+  TOK_BUILD_NEW ship_class TOK_STRING {
+      // build new W|S NAME
+      // Example:  BN W FooShip
+      // Example:  BN S BarShip
+      // Example:  BN W4 AnotherShip
+      // Example:  BN S11 yetAnotherShip
+      if ($2 == nullptr) {
+            // ship_class validation failed. already reported error
+            SafeDelete($3);
+      }
+      else {
+         ICmd* pCmd = BuildNewActor::Builder()
+                     .set_ship_code(*$2)
+                     .set_ship_name(*$3)
+                     .build();
+         pCmd->invoke();
+         SafeDelete($2);
+         SafeDelete($3);
+         SafeDelete(pCmd);
+      }
+  }
+  | TOK_BUILD_NEW ship_class TOK_STRING error {
+      // ERROR: Too many arguments
+      yyerror(&@4, "Too many arguments. Usage: bn {W|S} name > HELP BN");
       SafeDelete($2);
       SafeDelete($3);
-      SafeDelete(pCmd);
+      YYABORT;
   }
+  | TOK_BUILD_NEW ship_class error {
+      // ERROR: BN W (missing ship name)
+      yyerror(&@3, "Missing ship name. Usage: bn {W|S} name > HELP BN");
+      SafeDelete($2);
+      YYABORT;
+  }
+  | TOK_BUILD_NEW error {
+      // ERROR: BN (no arguments at all)
+      yyerror(&@2, "Missing arguments. Usage: bn {W|S} name > HELP BN");
+      YYABORT;
+  }
+
+  // build new ...
+  // build new W|S NAME
+  | TOK_BUILD TOK_NEW ship_class TOK_STRING {
+      if ($3 == nullptr) {
+            // ship_class validation failed. already reported error
+            SafeDelete($4);
+      }
+      else {  
+         ICmd *pCmd = BuildNewActor::Builder()
+                     .set_ship_code(*$3)
+                     .set_ship_name(*$4)
+                     .build();
+         pCmd->invoke();
+         SafeDelete($3);
+         SafeDelete($4);
+         SafeDelete(pCmd);
+      }
+  }
+  | TOK_BUILD TOK_NEW ship_class TOK_STRING error {
+      // ERROR: BUILD NEW W A B C
+      yyerror(&@5, "Too many arguments. Usage: build new {W|S} name > HELP BUILD");
+      SafeDelete($3);
+      SafeDelete($4);
+      YYABORT;
+  }
+  | TOK_BUILD TOK_NEW ship_class error {
+      // ERROR: BUILD NEW W (missing name)
+      yyerror(&@4, "Missing ship name. Usage: build new {W|S} name > HELP BUILD");
+      SafeDelete($3);
+      YYABORT;
+  }
+
+  | TOK_BUILD TOK_NEW error {
+      // ERROR: BUILD NEW (missing ship class and name)
+      yyerror(&@3, "Missing arguments. Usage: build new {W|S} name > HELP BUILD");
+      YYABORT;
+  }
+
   // build drafts
   | TOK_BUILD TOK_DRAFTS {
       ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-
   // bd
-  | TOK_BUILD_DRAFTS {
-      ICmd *pCmd = BuildDraftsActor::Builder().build();
-      pCmd->invoke();
-      SafeDelete(pCmd);
-  }
   | TOK_BUILD TOK_DRAFTS building_draft_ship {
       // can also be a name, but we will take it as it comes.
       ICmd *pCmd = BuildShowDraftActor::Builder()
@@ -854,32 +1085,62 @@ build_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
-
-
-  // build set ...
-  | TOK_BUILD build_target TOK_SET_ATTR build_attr_spec {
-      // $2 is the optional target
-      //   can be ship_code or  ship name .. dealt with by invoke() later.
-      // $3 is "SET" subcommand, we ignore that.
-      // $4 is map of ship attributes
-
-      ICmd *pCmd = BuildSetActor::Builder()
-                    .set_target(*$2)
-                    .set_attributes(*$4)
-                    .build();
-      pCmd->invoke(); 
-      SafeDelete($4)
-      SafeDelete($2)
+  | TOK_BUILD_DRAFTS {
+      ICmd *pCmd = BuildDraftsActor::Builder().build();
+      pCmd->invoke();
       SafeDelete(pCmd);
   }
 
-  // bs ...
-  | TOK_BUILD_SET_ATTR build_target build_attr_spec {
-      // Using alias, already know it's the SET subcommand of BUILD.
-      // $2 is the optional target
-      //   can be ship_code or
-      //   ship name 
-      // $3 is vector of ship attributes
+  // jdw
+  | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty {
+      // SUCCESS: BUILD SET target attr=# [attr=# ...]
+      ICmd *pCmd = BuildSetActor::Builder()
+                    .set_target(*$3)
+                    .set_attributes(*$4)
+                    .build();
+      pCmd->invoke();
+      SafeDelete($4)
+      SafeDelete($3)
+      SafeDelete(pCmd);
+  }
+
+  | TOK_BUILD TOK_SET_ATTR build_target {
+      // ERROR: BUILD SET target (missing attributes)
+      yyerror(&@3, "Missing attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
+      SafeDelete($3);
+      YYABORT;
+  }
+
+  | TOK_BUILD TOK_SET_ATTR build_target TOK_STRING {
+      // ERROR: BUILD SET target X=1 (invalid attribute key)
+      std::string err = "Invalid attribute: " + *$4;
+      err += ". Valid attributes: PD, B, S, T, M, SR > HELP BS";
+      yyerror(&@4, err.c_str());
+      SafeDelete($3);
+      SafeDelete($4);
+      YYABORT;
+  }
+
+  | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty error {
+      // ERROR: BUILD SET target attr=# ... extra junk
+      yyerror(&@5, "Unexpected tokens after attributes. > HELP BS");
+      SafeDelete($3);
+      SafeDelete($4);
+      YYABORT;
+  }
+
+  | TOK_BUILD TOK_SET_ATTR error {
+      // ERROR: BUILD SET (missing target and attributes)
+      yyerror(&@3, "Missing ship name/hull and attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
+      YYABORT;
+  }
+
+  // =========================================================================
+  // BS (alias) with comprehensive error handling
+  // =========================================================================
+
+  | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty {
+      // SUCCESS: BS target attr=# [attr=# ...]
       ICmd *pCmd = BuildSetActor::Builder()
                     .set_target(*$2)
                     .set_attributes(*$3)
@@ -889,6 +1150,38 @@ build_cmd:
       SafeDelete($2)
       SafeDelete(pCmd);
   }
+
+  | TOK_BUILD_SET_ATTR build_target {
+      // ERROR: BS target (missing attributes)
+      yyerror(&@2, "Missing attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
+      SafeDelete($2);
+      YYABORT;
+  }
+
+  | TOK_BUILD_SET_ATTR build_target TOK_STRING {
+      // ERROR: BS target X=1 (invalid attribute - caught as TOK_STRING)
+      std::string err = "Invalid attribute: " + *$3;
+      err += ". Valid attributes: PD, B, S, T, M, SR > HELP BS";
+      yyerror(&@3, err.c_str());
+      SafeDelete($2);
+      SafeDelete($3);
+      YYABORT;
+  }
+
+  | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty error {
+      // ERROR: BS target attr=# ... extra junk
+      yyerror(&@4, "Unexpected tokens after attributes. > HELP BS");
+      SafeDelete($2);
+      SafeDelete($3);
+      YYABORT;
+  }
+
+  | TOK_BUILD_SET_ATTR error {
+      // ERROR: BS (missing everything)
+      yyerror(&@2, "Missing ship name/hull and attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
+      YYABORT;
+  }
+  // jdw
 
   // build commit
   // build commit CODE|NAME
@@ -933,13 +1226,20 @@ build_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
-  
+  |
+  // With no arguments, treat this as 'build drafts' 
+  // build
+  // b
+  TOK_BUILD {
+      ICmd *pCmd = BuildDraftsActor::Builder().build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+  }
+
 | TOK_BUILD error { yyerror(&@1,          "build syntax               > HELP BUILD"); YYABORT; }
-| TOK_BUILD_NEW error { yyerror(&@1,      "usage: bn {W|S} name       > HELP BN"); YYABORT; }
 | TOK_BUILD_DRAFTS error { yyerror(&@1,   "usage: bd {NAME|HULL}      > HELP BD"); YYABORT; }
 | TOK_BUILD_COMMIT error { yyerror(&@1,   "usage: bc {NAME|HULL}      > HELP BC"); YYABORT; }
 | TOK_BUILD_CANCEL error { yyerror(&@1,   "usage: bx {NAME|HULL}      > HELP BX"); YYABORT; }
-| TOK_BUILD_SET_ATTR error { yyerror(&@1, "usage: bs [attr=# ... ]    > HELP BS"); YYABORT; }
 ;
 
 build_target:
@@ -948,60 +1248,6 @@ build_target:
      $$ = $1;
   }
   ;
-
-build_attr_spec: {  
-     $$ = new AttributeMap;
-  }
-  | build_attr_spec TOK_PD_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
-      if (!inserted) {
-        // yyerror(&@2, "build set: duplicate POWER_DRIVE assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | build_attr_spec TOK_B_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
-      if (!inserted) {
-        // yyerror(&@2, "build set: duplicate BEAM assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | build_attr_spec TOK_S_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
-      if (!inserted) {
-        // yyerror(&@2, "build set: duplicate SCREEN assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | build_attr_spec TOK_T_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
-      if (!inserted) {
-        // yyerror(&@2, "build set: duplicate TUBE assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | build_attr_spec TOK_M_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
-      if (!inserted) {
-        // yyerror(&@2, "build set: duplicate MISSILE assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | build_attr_spec TOK_SR_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::SYSTEM_RACK, $2});
-      if (!inserted) {
-        // yyerror(&@2, "build set: duplicate SYSTEM_RACK assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  ;
-
 
 // deployment
 // "deploy" { return TOK_DEPLOY; }

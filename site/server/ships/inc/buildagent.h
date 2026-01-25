@@ -86,6 +86,54 @@ class BuildParam
     char m_user; // 'A' or 'B'
 };
 
+// Parameter class for FleetListActor operation 
+class BuildFleetListParam : public BuildParam
+{
+  public:
+    BuildFleetListParam(int gid, int mid, char user) : BuildParam(gid, mid, user)
+    {
+    }
+
+    BuildFleetListParam() : BuildParam()
+    {
+    }
+
+    class Builder
+    {
+      public:
+        Builder& set_module_id(int _mid)
+        {
+            mid = _mid;
+            return *this;
+        }
+        Builder& set_game_id(int _gid)
+        {
+            gid = _gid;
+            return *this;
+        }
+        Builder& set_player(char user)
+        {
+            player = user;
+            return *this;
+        }
+        Builder()
+        {
+            mid = 0;
+            gid = 0;
+            player = 0;
+        }
+        BuildFleetListParam build() const
+        {
+            return BuildFleetListParam(gid, mid, player);
+        }
+
+      protected:
+        int mid;
+        int gid;
+        char player;
+    };
+};
+
 // Parameter class for BuildNew operation
 class BuildNewParam : public BuildParam
 {
@@ -490,7 +538,8 @@ class BuildCancelParam : public BuildParam
 // Variant wrapper for all Build parameter types
 using BuildAgentParam =
     std::variant<BuildParam, BuildNewParam, BuildSetParam, BuildCommitParam,
-                 BuildDraftsParam, BuildCancelParam, BuildShowDraftParam>;
+                 BuildDraftsParam, BuildCancelParam, BuildShowDraftParam,
+                 BuildFleetListParam>;
 
 // BuildAgent - Singleton that handles all build operations
 class BuildAgent
@@ -514,6 +563,7 @@ class BuildAgent
     bool apply(BuildDraftsParam& param);
     bool apply(BuildShowDraftParam& param);
     bool apply(BuildCancelParam& param);
+    bool apply(BuildFleetListParam& param);
 
   private:
     // return value is false if the spec is not found.
