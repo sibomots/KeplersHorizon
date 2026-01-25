@@ -165,7 +165,7 @@ bool BuildAgent::apply(BuildSetParam& param)
         else
         {
             Telemetry::instance().write("SHIPYARD: Ship " + target +
-                                        " not in space dock.");
+                                        " does not exist");
         }
         return false;
     }
@@ -180,6 +180,11 @@ bool BuildAgent::apply(BuildSetParam& param)
                                     " is LOST from space dock.");
         return false;
     }
+
+    //jdw for (const auto& [attr_id, value] : attributes.data)
+    //jdw {
+    //jdw     fprintf(stderr, "BuildSet: Found Attribute: %d = %d\n", (int)attr_id, value);
+    //jdw }
 
     // Apply attributes using AttributeMap
     for (const auto& [attr_id, value] : attributes.data)
