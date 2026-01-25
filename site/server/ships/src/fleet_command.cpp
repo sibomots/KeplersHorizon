@@ -18,23 +18,25 @@
 
 bool FleetCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Join with star_systems table to get star names for at_hex
     auto rows = db.query(
         "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
-        "s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, ss.name "
+        "s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, "
+        "ss.name "
         "FROM ships s "
-        "LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = 1 "
+        "LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = "
+        "1 "
         "WHERE s.game_id=" +
         std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
         "' AND s.destroyed_at IS NULL ORDER BY s.ship_code");
 
     if (rows.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "FLEET OPS: No vessels under your command.");
         return true;
     }
@@ -86,6 +88,6 @@ bool FleetCommand::invoke(void)
         out << "\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

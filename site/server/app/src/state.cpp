@@ -31,12 +31,12 @@ void handle_state(const HttpRequest* req, HttpResponse* resp)
 
     // Set StateMachine context so Telemetry::get_queued_messages works
     // correctly
-    StateMachine::getInstance().set_game_id(a.game_id);
-    StateMachine::getInstance().set_current_player(a.player);
+    StateMachine::instance().set_game_id(a.game_id);
+    StateMachine::instance().set_current_player(a.player);
 
     // Telemetry::status() accesses StateMachine singleton and builds complete
     // JSON, including queued messages for this player
-    Telemetry::getInstance().status(a.player, resp);
+    Telemetry::instance().status(a.player, resp);
     return;
 }
 

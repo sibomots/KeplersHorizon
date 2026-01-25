@@ -15,9 +15,9 @@
 
 bool HexCommand::invoke(void)
 {
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Try to find system by hex_id or name
     auto sys = db.query(
@@ -81,6 +81,6 @@ bool HexCommand::invoke(void)
         out << "===========================================\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

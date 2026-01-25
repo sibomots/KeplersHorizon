@@ -65,16 +65,16 @@ void OutfitCommand::show_equipment()
         << "Use: outfit <ship> <equipment>\n"
         << "Example: outfit W1 lrs";
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 bool OutfitCommand::do_outfit()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Normalize equipment name to lowercase
     std::string equip_lower = m_equipment;
@@ -94,7 +94,7 @@ bool OutfitCommand::do_outfit()
 
     if (!item)
     {
-        Telemetry::getInstance().write("OUTFIT: Unknown equipment: " +
+        Telemetry::instance().write("OUTFIT: Unknown equipment: " +
                                        m_equipment + ". Use 'outfit list'.");
         return false;
     }
@@ -113,7 +113,7 @@ bool OutfitCommand::do_outfit()
 
     if (ships.empty())
     {
-        Telemetry::getInstance().write("OUTFIT: Ship " + ship_upper +
+        Telemetry::instance().write("OUTFIT: Ship " + ship_upper +
                                        " not found.");
         return false;
     }
@@ -123,7 +123,7 @@ bool OutfitCommand::do_outfit()
 
     if (at_hex.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "OUTFIT: Ship " + ship_upper + " is not deployed.");
         return false;
     }
@@ -143,7 +143,7 @@ bool OutfitCommand::do_outfit()
 
     if (at_system.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "OUTFIT: Ship " + ship_upper + " is not at a star system.");
         return false;
     }
@@ -151,7 +151,7 @@ bool OutfitCommand::do_outfit()
     // Check for SHIPYARD controlled by player
     if (!FacilityEngine::player_controls(game_id, at_system, "SHIPYARD", me))
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "OUTFIT: " + at_system + " does not have a SHIPYARD you control.");
         return false;
     }
@@ -160,7 +160,7 @@ bool OutfitCommand::do_outfit()
     int credits = (me == 'A') ? s.creditsA : s.creditsB;
     if (credits < item->price)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "OUTFIT: Insufficient credits. Need " + std::to_string(item->price) +
             " CR, have " + std::to_string(credits) + " CR.");
         return false;
@@ -172,7 +172,7 @@ bool OutfitCommand::do_outfit()
     else
         s.creditsB -= item->price;
 
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
     // Add equipment to ship
     db.exec("UPDATE ships SET " + std::string(item->column) + "=" +
@@ -183,7 +183,7 @@ bool OutfitCommand::do_outfit()
     std::ostringstream msg;
     msg << "OUTFIT: Installed " << item->description << " on " << ship_upper
         << " for " << item->price << " CR.";
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
 
     Logger::instance().info(msg.str());
 

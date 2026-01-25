@@ -16,9 +16,9 @@
 
 bool CargoCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Query ship with cargo info
     auto rows = db.query(
@@ -32,7 +32,7 @@ bool CargoCommand::invoke(void)
 
     if (rows.empty())
     {
-        Telemetry::getInstance().write("Ship not found: " + m_ship_code);
+        Telemetry::instance().write("Ship not found: " + m_ship_code);
         return false;
     }
 
@@ -78,6 +78,6 @@ bool CargoCommand::invoke(void)
         out << "  (empty)\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

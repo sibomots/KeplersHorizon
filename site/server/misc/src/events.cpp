@@ -13,8 +13,8 @@
 
 void handle_events(const HttpRequest* req, HttpResponse* resp)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
-    int game_id = StateMachine::getInstance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
+    int game_id = StateMachine::instance().get_game_id();
 
     if (!authenticated(req, resp))
     {
@@ -49,8 +49,8 @@ void handle_events(const HttpRequest* req, HttpResponse* resp)
 void append_event(int game_id, int user_id, const std::string& cmd,
                   const std::string& result, const GameState& s)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
-    int seq = StateMachine::getInstance().next_event_seq(game_id);
+    DatabaseManager& db = DatabaseManager::instance();
+    int seq = StateMachine::instance().next_event_seq(game_id);
     std::string q = "INSERT INTO "
                     "game_events(game_id,user_id,seq,command_text,result_text,"
                     "state_json) VALUES(" +

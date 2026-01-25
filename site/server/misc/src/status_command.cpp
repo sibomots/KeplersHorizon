@@ -16,9 +16,9 @@
 
 bool StatusCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::ostringstream out;
     out << "         GAME STATUS\n";
@@ -50,6 +50,6 @@ bool StatusCommand::invoke(void)
         out << "GAME OVER - Winner: Player " << s.winner << "\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

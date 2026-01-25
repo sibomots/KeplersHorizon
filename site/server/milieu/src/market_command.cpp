@@ -37,10 +37,10 @@ bool MarketCommand::invoke(void)
 
 void MarketCommand::show_all_prices()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::ostringstream out;
     out << "          MARKET EXCHANGE (Round " << s.round << ")\n"
@@ -97,15 +97,15 @@ void MarketCommand::show_all_prices()
     }
 
     out << "-------------------------------------------";
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 void MarketCommand::show_price_history()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::string res_upper = m_resource;
     for (auto& c : res_upper)
@@ -135,13 +135,13 @@ void MarketCommand::show_price_history()
     }
 
     out << "-------------------------------------------";
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 // Called at end of each full turn (both players done)
 void update_market_prices(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     for (int i = 0; i < NUM_RESOURCES; i++)
     {

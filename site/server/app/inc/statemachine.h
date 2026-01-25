@@ -247,7 +247,7 @@ class StateMachine
     } Data;
 
   public:
-    static StateMachine& getInstance()
+    static StateMachine& instance()
     {
         static StateMachine instance;
         return instance;

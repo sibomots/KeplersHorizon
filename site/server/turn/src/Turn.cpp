@@ -13,7 +13,6 @@
 #include "done_command.h"
 #include "logger.h"
 #include "next_command.h"
-#include "ships.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "typedefs.h"
@@ -23,13 +22,13 @@ bool DoneCommand::invoke(void)
     // Check if this command is allowed given current game state
     DoneParams_t params;
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::DONE, inhibit_error))
+    if (!StateMachine::instance().check_inhibits(CommandID::DONE, inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::instance().write("Error: " + inhibit_error);
         return false;
     }
 
-    GameState s = StateMachine::getInstance().get_game_state();
+    GameState s = StateMachine::instance().get_game_state();
     char me = s.active_player.empty() ? 'A' : s.active_player[0];
 
     // Auto-advance until active player changes, game over, or blocked on combat
@@ -41,7 +40,7 @@ bool DoneCommand::invoke(void)
     while (s.active_player == std::string(1, me) && !s.game_over &&
            iterations < max_iterations)
     {
-        StateMachine::getInstance().advance_next(s);
+        StateMachine::instance().advance_next(s);
         iterations++;
     }
 
@@ -65,16 +64,16 @@ bool DoneCommand::invoke(void)
             msg << "\nUse: combat order <ship> <target> <tactic> <power "
                    "allocation>";
 
-            Telemetry::getInstance().write(msg.str());
+            Telemetry::instance().write(msg.str());
 
             // Save state (still in combat phase)
-            StateMachine::getInstance().save_game(s);
+            StateMachine::instance().save_game(s);
             return true;
         }
     }
 
     // Check for pending retreats
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto retreat_pending = db.query(
         "SELECT ship_code FROM ships WHERE game_id=" +
         std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
@@ -89,15 +88,15 @@ bool DoneCommand::invoke(void)
             msg << "\n  - " << r[0];
         }
         msg << "\nUse: retreat <ship> <hex>";
-        Telemetry::getInstance().write(msg.str());
-        StateMachine::getInstance().save_game(s);
+        Telemetry::instance().write(msg.str());
+        StateMachine::instance().save_game(s);
         return true;
     }
 
     // Game over check
     if (s.game_over)
     {
-        Telemetry::getInstance().broadcast(">> GAME OVER <<");
+        Telemetry::instance().broadcast(">> GAME OVER <<");
     }
     else
     {
@@ -106,7 +105,7 @@ bool DoneCommand::invoke(void)
                                 s.active_player);
 
         // Look up opponent's username for the broadcast
-        DatabaseManager& db = DatabaseManager::getInstance();
+        DatabaseManager& db = DatabaseManager::instance();
         std::string oppUser = s.active_player;
         auto oppRow = db.query("SELECT u.username FROM users u "
                                "JOIN game_seats gs ON gs.user_id = u.id "
@@ -118,20 +117,20 @@ bool DoneCommand::invoke(void)
             oppUser = oppRow[0][0];
         }
 
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "COMMAND: Your turn has ended. Standing down.");
         // After advance, s.active_player is the NEW active player
         // The requester (ME) is the OLD player, so THEM = the new player
-        Telemetry::getInstance().tell(PlayerTarget::THEM,
+        Telemetry::instance().tell(PlayerTarget::THEM,
                                       "COMMAND: You are now in command! " +
                                           s.phase_name() + " (Round " +
                                           std::to_string(s.round) + ")");
-        Telemetry::getInstance().broadcast("COMMAND: " + oppUser +
+        Telemetry::instance().broadcast("COMMAND: " + oppUser +
                                            "'s turn has begun.");
     }
 
     // Save game state to persist changes
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
     return true;
 }
 
@@ -148,9 +147,9 @@ bool NextCommand::invoke(void)
         int round;
     } TurnMetrics;
 
-    if (!StateMachine::getInstance().check_inhibits(CommandID::NEXT, inhibit_error))
+    if (!StateMachine::instance().check_inhibits(CommandID::NEXT, inhibit_error))
     {
-        Telemetry::getInstance().write(inhibit_error);
+        Telemetry::instance().write(inhibit_error);
         return false;
     }
 
@@ -158,8 +157,8 @@ bool NextCommand::invoke(void)
     TurnMetrics before_advance;
     TurnMetrics after_advance;
 
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
 
     // jdw
     before_advance.phase = s.phase_index;
@@ -168,10 +167,10 @@ bool NextCommand::invoke(void)
 
     // Before we try to advance to the next phase
     // let's save the current phase and round.
-    StateMachine::getInstance().advance_next(s);
+    StateMachine::instance().advance_next(s);
 
     // Save the updated game state
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
     after_advance.phase = s.phase_index;
     after_advance.round = s.round;
@@ -188,7 +187,7 @@ bool NextCommand::invoke(void)
     {
         if (player_change)
         {
-            Telemetry::getInstance().tell(PlayerTarget::THEM,
+            Telemetry::instance().tell(PlayerTarget::THEM,
                                           "It's YOUR turn! " + s.phase_name());
         }
     }
@@ -214,7 +213,7 @@ bool NextCommand::invoke(void)
     }
     if (msg_updated)
     {
-        Telemetry::getInstance().write(msg.str());
+        Telemetry::instance().write(msg.str());
     }
     return true;
 }

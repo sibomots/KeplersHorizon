@@ -15,9 +15,9 @@
 
 bool SurveyCommand::has_ship_in_system(const std::string& system)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get the hex for this system
     auto hex_rows = db.query("SELECT hex_id FROM star_systems WHERE name='" +
@@ -56,9 +56,9 @@ std::string SurveyCommand::upgrade_knowledge(const std::string& current)
 
 bool SurveyCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // If no system specified, find where player has ships
     std::string target_system = m_system_name;
@@ -75,7 +75,7 @@ bool SurveyCommand::invoke(void)
 
         if (loc_rows.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SURVEY: No ships available to conduct survey.");
             return false;
         }
@@ -88,7 +88,7 @@ bool SurveyCommand::invoke(void)
                  db.esc(target_system) + "')");
     if (check.empty())
     {
-        Telemetry::getInstance().write("SURVEY: Unknown system '" +
+        Telemetry::instance().write("SURVEY: Unknown system '" +
                                        target_system + "'");
         return false;
     }
@@ -97,7 +97,7 @@ bool SurveyCommand::invoke(void)
     // Check ship presence
     if (!has_ship_in_system(target_system))
     {
-        Telemetry::getInstance().write("SURVEY: No ships present in " +
+        Telemetry::instance().write("SURVEY: No ships present in " +
                                        target_system +
                                        ".\nYou must have a vessel in-system to "
                                        "conduct survey operations.");
@@ -121,7 +121,7 @@ bool SurveyCommand::invoke(void)
 
     if (new_level == current_level)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SURVEY: " + target_system +
             " already at maximum knowledge level (Intimate).\n"
             "All system secrets are known to you.");
@@ -171,6 +171,6 @@ bool SurveyCommand::invoke(void)
         out << "Use 'system " << target_system << " anomalies' to view.\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

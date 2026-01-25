@@ -20,7 +20,7 @@ static bool get_session_from_token(const std::string& token, int& user_id,
     game_id = 0;
     if (token.empty())
         return false;
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query(
         "SELECT user_id, COALESCE(game_id, 0) FROM sessions WHERE token='" +
         db.esc(token) + "'");
@@ -34,7 +34,7 @@ static bool get_session_from_token(const std::string& token, int& user_id,
 // Helper to get username
 static std::string get_username(int user_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT username FROM users WHERE id=" +
                          std::to_string(user_id));
     if (rows.empty())
@@ -71,7 +71,7 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
         save_name = "Save " + std::to_string(time(nullptr));
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get game state
     auto game_rows =
@@ -174,7 +174,7 @@ void handle_saves_list(const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query(
         "SELECT id, save_name, round, player_a_name, player_b_name, "
         "saved_at FROM saved_games WHERE user_id=" +
@@ -210,7 +210,7 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get save data
     auto save_rows = db.query(
@@ -310,7 +310,7 @@ void handle_save_delete(int save_id, const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check ownership
     auto rows = db.query(

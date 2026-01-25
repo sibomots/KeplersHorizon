@@ -17,7 +17,7 @@ static int get_user_id_from_token(const std::string& token)
 {
     if (token.empty())
         return 0;
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT user_id FROM sessions WHERE token='" +
                          db.esc(token) + "'");
     if (rows.empty())
@@ -58,12 +58,12 @@ void handle_rooms_list(const HttpRequest* req, HttpResponse* resp)
     int user_id = get_user_id_from_token(token);
     if (user_id > 0)
     {
-        DatabaseManager& db = DatabaseManager::getInstance();
+        DatabaseManager& db = DatabaseManager::instance();
         db.exec("UPDATE sessions SET last_seen=NOW() WHERE user_id=" +
                 std::to_string(user_id));
     }
 
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     auto rooms = rm.listOpenRooms();
 
     std::ostringstream o;
@@ -82,7 +82,7 @@ void handle_rooms_list(const HttpRequest* req, HttpResponse* resp)
 // GET /api/modules - List available modules
 void handle_modules_list(const HttpRequest* /* req */, HttpResponse* resp)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto modules = db.query(
         "SELECT module_id, name, description FROM modules ORDER BY module_id");
@@ -117,7 +117,7 @@ void handle_rooms_create(const HttpRequest* req, HttpResponse* resp)
     if (name.empty())
         name = "Game Room";
 
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     std::string code = rm.createRoom(user_id, name);
 
     if (code.empty())
@@ -135,7 +135,7 @@ void handle_rooms_create(const HttpRequest* req, HttpResponse* resp)
 void handle_room_get(const std::string& code, const HttpRequest* req,
                      HttpResponse* resp)
 {
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     RoomInfo room = rm.getRoom(code);
 
     if (room.id == 0)
@@ -161,7 +161,7 @@ void handle_room_join(const std::string& code, const HttpRequest* req,
         return;
     }
 
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     if (!rm.joinRoom(code, user_id))
     {
         resp->status = 400;
@@ -186,7 +186,7 @@ void handle_room_leave(const std::string& code, const HttpRequest* req,
         return;
     }
 
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     if (!rm.leaveRoom(code, user_id))
     {
         resp->status = 400;
@@ -215,7 +215,7 @@ void handle_room_module(const std::string& code, const HttpRequest* req,
     if (module_id <= 0)
         module_id = 1;
 
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     if (!rm.setModule(code, module_id))
     {
         resp->status = 400;
@@ -240,7 +240,7 @@ void handle_room_start(const std::string& code, const HttpRequest* req,
         return;
     }
 
-    RoomManager& rm = RoomManager::getInstance();
+    RoomManager& rm = RoomManager::instance();
     RoomInfo room = rm.getRoom(code);
 
     // Verify user is in this room

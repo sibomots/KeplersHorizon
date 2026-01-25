@@ -17,9 +17,9 @@
 
 bool QuitCommand::invoke(void)
 {
-    int game_id = StateMachine::getInstance().get_game_id();
-    int user_id = StateMachine::getInstance().get_current_user_id();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    int game_id = StateMachine::instance().get_game_id();
+    int user_id = StateMachine::instance().get_current_user_id();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Generate auto-save name with timestamp: ASF-DD-MM-YYYY
     time_t now = time(nullptr);
@@ -53,10 +53,10 @@ bool QuitCommand::invoke(void)
     out << "Returning to lobby.\n";
     out << "\033[LOBBY]"; // Signal client to return to lobby
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 
     // Reset state machine to lobby state
-    StateMachine::getInstance().clear_game_session();
+    StateMachine::instance().clear_game_session();
 
     return true;
 }

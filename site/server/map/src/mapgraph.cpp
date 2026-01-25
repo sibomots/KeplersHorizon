@@ -25,7 +25,7 @@ static int get_module_id_for_game(int game_id)
     if (game_id <= 0)
         return DEFAULT_MODULE_ID;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT module_id FROM games WHERE id=" +
                          std::to_string(game_id));
     if (rows.empty() || rows[0].empty() || rows[0][0].empty())
@@ -42,7 +42,7 @@ MapGraph::MapGraph(int gId)
 
 void MapGraph::load_hexes()
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // Module hexes are shared across all games using same module
     std::vector<std::vector<std::string>> allHex =
         db.query("SELECT hex_id,q,r FROM hexes WHERE module_id=" +
@@ -62,7 +62,7 @@ void MapGraph::load_hexes()
 
 void MapGraph::load_warplines()
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // Warplines are shared across all games using same module
     std::vector<std::vector<std::string>> wh = db.query(
         "SELECT wh.hex_id,w.a_hex,w.b_hex "
@@ -94,7 +94,7 @@ void MapGraph::load_warplines()
 
 void MapGraph::load_state(char owner)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     me = owner;
     enemy = (me == 'A') ? 'B' : 'A';
     enemyBlockades.clear();
@@ -156,7 +156,7 @@ std::string MapGraph::resolve_hex(const std::string& token)
 
 std::string MapGraph::resolve_system(const std::string& token)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::string u = upper_ascii(token);
     // Star systems use module_id (shared across all games using same module)
     auto r = db.query("SELECT hex_id FROM star_systems WHERE module_id=" +

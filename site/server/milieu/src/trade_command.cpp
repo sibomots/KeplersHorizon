@@ -12,7 +12,7 @@
 #include "db.h"
 #include "logger.h"
 #include "moduleutil.h"
-#include "ships.h"
+#include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 
@@ -32,7 +32,7 @@ static const int NUM_PRICES = sizeof(PRICES) / sizeof(PRICES[0]);
 // Get current market price (from database if available)
 static int get_market_price(int game_id, const std::string& res)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto mp = db.query(
         "SELECT current_price FROM market_prices WHERE game_id=" +
         std::to_string(game_id) + " AND resource_type='" + db.esc(res) + "'");
@@ -55,7 +55,7 @@ static int get_market_price(int game_id, const std::string& res)
 static void track_trade(int game_id, const std::string& res, int qty,
                         bool is_buy)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::string col = is_buy ? "total_bought" : "total_sold";
 
     db.exec("UPDATE market_prices SET " + col + "=" + col + "+" +
@@ -120,16 +120,16 @@ void TradeCommand::show_prices()
 
     out << "-------------------------------------------\n";
     out << "Trade requires ship at TRADE_HUB facility.";
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 bool TradeCommand::do_buy()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::string res_upper = m_resource;
     for (auto& c : res_upper)
@@ -138,7 +138,7 @@ bool TradeCommand::do_buy()
     int price = get_market_price(game_id, res_upper);
     if (price == 0)
     {
-        Telemetry::getInstance().write("TRADE: Unknown resource type: " +
+        Telemetry::instance().write("TRADE: Unknown resource type: " +
                                        m_resource);
         return false;
     }
@@ -148,7 +148,7 @@ bool TradeCommand::do_buy()
 
     if (total_cost > my_credits)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "TRADE: Insufficient credits. Need " + std::to_string(total_cost) +
             " CR, have " + std::to_string(my_credits) + " CR");
         return false;
@@ -167,7 +167,7 @@ bool TradeCommand::do_buy()
 
     if (ships.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "TRADE: No ships available to receive cargo.");
         return false;
     }
@@ -188,7 +188,7 @@ bool TradeCommand::do_buy()
             " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
             std::string(1, me) + "' AND ship_code='" + db.esc(ship_code) + "'");
 
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
     // Track for market dynamics
     track_trade(game_id, res_upper, m_quantity, true);
@@ -196,17 +196,17 @@ bool TradeCommand::do_buy()
     std::ostringstream msg;
     msg << "TRADE: Purchased " << m_quantity << " " << res_upper << " for "
         << total_cost << " CR. Loaded onto " << ship_name;
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
     return true;
 }
 
 bool TradeCommand::do_sell()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::string res_upper = m_resource;
     for (auto& c : res_upper)
@@ -217,7 +217,7 @@ bool TradeCommand::do_sell()
     int price = (market * 3) / 4; // 75% of market
     if (price == 0)
     {
-        Telemetry::getInstance().write("TRADE: Unknown resource type: " +
+        Telemetry::instance().write("TRADE: Unknown resource type: " +
                                        m_resource);
         return false;
     }
@@ -235,7 +235,7 @@ bool TradeCommand::do_sell()
 
     if (m_quantity > available)
     {
-        Telemetry::getInstance().write("TRADE: Insufficient " + res_upper +
+        Telemetry::instance().write("TRADE: Insufficient " + res_upper +
                                        ". Have " + std::to_string(available) +
                                        ", need " + std::to_string(m_quantity));
         return false;
@@ -270,7 +270,7 @@ bool TradeCommand::do_sell()
     else
         s.creditsB += total_revenue;
 
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
     // Track for market dynamics
     track_trade(game_id, res_upper, m_quantity, false);
@@ -278,21 +278,21 @@ bool TradeCommand::do_sell()
     std::ostringstream msg;
     msg << "TRADE: Sold " << m_quantity << " " << res_upper << " for "
         << total_revenue << " CR";
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
     return true;
 }
 
 bool TradeCommand::do_transfer()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     if (m_from_ship.empty() || m_to_ship.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Usage: trade transfer <from_ship> <to_ship> <resource> <qty>");
         return false;
     }
@@ -304,7 +304,7 @@ bool TradeCommand::do_transfer()
     std::string col = get_cargo_column(res_upper);
     if (col.empty())
     {
-        Telemetry::getInstance().write("TRADE: Unknown resource: " +
+        Telemetry::instance().write("TRADE: Unknown resource: " +
                                        m_resource);
         return false;
     }
@@ -317,7 +317,7 @@ bool TradeCommand::do_transfer()
 
     if (src.empty())
     {
-        Telemetry::getInstance().write("TRADE: Ship " + m_from_ship +
+        Telemetry::instance().write("TRADE: Ship " + m_from_ship +
                                        " not found.");
         return false;
     }
@@ -325,7 +325,7 @@ bool TradeCommand::do_transfer()
     int has = std::atoi(src[0][0].c_str());
     if (has < m_quantity)
     {
-        Telemetry::getInstance().write("TRADE: " + m_from_ship + " only has " +
+        Telemetry::instance().write("TRADE: " + m_from_ship + " only has " +
                                        std::to_string(has) + " " + res_upper);
         return false;
     }
@@ -344,6 +344,6 @@ bool TradeCommand::do_transfer()
     std::ostringstream msg;
     msg << "TRADE: Transferred " << m_quantity << " " << res_upper << " from "
         << m_from_ship << " to " << m_to_ship;
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
     return true;
 }

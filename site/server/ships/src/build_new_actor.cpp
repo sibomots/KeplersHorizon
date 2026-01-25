@@ -7,6 +7,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 #include "build_new_actor.h"
+
 #include "buildagent.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -14,20 +15,20 @@
 
 bool BuildNewActor::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
 
     // Check inhibits
     std::string inhibit_error;
-    if (!StateMachine::getInstance()
-               .check_inhibits(CommandID::BUILD_NEW, inhibit_error))
+    if (!StateMachine::instance().check_inhibits(CommandID::BUILD_NEW,
+                                                 inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::instance().write("Error: " + inhibit_error);
         return false;
     }
 
     // Determine ship type from first character of ship code
-    char ship_type = 'W';  // Default to Warship
+    char ship_type = 'W'; // Default to Warship
     if (!m_ship_code.empty())
     {
         char code = (char)m_ship_code[0];
@@ -49,7 +50,7 @@ bool BuildNewActor::invoke(void)
     // Build parameter
     BuildNewParam bp = BuildNewParam::Builder()
                            .set_game_id(s.game_id)
-                           //JDW BUGBUG .set_module_id(s.module_id)
+                           // JDW BUGBUG .set_module_id(s.module_id)
                            .set_player(owner)
                            .set_ship_type(ship_type)
                            .set_ship_code(m_ship_code)
@@ -58,5 +59,5 @@ bool BuildNewActor::invoke(void)
 
     // Dispatch to agent
     BuildAgentParam bap(bp);
-    return BuildAgent::getInstance().apply(bap);
+    return BuildAgent::instance().apply(bap);
 }

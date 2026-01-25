@@ -15,7 +15,7 @@
 int ConstraintEngine::get_movement_modifier(int game_id,
                                             const std::string& system)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check for movement constraints
     auto rows =
@@ -46,7 +46,7 @@ int ConstraintEngine::get_movement_modifier(int game_id,
 bool ConstraintEngine::is_movement_blocked(int game_id,
                                            const std::string& system)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
         db.query("SELECT COUNT(*) FROM system_constraints "
@@ -61,7 +61,7 @@ int ConstraintEngine::get_combat_modifier(int game_id,
                                           const std::string& system,
                                           char player)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     int total_modifier = 0;
 
@@ -112,7 +112,7 @@ int ConstraintEngine::get_combat_modifier(int game_id,
 int ConstraintEngine::get_extraction_modifier(int game_id,
                                               const std::string& system)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
         db.query("SELECT modifier_type, modifier_value FROM system_constraints "
@@ -141,7 +141,7 @@ int ConstraintEngine::get_extraction_modifier(int game_id,
 bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
                                        const std::string& resource)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check for hazardous extraction conditions
     auto rows = db.query("SELECT COUNT(*) FROM system_constraints "
@@ -184,7 +184,7 @@ bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
 std::vector<SystemConstraint>
 ConstraintEngine::get_constraints(int game_id, const std::string& system)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::vector<SystemConstraint> result;
 
     auto rows = db.query(

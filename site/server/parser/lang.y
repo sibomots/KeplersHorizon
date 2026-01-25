@@ -287,7 +287,7 @@ session_cmd:
    {
         // Bug #6: Clear command sends special marker that client will detect
         // Using ANSI escape sequence ESC[2J which means "clear entire screen"
-        Telemetry::getInstance().write("\033[2J");
+        Telemetry::instance().write("\033[2J");
    }
    
 | TOK_SAVE error { yyerror(&@1, "save: usage: save <name>. Note: reserved words cannot be used as names."); YYABORT; }
@@ -475,7 +475,7 @@ looking_cmd:
   }
   | TOK_CARGO {
       // Show cargo help
-      Telemetry::getInstance().write("Usage: cargo <ship_code>");
+      Telemetry::instance().write("Usage: cargo <ship_code>");
   }
   | TOK_CARGO TOK_STRING {
       std::string ship(*$2);
@@ -1014,9 +1014,9 @@ deployable_ship:
 deploy_cmd:
    // deploy - list undeployed ships
    TOK_DEPLOY {
-       GameState s = StateMachine::getInstance().get_game_state();
-       char owner = StateMachine::getInstance().get_current_player();
-       DatabaseManager& db = DatabaseManager::getInstance();
+       GameState s = StateMachine::instance().get_game_state();
+       char owner = StateMachine::instance().get_current_player();
+       DatabaseManager& db = DatabaseManager::instance();
 
        auto rows = db.query(
            "SELECT ship_code, ship_name FROM ships WHERE game_id=" +
@@ -1026,7 +1026,7 @@ deploy_cmd:
 
        if (rows.empty())
        {
-           Telemetry::getInstance().write(
+           Telemetry::instance().write(
                "DEPLOY: All vessels are deployed. None in spacedock.");
        }
        else
@@ -1038,7 +1038,7 @@ deploy_cmd:
                out << "  " << r[0] << " - " << r[1] << "\n";
            }
            out << "Use: deploy <SHIP> <BASE_SYSTEM>";
-           Telemetry::getInstance().write(out.str());
+           Telemetry::instance().write(out.str());
        }
    }
    | TOK_DEPLOY deployable_ship TOK_STRING {

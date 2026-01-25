@@ -71,7 +71,7 @@ void Telemetry::add_message(const std::string& msg)
 
 void Telemetry::add_tell(char player, const std::string& msg)
 {
-    int game_id = StateMachine::getInstance().get_game_id();
+    int game_id = StateMachine::instance().get_game_id();
     add_tell(game_id, player, msg);
 }
 
@@ -83,7 +83,7 @@ void Telemetry::add_tell(int game_id, char player, const std::string& msg)
     }
 
     seq_log(TLM_ADD_TELL, msg);
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::string target = std::string(1, player);
     std::string ins =
         "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
@@ -93,13 +93,13 @@ void Telemetry::add_tell(int game_id, char player, const std::string& msg)
 
 void Telemetry::add_broadcast(const std::string& msg)
 {
-    int game_id = StateMachine::getInstance().get_game_id();
+    int game_id = StateMachine::instance().get_game_id();
     add_broadcast(game_id, msg);
 }
 
 void Telemetry::add_broadcast(int game_id, const std::string& msg)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     seq_log(TLM_ADD_BCAST, msg);
     std::string ins =
         "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
@@ -110,8 +110,8 @@ void Telemetry::add_broadcast(int game_id, const std::string& msg)
 Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
 {
     QueuedMessages result;
-    DatabaseManager& db = DatabaseManager::getInstance();
-    int game_id = StateMachine::getInstance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
+    int game_id = StateMachine::instance().get_game_id();
 
     std::string target = std::string(1, player);
     result.player = player;
@@ -149,7 +149,7 @@ void Telemetry::mark_messages_sent(const QueuedMessages& msgs)
     if (msgs.direct_ids.empty() && msgs.both_ids.empty())
         return;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Mark direct messages as sent (sent_at)
     if (!msgs.direct_ids.empty())
@@ -214,10 +214,10 @@ void Telemetry::source_messages(std::string& result_msg)
     oss << "\"event\":\"" << json_escape(event_msg) << "\"";
 
     // Only include state if a game has been started
-    int game_id = StateMachine::getInstance().get_game_id();
+    int game_id = StateMachine::instance().get_game_id();
     if (game_id != 0)
     {
-        GameState s = StateMachine::getInstance().get_game_state();
+        GameState s = StateMachine::instance().get_game_state();
         oss << ",\"state\":" << s.to_json();
     }
 
@@ -230,7 +230,7 @@ void Telemetry::tell(PlayerTarget target, const std::string& msg)
     // Queue message for specific player (delivered via heartbeat)
     // ME = the player who made this request (from get_current_player)
     // THEM = the other player
-    char requesting_player = StateMachine::getInstance().get_current_player();
+    char requesting_player = StateMachine::instance().get_current_player();
     char target_player = (target == PlayerTarget::ME)
                              ? requesting_player
                              : (requesting_player == 'A' ? 'B' : 'A');
@@ -258,7 +258,7 @@ void Telemetry::broadcast(const std::string& raw_msg)
 // Helper: Build ships JSON for map rendering
 static std::string getShipsJson(int game_id, char player)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     char opponent = (player == 'A') ? 'B' : 'A';
 
     std::ostringstream out;
@@ -372,9 +372,9 @@ static std::string getShipsJson(int game_id, char player)
 
 void Telemetry::status(char player, HttpResponse* resp)
 {
-    int game_id = StateMachine::getInstance().get_game_id();
+    int game_id = StateMachine::instance().get_game_id();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // If no game has been started yet, return minimal status but still check
     // peer online
@@ -434,7 +434,7 @@ void Telemetry::status(char player, HttpResponse* resp)
         return;
     }
 
-    GameState s = StateMachine::getInstance().get_game_state();
+    GameState s = StateMachine::instance().get_game_state();
 
     // Build status JSON
     std::ostringstream status_json;

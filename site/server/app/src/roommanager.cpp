@@ -35,7 +35,7 @@ std::string RoomManager::generateRoomCode()
 
 std::string RoomManager::createRoom(int user_id, const std::string& name)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Generate unique room code
     std::string code;
@@ -67,7 +67,7 @@ std::string RoomManager::createRoom(int user_id, const std::string& name)
 
 bool RoomManager::joinRoom(const std::string& code, int user_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check room exists and has empty seat
     auto rows = db.query(
@@ -118,7 +118,7 @@ bool RoomManager::joinRoom(const std::string& code, int user_id)
 
 bool RoomManager::leaveRoom(const std::string& code, int user_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query(
         "SELECT id, seat_a, seat_b, status FROM rooms WHERE room_code='" +
@@ -167,7 +167,7 @@ bool RoomManager::leaveRoom(const std::string& code, int user_id)
 
 bool RoomManager::deleteRoom(const std::string& code, int user_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
         db.query("SELECT id, created_by, status FROM rooms WHERE room_code='" +
@@ -190,7 +190,7 @@ bool RoomManager::deleteRoom(const std::string& code, int user_id)
 
 std::vector<RoomInfo> RoomManager::listOpenRooms()
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::vector<RoomInfo> rooms;
 
     auto rows =
@@ -228,7 +228,7 @@ std::vector<RoomInfo> RoomManager::listOpenRooms()
 
 RoomInfo RoomManager::getRoom(const std::string& code)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     RoomInfo info = {};
 
     auto rows =
@@ -265,7 +265,7 @@ RoomInfo RoomManager::getRoom(const std::string& code)
 
 RoomInfo RoomManager::getRoomByUser(int user_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query(
         "SELECT room_code FROM rooms WHERE (seat_a=" + std::to_string(user_id) +
@@ -282,7 +282,7 @@ RoomInfo RoomManager::getRoomByUser(int user_id)
 
 bool RoomManager::roomExists(const std::string& code)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows =
         db.query("SELECT id FROM rooms WHERE room_code='" + db.esc(code) + "'");
     return !rows.empty();
@@ -290,7 +290,7 @@ bool RoomManager::roomExists(const std::string& code)
 
 bool RoomManager::setModule(const std::string& code, int module_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Validate module exists (default to 1 if invalid)
     if (module_id <= 0)
@@ -304,7 +304,7 @@ bool RoomManager::setModule(const std::string& code, int module_id)
 
 int RoomManager::startGame(const std::string& code)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get room info
     RoomInfo room = getRoom(code);
@@ -317,7 +317,7 @@ int RoomManager::startGame(const std::string& code)
 
     // Use StateMachine to create game
     int module_id = room.module_id > 0 ? room.module_id : 1;
-    GameState gs = StateMachine::getInstance().new_game_state();
+    GameState gs = StateMachine::instance().new_game_state();
 
     // Randomly assign initiative (who goes first)
     static std::random_device rd;
@@ -359,7 +359,7 @@ int RoomManager::startGame(const std::string& code)
     // Set StateMachine context for this operation
     // This ensures all subsequent state operations (like Telemetry) work
     // correctly
-    StateMachine::getInstance().set_game_id(game_id);
+    StateMachine::instance().set_game_id(game_id);
 
     // Initialize facility control for this game (copy from static template)
     FacilityEngine::initialize_facilities(game_id);
@@ -386,16 +386,16 @@ int RoomManager::startGame(const std::string& code)
     // Add to telemetry queue for each player (StateMachine context now set)
     if (first_player == "A")
     {
-        Telemetry::getInstance().add_tell(
+        Telemetry::instance().add_tell(
             'A', "COMMAND: YOU HAVE THE INITIATIVE! " + first_phase);
-        Telemetry::getInstance().add_tell(
+        Telemetry::instance().add_tell(
             'B', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
     }
     else
     {
-        Telemetry::getInstance().add_tell(
+        Telemetry::instance().add_tell(
             'B', "COMMAND: YOU HAVE THE INITIATIVE! " + first_phase);
-        Telemetry::getInstance().add_tell(
+        Telemetry::instance().add_tell(
             'A', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
     }
 
@@ -404,7 +404,7 @@ int RoomManager::startGame(const std::string& code)
 
 bool RoomManager::isUserOnline(int user_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query(
         "SELECT 1 FROM sessions WHERE user_id=" + std::to_string(user_id) +
         " AND TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6 LIMIT 1");
@@ -413,7 +413,7 @@ bool RoomManager::isUserOnline(int user_id)
 
 std::vector<int> RoomManager::getOnlineUserIds()
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::vector<int> ids;
 
     auto rows = db.query("SELECT DISTINCT user_id FROM sessions "

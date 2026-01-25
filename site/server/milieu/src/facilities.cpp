@@ -19,7 +19,7 @@ const int FacilityEngine::TURNS_TO_CAPTURE;
 std::vector<FacilityInfo>
 FacilityEngine::get_facilities(int game_id, const std::string& system)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::vector<FacilityInfo> result;
 
     auto rows = db.query(
@@ -45,7 +45,7 @@ bool FacilityEngine::player_controls(int game_id, const std::string& system,
                                      const std::string& facility_type,
                                      char player)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query("SELECT 1 FROM facility_control WHERE game_id=" +
                          std::to_string(game_id) + " AND system_name='" +
@@ -58,7 +58,7 @@ bool FacilityEngine::player_controls(int game_id, const std::string& system,
 
 void FacilityEngine::initialize_facilities(int game_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     Logger::instance().info("[FACILITIES] Initializing facilities for game " +
                             std::to_string(game_id));
@@ -76,7 +76,7 @@ void FacilityEngine::initialize_facilities(int game_id)
 
 void FacilityEngine::update_control(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get all systems with facilities
     auto facilities =
@@ -249,7 +249,7 @@ void FacilityEngine::update_control(int game_id, int round)
 
 int FacilityEngine::calculate_trade_hub_income(int game_id, char player)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
         db.query("SELECT COUNT(*) FROM facility_control WHERE game_id=" +

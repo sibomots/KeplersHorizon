@@ -8,7 +8,7 @@
 CombatSessionState
 CombatAgent::get_combat_state_at_hex(const int gid, const std::string& hex_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // BUGBUG need to be more precise about the combat_state record that is
     // found. module id and players involved?
@@ -117,7 +117,7 @@ bool CombatAgent::apply(CombatParam& param)
 
 bool CombatAgent::apply(CombatOrderParam& param)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     bool bresult = false;
     if (!is_param_valid(param))
@@ -391,7 +391,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
 
 bool CombatAgent::apply(CombatApplyParam& param)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     
     int gid = param.get_game_id();
     char owner = param.get_player();
@@ -402,7 +402,7 @@ bool CombatAgent::apply(CombatApplyParam& param)
     CombatEngine ce(gid);
     std::string result = ce.apply_damage(owner, target_ship , assignments);
 
-    Telemetry::getInstance().write(result);
+    Telemetry::instance().write(result);
     return true;
 }
 
@@ -413,7 +413,7 @@ bool CombatAgent::apply(CombatRetreatParam& param)
 
 bool CombatAgent::apply(CombatCommitParam& param)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     
     int gid = param.get_game_id();
     char owner = param.get_player();
@@ -439,7 +439,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
 
     if (hexRows.empty())
     {
-        Telemetry::getInstance().write("TACTICAL: No combat orders queued.");
+        Telemetry::instance().write("TACTICAL: No combat orders queued.");
         return true;
     }
 
@@ -450,7 +450,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
         {
             if (row[0] != activeHex)
             {
-                Telemetry::getInstance().write(
+                Telemetry::instance().write(
                     "Error: Orders pending for hex " + row[0] +
                     " but active combat is in hex " + activeHex);
                 return false;
@@ -463,7 +463,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
             std::to_string(gid) + " AND owner='" + std::string(1, owner) +
             "' AND committed=0");
 
-    Telemetry::getInstance().write("TACTICAL: Combat orders transmitted.");
+    Telemetry::instance().write("TACTICAL: Combat orders transmitted.");
 
     // Check each affected hex for resolution
     CombatEngine ce(gid);
@@ -509,22 +509,22 @@ bool CombatAgent::apply(CombatCommitParam& param)
                        << " S=" << ord[6] << " T=" << ord[7] << "]\n";
             }
             reveal << "==============================";
-            Telemetry::getInstance().add_broadcast(gid, reveal.str());
+            Telemetry::instance().add_broadcast(gid, reveal.str());
 
             std::string result = ce.resolve_round(hex_id);
-            Telemetry::getInstance().write(result);
+            Telemetry::instance().write(result);
         }
         else
         {
             // Notify opponent that this player has committed
             char opponent = (owner == 'A') ? 'B' : 'A';
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 opponent, "Player " + std::string(1, owner) +
                               " has committed combat orders for hex " + hex_id +
                               ". Use 'combat order' then 'combat commit' for "
                               "your ships.");
 
-            Telemetry::getInstance().write("TACTICAL: Sector " + hex_id +
+            Telemetry::instance().write("TACTICAL: Sector " + hex_id +
                                            " - Awaiting enemy orders.");
         }
     }
@@ -533,7 +533,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
 
 bool CombatAgent::apply(CombatCancelParam& param)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     
     int gid = param.get_game_id();
     char owner = param.get_player();
@@ -546,7 +546,7 @@ bool CombatAgent::apply(CombatCancelParam& param)
 
     if (orderRows.empty() || orderRows[0][0] == "0")
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "TACTICAL: No combat orders have been received.");
         return true;
     }
@@ -556,14 +556,14 @@ bool CombatAgent::apply(CombatCancelParam& param)
         "DELETE FROM combat_orders WHERE game_id=" + std::to_string(gid) +
         " AND owner='" + std::string(1, owner) + "' AND committed=0");
 
-    Telemetry::getInstance().write(
+    Telemetry::instance().write(
         "TACTICAL: Orders rescinded. Issue new commands.");
     return true;
 }
 
 bool CombatAgent::apply(CombatDraftsParam& param)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     
     int gid = param.get_game_id();
     char owner = param.get_player();
@@ -582,7 +582,7 @@ bool CombatAgent::apply(CombatDraftsParam& param)
 
     if (rows.empty())
     {
-        Telemetry::getInstance().write("No pending combat orders.");
+        Telemetry::instance().write("No pending combat orders.");
         return true;
     }
 
@@ -609,7 +609,7 @@ bool CombatAgent::apply(CombatDraftsParam& param)
         }
         out << "]\n";
     }
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }
 

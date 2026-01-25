@@ -42,7 +42,7 @@ struct RoomInfo
 class RoomManager
 {
   public:
-    static RoomManager& getInstance()
+    static RoomManager& instance()
     {
         static RoomManager instance;
         return instance;

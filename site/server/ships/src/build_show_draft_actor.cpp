@@ -7,6 +7,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 #include "build_show_draft_actor.h"
+
 #include "buildagent.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -14,20 +15,20 @@
 
 bool BuildShowDraftActor::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
 
     // Note: BuildShowDraft typically doesn't need inhibits checking
     // It's a read-only query command
 
     // Build parameter
     BuildShowDraftParam bp = BuildShowDraftParam::Builder()
-                              .set_game_id(s.game_id)
-                              .set_target(m_target)
-                              .set_player(owner)
-                              .build();
+                                 .set_game_id(s.game_id)
+                                 .set_target(m_target)
+                                 .set_player(owner)
+                                 .build();
 
     // Dispatch to agent
     BuildAgentParam bap(bp);
-    return BuildAgent::getInstance().apply(bap);
+    return BuildAgent::instance().apply(bap);
 }

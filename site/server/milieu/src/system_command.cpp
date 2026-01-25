@@ -31,9 +31,9 @@ int SystemCommand::knowledge_rank(const std::string& level)
 // Get player's current knowledge level for this system
 std::string SystemCommand::get_knowledge_level()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query("SELECT knowledge_level FROM codex_entries "
                          "WHERE game_id=" +
@@ -50,14 +50,14 @@ std::string SystemCommand::get_knowledge_level()
 
 bool SystemCommand::invoke(void)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Validate system exists
     auto check = db.query("SELECT name FROM star_systems WHERE UPPER(name)='" +
                           db.esc(m_system_name) + "'");
     if (check.empty())
     {
-        Telemetry::getInstance().write("SYSTEM: Unknown system '" +
+        Telemetry::instance().write("SYSTEM: Unknown system '" +
                                        m_system_name + "'");
         return false;
     }
@@ -92,7 +92,7 @@ bool SystemCommand::invoke(void)
     }
     else
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SYSTEM: Unknown subcommand '" + m_subcommand +
             "'. Use: planets, resources, population, facilities, anomalies");
         return false;
@@ -103,7 +103,7 @@ bool SystemCommand::invoke(void)
 
 void SystemCommand::show_overview()
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::string level = get_knowledge_level();
     int rank = knowledge_rank(level);
 
@@ -184,7 +184,7 @@ void SystemCommand::show_overview()
             << " anomalies' for discoveries.\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 void SystemCommand::show_planets()
@@ -194,14 +194,14 @@ void SystemCommand::show_planets()
 
     if (rank < 2)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SYSTEM: Planetary data requires Charted knowledge level.\n"
             "Current: " +
             level + ". Send a ship to survey.");
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << m_system_name << " PLANETS ===\n\n";
 
@@ -230,7 +230,7 @@ void SystemCommand::show_planets()
         }
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 void SystemCommand::show_resources()
@@ -240,14 +240,14 @@ void SystemCommand::show_resources()
 
     if (rank < 3)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SYSTEM: Resource data requires Surveyed knowledge level.\n"
             "Current: " +
             level + ". Use 'survey' command.");
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << m_system_name << " RESOURCES ===\n\n";
 
@@ -303,7 +303,7 @@ void SystemCommand::show_resources()
         }
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 void SystemCommand::show_populations()
@@ -313,14 +313,14 @@ void SystemCommand::show_populations()
 
     if (rank < 3)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SYSTEM: Population data requires Surveyed knowledge level.\n"
             "Current: " +
             level + ". Use 'survey' command.");
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << m_system_name << " POPULATIONS ===\n\n";
 
@@ -363,7 +363,7 @@ void SystemCommand::show_populations()
         }
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 void SystemCommand::show_facilities()
@@ -373,14 +373,14 @@ void SystemCommand::show_facilities()
 
     if (rank < 2)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SYSTEM: Facility data requires Charted knowledge level.\n"
             "Current: " +
             level + ". Send a ship to survey.");
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << m_system_name << " FACILITIES ===\n\n";
 
@@ -423,7 +423,7 @@ void SystemCommand::show_facilities()
         }
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 void SystemCommand::show_anomalies()
@@ -433,14 +433,14 @@ void SystemCommand::show_anomalies()
 
     if (rank < 4)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SYSTEM: Anomaly data requires Intimate knowledge level.\n"
             "Current: " +
             level + ". Extended presence required.");
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << m_system_name << " ANOMALIES ===\n\n";
 
@@ -469,5 +469,5 @@ void SystemCommand::show_anomalies()
         }
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }

@@ -7,6 +7,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 #include "build_drafts_actor.h"
+
 #include "buildagent.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -14,8 +15,8 @@
 
 bool BuildDraftsActor::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
 
     // Note: BuildDrafts typically doesn't need inhibits checking
     // It's a read-only query command
@@ -23,11 +24,11 @@ bool BuildDraftsActor::invoke(void)
     // Build parameter
     BuildDraftsParam bp = BuildDraftsParam::Builder()
                               .set_game_id(s.game_id)
-                              //JDW BUGBUG .set_module_id(s.module_id)
+                              // JDW BUGBUG .set_module_id(s.module_id)
                               .set_player(owner)
                               .build();
 
     // Dispatch to agent
     BuildAgentParam bap(bp);
-    return BuildAgent::getInstance().apply(bap);
+    return BuildAgent::instance().apply(bap);
 }

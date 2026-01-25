@@ -19,7 +19,7 @@ int HexEventEngine::get_movement_modifier(int game_id, int round, const std::str
         return 0;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query(
         "SELECT COALESCE(SUM(modifier_value),0) FROM hex_events "
@@ -42,7 +42,7 @@ int HexEventEngine::get_combat_modifier(int game_id, int round, const std::strin
         return 0;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query(
         "SELECT COALESCE(SUM(modifier_value),0) FROM hex_events "
@@ -65,7 +65,7 @@ float HexEventEngine::get_salvage_multiplier(int game_id, int round, const std::
         return 1.0f;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query(
         "SELECT COUNT(*) FROM hex_events "
@@ -88,7 +88,7 @@ int HexEventEngine::get_extraction_modifier(int game_id, int round, const std::s
         return 0;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows = db.query(
         "SELECT COALESCE(SUM(modifier_value),0) FROM hex_events "

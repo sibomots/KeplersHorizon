@@ -11,7 +11,7 @@
 
 #include "db.h"
 #include "logger.h"
-#include "ships.h"
+#include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "hex_events.h"
@@ -26,7 +26,7 @@ bool ExtractCommand::invoke(void)
 
     if (m_ship_code.empty())
     {
-        Telemetry::getInstance().write("Usage: extract scan\n"
+        Telemetry::instance().write("Usage: extract scan\n"
                                        "       extract <ship> <resource>");
         return true;
     }
@@ -36,11 +36,11 @@ bool ExtractCommand::invoke(void)
 
 void ExtractCommand::do_scan()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get all ships and their locations
     auto ships = db.query(
@@ -50,7 +50,7 @@ void ExtractCommand::do_scan()
 
     if (ships.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "No deployed ships available for extracting.");
         return;
     }
@@ -104,30 +104,31 @@ void ExtractCommand::do_scan()
 
     out << "-------------------------------------------\n";
     out << "Use: extract <ship> <resource_type>";
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 bool ExtractCommand::do_extract()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Verify ship exists and get location
-    if (!ship_exists(game_id, me, m_ship_code))
+    if (!ShipManager::instance().ship_exists(game_id, me, m_ship_code))
     {
-        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
+        Telemetry::instance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " not found.");
         return false;
     }
 
-    ShipRow ship = load_ship(game_id, me, m_ship_code);
+    ShipRow ship;
+    bool has_ship = ShipManager::instance().load_ship_by_code_or_name(ship, game_id, me, m_ship_code);
 
-    if (ship.at_system.empty())
+    if (!has_ship) //JDW  ship.at_system.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "HARVEST: Ship must be deployed to a system to extract.");
         return false;
     }
@@ -162,7 +163,7 @@ bool ExtractCommand::do_extract()
 
     if (res_check.empty())
     {
-        Telemetry::getInstance().write("HARVEST: No " + res_upper +
+        Telemetry::instance().write("HARVEST: No " + res_upper +
                                        " deposits found in " + ship.at_system);
         return false;
     }
@@ -228,7 +229,7 @@ bool ExtractCommand::do_extract()
         yield = capacity - current_cargo;
         if (yield <= 0)
         {
-            Telemetry::getInstance().write("HARVEST: " + ship.name +
+            Telemetry::instance().write("HARVEST: " + ship.name +
                                            " cargo hold is full!");
             return false;
         }
@@ -270,7 +271,7 @@ bool ExtractCommand::do_extract()
         << res_upper << " from " << location << " (" << ship.at_system << ")";
 
     Logger::instance().info(msg.str());
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
 
     return true;
 }

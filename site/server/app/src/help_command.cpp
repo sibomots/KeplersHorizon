@@ -59,16 +59,16 @@ bool HelpCommand::invoke(void)
 {
     if (m_demo)
     {
-        Telemetry::getInstance().write(demo_page);
+        Telemetry::instance().write(demo_page);
     }
     else if (m_topic.empty())
     {
-        Telemetry::getInstance().write(help_page);
+        Telemetry::instance().write(help_page);
     }
     else
     {
         // Look up topic from database
-        DatabaseManager& db = DatabaseManager::getInstance();
+        DatabaseManager& db = DatabaseManager::instance();
 
         // Convert to lowercase for case-insensitive lookup
         for (auto& c : m_topic)
@@ -82,7 +82,7 @@ bool HelpCommand::invoke(void)
 
             if (rows.empty())
             {
-                Telemetry::getInstance().write("No topics available.\n");
+                Telemetry::instance().write("No topics available.\n");
                 return true;
             }
 
@@ -110,7 +110,7 @@ bool HelpCommand::invoke(void)
             {
                 out += "\n";
             }
-            Telemetry::getInstance().write(out);
+            Telemetry::instance().write(out);
             return true;
         }
 
@@ -132,11 +132,11 @@ bool HelpCommand::invoke(void)
 
         if (!rows.empty() && !rows[0].empty())
         {
-            Telemetry::getInstance().write(rows[0][0]);
+            Telemetry::instance().write(rows[0][0]);
         }
         else
         {
-            Telemetry::getInstance().write("No help available for '" + m_topic +
+            Telemetry::instance().write("No help available for '" + m_topic +
                                            "'. Try: help topics");
         }
     }

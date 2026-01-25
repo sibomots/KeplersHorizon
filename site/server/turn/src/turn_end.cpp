@@ -53,7 +53,7 @@ void TurnEndProcessor::update_facilities(int game_id, int round)
 
 void TurnEndProcessor::update_market_prices(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get all tracked resources
     auto resources = db.query(
@@ -123,7 +123,7 @@ void TurnEndProcessor::update_market_prices(int game_id, int round)
 
 void TurnEndProcessor::regenerate_resources(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Regenerate resources that haven't been extracted this round
     db.exec("UPDATE resource_state SET current_supply = "
@@ -139,7 +139,7 @@ void TurnEndProcessor::regenerate_resources(int game_id, int round)
 
 void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Calculate income for each player
     for (char player : {'A', 'B'})
@@ -194,7 +194,7 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
                         " CR from trade hubs");
 
                     // Notify player
-                    Telemetry::getInstance().add_tell(
+                    Telemetry::instance().add_tell(
                         game_id, player,
                         "INCOME: Trade hub revenue +" + std::to_string(income) +
                             " CR this round.");
@@ -206,7 +206,7 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
 
 void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Find all jobs that are IN_PROGRESS and complete this round
     auto jobs = db.query(
@@ -266,7 +266,7 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
             db.exec(update_sql);
 
             // Notify player
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, player,
                 "FABRICATION COMPLETE: " + ship_code + " - " + msg);
         }
@@ -282,7 +282,7 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
 
 void TurnEndProcessor::check_victory_conditions(int game_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check if game already has a winner
     auto game_rows = db.query("SELECT vp_A, vp_B, winner FROM games WHERE id=" +
@@ -335,7 +335,7 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
             else
                 vp_B += 2;
 
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, enemy,
                 "VICTORY: +2 VP for controlling enemy base star!");
 
@@ -349,9 +349,9 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
     {
         db.exec("UPDATE games SET winner='A' WHERE id=" +
                 std::to_string(game_id));
-        Telemetry::getInstance().add_tell(game_id, 'A',
+        Telemetry::instance().add_tell(game_id, 'A',
                                           "*** VICTORY! You have won the game! ***");
-        Telemetry::getInstance().add_tell(game_id, 'B',
+        Telemetry::instance().add_tell(game_id, 'B',
                                           "*** DEFEAT. Your opponent has won. ***");
         Logger::instance().info("[VICTORY] Player A wins game " +
                                 std::to_string(game_id));
@@ -360,9 +360,9 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
     {
         db.exec("UPDATE games SET winner='B' WHERE id=" +
                 std::to_string(game_id));
-        Telemetry::getInstance().add_tell(game_id, 'B',
+        Telemetry::instance().add_tell(game_id, 'B',
                                           "*** VICTORY! You have won the game! ***");
-        Telemetry::getInstance().add_tell(game_id, 'A',
+        Telemetry::instance().add_tell(game_id, 'A',
                                           "*** DEFEAT. Your opponent has won. ***");
         Logger::instance().info("[VICTORY] Player B wins game " +
                                 std::to_string(game_id));

@@ -16,12 +16,12 @@
 
 bool DeleteCommand::invoke(void)
 {
-    int user_id = StateMachine::getInstance().get_current_user_id();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    int user_id = StateMachine::instance().get_current_user_id();
+    DatabaseManager& db = DatabaseManager::instance();
 
     if (m_save_name.empty())
     {
-        Telemetry::getInstance().write("DELETE: No save name specified.\n"
+        Telemetry::instance().write("DELETE: No save name specified.\n"
                                        "Usage: delete <save_name>");
         return false;
     }
@@ -33,7 +33,7 @@ bool DeleteCommand::invoke(void)
 
     if (rows.empty())
     {
-        Telemetry::getInstance().write("DELETE: No saved game '" + m_save_name +
+        Telemetry::instance().write("DELETE: No saved game '" + m_save_name +
                                        "' found.");
         return false;
     }
@@ -44,7 +44,7 @@ bool DeleteCommand::invoke(void)
     // Delete the save
     db.exec("DELETE FROM saved_games WHERE id=" + save_id);
 
-    Telemetry::getInstance().write("DELETE: game '" + actual_name + "' deleted.");
+    Telemetry::instance().write("DELETE: game '" + actual_name + "' deleted.");
 
     return true;
 }

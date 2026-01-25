@@ -17,7 +17,7 @@ class MapUtil
 {
   public:
   public:
-    static MapUtil& getInstance()
+    static MapUtil& instance()
     {
         static MapUtil instance;
         return instance;

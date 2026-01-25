@@ -29,11 +29,11 @@ void handle_login(const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    auto rows = DatabaseManager::getInstance().query(
+    auto rows = DatabaseManager::instance().query(
         "SELECT id,password_plain "
         "FROM users "
         "WHERE username='" +
-        DatabaseManager::getInstance().esc(u) + "' LIMIT 1");
+        DatabaseManager::instance().esc(u) + "' LIMIT 1");
     if (rows.empty() || rows[0][1] != p)
     {
         resp->status = 401;
@@ -44,9 +44,9 @@ void handle_login(const HttpRequest* req, HttpResponse* resp)
 
     std::string token = rand_hex_64();
 
-    DatabaseManager::getInstance().exec(
+    DatabaseManager::instance().exec(
         "INSERT INTO sessions(token,user_id) VALUES('" +
-        DatabaseManager::getInstance().esc(token) + "'," +
+        DatabaseManager::instance().esc(token) + "'," +
         std::to_string(user_id) + ")");
 
     resp->body = std::string("{\"ok\":true,\"token\":\"") + token +
@@ -70,9 +70,9 @@ void handle_logout(const HttpRequest* req, HttpResponse* resp)
 
     if (!tok.empty())
     {
-        DatabaseManager::getInstance().exec(
+        DatabaseManager::instance().exec(
             "DELETE FROM sessions WHERE token='" +
-            DatabaseManager::getInstance().esc(tok) + "'");
+            DatabaseManager::instance().esc(tok) + "'");
     }
     resp->body = "{\"ok\":true}";
     return;
@@ -121,7 +121,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check if username already exists
     auto existing = db.query("SELECT id FROM users WHERE username='" +

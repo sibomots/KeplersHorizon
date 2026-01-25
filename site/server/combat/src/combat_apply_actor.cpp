@@ -18,15 +18,15 @@
 
 bool CombatApplyActor::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
 
     // Are we allowed to use Combat Apply now?
     std::string inhibit_error;
-    if (!StateMachine::getInstance()
+    if (!StateMachine::instance()
                .check_inhibits(CommandID::COMBAT_APPLY, inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::instance().write("Error: " + inhibit_error);
         return false;
     }
 
@@ -40,6 +40,6 @@ bool CombatApplyActor::invoke(void)
                               .build();
     
     CombatAgentParam capm(cp);
-    bool bresult = CombatAgent::getInstance().apply(capm);
+    bool bresult = CombatAgent::instance().apply(capm);
     return bresult;
 }

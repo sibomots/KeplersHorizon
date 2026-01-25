@@ -9,6 +9,7 @@
 #define __BUILD_DRAFTS_ACTOR_H__
 
 #include <string>
+
 #include "icmd.h"
 
 class BuildDraftsActor : public ICmd

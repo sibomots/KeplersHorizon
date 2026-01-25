@@ -19,7 +19,7 @@ class DatabaseManager
     static const size_t SQLSZ = 1024;
 
   public:
-    static DatabaseManager& getInstance()
+    static DatabaseManager& instance()
     {
         static DatabaseManager instance;
         return instance;

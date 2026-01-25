@@ -21,12 +21,12 @@ bool SaveCommand::invoke()
 {
     if (m_show_usage)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Usage: save <NAME> - save current game under label NAME");
         return true;
     }
 
-    StateMachine& sm = StateMachine::getInstance();
+    StateMachine& sm = StateMachine::instance();
     int game_id = sm.get_game_id();
     int user_id = sm.get_current_user_id();
     GameState gs = sm.get_game_state();
@@ -36,7 +36,7 @@ bool SaveCommand::invoke()
     // Check phase - only allow during BUILD_SHIPS
     if (gs.phase_index != 0)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SAVE: Only allowed during BUILD_SHIPS phase.");
         return false;
     }
@@ -44,12 +44,12 @@ bool SaveCommand::invoke()
 
     if (m_name.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Usage: save <NAME> - save current game under label NAME");
         return true;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Check if save name already exists for this user
     auto existing = db.query(
@@ -61,7 +61,7 @@ bool SaveCommand::invoke()
         // Update existing save to point to current game
         db.exec("UPDATE saved_games SET game_id=" + std::to_string(game_id) +
                 ", saved_at=NOW() WHERE id=" + existing[0][0]);
-        Telemetry::getInstance().write("SAVE: Updated '" + m_name +
+        Telemetry::instance().write("SAVE: Updated '" + m_name +
                                        "' to point to current game (Turn " +
                                        std::to_string(gs.round) + ").");
     }
@@ -71,7 +71,7 @@ bool SaveCommand::invoke()
         db.exec("INSERT INTO saved_games(user_id, save_name, game_id) VALUES(" +
                 std::to_string(user_id) + ",'" + db.esc(m_name) + "'," +
                 std::to_string(game_id) + ")");
-        Telemetry::getInstance().write("SAVE: Game saved as '" + m_name +
+        Telemetry::instance().write("SAVE: Game saved as '" + m_name +
                                        "' (Turn " + std::to_string(gs.round) +
                                        ").");
     }
@@ -83,13 +83,13 @@ bool SaveCommand::invoke()
 //------------------------------------------------------------------------------
 bool LoadCommand::invoke()
 {
-    StateMachine& sm = StateMachine::getInstance();
+    StateMachine& sm = StateMachine::instance();
     int game_id = sm.get_game_id();
     int user_id = sm.get_current_user_id();
     char player = sm.get_current_player();
     GameState gs = sm.get_game_state();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // If just listing saves
     if (m_list_saves || m_name.empty())
@@ -104,8 +104,8 @@ bool LoadCommand::invoke()
 
         if (saves.empty())
         {
-            Telemetry::getInstance().write("LOAD: No saved games found.");
-            Telemetry::getInstance().write(
+            Telemetry::instance().write("LOAD: No saved games found.");
+            Telemetry::instance().write(
                 "Usage: load <NAME> - load a saved game by name");
             return false;
         }
@@ -118,14 +118,14 @@ bool LoadCommand::invoke()
                 << ")\n";
         }
         out << "Usage: load <NAME> - load a saved game by name";
-        Telemetry::getInstance().write(out.str());
+        Telemetry::instance().write(out.str());
         return true;
     }
 
     // Check phase - only allow during BUILD_SHIPS
     if (gs.phase_index != 0)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "LOAD: Only allowed during BUILD_SHIPS phase.");
         return false;
     }
@@ -141,7 +141,7 @@ bool LoadCommand::invoke()
 
     if (saves.empty())
     {
-        Telemetry::getInstance().write("LOAD: No saved game named '" + m_name +
+        Telemetry::instance().write("LOAD: No saved game named '" + m_name +
                                        "' found.");
         return false;
     }
@@ -154,7 +154,7 @@ bool LoadCommand::invoke()
     // Can't load the same game we're in
     if (target_game_id == game_id)
     {
-        Telemetry::getInstance().write("LOAD: You're already in that game.");
+        Telemetry::instance().write("LOAD: You're already in that game.");
         return false;
     }
 
@@ -195,15 +195,15 @@ bool LoadCommand::invoke()
             // Notify both players
             std::string msg = "COMMAND: Game '" + m_name +
                               "' loaded. Resuming Turn " + round + ".";
-            Telemetry::getInstance().add_tell(target_game_id, 'A', msg);
-            Telemetry::getInstance().add_tell(target_game_id, 'B', msg);
-            Telemetry::getInstance().write(msg);
+            Telemetry::instance().add_tell(target_game_id, 'A', msg);
+            Telemetry::instance().add_tell(target_game_id, 'B', msg);
+            Telemetry::instance().write(msg);
             return true;
         }
         else
         {
             // Different request pending
-            Telemetry::getInstance().write("LOAD: A load request for '" +
+            Telemetry::instance().write("LOAD: A load request for '" +
                                            existing_name +
                                            "' is pending. "
                                            "Type 'reject " +
@@ -225,7 +225,7 @@ bool LoadCommand::invoke()
     std::string username = username_row.empty() ? "Player" : username_row[0][0];
 
     // Notify the requester
-    Telemetry::getInstance().write("LOAD: Requested to load '" + m_name +
+    Telemetry::instance().write("LOAD: Requested to load '" + m_name +
                                    "' (Turn " + round +
                                    "). "
                                    "Waiting for other player to accept.");
@@ -237,7 +237,7 @@ bool LoadCommand::invoke()
                                ").\n"
                                "Type 'accept " +
                                m_name + "' or 'reject " + m_name + "'.";
-    Telemetry::getInstance().add_tell(game_id, opponent, opponent_msg);
+    Telemetry::instance().add_tell(game_id, opponent, opponent_msg);
 
     return true;
 }
@@ -247,11 +247,11 @@ bool LoadCommand::invoke()
 //------------------------------------------------------------------------------
 bool AcceptCommand::invoke()
 {
-    StateMachine& sm = StateMachine::getInstance();
+    StateMachine& sm = StateMachine::instance();
     int game_id = sm.get_game_id();
     char player = sm.get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Find pending request
     auto pending = db.query("SELECT requester, target_game_id, save_name FROM "
@@ -260,7 +260,7 @@ bool AcceptCommand::invoke()
 
     if (pending.empty())
     {
-        Telemetry::getInstance().write("ACCEPT: No pending load request.");
+        Telemetry::instance().write("ACCEPT: No pending load request.");
         return false;
     }
 
@@ -271,7 +271,7 @@ bool AcceptCommand::invoke()
     // Check if name matches (if provided)
     if (!m_name.empty() && m_name != save_name)
     {
-        Telemetry::getInstance().write("ACCEPT: Pending request is for '" +
+        Telemetry::instance().write("ACCEPT: Pending request is for '" +
                                        save_name + "', not '" + m_name + "'.");
         return false;
     }
@@ -279,7 +279,7 @@ bool AcceptCommand::invoke()
     // Can't accept your own request
     if (requester[0] == player)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "ACCEPT: Waiting for the other player to accept your request.");
         return false;
     }
@@ -349,9 +349,9 @@ bool AcceptCommand::invoke()
     // Notify both players
     std::string msg = "COMMAND: Game '" + save_name +
                       "' loaded. Resuming Turn " + round + "." + extra_msg;
-    Telemetry::getInstance().add_tell(target_game_id, 'A', msg);
-    Telemetry::getInstance().add_tell(target_game_id, 'B', msg);
-    Telemetry::getInstance().write(msg);
+    Telemetry::instance().add_tell(target_game_id, 'A', msg);
+    Telemetry::instance().add_tell(target_game_id, 'B', msg);
+    Telemetry::instance().write(msg);
     return true;
 }
 
@@ -360,10 +360,10 @@ bool AcceptCommand::invoke()
 //------------------------------------------------------------------------------
 bool RejectCommand::invoke()
 {
-    StateMachine& sm = StateMachine::getInstance();
+    StateMachine& sm = StateMachine::instance();
     int game_id = sm.get_game_id();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Find pending request
     auto pending = db.query("SELECT requester, requester_user_id, save_name "
@@ -372,7 +372,7 @@ bool RejectCommand::invoke()
 
     if (pending.empty())
     {
-        Telemetry::getInstance().write("REJECT: No pending load request.");
+        Telemetry::instance().write("REJECT: No pending load request.");
         return false;
     }
 
@@ -383,7 +383,7 @@ bool RejectCommand::invoke()
     // Check if name matches (if provided)
     if (!m_name.empty() && m_name != save_name)
     {
-        Telemetry::getInstance().write("REJECT: Pending request is for '" +
+        Telemetry::instance().write("REJECT: Pending request is for '" +
                                        save_name + "', not '" + m_name + "'.");
         return false;
     }
@@ -399,14 +399,14 @@ bool RejectCommand::invoke()
             std::to_string(game_id));
 
     // Notify the rejector
-    Telemetry::getInstance().write("REJECT: Load request for '" + save_name +
+    Telemetry::instance().write("REJECT: Load request for '" + save_name +
                                    "' rejected.");
 
     // Notify the requester
     char requester_player = requester[0];
     std::string requester_msg =
         "COMMAND: " + username + " rejected loading '" + save_name + "'.";
-    Telemetry::getInstance().add_tell(game_id, requester_player, requester_msg);
+    Telemetry::instance().add_tell(game_id, requester_player, requester_msg);
 
     return true;
 }

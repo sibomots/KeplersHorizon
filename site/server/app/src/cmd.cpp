@@ -16,7 +16,6 @@
 #include "events.h"
 #include "logger.h"
 #include "mapgraph.h"
-#include "ships.h"
 #include "state.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -60,7 +59,7 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         return true; // is done
     }
     // Configure StateMachine with DB context
-    StateMachine::getInstance().set_game_id(a.game_id);
+    StateMachine::instance().set_game_id(a.game_id);
 
     // BEGIN BUGBUG
     // This is probably OK --- the server is single threaded -
@@ -79,12 +78,12 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     //       player).  All State Machine inhibits are based on the turn-holding
     //       player compared to the 'current' player issuing the candidate command.
 
-    StateMachine::getInstance().set_current_player(a.player);
-    StateMachine::getInstance().set_current_user_id(a.user_id);
+    StateMachine::instance().set_current_player(a.player);
+    StateMachine::instance().set_current_user_id(a.user_id);
     // END BUGBUG
 
     // Clear telemetry message buffer before command execution
-    Telemetry::getInstance().clear_messages();
+    Telemetry::instance().clear_messages();
 
     // Try parser first (handles migrated commands)
     YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
@@ -96,11 +95,11 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     if (parse_result == 0)
     {
         // Check if game_id changed (e.g., after 'start' command)
-        int new_game_id = StateMachine::getInstance().get_game_id();
+        int new_game_id = StateMachine::instance().get_game_id();
         if (new_game_id != a.game_id)
         {
             // Update session with new game_id
-            DatabaseManager& db = DatabaseManager::getInstance();
+            DatabaseManager& db = DatabaseManager::instance();
             db.exec(
                 "UPDATE sessions SET game_id=" + std::to_string(new_game_id) +
                 " WHERE token='" + db.esc(a.token) + "'");
@@ -112,11 +111,11 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         // (game_id will be 0 until 'start' command is run)
         if (new_game_id != 0)
         {
-            GameState s = StateMachine::getInstance().load_game(new_game_id);
+            GameState s = StateMachine::instance().load_game(new_game_id);
         }
 
         std::string event_msg;
-        Telemetry::getInstance().source_messages(event_msg);
+        Telemetry::instance().source_messages(event_msg);
         resp->body = event_msg;
     }
     else {

@@ -19,7 +19,7 @@ std::string StarSystemConstraints::getSystemForHex(int game_id,
     if (hex_id.empty())
         return "";
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     int mod = get_module_id_for_game(game_id);
 
     auto rows =
@@ -38,7 +38,7 @@ int StarSystemConstraints::getConstraintModifier(int game_id,
     if (system.empty())
         return 0;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
         db.query("SELECT modifier_type, modifier_value FROM system_constraints "

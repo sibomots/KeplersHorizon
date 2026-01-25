@@ -9,6 +9,7 @@
 #define __BUILD_SET_ACTOR_H__
 
 #include <string>
+
 #include "attributemap.h"
 #include "icmd.h"
 

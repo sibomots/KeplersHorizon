@@ -9,6 +9,7 @@
 #define __BUILD_NEW_ACTOR_H__
 
 #include <string>
+
 #include "icmd.h"
 
 class BuildNewActor : public ICmd

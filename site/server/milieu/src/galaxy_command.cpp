@@ -16,8 +16,8 @@
 
 bool GalaxyCommand::invoke(void)
 {
-    int game_id = StateMachine::getInstance().get_game_id();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    int game_id = StateMachine::instance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::ostringstream out;
     out << "         GALAXY OVERVIEW\n";
@@ -74,6 +74,6 @@ bool GalaxyCommand::invoke(void)
     }
 
     out << "=========================================================\n";
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

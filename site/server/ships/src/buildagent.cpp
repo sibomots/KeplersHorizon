@@ -6,12 +6,13 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 
+#include "buildagent.h"
+
 #include <sstream>
 
-#include "buildagent.h"
 #include "db.h"
 #include "logger.h"
-#include "ships.h"
+#include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 
@@ -59,19 +60,20 @@ bool BuildAgent::apply(BuildAgentParam& param)
 // BuildNew - Create a new ship draft
 bool BuildAgent::apply(BuildNewParam& param)
 {
+    ShipManager& shipmgr = ShipManager::instance();
     int game_id = param.get_game_id();
     char owner = param.get_player();
     std::string ship_code = param.get_ship_code();
     std::string ship_name = param.get_ship_name();
     char ship_type = param.get_ship_type();
 
-    GameState s = StateMachine::getInstance().get_game_state();
+    GameState s = StateMachine::instance().get_game_state();
 
     // Check BP availability
     int& bp = (s.active_player == "A") ? s.creditsA : s.creditsB;
     if (bp <= 0)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SHIPYARD: Insufficient Build Points. Construction halted.");
         return false;
     }
@@ -79,7 +81,7 @@ bool BuildAgent::apply(BuildNewParam& param)
     // Validate ship code format
     if (ship_code.empty() || ship_name.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SHIPYARD: Invalid hull designation. Review ship code.");
         return false;
     }
@@ -102,8 +104,8 @@ bool BuildAgent::apply(BuildNewParam& param)
             // Check both players to ensure global uniqueness
             A_has_draft = get_draft_by_spec(did, game_id, 'A', candidate_code);
             B_has_draft = get_draft_by_spec(did, game_id, 'B', candidate_code);
-            A_has_ship = ship_exists(game_id, 'A', candidate_code);
-            B_has_ship = ship_exists(game_id, 'B', candidate_code);
+            A_has_ship = shipmgr.ship_exists(game_id, 'A', candidate_code);
+            B_has_ship = shipmgr.ship_exists(game_id, 'B', candidate_code);
         } while (A_has_draft || B_has_draft || A_has_ship || B_has_ship);
 
         ship_code = candidate_code;
@@ -112,15 +114,15 @@ bool BuildAgent::apply(BuildNewParam& param)
     // Check for duplicates
     if (get_draft_by_spec(did, game_id, owner, ship_code))
     {
-        Telemetry::getInstance().write("SHIPYARD: Hull " + ship_code +
-                                       " already on drafting board.");
+        Telemetry::instance().write("SHIPYARD: Hull " + ship_code +
+                                    " already on drafting board.");
         return false;
     }
 
-    if (ship_exists(game_id, owner, ship_code))
+    if (shipmgr.ship_exists(game_id, owner, ship_code))
     {
-        Telemetry::getInstance().write("SHIPYARD: Vessel " + ship_code +
-                                       " already commissioned in fleet.");
+        Telemetry::instance().write("SHIPYARD: Vessel " + ship_code +
+                                    " already commissioned in fleet.");
         return false;
     }
 
@@ -131,12 +133,12 @@ bool BuildAgent::apply(BuildNewParam& param)
     draft.set_type(ship_type);
     draft.update_cost();
 
-    insert_draft(game_id, owner, draft);
+    shipmgr.insert_draft(game_id, owner, draft);
 
     std::ostringstream msg;
     msg << "SHIPYARD: Hull " << ship_code
         << " laid down. Designation: " << ship_name;
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
 
     return true;
 }
@@ -148,6 +150,7 @@ bool BuildAgent::apply(BuildSetParam& param)
     char owner = param.get_player();
     std::string target = param.get_target();
     AttributeMap attributes = param.get_attributes();
+    ShipManager& shipmgr = ShipManager::instance();
 
     int did = 0;
     bool has_draft = get_draft_by_spec(did, game_id, owner, target);
@@ -156,25 +159,25 @@ bool BuildAgent::apply(BuildSetParam& param)
     {
         if (target.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SHIPYARD: Need ship hull designator or name to find it");
         }
         else
         {
-            Telemetry::getInstance().write("SHIPYARD: Ship " + target +
-                                           " not in space dock.");
+            Telemetry::instance().write("SHIPYARD: Ship " + target +
+                                        " not in space dock.");
         }
         return false;
     }
 
     DraftRow drow;
     bool found_ship_draft =
-        load_ship_draft_by_spec(drow, did, game_id, owner, target);
+        shipmgr.load_ship_draft_by_spec(drow, did, game_id, owner, target);
 
     if (!found_ship_draft)
     {
-        Telemetry::getInstance().write("SHIPYARD: Ship " + target +
-                                       " is LOST from space dock.");
+        Telemetry::instance().write("SHIPYARD: Ship " + target +
+                                    " is LOST from space dock.");
         return false;
     }
 
@@ -206,13 +209,13 @@ bool BuildAgent::apply(BuildSetParam& param)
         }
     }
 
-    update_draft_attrs(did, game_id, owner, target, drow);
+    shipmgr.update_draft_attrs(did, game_id, owner, target, drow);
     drow.update_cost();
 
     std::ostringstream os;
-    append_draft_header(os);
-    append_draft_row(os, drow);
-    Telemetry::getInstance().write(os.str());
+    shipmgr.append_draft_header(os);
+    shipmgr.append_draft_row(os, drow);
+    Telemetry::instance().write(os.str());
 
     return true;
 }
@@ -223,8 +226,9 @@ bool BuildAgent::apply(BuildCommitParam& param)
     int game_id = param.get_game_id();
     char owner = param.get_player();
     std::string target = param.get_target();
+    ShipManager& shipmgr = ShipManager::instance();
 
-    GameState s = StateMachine::getInstance().get_game_state();
+    GameState s = StateMachine::instance().get_game_state();
 
     int did = 0;
     bool has_draft = get_draft_by_spec(did, game_id, owner, target);
@@ -233,12 +237,12 @@ bool BuildAgent::apply(BuildCommitParam& param)
     {
         if (target.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SHIPYARD: Need ship hull designator or name to find it");
         }
         else
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SHIPYARD: Ship with hull designation " + target +
                 " not in space dock.");
         }
@@ -248,25 +252,25 @@ bool BuildAgent::apply(BuildCommitParam& param)
     // Load draft
     DraftRow drow;
     bool found_draft_row =
-        load_ship_draft_by_spec(drow, did, game_id, owner, target);
+        shipmgr.load_ship_draft_by_spec(drow, did, game_id, owner, target);
 
     if (!found_draft_row)
     {
-        Telemetry::getInstance().write("SHIPYARD: Ship " + target +
-                                       " is LOST from space dock.");
+        Telemetry::instance().write("SHIPYARD: Ship " + target +
+                                    " is LOST from space dock.");
         return false;
     }
 
     // Validate draft
     std::vector<std::string> report;
-    bool is_valid_ship_candidate = test_ship_draft_candidate(drow, report);
+    bool is_valid_ship_candidate = shipmgr.is_ship_draft_valid(drow, report);
 
     if (!is_valid_ship_candidate)
     {
         // Report validation errors
         for (const auto& msg : report)
         {
-            Telemetry::getInstance().write(msg);
+            Telemetry::instance().write(msg);
         }
         return false;
     }
@@ -279,9 +283,9 @@ bool BuildAgent::apply(BuildCommitParam& param)
 
     if (candidate_cost > bp)
     {
-        Telemetry::getInstance().write("SHIPYARD: Insufficient CR. Need " +
-                                       std::to_string(candidate_cost) +
-                                       ", have " + std::to_string(bp));
+        Telemetry::instance().write("SHIPYARD: Insufficient CR. Need " +
+                                    std::to_string(candidate_cost) + ", have " +
+                                    std::to_string(bp));
         return false;
     }
 
@@ -299,17 +303,17 @@ bool BuildAgent::apply(BuildCommitParam& param)
     ShipRow ship = ShipRow::from_draft(drow, s.round, s.active_player);
 
     // Commit to DB
-    insert_ship(game_id, owner, ship);
-    delete_draft(did, game_id, owner, drow.code);
+    shipmgr.insert_ship(game_id, owner, ship);
+    shipmgr.delete_draft(did, game_id, owner, drow.code);
 
     // Deduct BP and save
     bp -= candidate_cost;
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
     std::ostringstream msg;
     msg << "Committed: " << ship << "\n"
         << "Remaining BP: " << std::to_string(bp) << " BP";
-    Telemetry::getInstance().write(msg.str());
+    Telemetry::instance().write(msg.str());
 
     return true;
 }
@@ -319,18 +323,19 @@ bool BuildAgent::apply(BuildDraftsParam& param)
 {
     int game_id = param.get_game_id();
     char owner = param.get_player();
+    ShipManager& shipmgr = ShipManager::instance();
 
-    std::vector<DraftRow> drafts = load_drafts_by_owner(game_id, owner);
-
-    if (drafts.empty())
+    std::vector<DraftRow> drafts;
+    bool has_drafts = shipmgr.load_drafts_by_owner(drafts, game_id, owner);
+    if (!has_drafts)
     {
-        Telemetry::getInstance().write("SHIPYARD: No ships in production");
+        Telemetry::instance().write("SHIPYARD: No ships in production");
         return false;
     }
 
     std::ostringstream oss;
-    build_drafts_report(oss, drafts);
-    Telemetry::getInstance().write(oss.str());
+    shipmgr.build_drafts_report(oss, drafts);
+    Telemetry::instance().write(oss.str());
 
     return true;
 }
@@ -342,8 +347,10 @@ bool BuildAgent::apply(BuildShowDraftParam& param)
     char owner = param.get_player();
     std::string target = param.get_target();
 
-    GameState s = StateMachine::getInstance().get_game_state();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    DatabaseManager& db = DatabaseManager::instance();
+    ShipManager& shipmgr = ShipManager::instance();
+
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
     int did = 0;
@@ -353,12 +360,12 @@ bool BuildAgent::apply(BuildShowDraftParam& param)
     {
         if (target.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SHIPYARD: Need ship hull designator or name to find it");
         }
         else
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SHIPYARD: Ship with hull designation " + target +
                 " not in space dock.");
         }
@@ -368,21 +375,21 @@ bool BuildAgent::apply(BuildShowDraftParam& param)
     {
         // Load draft
         DraftRow drow;
-        bool found_draft = load_ship_draft_by_spec(drow, did, game_id,
-                                                   active_player, target);
+        bool found_draft = shipmgr.load_ship_draft_by_spec(
+            drow, did, game_id, active_player, target);
         if (found_draft)
         {
             std::ostringstream os;
             drow.update_cost();
-            append_draft_header(os);
-            append_draft_row(os, drow);
-            Telemetry::getInstance().write(os.str());
+            shipmgr.append_draft_header(os);
+            shipmgr.append_draft_row(os, drow);
+            Telemetry::instance().write(os.str());
             result = true;
         }
         else
         {
-            Telemetry::getInstance().write("SHIPYARD: Ship " + target +
-                                           " is LOST from space dock.");
+            Telemetry::instance().write("SHIPYARD: Ship " + target +
+                                        " is LOST from space dock.");
             result = false;
         }
     }
@@ -395,22 +402,56 @@ bool BuildAgent::apply(BuildCancelParam& param)
     int game_id = param.get_game_id();
     char owner = param.get_player();
     std::string target = param.get_target();
+    ShipManager& shipmgr = ShipManager::instance();
 
     int did = 0;
     bool has_draft = get_draft_by_spec(did, game_id, owner, target);
 
     if (!has_draft)
     {
-        Telemetry::getInstance().write(
-            "SHIPYARD: No ship with hull designation " + target +
-            " in the shipyard.");
+        Telemetry::instance().write("SHIPYARD: No ship with hull designation " +
+                                    target + " in the shipyard.");
         return false;
     }
 
     // Delete the draft
-    delete_draft(did, game_id, owner, target);
+    shipmgr.delete_draft(did, game_id, owner, target);
 
-    Telemetry::getInstance().write("SHIPYARD: Canceled: " + target);
+    Telemetry::instance().write("SHIPYARD: Canceled: " + target);
 
     return true;
+}
+
+// private methods
+
+bool BuildAgent::get_draft_by_spec(int& did, int gid, char owner,
+                                   std::string target)
+{
+    bool result = false;
+    DatabaseManager& db = DatabaseManager::instance();
+    std::string qry = "SELECT DISTINCT "
+                      "d.id, d.game_id, d.owner, d.ship_code, d.ship_name, "
+                      "d.ship_type "
+                      " FROM drafts d "
+                      " WHERE d.owner = '" +
+                      std::string(1, owner) +
+                      "'  AND d.game_id = " + std::to_string(gid) +
+                      " AND ( d.ship_code = '" + db.esc(target) +
+                      "' OR d.ship_name = '" + db.esc(target) + "')";
+    auto rows = db.query(qry.c_str());
+    size_t sz = rows.size();
+    if (sz == 0)
+    {
+        // BUGBUG
+        // we cannot find the draft.
+    }
+    else
+    {
+        // we found the draft(s)
+        // BUGBUG how many??
+        std::vector<std::string> r = rows[0];
+        did = std::atoi(r[0].c_str());
+        result = true;
+    }
+    return result;
 }

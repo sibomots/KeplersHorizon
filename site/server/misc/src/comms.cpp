@@ -193,7 +193,7 @@ std::string pick_bearer(const HttpRequest* req)
 
 AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     AuthContext a;
     std::string tok = pick_bearer(req);
     if (tok.empty())

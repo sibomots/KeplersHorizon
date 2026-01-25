@@ -10,21 +10,21 @@
 #include <iomanip>
 #include <sstream>
 
+#include "typedefs.h"
+#include "logger.h"
 #include "ce.h"
-#include "constraints.h"
 #include "db.h"
+#include "shipmgr.h"
+#include "constraints.h"
+#include "telemetry.h"
 #include "deploy_command.h"
 #include "hex_events.h"
-#include "logger.h"
 #include "mapgraph.h"
 #include "maputil.h"
 #include "moduleutil.h"
 #include "move_command.h"
-#include "ships.h"
 #include "star_system_constraints.h"
 #include "statemachine.h"
-#include "telemetry.h"
-#include "typedefs.h"
 
 bool DeployCommand::invoke(void)
 {
@@ -34,32 +34,35 @@ bool DeployCommand::invoke(void)
     params.destination = m_system_name;
 
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::DEPLOY, inhibit_error))
+    if (!StateMachine::instance().check_inhibits(CommandID::DEPLOY, inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::instance().write("Error: " + inhibit_error);
         return false;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
-    GameState s = StateMachine::getInstance().get_game_state();
-    int m_game_id = StateMachine::getInstance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
+    ShipManager& shipmgr = ShipManager::instance();
+
+    GameState s = StateMachine::instance().get_game_state();
+    int m_game_id = StateMachine::instance().get_game_id();
 
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
     std::string sys =
-        MapUtil::getInstance().resolve_system_name(m_game_id, m_system_name);
+        MapUtil::instance().resolve_system_name(m_game_id, m_system_name);
 
-    if (!ship_exists_by_code_or_name(m_game_id, active_player, m_ship_code))
+    if (!shipmgr.ship_exists_by_code_or_name(m_game_id, active_player, m_ship_code))
     {
-        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
+        Telemetry::instance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " is not in your fleet!");
         return false;
     }
 
-    ShipRow sh = load_ship_by_code_or_name(m_game_id, active_player, m_ship_code);
-    if (!sh.racked_in.empty())
+    ShipRow sh;
+    bool has_ship = shipmgr.load_ship_by_code_or_name(sh, m_game_id, active_player, m_ship_code);
+    if (has_ship && !sh.racked_in.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Error: Ship is racked; drop it before deploying: " + m_ship_code);
         return false;
     }
@@ -73,14 +76,14 @@ bool DeployCommand::invoke(void)
 
     if (base_info.empty())
     {
-        Telemetry::getInstance().write("DEPLOY: Unknown system: " +
+        Telemetry::instance().write("DEPLOY: Unknown system: " +
                                        m_system_name);
         return false;
     }
 
     if (base_info[0][0] != "1")
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "DEPLOY: Ships can only be deployed at a home base system.");
         return false;
     }
@@ -110,31 +113,31 @@ bool DeployCommand::invoke(void)
         }
 
         // Get player's actual username for the broadcast
-        int user_id = StateMachine::getInstance().get_current_user_id();
-        auto user_rows = DatabaseManager::getInstance().query(
+        int user_id = StateMachine::instance().get_current_user_id();
+        auto user_rows = DatabaseManager::instance().query(
             "SELECT username FROM users WHERE id=" + std::to_string(user_id));
         std::string player_name =
             user_rows.empty() ? "Player" : user_rows[0][0];
 
-        Telemetry::getInstance().broadcast("DEPLOY: " + player_name +
+        Telemetry::instance().broadcast("DEPLOY: " + player_name +
                                            " has claimed the " +
                                            territory_name + ".");
     }
     else if (player_side != base_side)
     {
         // Trying to deploy on enemy's side
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "DEPLOY: Cannot deploy in enemy territory. Use your home bases.");
         return false;
     }
 
-    std::string hex = MapUtil::getInstance().resolve_system_hex(m_game_id, sys);
-    update_ship_location_by_code_or_name(m_game_id, active_player, m_ship_code, sys, hex);
+    std::string hex = MapUtil::instance().resolve_system_hex(m_game_id, sys);
+    shipmgr.update_ship_location(m_game_id, active_player, m_ship_code, sys, hex);
 
     // Save game state to persist side assignment
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
-    Telemetry::getInstance().write("FLEET COMMAND: " + sh.name + " (" +
+    Telemetry::instance().write("FLEET COMMAND: " + sh.name + " (" +
                                    sh.code + ") deployed to " + sys);
 
     return true;
@@ -147,39 +150,41 @@ bool MoveCommand::invoke(void)
     params.destination = m_destinations.empty() ? "" : m_destinations[0];
 
     std::string inhibit_error;
-    if (!StateMachine::getInstance().check_inhibits(CommandID::MOVE, inhibit_error))
+    if (!StateMachine::instance().check_inhibits(CommandID::MOVE, inhibit_error))
     {
-        Telemetry::getInstance().write("Error: " + inhibit_error);
+        Telemetry::instance().write("Error: " + inhibit_error);
         return false;
     }
 
-    DatabaseManager& db = DatabaseManager::getInstance();
-    GameState s = StateMachine::getInstance().get_game_state();
-    int m_game_id = StateMachine::getInstance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
+    ShipManager& shipmgr = ShipManager::instance();
+    GameState s = StateMachine::instance().get_game_state();
+    int m_game_id = StateMachine::instance().get_game_id();
 
     char active_player = (s.active_player.empty() ? 'A' : s.active_player[0]);
 
-    bool ship_present = ship_exists_by_code_or_name(m_game_id, active_player, m_ship_code);
+    bool ship_present = shipmgr.ship_exists_by_code_or_name(m_game_id, active_player, m_ship_code);
 
     if (!ship_present)
     {
-        Telemetry::getInstance().write("FLEET REGISTRY: Vessel " + m_ship_code +
+        Telemetry::instance().write("FLEET REGISTRY: Vessel " + m_ship_code +
                                        " is not in your fleet!");
         return false;
     }
 
-    ShipRow sh = load_ship_by_code_or_name(m_game_id, active_player, m_ship_code);
+    ShipRow sh;
+    bool has_ship = shipmgr.load_ship_by_code_or_name(sh, m_game_id, active_player, m_ship_code);
 
-    if (sh.attr.type != 'W')
+    if (has_ship && sh.attr.type != 'W')
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "NAV: Only WarpShip class vessels can engage hyperdrive.");
         return false;
     }
 
     if (sh.attr.PD <= 0)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "NAV: " + sh.name +
             " has no power drive capacity. Unable to maneuver.");
         return false;
@@ -187,7 +192,7 @@ bool MoveCommand::invoke(void)
 
     if (!sh.racked_in.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "OPS: Ship is racked and cannot move: " + sh.racked_in);
         return false;
     }
@@ -196,12 +201,12 @@ bool MoveCommand::invoke(void)
     if (startHex.empty() && !sh.at_system.empty())
     {
         startHex =
-            MapUtil::getInstance().resolve_system_hex(m_game_id, sh.at_system);
+            MapUtil::instance().resolve_system_hex(m_game_id, sh.at_system);
     }
 
     if (startHex.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "NAV: " + sh.name +
             " is not deployed. It is still in shipyard.");
         return false;
@@ -213,7 +218,7 @@ bool MoveCommand::invoke(void)
         std::string firstDest = m_destinations[0];
         // Resolve system name to hex if needed
         std::string destHex =
-            MapUtil::getInstance().resolve_system_hex(m_game_id, firstDest);
+            MapUtil::instance().resolve_system_hex(m_game_id, firstDest);
 
         if (destHex.empty())
         {
@@ -222,7 +227,7 @@ bool MoveCommand::invoke(void)
 
         if (destHex == startHex)
         {
-            Telemetry::getInstance().write("NAV: " + sh.name +
+            Telemetry::instance().write("NAV: " + sh.name +
                                            " is already at " + firstDest + ".");
             return false;
         }
@@ -258,7 +263,7 @@ bool MoveCommand::invoke(void)
 
     if (allowance <= 0)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "NAV: " + sh.name + " has exhausted power drive for this turn.");
         return false;
     }
@@ -449,7 +454,7 @@ bool MoveCommand::invoke(void)
     if (!errorMsg.empty())
     {
         Logger::instance().error(errorMsg);
-        Telemetry::getInstance().write("Error: " + errorMsg);
+        Telemetry::instance().write("Error: " + errorMsg);
         return false;
     }
 
@@ -458,7 +463,7 @@ bool MoveCommand::invoke(void)
     {
         finalSystem.clear();
     }
-    update_ship_location(m_game_id, active_player, sh.code, finalSystem,
+    shipmgr.update_ship_location(m_game_id, active_player, sh.code, finalSystem,
                          finalHex);
     db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
             " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
@@ -466,7 +471,7 @@ bool MoveCommand::invoke(void)
             db.esc(sh.code) + "'");
 
     // Save game state to persist changes
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
     std::string milieu_report;
 
@@ -617,15 +622,15 @@ bool MoveCommand::invoke(void)
         if (fullPath.size() > 0) {
             pathOut << "\n";
         }
-        Telemetry::getInstance().write(pathOut.str());
+        Telemetry::instance().write(pathOut.str());
 
         std::ostringstream o;
         o << "OPS: " << sh.name << " (" << sh.code << ") transit to "
           << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
           << "] complete.\nPower expended: " << totalCost << " PD";
-        Telemetry::getInstance().write(o.str());
+        Telemetry::instance().write(o.str());
 
-        Telemetry::getInstance().write(milieu_report);
+        Telemetry::instance().write(milieu_report);
     }
 
     // Check for combat trigger: enemy ships in destination hex
@@ -645,8 +650,8 @@ bool MoveCommand::invoke(void)
             "TACTICAL ALERT: Contact! Enemy forces detected in " + sysName +
             "!\n>> Combat will resolve when movement phase ends.";
 
-        Telemetry::getInstance().write(alertMsg);
-        Telemetry::getInstance().tell(PlayerTarget::THEM, alertMsg);
+        Telemetry::instance().write(alertMsg);
+        Telemetry::instance().tell(PlayerTarget::THEM, alertMsg);
     }
     else
     {
@@ -740,7 +745,7 @@ bool MoveCommand::invoke(void)
                 std::string pis = (keyc == 'A') ? you : them;
                 whodat << pis << "\n";
             }
-            Telemetry::getInstance().broadcast(whodat.str());
+            Telemetry::instance().broadcast(whodat.str());
         }
     }
     return true;

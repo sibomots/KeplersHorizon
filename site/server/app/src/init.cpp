@@ -56,8 +56,8 @@ void apply_arguments(int argc, char** argv)
     {
        Configr::instance().summary();
            
-       DatabaseManager::getInstance().configure();
-       ServerManager::getInstance().configure();
+       DatabaseManager::instance().configure();
+       ServerManager::instance().configure();
     }
 }
 
@@ -67,7 +67,7 @@ void activate_db()
 {
     try
     {
-        DatabaseManager::getInstance().connect();
+        DatabaseManager::instance().connect();
     }
     catch (const std::exception& ex)
     {
@@ -83,7 +83,7 @@ void test_db(void)
     std::cout << "[TEST] Starting database validation..."
               << std::endl;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     std::cout << "DB Instance set" << std::endl;
 
@@ -288,7 +288,7 @@ void load_services()
 
     // This creates the server and descritpr for
     // listening on port for REST-ful  transactions
-    ServerManager::getInstance().connect();
+    ServerManager::instance().connect();
 
     // Front-end Services
     /////////////////////

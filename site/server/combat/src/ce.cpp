@@ -40,7 +40,7 @@ void CombatEngine::check_for_combat_triggers()
 {
     // 1. Find all hexes containing ships from both players (A and B)
     //    We can do this by selecting all ship locations and grouping.
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     bool litmus = CombatEngine::is_real_combat_state(game_id);
 
     if (litmus == false)
@@ -111,7 +111,7 @@ void CombatEngine::check_for_combat_triggers()
 // each row has at_hex, owner of each ship involved in conflict
 bool CombatEngine::is_real_combat_state(int gid)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     bool real_combat = false;
 
     // Find out how many hexes are conflicted.
@@ -149,7 +149,7 @@ bool CombatEngine::is_real_combat_state(int gid)
 
 void CombatEngine::create_combat(const std::string& hex_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // Identify attacker? For now, we assume simple engagement.
     // In strict rules, the "moving player" is attacker.
     // We might need to passed that context in, or infer it (active player).
@@ -170,8 +170,8 @@ void CombatEngine::create_combat(const std::string& hex_id)
 
 std::vector<CombatState> CombatEngine::get_active_combats()
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
-    int gid = StateMachine::getInstance().get_game_id();
+    DatabaseManager& db = DatabaseManager::instance();
+    int gid = StateMachine::instance().get_game_id();
     std::vector<CombatState> result;
 
     std::string active_combat;
@@ -211,7 +211,7 @@ std::vector<CombatState> CombatEngine::get_active_combats()
 
 CombatState CombatEngine::get_combat_state(const std::string& hex_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
         db.query("SELECT round, stage, attacker_remains, stalemate_counter, "
@@ -231,7 +231,7 @@ CombatState CombatEngine::get_combat_state(const std::string& hex_id)
 
 std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     CombatOrder order = order_in;
     // 1. Validate ownership
     {
@@ -325,7 +325,7 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
 
 bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // Count ships in hex
     auto sr = db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
                        std::to_string(game_id) + " AND at_hex='" + hex_id +
@@ -352,7 +352,7 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
 
 bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // Count ships in hex
     auto sr = db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
                        std::to_string(game_id) + " AND at_hex='" + hex_id +
@@ -382,7 +382,7 @@ bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
 static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
                        bool& escaped)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     escaped = false;
     // Tactic: A, D, R
     // Returns damage mod (0, 1, 2) or -999 for Miss.
@@ -564,7 +564,7 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
 
 std::string CombatEngine::resolve_round(const std::string& hex_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // 1. Get State
     auto cs = get_combat_state(hex_id);
     if (cs.game_id == 0)
@@ -930,7 +930,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         // Notify each player about their damage
         if (dmgA_total > 0)
         {
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, 'A',
                 "TACTICAL: ROUND " + std::to_string(cs.round) +
                     " DAMAGE REPORT\n" + dmgA.str() + "TOTAL: " +
@@ -940,7 +940,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else
         {
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, 'A',
                 "TACTICAL: ROUND " + std::to_string(cs.round) +
                     " - YOUR SHIPS TOOK NO DAMAGE.");
@@ -948,7 +948,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
         if (dmgB_total > 0)
         {
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, 'B',
                 "TACTICAL: ROUND " + std::to_string(cs.round) +
                     " DAMAGE REPORT\n" + dmgB.str() + "TOTAL: " +
@@ -958,7 +958,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else
         {
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, 'B',
                 "TACTICAL: ROUND " + std::to_string(cs.round) +
                     " - YOUR SHIPS TOOK NO DAMAGE.");
@@ -982,13 +982,13 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             // Mark for retreat - user must issue 'retreat <ship> <hex>'
             // command
 
-            GameState s = StateMachine::getInstance().get_game_state();
-            int game_id = StateMachine::getInstance().get_game_id();
+            GameState s = StateMachine::instance().get_game_state();
+            int game_id = StateMachine::instance().get_game_id();
             char active_player =
                 (s.active_player.empty() ? 'A' : s.active_player[0]);
 
             // jdw char initiative =
-            // StateMachine::getInstance().get_current_player();
+            // StateMachine::instance().get_current_player();
             std::string dbg;
             dbg.append("Active player: ");
             dbg += active_player;
@@ -1015,7 +1015,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 // Logger::instance().info(escapee_stmt.c_str());
             }
             // Notify initiative player they must retreat
-            Telemetry::getInstance().add_tell(
+            Telemetry::instance().add_tell(
                 game_id, active_player,
                 "Three consecutive stalemates. You must retreat your ships "
                 "from "
@@ -1031,7 +1031,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             next_round++;
 
             // Notify both players next round begins
-            Telemetry::getInstance().add_broadcast(
+            Telemetry::instance().add_broadcast(
                 "Combat Round " + std::to_string(next_round) +
                 " begins in hex " + hex_id + ". Submit orders.");
         }
@@ -1056,7 +1056,7 @@ std::string
 CombatEngine::apply_damage(char owner, const std::string& ship_code,
                            const AttributeMap& assignments)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     
     // 1. Get ship current stats and location
     auto ship_rows = db.query(
@@ -1191,7 +1191,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
         db.exec("UPDATE games SET " + vp_col + "=" + vp_col + "+1 "
                 "WHERE id=" + std::to_string(game_id));
         
-        Telemetry::getInstance().add_tell(
+        Telemetry::instance().add_tell(
             game_id, enemy, 
             "VICTORY: +1 VP for destroying enemy ship " + ship_code);
         
@@ -1226,7 +1226,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 " AND hex_id='" + db.esc(hex) + "'");
         
         char opponent = (owner == 'A') ? 'B' : 'A';
-        Telemetry::getInstance().add_tell(
+        Telemetry::instance().add_tell(
             game_id, opponent,
             "Player " + std::string(1, owner) + " has assigned all damage.");
     }
@@ -1265,7 +1265,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                     "WHERE id=" + std::to_string(game_id));
             
             std::string winner = (count_a > 0) ? "A" : "B";
-            Telemetry::getInstance().add_broadcast(
+            Telemetry::instance().add_broadcast(
                 game_id,
                 "Combat in hex " + hex + " ends. Player " + winner + 
                 " controls the hex.");
@@ -1281,7 +1281,7 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 "WHERE game_id=" + std::to_string(game_id) +
                 " AND hex_id='" + db.esc(hex) + "'");
         
-        Telemetry::getInstance().add_broadcast(
+        Telemetry::instance().add_broadcast(
             game_id,
             "All damage assigned. Combat Round " + 
             std::to_string(next_round) + " begins in hex " + hex + 

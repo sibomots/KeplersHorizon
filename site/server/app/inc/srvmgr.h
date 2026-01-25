@@ -15,7 +15,7 @@
 class ServerManager
 {
   public:
-    static ServerManager& getInstance()
+    static ServerManager& instance()
     {
         // The static instance is created upon the first call to this function.
         static ServerManager instance;

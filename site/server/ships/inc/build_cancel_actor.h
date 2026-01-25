@@ -9,6 +9,7 @@
 #define __BUILD_CANCEL_ACTOR_H__
 
 #include <string>
+
 #include "icmd.h"
 
 class BuildCancelActor : public ICmd
@@ -39,8 +40,7 @@ class BuildCancelActor : public ICmd
     bool invoke(void) override;
 
   private:
-    BuildCancelActor(Builder& builder)
-        : m_target(std::move(builder._target))
+    BuildCancelActor(Builder& builder) : m_target(std::move(builder._target))
     {
     }
 };

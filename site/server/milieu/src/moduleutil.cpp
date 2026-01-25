@@ -17,7 +17,7 @@ int get_module_id_for_game(int game_id)
     if (game_id <= 0)
         return DEFAULT_MODULE_ID;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT module_id FROM games WHERE id=" +
                          std::to_string(game_id));
     if (rows.empty() || rows[0].empty() || rows[0][0].empty())

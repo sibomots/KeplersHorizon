@@ -19,7 +19,7 @@ static int get_module_id_for_game(int game_id)
     if (game_id <= 0)
         return DEFAULT_MODULE_ID;
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT module_id FROM games WHERE id=" +
                          std::to_string(game_id));
     if (rows.empty() || rows[0].empty() || rows[0][0].empty())
@@ -29,7 +29,7 @@ static int get_module_id_for_game(int game_id)
 
 std::string MapUtil::resolve_system_hex(int gid, const std::string& canon_name)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     int module_id = get_module_id_for_game(gid);
     std::ostringstream q;
     q << "SELECT hex_id FROM star_systems WHERE module_id=" << module_id
@@ -45,7 +45,7 @@ std::string MapUtil::resolve_system_hex(int gid, const std::string& canon_name)
 std::string MapUtil::resolve_system_name(int gid,
                                          const std::string& user_supplied)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     int module_id = get_module_id_for_game(gid);
     std::string u = upper_ascii(user_supplied);
     auto r = db.query("SELECT name FROM star_systems WHERE module_id=" +
@@ -60,7 +60,7 @@ std::string MapUtil::resolve_system_name(int gid,
 
 bool MapUtil::system_exists(int gid, const std::string& user_supplied)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     int module_id = get_module_id_for_game(gid);
     std::string u = upper_ascii(user_supplied);
     auto r = db.query("SELECT name FROM star_systems WHERE module_id=" +

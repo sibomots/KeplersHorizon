@@ -19,9 +19,9 @@
 
 bool RetreatCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Normalize ship code to uppercase
     std::string ship_code = m_ship_code;
@@ -37,7 +37,7 @@ bool RetreatCommand::invoke(void)
 
     if (ship_rows.empty())
     {
-        Telemetry::getInstance().write("RETREAT: Ship not found: " + ship_code);
+        Telemetry::instance().write("RETREAT: Ship not found: " + ship_code);
         return false;
     }
 
@@ -47,7 +47,7 @@ bool RetreatCommand::invoke(void)
     // Check if ship is allowed to retreat
     if (escape_pending != 1)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "RETREAT: " + ship_code +
             " has no pending retreat. Use during escape or stalemate.");
         return false;
@@ -58,7 +58,7 @@ bool RetreatCommand::invoke(void)
     std::string dest_hex = mg.resolve_hex(m_dest_hex);
     if (dest_hex.empty())
     {
-        Telemetry::getInstance().write("RETREAT: Invalid hex: " + m_dest_hex);
+        Telemetry::instance().write("RETREAT: Invalid hex: " + m_dest_hex);
         return false;
     }
 
@@ -97,7 +97,7 @@ bool RetreatCommand::invoke(void)
                 out << "\n  " << adj;
             }
         }
-        Telemetry::getInstance().write(out.str());
+        Telemetry::instance().write(out.str());
         return false;
     }
 
@@ -119,7 +119,7 @@ bool RetreatCommand::invoke(void)
         dest_name = dest_sys[0][0] + " (" + dest_hex + ")";
     }
 
-    Telemetry::getInstance().write("RETREAT: " + ship_code +
+    Telemetry::instance().write("RETREAT: " + ship_code +
                                    " withdraws to " + dest_name);
 
     // Update the combat status -

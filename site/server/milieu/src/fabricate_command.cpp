@@ -12,7 +12,7 @@
 #include "db.h"
 #include "facilities.h"
 #include "logger.h"
-#include "ships.h"
+#include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 
@@ -115,16 +115,16 @@ void FabricateCommand::show_recipes()
     out << "-------------------------------------------\n"
         << "Use: fabricate <recipe> [qty]\n"
         << "Requires ship at SHIPYARD or REFINERY.";
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 bool FabricateCommand::do_fabricate()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Find recipe
     const Recipe* recipe = nullptr;
@@ -139,7 +139,7 @@ bool FabricateCommand::do_fabricate()
 
     if (!recipe)
     {
-        Telemetry::getInstance().write("FABRICATE: Unknown recipe: " +
+        Telemetry::instance().write("FABRICATE: Unknown recipe: " +
                                        m_recipe);
         return false;
     }
@@ -153,7 +153,7 @@ bool FabricateCommand::do_fabricate()
 
     if (ships.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "FABRICATE: No ships deployed to fabrication sites.");
         return false;
     }
@@ -165,7 +165,7 @@ bool FabricateCommand::do_fabricate()
     if (!FacilityEngine::player_controls(game_id, at_system, "SHIPYARD", me) &&
         !FacilityEngine::player_controls(game_id, at_system, "REFINERY", me))
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "FABRICATE: Ship must be at a SHIPYARD or REFINERY you control.");
         return false;
     }
@@ -193,7 +193,7 @@ bool FabricateCommand::do_fabricate()
 
     if (cargo.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "FABRICATE: Unable to check cargo inventory.");
         return false;
     }
@@ -204,7 +204,7 @@ bool FabricateCommand::do_fabricate()
         int have = std::atoi(cargo[0][i].c_str());
         if (have < total_cost[i])
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "FABRICATE: Insufficient " + std::string(RES_NAMES[i]) +
                 ". Need " + std::to_string(total_cost[i]) + ", have " +
                 std::to_string(have));
@@ -268,7 +268,7 @@ bool FabricateCommand::do_fabricate()
     }
 
     Logger::instance().info("FABRICATE: " + result_msg);
-    Telemetry::getInstance().write("FABRICATE: " + result_msg);
+    Telemetry::instance().write("FABRICATE: " + result_msg);
 
     return true;
 }

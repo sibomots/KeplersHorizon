@@ -34,7 +34,7 @@ class Telemetry
     Telemetry& operator=(const Telemetry&) = delete;
 
   public:
-    static Telemetry& getInstance()
+    static Telemetry& instance()
     {
         static Telemetry instance;
         return instance;

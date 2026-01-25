@@ -67,14 +67,23 @@ class BuildParam
     {
     }
 
-    int get_game_id() const { return m_gid; }
-    int get_module_id() const { return m_mid; }
-    char get_player() const { return m_user; }
+    int get_game_id() const
+    {
+        return m_gid;
+    }
+    int get_module_id() const
+    {
+        return m_mid;
+    }
+    char get_player() const
+    {
+        return m_user;
+    }
 
   protected:
-    int m_gid;    // Game ID
-    int m_mid;    // Module ID
-    char m_user;  // 'A' or 'B'
+    int m_gid;   // Game ID
+    int m_mid;   // Module ID
+    char m_user; // 'A' or 'B'
 };
 
 // Parameter class for BuildNew operation
@@ -147,9 +156,18 @@ class BuildNewParam : public BuildParam
         std::string ship_name;
     };
 
-    char get_ship_type() const { return m_ship_type; }
-    std::string get_ship_code() const { return m_ship_code; }
-    std::string get_ship_name() const { return m_ship_name; }
+    char get_ship_type() const
+    {
+        return m_ship_type;
+    }
+    std::string get_ship_code() const
+    {
+        return m_ship_code;
+    }
+    std::string get_ship_name() const
+    {
+        return m_ship_name;
+    }
 
   protected:
     char m_ship_type;
@@ -163,8 +181,7 @@ class BuildSetParam : public BuildParam
   public:
     BuildSetParam(int gid, int mid, char user, const std::string& target,
                   const AttributeMap& attributes)
-        : BuildParam(gid, mid, user), m_target(target),
-          m_attributes(attributes)
+        : BuildParam(gid, mid, user), m_target(target), m_attributes(attributes)
     {
     }
 
@@ -219,8 +236,14 @@ class BuildSetParam : public BuildParam
         AttributeMap attributes;
     };
 
-    std::string get_target() const { return m_target; }
-    AttributeMap get_attributes() const { return m_attributes; }
+    std::string get_target() const
+    {
+        return m_target;
+    }
+    AttributeMap get_attributes() const
+    {
+        return m_attributes;
+    }
 
   protected:
     std::string m_target;
@@ -281,7 +304,10 @@ class BuildCommitParam : public BuildParam
         std::string target;
     };
 
-    std::string get_target() const { return m_target; }
+    std::string get_target() const
+    {
+        return m_target;
+    }
 
   protected:
     std::string m_target;
@@ -291,8 +317,7 @@ class BuildCommitParam : public BuildParam
 class BuildDraftsParam : public BuildParam
 {
   public:
-    BuildDraftsParam(int gid, int mid, char user)
-        : BuildParam(gid, mid, user)
+    BuildDraftsParam(int gid, int mid, char user) : BuildParam(gid, mid, user)
     {
     }
 
@@ -390,11 +415,12 @@ class BuildShowDraftParam : public BuildParam
         char player;
     };
 
-    std::string get_target() const {
-         return m_target;
+    std::string get_target() const
+    {
+        return m_target;
     }
 
-protected:
+  protected:
     std::string m_target;
 };
 
@@ -452,22 +478,25 @@ class BuildCancelParam : public BuildParam
         std::string target;
     };
 
-    std::string get_target() const { return m_target; }
+    std::string get_target() const
+    {
+        return m_target;
+    }
 
   protected:
     std::string m_target;
 };
 
 // Variant wrapper for all Build parameter types
-using BuildAgentParam = std::variant<BuildParam, BuildNewParam, BuildSetParam,
-                                     BuildCommitParam, BuildDraftsParam,
-                                     BuildCancelParam, BuildShowDraftParam>;
+using BuildAgentParam =
+    std::variant<BuildParam, BuildNewParam, BuildSetParam, BuildCommitParam,
+                 BuildDraftsParam, BuildCancelParam, BuildShowDraftParam>;
 
 // BuildAgent - Singleton that handles all build operations
 class BuildAgent
 {
   public:
-    static BuildAgent& getInstance()
+    static BuildAgent& instance()
     {
         static BuildAgent instance;
         return instance;
@@ -487,6 +516,10 @@ class BuildAgent
     bool apply(BuildCancelParam& param);
 
   private:
+    // return value is false if the spec is not found.
+    // else output is the draft id (did)
+    bool get_draft_by_spec(int& did, int gid, char owner, std::string target);
+
     BuildAgent() = default;
     ~BuildAgent() = default;
 };

@@ -38,6 +38,6 @@ bool CrtCommand::invoke(void)
     out << "Damage = Beam Power + Tech Level\n";
     out << "         (may be modified by hex events)\n";
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
     return true;
 }

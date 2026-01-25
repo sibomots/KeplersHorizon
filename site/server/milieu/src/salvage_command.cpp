@@ -13,7 +13,7 @@
 
 #include "db.h"
 #include "logger.h"
-#include "ships.h"
+#include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "hex_events.h"
@@ -28,7 +28,7 @@ bool SalvageCommand::invoke(void)
 
     if (m_ship_code.empty())
     {
-        Telemetry::getInstance().write("Usage: salvage scan\n"
+        Telemetry::instance().write("Usage: salvage scan\n"
                                        "       salvage <ship>\n"
                                        "       salvage <ship> <target_name>");
         return true;
@@ -39,11 +39,11 @@ bool SalvageCommand::invoke(void)
 
 void SalvageCommand::do_scan()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get player's ship locations
     auto ships =
@@ -54,7 +54,7 @@ void SalvageCommand::do_scan()
 
     if (ships.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SALVAGE SCAN: No deployed ships to scan from.");
         return;
     }
@@ -159,30 +159,31 @@ void SalvageCommand::do_scan()
         out << "Use: salvage <ship> <target_name> to salvage.\n";
     }
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }
 
 bool SalvageCommand::do_salvage()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Verify ship exists
-    if (!ship_exists(game_id, me, m_ship_code))
+    if (!ShipManager::instance().ship_exists_by_code_or_name(game_id, me, m_ship_code))
     {
-        Telemetry::getInstance().write("SALVAGE: Ship " + m_ship_code +
+        Telemetry::instance().write("SALVAGE: Ship " + m_ship_code +
                                        " not found.");
         return false;
     }
 
-    ShipRow ship = load_ship(game_id, me, m_ship_code);
+    ShipRow ship;
+    bool has_ship = ShipManager::instance().load_ship_by_code_or_name(ship, game_id, me, m_ship_code);
 
-    if (ship.at_system.empty())
+    if (has_ship && ship.at_system.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "SALVAGE: Ship must be deployed to salvage.");
         return false;
     }
@@ -201,7 +202,7 @@ bool SalvageCommand::do_salvage()
 
         if (avail.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "SALVAGE: No known salvageables in " + ship.at_system +
                 ". Use 'salvage scan' to search.");
             return true;
@@ -214,7 +215,7 @@ bool SalvageCommand::do_salvage()
             out << "  - " << a[0] << "\n";
         }
         out << "Use: salvage " << m_ship_code << " <target_name>";
-        Telemetry::getInstance().write(out.str());
+        Telemetry::instance().write(out.str());
         return true;
     }
 
@@ -235,7 +236,7 @@ bool SalvageCommand::do_salvage()
 
     if (target.empty())
     {
-        Telemetry::getInstance().write("SALVAGE: No salvageable matching '" +
+        Telemetry::instance().write("SALVAGE: No salvageable matching '" +
                                        m_target_name + "' found in " +
                                        ship.at_system + ".");
         return false;
@@ -259,7 +260,7 @@ bool SalvageCommand::do_salvage()
     int drones = dr_check.empty() ? 0 : std::atoi(dr_check[0][0].c_str());
     if (drones < 1)
     {
-        Telemetry::getInstance().write("SALVAGE: " + ship.name +
+        Telemetry::instance().write("SALVAGE: " + ship.name +
                                        " needs Drones (DR) to salvage safely.");
         return false;
     }
@@ -311,7 +312,7 @@ bool SalvageCommand::do_salvage()
                     std::to_string(game_id) + " AND owner='" +
                     std::string(1, me) + "' AND ship_code='" +
                     db.esc(m_ship_code) + "'");
-            Telemetry::getInstance().write(result.str());
+            Telemetry::instance().write(result.str());
             return true;
         }
     }
@@ -427,7 +428,7 @@ bool SalvageCommand::do_salvage()
             ",'{}',FALSE)");
 
     Logger::instance().info(result.str());
-    Telemetry::getInstance().write(result.str());
+    Telemetry::instance().write(result.str());
 
     return true;
 }

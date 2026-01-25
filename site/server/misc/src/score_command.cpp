@@ -22,12 +22,12 @@ bool ScoreCommand::invoke(void)
 
 void ScoreCommand::show_overview()
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    int game_id = StateMachine::getInstance().get_game_id();
-    char me = StateMachine::getInstance().get_current_player();
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
     char enemy = (me == 'A') ? 'B' : 'A';
 
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // Get active player's username (whose turn it is)
     std::string active_username = "Unknown";
@@ -60,5 +60,5 @@ void ScoreCommand::show_overview()
         << "VICTORY: You " << my_vp << ", Enemy " << enemy_vp << " (need "
         << vp_needed << " to win)\n";
 
-    Telemetry::getInstance().write(out.str());
+    Telemetry::instance().write(out.str());
 }

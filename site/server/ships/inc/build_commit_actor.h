@@ -9,6 +9,7 @@
 #define __BUILD_COMMIT_ACTOR_H__
 
 #include <string>
+
 #include "icmd.h"
 
 class BuildCommitActor : public ICmd
@@ -39,8 +40,7 @@ class BuildCommitActor : public ICmd
     bool invoke(void) override;
 
   private:
-    BuildCommitActor(Builder& builder)
-        : m_target(std::move(builder._target))
+    BuildCommitActor(Builder& builder) : m_target(std::move(builder._target))
     {
     }
 };

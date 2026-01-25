@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     load_services();
 
     // Now we run...
-    ServerManager::getInstance().run();
+    ServerManager::instance().run();
 
     // We never get here
     return 0;

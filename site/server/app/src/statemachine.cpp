@@ -11,7 +11,7 @@
 #include "db.h"
 #include "logger.h"
 #include "moduleutil.h"
-#include "ships.h"
+#include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "turn_end.h"
@@ -40,7 +40,7 @@ bool StateMachine::start_game_for_random_player()
 
 GameState StateMachine::load_game(int game_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT module_id,state_json FROM games WHERE id=" +
                          std::to_string(game_id) + " LIMIT 1");
     if (rows.empty())
@@ -240,7 +240,7 @@ GameState StateMachine::new_game_state()
 
 void StateMachine::apply_start_of_turn(GameState& s)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     // Called when a player begins their player-turn (phase 0 = Build Ships).
     // 1) Count victory points automatically.
     // 2) Award BP (+10) at start of each player-turn after the first.
@@ -368,7 +368,7 @@ void StateMachine::advance_next(GameState& s)
 
                 // Notify BOTH players about combat detection with detailed
                 // listing
-                DatabaseManager& db = DatabaseManager::getInstance();
+                DatabaseManager& db = DatabaseManager::instance();
                 char meOwner =
                     (s.active_player.empty() ? 'A' : s.active_player[0]);
                 char oppOwner = (meOwner == 'A') ? 'B' : 'A';
@@ -447,7 +447,7 @@ void StateMachine::advance_next(GameState& s)
                         combatMsg << "     >> Draft orders:   'combat order'\n";
                         combatMsg << "     >> Execute orders: 'combat commit'";
 
-                        Telemetry::getInstance().add_tell(s.game_id, viewer,
+                        Telemetry::instance().add_tell(s.game_id, viewer,
                                                           combatMsg.str());
                     }
                 }
@@ -474,7 +474,7 @@ void StateMachine::advance_next(GameState& s)
 
 void StateMachine::save_game(const GameState& s)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     std::string q = "UPDATE games SET state_json='" + db.esc(s.to_json()) +
                     "' WHERE id=" + std::to_string(s.game_id);
     db.exec(q);
@@ -482,7 +482,7 @@ void StateMachine::save_game(const GameState& s)
 
 int StateMachine::next_event_seq(int game_id)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto r = db.query(
         "SELECT COALESCE(MAX(seq),0)+1 FROM game_events WHERE game_id=" +
         std::to_string(game_id));
@@ -493,7 +493,7 @@ int StateMachine::next_event_seq(int game_id)
 
 std::string StateMachine::get_player_name(int game_id, const std::string& seat)
 {
-    DatabaseManager& db = DatabaseManager::getInstance();
+    DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.query("SELECT u.username FROM game_seats gs "
                          "JOIN users u ON gs.user_id = u.id "
                          "WHERE gs.game_id=" +

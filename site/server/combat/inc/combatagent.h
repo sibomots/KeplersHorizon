@@ -803,7 +803,7 @@ class CombatAgentParam
 class CombatAgent
 {
   public:
-    static CombatAgent& getInstance()
+    static CombatAgent& instance()
     {
         static CombatAgent instance;
         return instance;

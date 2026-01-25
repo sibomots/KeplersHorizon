@@ -17,9 +17,9 @@
 
 bool RepairCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // If no ship specified, list repairable ships
     if (m_ship_code.empty())
@@ -42,7 +42,7 @@ bool RepairCommand::invoke(void)
 
         if (rows.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "No damaged ships at your base stars.");
             return true;
         }
@@ -55,7 +55,7 @@ bool RepairCommand::invoke(void)
         }
         out << "Use: repair <ship_code> <attribute>=<amount>\n";
         out << "Example: repair W1 pd=2 (costs 2 BP)\n";
-        Telemetry::getInstance().write(out.str());
+        Telemetry::instance().write(out.str());
         return true;
     }
 
@@ -75,7 +75,7 @@ bool RepairCommand::invoke(void)
 
     if (shipRow.empty())
     {
-        Telemetry::getInstance().write("Ship not found.");
+        Telemetry::instance().write("Ship not found.");
         return false;
     }
 
@@ -99,14 +99,14 @@ bool RepairCommand::invoke(void)
 
     if (!can_repair)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Ship must be at your base star or a controlled repair facility.");
         return false;
     }
 
     if (m_attribute.empty() || m_amount <= 0)
     {
-        Telemetry::getInstance().write("Specify attribute and amount: repair " +
+        Telemetry::instance().write("Specify attribute and amount: repair " +
                                        m_ship_code +
                                        " pd=N or b=N or s=N or t=N");
         return false;
@@ -136,7 +136,7 @@ bool RepairCommand::invoke(void)
     }
     else
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Invalid attribute. Use pd, b, s, or t.");
         return false;
     }
@@ -166,7 +166,7 @@ bool RepairCommand::invoke(void)
     int maxRepair = orig - current;
     if (maxRepair <= 0)
     {
-        Telemetry::getInstance().write("Attribute already at maximum.");
+        Telemetry::instance().write("Attribute already at maximum.");
         return false;
     }
 
@@ -183,7 +183,7 @@ bool RepairCommand::invoke(void)
     int availBP = (owner == 'A') ? s.creditsA : s.creditsB;
     if (cost > availBP)
     {
-        Telemetry::getInstance().write("Insufficient CR. Need " +
+        Telemetry::instance().write("Insufficient CR. Need " +
                                        std::to_string(cost) + ", have " +
                                        std::to_string(availBP));
         return false;
@@ -200,9 +200,9 @@ bool RepairCommand::invoke(void)
         s.creditsA -= cost;
     else
         s.creditsB -= cost;
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
-    Telemetry::getInstance().write("Repaired " + m_ship_code + " " + col +
+    Telemetry::instance().write("Repaired " + m_ship_code + " " + col +
                                    " by " + std::to_string(repairAmt) +
                                    " (cost: " + std::to_string(cost) + " BP)");
     return true;
@@ -210,9 +210,9 @@ bool RepairCommand::invoke(void)
 
 bool ResupplyCommand::invoke(void)
 {
-    GameState s = StateMachine::getInstance().get_game_state();
-    char owner = StateMachine::getInstance().get_current_player();
-    DatabaseManager& db = DatabaseManager::getInstance();
+    GameState s = StateMachine::instance().get_game_state();
+    char owner = StateMachine::instance().get_current_player();
+    DatabaseManager& db = DatabaseManager::instance();
 
     // If no ship specified, list ships that can be resupplied
     if (m_ship_code.empty())
@@ -231,7 +231,7 @@ bool ResupplyCommand::invoke(void)
 
         if (rows.empty())
         {
-            Telemetry::getInstance().write(
+            Telemetry::instance().write(
                 "No ships need missile resupply at your base stars.");
             return true;
         }
@@ -247,7 +247,7 @@ bool ResupplyCommand::invoke(void)
         }
         out << "Use: resupply <ship_code> <quantity>\n";
         out << "Example: resupply W1 6 (costs 2 BP for 6 missiles)\n";
-        Telemetry::getInstance().write(out.str());
+        Telemetry::instance().write(out.str());
         return true;
     }
 
@@ -263,7 +263,7 @@ bool ResupplyCommand::invoke(void)
 
     if (shipRow.empty())
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Ship not found or not at your base star.");
         return false;
     }
@@ -275,14 +275,14 @@ bool ResupplyCommand::invoke(void)
 
     if (canAdd <= 0)
     {
-        Telemetry::getInstance().write(
+        Telemetry::instance().write(
             "Ship already at maximum missile capacity.");
         return false;
     }
 
     if (m_missiles <= 0)
     {
-        Telemetry::getInstance().write("Specify quantity: resupply " +
+        Telemetry::instance().write("Specify quantity: resupply " +
                                        m_ship_code + " <N>");
         return false;
     }
@@ -300,7 +300,7 @@ bool ResupplyCommand::invoke(void)
     int availBP = (owner == 'A') ? s.creditsA : s.creditsB;
     if (cost > availBP)
     {
-        Telemetry::getInstance().write("Insufficient CR. Need " +
+        Telemetry::instance().write("Insufficient CR. Need " +
                                        std::to_string(cost) + ", have " +
                                        std::to_string(availBP));
         return false;
@@ -317,9 +317,9 @@ bool ResupplyCommand::invoke(void)
         s.creditsA -= cost;
     else
         s.creditsB -= cost;
-    StateMachine::getInstance().save_game(s);
+    StateMachine::instance().save_game(s);
 
-    Telemetry::getInstance().write(
+    Telemetry::instance().write(
         "Resupplied " + m_ship_code + " with " + std::to_string(addAmt) +
         " missiles (cost: " + std::to_string(cost) + " BP)");
     return true;
