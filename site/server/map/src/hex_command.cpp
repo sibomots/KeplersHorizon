@@ -36,16 +36,24 @@ bool HexCommand::invoke(void)
         std::string sysName = sys[0][0];
         std::string hexId = sys[0][1];
         bool isBase = sys[0][2] == "1";
+        
         std::string baseOwner = sys[0][3];
-
-        out << "         HEX INFORMATION\n";
-        out << "===========================================\n";
-        out << "System: " << sysName << " [" << hexId << "]\n";
+        std::string baseOwnerMsg("BASE STAR SYSTEM - ");
+        if (baseOwner.empty()) {
+            baseOwnerMsg = std::string("Uncontrolled");
+        }
+        else {
+            baseOwnerMsg = std::string("Controlled by ");
+            baseOwnerMsg.append(baseOwner);
+        }
+        out << "                 REPORT\n"
+            << "───────────────────────────────────────────\n"
+            << "System: " << sysName << " [" << hexId << "]\n";
         if (isBase)
         {
-            out << "BASE STAR - Controlled by Player " << baseOwner << "\n";
+            out << baseOwnerMsg << "\n";
         }
-        out << "-------------------------------------------\n";
+        out << "───────────────────────────────────────────\n";
 
         // Get ships at this hex
         auto ships = db.query(
@@ -57,10 +65,14 @@ bool HexCommand::invoke(void)
 
         if (ships.empty())
         {
+            // BUGBUG We want to use Long Range Scanner capabilities here..
+            // BUGBUG FIX THIS
             out << "No ships present.\n";
         }
         else
         {
+            // BUGBUG Must be modulated based on Long Range Scan 
+            // BUGBUG But the map shows it anyway..
             out << "Ships present:\n";
             for (const auto& ship : ships)
             {
@@ -76,6 +88,8 @@ bool HexCommand::invoke(void)
                     out << "  [HOSTILE]  " << ship[0] << " '" << ship[1]
                         << "' (" << shipType << ")\n";
                 }
+
+                // BUGBUG what about alien ships?
             }
         }
         out << "===========================================\n";
