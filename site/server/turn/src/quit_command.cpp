@@ -25,7 +25,7 @@ bool QuitCommand::invoke(void)
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
     char buf[32];
-    strftime(buf, sizeof(buf), "ASF-%d-%m-%Y", t);
+    strftime(buf, sizeof(buf), "KHS-%d-%m-%Y", t);
     std::string save_name(buf);
 
     // Check for existing auto-save from quit, update or insert
@@ -57,6 +57,9 @@ bool QuitCommand::invoke(void)
 
     // Reset state machine to lobby state
     StateMachine::instance().clear_game_session();
+
+    // BUGBUG What happens for the other player?
+    // BUGBUG Notification?  Any report?
 
     return true;
 }
