@@ -144,7 +144,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_DEPLOY
 %token TOK_DODGE
 %token TOK_DONE
-%token TOK_DRAFTS
 %token TOK_DROP
 %token TOK_ESCAPE
 %token TOK_FLEET
@@ -533,12 +532,6 @@ combat_cmd:
    // c
    TOK_COMBAT {
       // [LANG] Status of combat situation
-   }
-   // combat drafts
-   | TOK_COMBAT TOK_DRAFTS {
-       ICmd* pCmd = CombatDraftsActor::Builder().build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
    }
    //  cd
    | TOK_COMBAT_DRAFTS {
@@ -1057,23 +1050,6 @@ build_cmd:
       yyerror(&@3, "Missing arguments. Usage: build new {W|S} name > HELP BUILD");
       YYABORT;
   }
-
-  // build drafts
-  | TOK_BUILD TOK_DRAFTS {
-      ICmd *pCmd = BuildDraftsActor::Builder().build();
-      pCmd->invoke();
-      SafeDelete(pCmd);
-  }
-  // bd
-  | TOK_BUILD TOK_DRAFTS building_draft_ship {
-      // can also be a name, but we will take it as it comes.
-      ICmd *pCmd = BuildShowDraftActor::Builder()
-                  .set_target(*$3)
-                  .build();
-      pCmd->invoke();
-      SafeDelete($3);
-      SafeDelete(pCmd);
-  }
   // bd SHIP_ID
   // bd SHIP_NAME
   | TOK_BUILD_DRAFTS building_draft_ship {
@@ -1085,6 +1061,7 @@ build_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
+  // bd
   | TOK_BUILD_DRAFTS {
       ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();

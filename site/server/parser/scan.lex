@@ -73,7 +73,6 @@ static void advance_col()
 
 "crt"      { set_loc_for_token(); advance_col(); return TOK_CRT; }
 "status"   { set_loc_for_token(); advance_col(); return TOK_STATUS; }
-"drafts"   { set_loc_for_token(); advance_col(); return TOK_DRAFTS; }
 
 "fleet"    { set_loc_for_token(); advance_col(); return TOK_FLEET; }
 "hex"      { set_loc_for_token(); advance_col(); return TOK_HEX; }
