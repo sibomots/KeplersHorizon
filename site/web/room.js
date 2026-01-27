@@ -69,10 +69,24 @@
             seatAEl.classList.remove('filled', 'you');
         }
 
-        // Seat B
+        // Seat B - NEW: Handle single-player mode
         const seatBEl = document.getElementById('seatB');
         const seatBName = document.getElementById('seatBName');
-        if (room.seat_b) {
+        const isSinglePlayer = document.querySelector('input[name="gameMode"]:checked')?.value === 'singleplayer';
+        
+        // Clear previous AI styling
+        seatBEl.classList.remove('ai');
+        seatBName.classList.remove('ai');
+        
+        if (isSinglePlayer) {
+            // Single-player: Seat B is AI
+            seatBName.textContent = 'AI AGENT';
+            seatBName.classList.remove('waiting');
+            seatBName.classList.add('ai');
+            seatBEl.classList.remove('empty');
+            seatBEl.classList.add('filled', 'ai');
+        } else if (room.seat_b) {
+            // Two-player: Human in seat B
             seatBName.textContent = room.seat_b_name;
             seatBName.classList.remove('waiting');
             seatBEl.classList.remove('empty');
@@ -82,6 +96,7 @@
                 currentUserId = room.seat_b;
             }
         } else {
+            // Two-player: Waiting for human
             seatBName.textContent = 'Waiting...';
             seatBName.classList.add('waiting');
             seatBEl.classList.add('empty');
@@ -94,7 +109,7 @@
             if (select) select.value = room.module_id;
         }
 
-        // Status and start button
+        // Status and start button - NEW: Single-player can start immediately
         const statusEl = document.getElementById('statusText');
         const startBtn = document.getElementById('btnStart');
 
@@ -104,8 +119,8 @@
             return;
         }
 
-        if (room.status === 'ready') {
-            statusEl.innerHTML = '<span class="status-ready">✓ Both players ready!</span>';
+        if (room.status === 'ready' || (isSinglePlayer && room.seat_a)) {
+            statusEl.innerHTML = '<span class="status-ready">✓ Ready to start!</span>';
             startBtn.disabled = false;
         } else {
             statusEl.innerHTML = '<span class="status-waiting">Waiting for opponent...</span>';
@@ -136,7 +151,15 @@
     async function startGame() {
         const select = document.getElementById('moduleSelect');
         const module_id = select ? parseInt(select.value) : 1;
-        const data = await apiCall('/rooms/' + roomCode + '/start', 'POST', { module_id });
+        
+        // NEW: Include game mode in request
+        const gameMode = document.querySelector('input[name="gameMode"]:checked')?.value || 'twoplayer';
+        const singleplayer = (gameMode === 'singleplayer');
+        
+        const data = await apiCall('/rooms/' + roomCode + '/start', 'POST', { 
+            module_id,
+            singleplayer  // NEW field
+        });
 
         if (data && data.ok) {
             // Store game info for the game page
@@ -193,10 +216,17 @@
         }
 
         document.getElementById('roomCode').addEventListener('click', copyRoomCode);
-        // Module dropdown
         document.getElementById('moduleSelect').addEventListener('change', setModule);
         document.getElementById('btnStart').addEventListener('click', startGame);
         document.getElementById('btnLeave').addEventListener('click', leaveRoom);
+        
+        // NEW: Listen for game mode changes
+        document.querySelectorAll('input[name="gameMode"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                // Re-render room to update Seat B display
+                loadRoom();
+            });
+        });
 
         // Load modules from API
         loadModules();

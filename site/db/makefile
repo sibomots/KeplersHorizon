@@ -12,4 +12,4 @@ it:
 	cat ./modules/kh/LoadModule.sql | $(DB_PROD)
 	cat ./99-fix.sql | $(DB_PROD)
 	cat 99-fix.sql | $(DB_PROD)
-
+	cat 001_add_ai_user.sql | $(DB_PROD)

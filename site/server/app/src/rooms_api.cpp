@@ -11,6 +11,7 @@
 #include "db.h"
 #include "json.h"
 #include "roommanager.h"
+#include "logger.h"
 
 // Helper to get user_id from token
 static int get_user_id_from_token(const std::string& token)
@@ -164,6 +165,8 @@ void handle_room_join(const std::string& code, const HttpRequest* req,
     RoomManager& rm = RoomManager::instance();
     if (!rm.joinRoom(code, user_id))
     {
+        Logger::instance().info("joinRoom failed on code: " + code );
+        Logger::instance().info("joinRoom failed on user_id: " + std::to_string(user_id));
         resp->status = 400;
         resp->body = json_error("cannot join room");
         return;
@@ -189,6 +192,8 @@ void handle_room_leave(const std::string& code, const HttpRequest* req,
     RoomManager& rm = RoomManager::instance();
     if (!rm.leaveRoom(code, user_id))
     {
+        Logger::instance().info("leaveRoom failed on code: " + code );
+        Logger::instance().info("leaveRoom failed on user_id: " + std::to_string(user_id));
         resp->status = 400;
         resp->body = json_error("cannot leave room");
         return;
@@ -213,11 +218,15 @@ void handle_room_module(const std::string& code, const HttpRequest* req,
     std::string module_str = json_get_string(req->body, "module_id");
     int module_id = module_str.empty() ? 1 : std::atoi(module_str.c_str());
     if (module_id <= 0)
+    {
         module_id = 1;
+    }
 
     RoomManager& rm = RoomManager::instance();
     if (!rm.setModule(code, module_id))
     {
+        Logger::instance().info("setModule failed on code: " + code );
+        Logger::instance().info("setModule failed on module_id: " + module_id);
         resp->status = 400;
         resp->body = json_error("invalid module");
         return;
@@ -231,6 +240,7 @@ void handle_room_module(const std::string& code, const HttpRequest* req,
 void handle_room_start(const std::string& code, const HttpRequest* req,
                        HttpResponse* resp)
 {
+    DatabaseManager& db = DatabaseManager::instance();
     std::string token = pick_bearer(req);
     int user_id = get_user_id_from_token(token);
     if (user_id == 0)
@@ -258,9 +268,31 @@ void handle_room_start(const std::string& code, const HttpRequest* req,
         rm.setModule(code, module_id);
     }
 
-    int game_id = rm.startGame(code);
+    // NEW: Handle single-player mode flag
+    std::string sp_str = json_get_string(req->body, "singleplayer");
+    bool singleplayer = (req->body.find("\"singleplayer\":true") != std::string::npos);
+
+    if (singleplayer)
+    {
+        // Auto-assign AI_AGENT (user_id=3) to seat B if not already assigned
+        RoomInfo current_room = rm.getRoom(code);
+        if (current_room.seat_b == 0)
+        {
+          // rm.assignSeat(code, 3, 'B');  // AI_AGENT to seat B
+          db.exec("UPDATE rooms SET seat_b=3 WHERE room_code='" + db.esc(code) + "'");
+          Logger::instance().info("[ROOM] Single-player: Assigned AI_AGENT to seat B");
+        }
+    }
+
+    //jdw int game_id = rm.startGame(code);
+    // REPLACE WITH:
+    int game_id = rm.startGame(code, singleplayer);  // Pass flag to startGame
+
     if (game_id == 0)
     {
+        Logger::instance().info("X1 startGame failed on code: "+ code);
+        Logger::instance().info("X1 startGame failed on singleplayer: " + 
+            (singleplayer) ? "true" : "false");
         resp->status = 400;
         resp->body = json_error("cannot start game - room not ready");
         return;

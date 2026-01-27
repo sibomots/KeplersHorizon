@@ -65,7 +65,8 @@ class RoomManager
 
     // Room state
     bool setModule(const std::string& code, int module_id);
-    int startGame(const std::string& code); // Returns game_id
+    //int startGame(const std::string& code); // Returns game_id
+    int startGame(const std::string& code, bool singleplayer = false); // Returns game_id
 
     // Presence (independent of game)
     bool isUserOnline(int user_id);

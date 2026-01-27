@@ -9,6 +9,8 @@
 #define __DB_H__
 
 #include <mysql/mysql.h>
+
+#include "ai_db_mutex.h"
 #include "app.h"
 #include "typedefs.h"
 
@@ -30,6 +32,10 @@ class DatabaseManager
     DatabaseManager(DatabaseManager&&) noexcept = delete;
     DatabaseManager& operator=(DatabaseManager&&) noexcept = delete;
 
+    // AI-protected query methods (used during AI turns)
+    void exec_ai(const std::string& sql);
+    std::vector<std::vector<std::string>> query_ai(const std::string& sql);
+
     static std::string dbhost;
     static std::string dbuser;
     static std::string dbpass;
@@ -43,7 +49,7 @@ class DatabaseManager
     void exec(const std::string& q);
     std::vector<std::vector<std::string>> query(const std::string& q);
     std::string esc(const std::string& s);
-    void dump(const std::vector<std::vector<std::string> >& rows);
+    void dump(const std::vector<std::vector<std::string>>& rows);
 
   private:
     void reconnect();

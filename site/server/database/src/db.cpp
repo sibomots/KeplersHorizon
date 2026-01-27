@@ -5,13 +5,12 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include "db.h"
-
 #include <iostream>
 
 #include "app.h"
 #include "ce.h"
 #include "configr.h"
+#include "db.h"
 #include "logger.h"
 #include "typedefs.h"
 #include "util.h"
@@ -31,7 +30,8 @@ void DatabaseManager::driver_check()
 {
     static int retry_count = 0;
 
-    try {
+    try
+    {
         int rc = mysql_ping(driver);
         if (rc)
         {
@@ -43,29 +43,34 @@ void DatabaseManager::driver_check()
             }
             else
             {
-                throw std::runtime_error("\nUnable to recover trying to connect database\n");
+                throw std::runtime_error(
+                    "\nUnable to recover trying to connect database\n");
             }
         }
         else
         {
             retry_count = 0;
         }
-   }
-   catch (const std::exception& ex) {
-        throw std::runtime_error("\nUnable to recover trying to connect database\n");
-   }
+    }
+    catch (const std::exception& ex)
+    {
+        throw std::runtime_error(
+            "\nUnable to recover trying to connect database\n");
+    }
 }
 
 void DatabaseManager::connect()
 {
     driver = mysql_init(NULL);
 
-    try {
-       driver_check();
+    try
+    {
+        driver_check();
     }
-    catch(const std::exception& ex) {
-                std::string err = "Unable to recover trying to connect database";
-                throw std::runtime_error(err.c_str());
+    catch (const std::exception& ex)
+    {
+        std::string err = "Unable to recover trying to connect database";
+        throw std::runtime_error(err.c_str());
     }
 
     if (!mysql_real_connect(driver, dbhost.c_str(), dbuser.c_str(),
@@ -79,13 +84,14 @@ void DatabaseManager::connect()
 
 void DatabaseManager::reconnect()
 {
-    try {
-       driver = mysql_init(NULL);
+    try
+    {
+        driver = mysql_init(NULL);
     }
-    catch(const std::exception& ex) {
+    catch (const std::exception& ex)
+    {
         std::string err = "mysql_init failed";
         throw std::runtime_error(err.c_str());
-
     }
 
     if (!mysql_real_connect(driver, dbhost.c_str(), dbuser.c_str(),
@@ -99,14 +105,16 @@ void DatabaseManager::reconnect()
 
 void DatabaseManager::exec(const std::string& q)
 {
-    try {
-       driver_check();
+    try
+    {
+        driver_check();
     }
-    catch(const std::exception& ex) {
-                std::string err = "Unable to recover trying to connect database";
-                throw std::runtime_error(err.c_str());
+    catch (const std::exception& ex)
+    {
+        std::string err = "Unable to recover trying to connect database";
+        throw std::runtime_error(err.c_str());
     }
-    //jdw fprintf(stderr, "DB::EXEC: %s\n", q.c_str());
+    // jdw fprintf(stderr, "DB::EXEC: %s\n", q.c_str());
     if (mysql_query(driver, q.c_str()))
     {
         Logger::instance().info("[DB] QUERY Failed: " + q);
@@ -119,15 +127,17 @@ void DatabaseManager::exec(const std::string& q)
 std::vector<std::vector<std::string>>
 DatabaseManager::query(const std::string& q)
 {
-    try {
-       driver_check();
+    try
+    {
+        driver_check();
     }
-    catch(const std::exception& ex) {
-                std::string err = "Unable to recover trying to connect database";
-                throw std::runtime_error(err.c_str());
+    catch (const std::exception& ex)
+    {
+        std::string err = "Unable to recover trying to connect database";
+        throw std::runtime_error(err.c_str());
     }
 
-    //jdw fprintf(stderr, "DB::QUERY: %s\n", q.c_str());
+    // jdw fprintf(stderr, "DB::QUERY: %s\n", q.c_str());
     if (mysql_query(driver, q.c_str()))
     {
         Logger::instance().info("QUERY: " + q);
@@ -163,7 +173,7 @@ DatabaseManager::query(const std::string& q)
         out.push_back(r);
     }
     mysql_free_result(res);
-    //jdw dump(out);
+    // jdw dump(out);
     return out;
 }
 
@@ -185,36 +195,51 @@ void DatabaseManager::configure()
     dbname = Configr::instance().get<Key::dbname>();
 }
 
-void DatabaseManager::dump(const std::vector<std::vector<std::string> >& rows )
+void DatabaseManager::dump(const std::vector<std::vector<std::string>>& rows)
 {
 
-   if (rows.empty()) {
-      return;
-   }
+    if (rows.empty())
+    {
+        return;
+    }
 
-   fprintf(stderr, "\nDUMP:\n"); 
-   for(std::vector<std::vector<std::string> >::const_iterator itr = rows.begin();
-           itr != rows.end(); 
-           ++itr)
-   {
-       bool seencol = false;
-       const std::vector<std::string> row = (*itr);
-       for(std::vector<std::string>::const_iterator inner = row.begin();
-           inner != row.end();
-           ++inner)
-       {
-           if (seencol) {
-             fprintf(stderr, "\t");
-           }
-           else {
-              seencol = true;
-           } 
-           fprintf(stderr, "%s", (*inner).c_str());
-       }
-       if (seencol) {
-          fprintf(stderr, "\n");
-       }
-   }
-   fprintf(stderr, "\n"); 
+    fprintf(stderr, "\nDUMP:\n");
+    for (std::vector<std::vector<std::string>>::const_iterator itr =
+             rows.begin();
+         itr != rows.end(); ++itr)
+    {
+        bool seencol = false;
+        const std::vector<std::string> row = (*itr);
+        for (std::vector<std::string>::const_iterator inner = row.begin();
+             inner != row.end(); ++inner)
+        {
+            if (seencol)
+            {
+                fprintf(stderr, "\t");
+            }
+            else
+            {
+                seencol = true;
+            }
+            fprintf(stderr, "%s", (*inner).c_str());
+        }
+        if (seencol)
+        {
+            fprintf(stderr, "\n");
+        }
+    }
+    fprintf(stderr, "\n");
+}
 
+void DatabaseManager::exec_ai(const std::string& sql)
+{
+    AIDBMutex& aidb = AIDBMutex::instance();
+    exec(sql);
+}
+
+std::vector<std::vector<std::string>>
+DatabaseManager::query_ai(const std::string& sql)
+{
+    AIDBMutex& aidb = AIDBMutex::instance();
+    return query(sql);
 }

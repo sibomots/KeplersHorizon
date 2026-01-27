@@ -112,7 +112,7 @@ Games are started through the web interface, not via command line:
 .RS
 .B 1. Portal
 .br
-Login or create an account at the web portal.
+Login or create account at the web portal.
 .PP
 .B 2. Lobby
 .br
@@ -319,208 +319,120 @@ Example: build set pd=7 b=3 s=2 t=1 m=6
 Note: Warp Generator costs 5 BP (automatically added for WarpShips)
 .RE
 .TP
-.B build commit
-.B bc
-Commit the current draft, spending BP and adding ship to your fleet
+.B build commit \fIship_code\fR, \fBbc\fR \fIship_code\fR
+Finalize and add draft ship to fleet (deducts BP)
 .TP
-.B build cancel
-.B bx
-Cancel the current draft without spending BP
+.B build cancel \fIship_code\fR, \fBbx\fR \fIship_code\fR
+Cancel draft ship (no BP deducted)
 
 .SS Deployment Commands
 .TP
-.B deploy \fIship_code\fR \fIsystem_name\fR
-.B ds \fIship_code\fR \fIsystem_name\fR
-Deploy the specified ship to the specified base star hex (must be your base star)
+.B deploy \fIship_code\fR \fIlocation\fR
+Deploy newly built ship to specified base star hex
+.RS
+.PP
+First deployment by either player claims that side of the map (3 base stars).
+Subsequent deployments must be to the same side.
+.RE
 
 .SS Movement Commands
 .TP
-.B move \fIship_code\fR \fIdestination\fR
-.B m \fIship_code\fR \fIdestination\fR
-Move the specified ship to destination, optionally through waypoints. Movement costs:
+.B move \fIship_code\fR \fIdestination\fR [\fIvia...\fR]
+.B m \fIship_code\fR \fIdestination\fR [\fIvia...\fR]
+Move WarpShip along path to destination
 .RS
-.IP \(bu 2
-1 PD: Move to adjacent hex
-.IP \(bu 2
-1 PD: Enter warpline at star hex
-.IP \(bu 2
-1 PD: Travel full warpline to destination star
-.IP \(bu 2
-1 PD: Pick up one SystemShip
-.IP \(bu 2
-1 PD: Drop off one SystemShip
 .PP
-Ships must stop at star hexes occupied by enemy ships.
-.br
-Ships may freely move through space hexes with enemy ships.
+\fBDestination:\fR Star system name or hex ID
+.PP
+\fBVia:\fR Optional intermediate waypoints
+.PP
+Movement costs 1 PD per hex or per warpline jump. Ships must stop at star hexes occupied by enemy ships (combat triggered).
 .RE
+.TP
+.B pick \fIwarpship\fR \fIsystemship\fR
+Load SystemShip onto WarpShip (costs 1 PD during movement)
+.TP
+.B drop \fIwarpship\fR \fIsystemship\fR
+Unload SystemShip from WarpShip (costs 1 PD during movement)
 
 .SS Combat Commands
 .TP
-.B combat
-.B c
-Show status of current combat situation
+.B combat, c
+Show active combat status at all contested hexes
 .TP
 .B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
 .B co \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR
-Issue combat orders for a ship. Components:
+Issue combat order for one of your ships
 .RS
-.TP
-.I ship
-Your ship identifier (e.g., W1, S05)
-.TP
-.I tactic
-Combat tactic: \fBattack\fR, \fBdodge\fR, or \fBescape\fR (WarpShips only)
-.TP
-.I target
-Enemy ship identifier to target
-.TP
-.I allocation
-Power allocation from PD to attributes:
-.RS
-.TP
-.B pd=\fIN\fR or d=\fIN\fR
-Drive allocation (for maneuver, affects CRT row/column)
-.TP
-.B b=\fIN\fR
-Beam power (cannot exceed built capacity)
-.TP
-.B s=\fIN\fR
-Screen power (cannot exceed built capacity)
-.TP
-.B t=\fIN\fR
-Tubes to power (1 PD per tube)
-.TP
-.B m=\fIN\fR
-Missiles to fire (requires powered tubes)
 .PP
-Note: Total allocation cannot exceed current PD
+\fBTactics:\fR attack (a), dodge (d), retreat (r)
+.PP
+\fBTarget:\fR Enemy ship code
+.PP
+\fBAllocation:\fR Power distribution (e.g., pd=5 b=3 s=2)
+.PP
+\fBExample:\fR co W3 attack S25 pd=5 b=3 s=2
+.PP
+For missiles, specify tube count and drive settings:
 .br
-Note: Cannot use Beams/Screens and Missiles in same round
+co S25 dodge W3 pd=5 t=1 m=3
+.br
+(missile drive setting: 3)
 .RE
-.RE
 .TP
-.B combat commit
-.B cc
-Commit all combat orders for this round
+.B combat commit, cc
+Finalize all combat orders (locks them in)
 .TP
-.B combat cancel
-.B cx
-Cancel all combat orders and re-issue
+.B combat cancel, cx
+Cancel all pending combat orders
 .TP
-.B combat drafts
-.B cd
-List pending combat orders
+.B combat drafts, cd
+Show your pending combat orders
 .TP
 .B combat apply \fIship\fR \fIdamage_allocation\fR
 .B ca \fIship\fR \fIdamage_allocation\fR
-Apply damage hits to ship attributes (defender chooses where hits are taken)
-
-.SS Pick and Drop Commands
-.TP
-.B pick \fIsystemship\fR \fIwarpship\fR
-.B p \fIsystemship\fR \fIwarpship\fR
-Pick up the specified SystemShip into the specified WarpShip's rack
-.TP
-.B drop \fIsystemship\fR \fIwarpship\fR
-.B dd \fIsystemship\fR \fIwarpship\fR
-Drop the specified SystemShip from the specified WarpShip at current location
-
-.SS Repair and Resupply Commands
-.TP
-.B repair \fIship_code\fR \fIattribute\fR \fIN\fR
-.B rp \fIship_code\fR \fIattribute\fR \fIN\fR
-Repair the specified ship using BP (1 BP repairs 1 unit of any attribute up to original max). Must be at your base star hex.
-.TP
-.B resupply \fIship_code\fR \fIquantity\fR
-.B rs \fIship_code\fR \fIquantity\fR
-Resupply the specified ship with missiles (1 BP per 3 missiles, up to original max)
-
-.SS Help Commands
-.TP
-.B help
-.B ?
-Show help screen and list all help topics
-
-.SH SHIP ATTRIBUTES
-.TP
-.B Power/Drive (PD)
-Engine strength. Provides movement points and combat power allocation. Cost: 1 BP per unit.
-.TP
-.B Warp Generator (WG)
-Enables interstellar travel and warpline usage. Cost: 5 BP. Required for WarpShips.
-.TP
-.B Beams (B)
-Energy weapon projector. Max strength = BP spent. Cost: 1 BP per unit. Damage = power + tech level.
-.TP
-.B Screens (S)
-Protective energy screen. Absorbs hits = power + tech level. Cost: 1 BP per unit.
-.TP
-.B Tubes (T)
-Missile launchers. Each tube fires 1 missile/round. Requires 1 PD to power. Cost: 1 BP per tube.
-.TP
-.B Missiles (M)
-Projectile weapons. Damage = 2 + tech level. Cost: 1 BP per 3 missiles.
-.TP
-.B SystemShip Racks (SR)
-Carries SystemShips (WarpShips only). 1 SystemShip per rack. Cost: 1 CR per rack.
-
-.SS Extraction Equipment
-.TP
-.B Long Range Scanner (LRS)
-Detects resources in current system. Required for extract scan. Cost: 3 CR per unit.
-.TP
-.B Transporter Beam (TB)
-Extracts resources from standard locations. Required for extract. Cost: 5 CR per unit.
-.TP
-.B Drones (DR)
-Extracts resources from hazardous locations. Required for extract in dangerous zones. Cost: 4 CR per unit.
-.PP
-Note: LRS, TB, and DR do not affect ship destruction. Only PD, B, S, T, M, SR reaching zero destroys the ship.
-
-.SH TECHNOLOGY LEVELS
-Tech level increases every 4 turns:
-.PP
+Assign damage to ship attributes after combat resolution
 .RS
-Turns 1-4: Level 0
-.br
-Turns 5-8: Level 1
-.br
-Turns 9-12: Level 2
-.br
-Turns 13-16: Level 3
-.br
-(continues +1 per 4 turns)
-.RE
 .PP
-Tech level adds to:
-.IP \(bu 2
-Beam damage when hitting
-.IP \(bu 2
-Missile damage when hitting (2 + tech level)
-.IP \(bu 2
-Screen absorption when powered
+\fBExample:\fR ca W3 pd=2 b=1 s=2
+.PP
+Distributes 5 total damage: 2 to PD, 1 to Beam, 2 to Screen
+.RE
+
+.SS Repair Commands
+.TP
+.B repair \fIship_code\fR \fIattributes\fR
+Repair damaged ship at base star hex (1 BP per attribute point)
+.RS
+.PP
+\fBExample:\fR repair W3 pd=2 b=1
+.PP
+Costs 3 BP total. Ship must start turn at your base hex.
+.RE
+.TP
+.B resupply \fIship_code\fR m=\fIN\fR
+Resupply missiles (1 BP per 3 missiles, up to original capacity)
 
 .SH COMBAT RESOLUTION
-.SS Combat Results Table (CRT)
-The CRT determines hit/miss based on:
-.IP \(bu 2
-Firing ship's tactic (Attack/Dodge/Retreat)
-.IP \(bu 2
-Target ship's tactic (Attack/Dodge/Retreat)
-.IP \(bu 2
-Drive difference (Firing Drive - Target Drive)
+.SS Combat Results Table
+Outcomes determined by comparing drive allocations and tactics:
+.PP
+.B Drive Difference = Attacker Drive - Defender Drive
+.PP
+Results: Miss, Hit, Hit+1, Hit+2, or Escapes (for Retreat tactic)
 
-.SS Combat Tactics
-.TP
-.B Attack
-Aggressive offense. Best hit chance when drive advantage is 0 to +2.
-.TP
-.B Dodge
-Defensive maneuvering. Good hit chance at +1/+2 drive, hard to hit at 0/-1.
-.TP
-.B Retreat (WarpShips only)
-Attempt to escape combat. Must get "Escapes" result against all enemy ships.
+.SS Power Allocation
+Each combat order specifies how PD is allocated:
+.IP \(bu 2
+\fBDrive:\fR Maneuverability (affects CRT outcomes)
+.IP \(bu 2
+\fBBeam:\fR Weapon power (up to ship's beam maximum)
+.IP \(bu 2
+\fBScreen:\fR Defense (absorbs hits = power + tech level)
+.IP \(bu 2
+\fBTubes:\fR Number of missiles to fire (costs 1 PD per tube)
+.PP
+Constraint: Drive + Beam + Screen + Tubes ≤ Current PD
 
 .SS Damage Application
 .IP 1. 3
@@ -816,6 +728,274 @@ FORTRESS|Combat defensive bonus
 .TE
 .PP
 Use \fBrepair\fR at captured REPAIR_DOCKs or SHIPYARDs to repair ships in the field.
+
+.SH AI AGENT PROGRAMMING
+Kepler's Horizon supports single-player mode through an AI opponent whose behavior is defined in Kepler Script (KHS), a functional programming language tailored for tactical decision-making. The AI agent replaces one human player and executes commands through the same game systems, respecting all rules and inhibits.
+
+.SS Overview
+KHS scripts define AI strategy through a series of decision functions called during each phase of the AI's turn. The server loads
+.I /opt/kepler/ai/strategy.khs
+at startup and can reload it without restart via
+.B kill -HUP
+signal.
+
+.SS Language Characteristics
+KHS is a functional hybrid language combining immutability, pattern matching, and first-class functions with familiar C-like syntax:
+.IP \(bu 2
+Variables immutable by default (\fBconst\fR)
+.IP \(bu 2
+Pattern matching via \fBmatch\fR expressions
+.IP \(bu 2
+Arrow functions for concise definitions
+.IP \(bu 2
+List comprehensions and pipe operators
+.IP \(bu 2
+C-like braces and semicolons (no whitespace sensitivity)
+.IP \(bu 2
+Strong typing with inference
+
+.SS Reserved Words
+.TS
+tab(|);
+l l l.
+Keyword|Purpose|Example
+_
+const|Immutable binding|const x = 5;
+if|Conditional|if (x > 0) return true;
+else|Alternative|else return false;
+match|Pattern matching|match (tactic) { ... }
+when|Match guard|when ratio < 0.3
+return|Function result|return Attack;
+for|List iteration|for ship in fleet
+where|Filter condition|where ship.pd > 0
+select|Map transform|select ship.location
+.TE
+
+.SS Built-in Types
+.TS
+tab(|);
+l l.
+Type|Description
+_
+int|Integer numbers
+float|Floating point
+bool|true or false
+string|Text strings
+Ship|Ship entity with attributes
+HexID|Map location identifier
+GameState|Complete game state
+Tactic|Attack, Dodge, or Retreat
+ShipDesign|Ship specification for building
+MovePlan|Movement instructions
+PowerAllocation|Combat power distribution
+DamageAssignment|Damage application
+.TE
+
+.SS Core Decision Functions
+Every KHS strategy must implement these functions:
+
+.TP
+.B buildShip(credits: int, game: GameState) -> Option<ShipDesign>
+Decide whether and what to build given available credits.
+Returns \fBNone\fR to skip building, \fBSome(design)\fR to build.
+
+.TP
+.B planMovement(ship: Ship, game: GameState) -> MovePlan
+Determine where to move a ship. Returns path as list of hex IDs.
+
+.TP
+.B selectTactic(ship: Ship, enemies: Ship[]) -> Tactic
+Choose combat tactic (Attack, Dodge, or Retreat) based on situation.
+
+.TP
+.B allocatePower(ship: Ship, tactic: Tactic, enemies: Ship[]) -> PowerAllocation
+Distribute ship's PD among drive, beam, screen, and tubes.
+
+.TP
+.B assignDamage(ship: Ship, damage: int) -> DamageAssignment
+Choose which attributes absorb damage.
+
+.SS Built-in Functions
+.TS
+tab(|);
+l l.
+Function|Description
+_
+pathfind(from, to, limit)|Find shortest path (uses MapGraph)
+evaluateStrength(ship)|Estimate combat effectiveness
+min(a, b)|Minimum value
+max(a, b)|Maximum value
+floor(x)|Round down
+filter(list, pred)|Select matching elements
+map(list, fn)|Transform elements
+sum(list)|Total of numeric list
+count(list)|List length
+first(list)|First element
+.TE
+
+.SS Practical Example: Ship Building
+.nf
+const buildShip = (credits: int, game: GameState) => 
+    Option<ShipDesign> {
+    
+    if (credits < 15) return None;
+    
+    // Check if we need carriers
+    const carriers = game.myShips
+        |> filter(s => s.systemRacks > 0)
+        |> count();
+    
+    if (carriers < 2 && credits >= 20) {
+        return Some(buildCarrier(credits));
+    } else {
+        return Some(buildAttacker(credits));
+    }
+};
+
+const buildAttacker = (credits: int) => ShipDesign {
+    const budget = credits - 5;  // Warp Generator
+    
+    return {
+        type: WarpShip,
+        name: "Attacker",
+        pd: floor(budget * 0.30),
+        beam: floor(budget * 0.45),
+        screen: floor(budget * 0.15),
+        tubes: floor(budget * 0.10),
+        missiles: floor(budget * 0.10) * 3,
+        systemRacks: 0
+    };
+};
+.fi
+
+.SS Practical Example: Combat Tactics
+.nf
+const selectTactic = (ship: Ship, enemies: Ship[]) => Tactic {
+    const myStrength = evaluateStrength(ship);
+    const enemyStrength = enemies
+        |> map(evaluateStrength)
+        |> sum();
+    const ratio = myStrength / enemyStrength;
+    
+    return match (ratio, ship.isWarpShip) {
+        (r, true) when r < 0.30 => Retreat,
+        (r, _) when r > 1.50    => Attack,
+        _                       => Dodge
+    };
+};
+
+const allocatePower = (ship: Ship, tactic: Tactic, 
+                       enemies: Ship[]) => PowerAllocation {
+    return match (tactic) {
+        Attack => {
+            pd: ship.currentPD,
+            beam: min(ship.beamMax, ship.currentPD / 2),
+            screen: 0,
+            tubes: ship.hasMissiles() ? min(2, ship.tubes) : 0,
+            missiles: ship.hasMissiles() 
+                ? repeat(ship.pdMax, 2) 
+                : []
+        },
+        Dodge => {
+            pd: ship.currentPD,
+            beam: ship.currentPD / 3,
+            screen: ship.currentPD / 3,
+            tubes: 0,
+            missiles: []
+        },
+        Retreat => {
+            pd: ship.currentPD,
+            beam: 0,
+            screen: 0,
+            tubes: 0,
+            missiles: []
+        }
+    };
+};
+.fi
+
+.SS Practical Example: SystemShip Tactics
+.nf
+const shouldDropSystemShip = (carrier: Ship, systemship: Ship,
+                               hexId: HexID, game: GameState) => bool {
+    // Garrison friendly bases
+    if (game.isMyBaseHex(hexId)) return true;
+    
+    // Support attacks on enemy bases
+    if (game.isEnemyBaseHex(hexId) && 
+        game.myShipsAt(hexId).count() > 1) {
+        return true;
+    }
+    
+    // Preserve systemship if carrier retreating
+    const enemies = game.enemyShipsAt(hexId);
+    if (shouldRetreat(carrier, enemies)) return true;
+    
+    return false;
+};
+
+const shouldPickupSystemShip = (carrier: Ship, systemship: Ship,
+                                 game: GameState) => bool {
+    if (!carrier.hasFreeRack()) return false;
+    
+    // Evacuate if enemies approaching
+    const threats = game.enemyShipsWithinRange(
+        systemship.location, 3
+    );
+    
+    return threats.count() > 0;
+};
+.fi
+
+.SS Ring-0 Strategies
+The server ships with three baseline KHS strategies in
+.I /opt/kepler/ai/
+demonstrating different playstyles:
+
+.TP
+.B aggressive.khs
+Offensive focus: 45% beam, 30% PD, 15% screen. Attacks when ratio > 1.5, retreats only when ratio < 0.3. Rushes enemy bases early.
+
+.TP
+.B defensive.khs
+Defensive focus: 20% beam, 40% screen, 30% PD. Prefers Dodge tactic, retreats at ratio < 0.5. Garrisons own bases first.
+
+.TP
+.B balanced.khs
+Mixed approach: 35% beam, 30% PD, 20% screen. Adapts tactics based on local strength ratios. Builds mix of carriers and attackers.
+
+.SS Reloading Strategy
+Edit the active strategy file, then signal the server:
+.nf
+# Edit strategy
+vim /opt/kepler/ai/strategy.khs
+
+# Reload without restart
+kill -HUP $(pidof khserver)
+
+# Verify in logs
+tail -f /var/log/kepler/server.log
+# [AI] Reloading: /opt/kepler/ai/strategy.khs
+# [AI] ✓ Reload successful
+.fi
+
+Changes take effect on the AI's next turn. Failed reloads keep the previous strategy active.
+
+.SS Best Practices
+.IP 1. 3
+Use pattern matching for decision trees rather than nested if-else
+.IP 2. 3
+Prefer pure functions - same inputs always produce same outputs
+.IP 3. 3
+Leverage pipe operator (|>) for readable data transformations
+.IP 4. 3
+Keep functions focused - one decision per function
+.IP 5. 3
+Test strategies against each other by swapping active script
+.IP 6. 3
+Balance offense and defense - pure strategies are exploitable
+.IP 7. 3
+Remember SystemShips are force multipliers (no WG cost)
 
 .SH MONITOR MODE
 The server may accept commands from the terminal in lieu of player access

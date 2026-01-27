@@ -11,6 +11,7 @@
 #include "json.h"
 #include "typedefs.h"
 #include "util.h"
+#include "logger.h"
 
 void handle_login(const HttpRequest* req, HttpResponse* resp)
 {
@@ -108,6 +109,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
     // Validate username length and format
     if (username.length() < 3 || username.length() > 32)
     {
+        Logger::instance().info("username: " + username);
         resp->status = 400;
         resp->body = json_error("username must be 3-32 characters");
         return;
@@ -116,6 +118,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
     // Validate password length
     if (password.length() < 4)
     {
+        Logger::instance().info("password: " + password);
         resp->status = 400;
         resp->body = json_error("password must be at least 4 characters");
         return;

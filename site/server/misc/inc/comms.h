@@ -14,19 +14,24 @@
 
 // These are specific to the Comms via REST, etc..
 
-typedef struct
+typedef struct HttpRequest
 {
     std::string method;
     std::string path;
     std::map<std::string, std::string> headers;
     std::string body;
+    ~HttpRequest() {
+          headers.clear();
+    }
 } HttpRequest;
 
-typedef struct
+typedef struct HttpResponse
 {
     int status = 200;
     std::string content_type = "application/json";
     std::string body;
+    ~HttpResponse() {
+    }
 } HttpResponse;
 
 typedef struct
@@ -40,9 +45,9 @@ typedef struct
 
 AuthContext require_auth(const HttpRequest* req, HttpResponse* resp);
 std::string pick_bearer(const HttpRequest* req);
-std::string http_serialize(const HttpResponse& r);
+std::string http_serialize(const HttpResponse* pr);
 bool dispatch_request(const HttpRequest* req, HttpResponse* resp);
-HttpRequest http_parse(int fd);
+HttpRequest* http_parse(int fd);
 bool authenticated(const HttpRequest* req, HttpResponse* resp);
 
 // Account handlers (account.cpp)

@@ -13,5 +13,5 @@
 bool handle_usr_command(const HttpRequest* req, HttpResponse* resp);
 void handle_login(const HttpRequest* req, HttpResponse* resp);
 void handle_logout(const HttpRequest* req, HttpResponse* resp);
-
+int internal_command_handler_body(const std::string cmdline, std::string& errmsg);
 #endif

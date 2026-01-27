@@ -13,9 +13,11 @@
 #include "db.h"
 #include "facilities.h"
 #include "json.h"
+#include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "util.h"
+#include "aiagent.h"
 
 std::string RoomManager::generateRoomCode()
 {
@@ -302,18 +304,41 @@ bool RoomManager::setModule(const std::string& code, int module_id)
     return true;
 }
 
-int RoomManager::startGame(const std::string& code)
+int RoomManager::startGame(const std::string& code, bool singleplayer)
 {
+    int game_id = 0;
     DatabaseManager& db = DatabaseManager::instance();
 
     // Get room info
     RoomInfo room = getRoom(code);
     if (room.id == 0)
+    {
+        Logger::instance().info("getRoom room.id = " + std::to_string(room.id));
         return 0;
-    if (room.status != "ready")
-        return 0;
-    if (room.seat_a == 0 || room.seat_b == 0)
-        return 0;
+    }
+
+    // NEW: For single-player, only need seat_a filled
+    if (singleplayer) {
+        if (room.seat_a == 0) {
+              Logger::instance().info("room.seat_a = " + std::to_string(room.seat_a));
+              Logger::instance().info("room.seat_b = " + std::to_string(room.seat_b));
+              Logger::instance().info("Failing to startGame because room.seat_a == 0");
+              return 0;
+        }
+        // seat_b should be AI_AGENT (id=3), but we'll verify/assign if needed
+        if (room.seat_b != 3) {
+            // Force AI_AGENT into seat B
+            db.exec("UPDATE rooms SET seat_b=3 WHERE id=" + std::to_string(room.id));
+            room = getRoom(code);  // Reload
+        }
+        // Override status check - single-player doesn't need 'ready' status
+    } else {
+        // Two-player mode - both seats required
+        if (room.status != "ready")
+            return 0;
+        if (room.seat_a == 0 || room.seat_b == 0)
+            return 0;
+    }
 
     // Use StateMachine to create game
     int module_id = room.module_id > 0 ? room.module_id : 1;
@@ -335,8 +360,12 @@ int RoomManager::startGame(const std::string& code)
     // Get new game ID
     auto id_rows = db.query("SELECT LAST_INSERT_ID()");
     if (id_rows.empty())
+    {
+        Logger::instance().info("getting new game ID had zero rows");
         return 0;
-    int game_id = std::stoi(id_rows[0][0]);
+    }
+
+    game_id = std::stoi(id_rows[0][0]);
 
     // Update room
     db.exec("UPDATE rooms SET game_id=" + std::to_string(game_id) +
@@ -360,6 +389,19 @@ int RoomManager::startGame(const std::string& code)
     // This ensures all subsequent state operations (like Telemetry) work
     // correctly
     StateMachine::instance().set_game_id(game_id);
+
+    // NEW: Configure single-player mode in StateMachine
+    if (singleplayer)
+    {
+        StateMachine::instance().set_game_mode(true, 'B');  // AI is Player B
+        Logger::instance().info("[ROOM] Single-player game " +
+                                std::to_string(game_id) + " started, AI is Player B");
+    }
+    else
+    {
+        StateMachine::instance().set_game_mode(false, '\0');  // Two-player mode
+    }
+
 
     // Initialize facility control for this game (copy from static template)
     FacilityEngine::initialize_facilities(game_id);
@@ -399,6 +441,14 @@ int RoomManager::startGame(const std::string& code)
             'A', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
     }
 
+    // NEW: If AI has first turn, execute it immediately
+    if (singleplayer && StateMachine::instance().is_ai_player(first_player))
+    {
+        Logger::instance().info("[ROOM] AI has first turn, executing now");
+        AIAgent::instance().take_turn(game_id, first_player[0]);
+    }
+
+    Logger::instance().info("final game_id = " + std::to_string(game_id));
     return game_id;
 }
 

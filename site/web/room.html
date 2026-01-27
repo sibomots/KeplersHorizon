@@ -28,6 +28,7 @@ Copyright (c) 2025, sibomots
             --bad: #f44;
             --glow: rgba(50, 255, 50, 0.8);
             --glow-soft: rgba(50, 255, 50, 0.4);
+            --ai-color: #f80;
         }
 
         body {
@@ -110,6 +111,11 @@ Copyright (c) 2025, sibomots
             box-shadow: 0 0 15px var(--glow-soft);
         }
 
+        .seat-card.ai {
+            border-color: var(--ai-color);
+            box-shadow: 0 0 10px rgba(255, 136, 0, 0.3);
+        }
+
         .seat-label {
             font-size: 1rem;
             text-transform: uppercase;
@@ -125,6 +131,11 @@ Copyright (c) 2025, sibomots
         .seat-name.waiting {
             color: var(--muted);
             font-style: italic;
+        }
+
+        .seat-name.ai {
+            color: var(--ai-color);
+            text-shadow: 0 0 5px rgba(255, 136, 0, 0.6);
         }
 
         .btn-primary {
@@ -289,6 +300,19 @@ Copyright (c) 2025, sibomots
                 </select>
             </div>
         </div>
+
+        <!-- NEW: Game Mode Selection -->
+        <div class="mb-3">
+            <label class="form-label text-center d-block">Game Mode</label>
+            <div class="module-group text-center">
+                <input type="radio" id="modeTwoPlayer" name="gameMode" value="twoplayer" class="module-radio" checked>
+                <label for="modeTwoPlayer" class="module-btn">Two Player</label>
+
+                <input type="radio" id="modeSinglePlayer" name="gameMode" value="singleplayer" class="module-radio">
+                <label for="modeSinglePlayer" class="module-btn">vs AI</label>
+            </div>
+        </div>
+        <!-- END NEW -->
 
         <div class="status-text" id="statusText">
             <span class="status-waiting">Waiting for opponent...</span>

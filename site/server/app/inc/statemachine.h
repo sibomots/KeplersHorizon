@@ -10,10 +10,10 @@
 
 #include <memory>
 
+#include "attributemap.h"
 #include "db.h"
 #include "icmd.h"
 #include "typedefs.h"
-#include "attributemap.h"
 
 class GameState
 {
@@ -244,6 +244,11 @@ class StateMachine
         int pending_repair_amount = 0;
         std::string pending_resupply_ship;
         int pending_resupply_missiles = 0;
+
+        // NEW: Single-player mode tracking
+        bool is_singleplayer_mode;
+        char ai_player_side; // 'A' or 'B', or '\0' if two-player
+
     } Data;
 
   public:
@@ -257,6 +262,21 @@ class StateMachine
     StateMachine& operator=(const StateMachine&) = delete;
     StateMachine(StateMachine&&) = delete;
     StateMachine& operator=(StateMachine&&) = delete;
+
+    /**
+     * @brief Check if a player is AI-controlled
+     * @param player The player string ("A" or "B")
+     * @return true if player is AI in single-player mode
+     */
+    bool is_ai_player(const std::string& player) const;
+
+    /**
+     * @brief Set game mode (single-player vs two-player)
+     * @param singleplayer true for single-player, false for two-player
+     * @param ai_player Which side AI controls ('A' or 'B'), ignored if
+     * !singleplayer
+     */
+    void set_game_mode(bool singleplayer, char ai_player);
 
     // state machine properties and objectives prior to game playability
     bool preinitialize();
@@ -321,7 +341,8 @@ class StateMachine
     // Returns true if allowed, false if inhibited (error_msg set)
     bool check_inhibits(CommandID cmd, std::string& error_msg);
 
-    // Get player username from game_seats table (returns seat letter if not found)
+    // Get player username from game_seats table (returns seat letter if not
+    // found)
     std::string get_player_name(int game_id, const std::string& seat);
 
     // Setters for state properties (used by Commands to set up Transitions)
@@ -388,8 +409,6 @@ class StateMachine
         data.pending_resupply_ship.clear();
         data.pending_resupply_missiles = 0;
     }
-
-
 
   private:
     Data data;

@@ -7,6 +7,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 #include <iostream>
 
+#include "aiagent.h"
 #include "ce.h"
 #include "db.h"
 #include "logger.h"
@@ -15,6 +16,32 @@
 #include "statemachine.h"
 #include "telemetry.h"
 #include "turn_end.h"
+
+bool StateMachine::is_ai_player(const std::string& player) const
+{
+    if (!data.is_singleplayer_mode)
+        return false;
+    if (player.empty())
+        return false;
+    return (player[0] == data.ai_player_side);
+}
+
+void StateMachine::set_game_mode(bool singleplayer, char ai_player)
+{
+    data.is_singleplayer_mode = singleplayer;
+    data.ai_player_side = singleplayer ? ai_player : '\0';
+
+    if (singleplayer)
+    {
+        Logger::instance().info(
+            "[SM] Single-player mode enabled, AI is Player " +
+            std::string(1, ai_player));
+    }
+    else
+    {
+        Logger::instance().info("[SM] Two-player mode enabled");
+    }
+}
 
 // Methods doing work do NOT move state.
 bool StateMachine::preinitialize()
@@ -127,7 +154,7 @@ GameState StateMachine::load_game(int game_id)
         }
         std::string sub = state_json.substr(p, end - p + 1);
         // re-use global find_int (ok for now; small JSON)
-        return find_int( fieldKey, fallback);
+        return find_int(fieldKey, fallback);
     };
 
     // We'll do simple direct searches for "vp":{"A":X,"B":Y} etc.
@@ -196,7 +223,7 @@ GameState StateMachine::load_game(int game_id)
              "\"active_hexes\":[";
         for (size_t i = 0; i < combats.size(); ++i)
         {
-            if (i > 0) 
+            if (i > 0)
             {
                 c << ",";
             }
@@ -216,7 +243,8 @@ GameState StateMachine::load_game(int game_id)
             c << "}";
         }
         c << "],"
-             "\"count\":" << combats.size();
+             "\"count\":"
+          << combats.size();
         c << "}";
         s.combat_summary_json = c.str();
     }
@@ -264,8 +292,8 @@ void StateMachine::apply_start_of_turn(GameState& s)
             "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND "
             "ss.module_id=" +
             std::to_string(mod) +
-            " WHERE sh.game_id=" +
-            std::to_string(s.game_id) + " AND sh.owner='" + std::string(1, me) +
+            " WHERE sh.game_id=" + std::to_string(s.game_id) +
+            " AND sh.owner='" + std::string(1, me) +
             "' AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
             " AND ss.is_base=1 AND ss.base_owner='" +
             std::string(1, enemy) + "'";
@@ -420,8 +448,8 @@ void StateMachine::advance_next(GameState& s)
                                                             : "SystemShip";
                                 combatMsg
                                     << "             " << blueNum++ << ". "
-                                    << shipClass << " class " << ship[0]
-                                    << " " << ship[1] << " (PD:" << ship[4]
+                                    << shipClass << " class " << ship[0] << " "
+                                    << ship[1] << " (PD:" << ship[4]
                                     << " B:" << ship[5] << " S:" << ship[6]
                                     << " T:" << ship[7] << " M:" << ship[8]
                                     << ")\n";
@@ -448,7 +476,7 @@ void StateMachine::advance_next(GameState& s)
                         combatMsg << "     >> Execute orders: 'combat commit'";
 
                         Telemetry::instance().add_tell(s.game_id, viewer,
-                                                          combatMsg.str());
+                                                       combatMsg.str());
                     }
                 }
             }
@@ -470,6 +498,19 @@ void StateMachine::advance_next(GameState& s)
     }
     s.phase_index = PH_BUILD_SHIPS;
     apply_start_of_turn(s);
+
+    save_game(s);
+
+    // NEW: Trigger AI if it has initiative after turn/phase change
+    if (is_ai_player(s.active_player))
+    {
+        Logger::instance().info(
+            "[SM] AI Player " + s.active_player +
+            " has initiative, turn=" + std::to_string(s.round));
+
+        // Phase 2: Uncomment below to trigger AI turn
+        AIAgent::instance().take_turn(s.game_id, s.active_player[0]);
+    }
 }
 
 void StateMachine::save_game(const GameState& s)

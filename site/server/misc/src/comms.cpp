@@ -59,7 +59,7 @@ bool dispatch_request(const HttpRequest* req, HttpResponse* resp)
     return done;
 }
 
-std::string status_text(int code)
+const char* status_text(int code)
 {
     switch (code)
     {
@@ -84,21 +84,26 @@ std::string status_text(int code)
     }
 }
 
-std::string http_serialize(const HttpResponse& r)
+std::string http_serialize(const HttpResponse* pr)
 {
-    std::ostringstream o;
-    o << "HTTP/1.1 " << r.status << " " << status_text(r.status) << "\r\n";
-    o << "Content-Type: " << r.content_type << "\r\n";
-    o << "Content-Length: " << r.body.size() << "\r\n";
-    o << "Connection: close\r\n";
-    o << "Cache-Control: no-store\r\n";
-    o << "\r\n";
-    o << r.body;
-    return o.str();
+    std::ostringstream oss;
+    oss << "HTTP/1.1 " 
+        << pr->status 
+        << " "
+        << status_text(pr->status)
+        << "\r\n"
+        << "Content-Type: " << pr->content_type << "\r\n"
+        << "Content-Length: " << pr->body.size() << "\r\n"
+        << "Connection: close" << "\r\n"
+        << "Cache-Control: no-store" << "\r\n"
+        << "\r\n"
+        << pr->body;
+    return oss.str();
 }
 
-HttpRequest http_parse(int fd)
+HttpRequest* http_parse(int fd)
 {
+    HttpRequest* preq = nullptr;
     std::string data;
     data.reserve(8192);
 
@@ -127,50 +132,62 @@ HttpRequest http_parse(int fd)
             }
             size_t body_start = header_end + 4;
             if (data.size() >= body_start + content_len)
+            {
                 break;
+            }
         }
         if (data.size() > 1024 * 1024)
+        {
             break; // safety
+        }
     }
 
-    HttpRequest req;
+    preq = new HttpRequest;
     size_t line_end = data.find("\r\n");
     if (line_end == std::string::npos)
-        return req;
+    {
+        return preq;
+    }
 
     std::string request_line = data.substr(0, line_end);
     {
         std::istringstream is(request_line);
-        is >> req.method >> req.path;
+        is >> preq->method >> preq->path;
     }
 
     size_t header_end = data.find("\r\n\r\n");
     if (header_end == std::string::npos)
+    {
         header_end = data.size();
+    }
 
     size_t pos = line_end + 2;
     while (pos + 2 <= header_end)
     {
         size_t e = data.find("\r\n", pos);
         if (e == std::string::npos || e > header_end)
+        {
             break;
+        }
         std::string line = data.substr(pos, e - pos);
         pos = e + 2;
         if (line.empty())
+        {
             break;
+        }
         size_t colon = line.find(':');
         if (colon != std::string::npos)
         {
             std::string k = to_lower(trim(line.substr(0, colon)));
             std::string v = trim(line.substr(colon + 1));
-            req.headers[k] = v;
+            preq->headers[k] = v;
         }
     }
 
-    if (header_end + 4 <= data.size())
-        req.body = data.substr(header_end + 4);
-
-    return req;
+    if (header_end + 4 <= data.size()) {
+        preq->body = data.substr(header_end + 4);
+    }
+    return preq;
 }
 
 std::string pick_bearer(const HttpRequest* req)

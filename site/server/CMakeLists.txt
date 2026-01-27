@@ -54,6 +54,7 @@ endfunction()
 # =============================================================================
 # Subtrees (match your directory structure)
 # =============================================================================
+add_subdirectory(ai)
 add_subdirectory(app)
 add_subdirectory(combat)
 add_subdirectory(database)

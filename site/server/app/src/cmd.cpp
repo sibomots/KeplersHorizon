@@ -21,6 +21,7 @@
 #include "telemetry.h"
 #include "typedefs.h"
 #include "util.h"
+#include "ai_db_mutex.h"
 
 typedef struct yy_buffer_state* YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(const char* str);
@@ -28,8 +29,36 @@ extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 extern "C" int yyparse();
 extern bool get_parser_error(std::string& err);
 
+// input: command line from user
+// output: modified errmsg (if any)
+int internal_command_handler_body(const std::string cmdline, std::string& errmsg)
+{
+    // Clear telemetry message buffer before command execution
+    Telemetry::instance().clear_messages();
+
+    // Try parser first (handles migrated commands)
+    YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
+    int parse_result = yyparse();
+    yy_delete_buffer(buffer);
+
+    fprintf(stderr, "parse_result = %d\n", parse_result);
+    // if error with parse
+    if (parse_result != 0)
+    {
+          bool found_cause = get_parser_error(errmsg);
+          if (!found_cause && errmsg.empty()) {
+             errmsg = "Parser provided no error message";
+          }
+          // Parser failed
+          Logger::instance().info("parserfailed");
+    }
+    return parse_result;
+}
+
 bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 {
+
+    // We only handle POST method
     if (req->method != "POST")
     {
         resp->status = 405;
@@ -37,29 +66,21 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         return false; // not done
     }
 
-    AuthContext a = require_auth((const HttpRequest*)req, resp);
+    // We need this from the HttpRequest to fulfill the command handling
+    // because it contains context for which player is invoking a command.
+    AuthContext context = require_auth((const HttpRequest*)req, resp);
 
+    // Part of the handshake, we want result 200
     if (resp->status != 200)
     {
         return false; // not done
     }
 
-    std::string cmdline = trim(json_get_string(req->body, "command"));
+    // This command came through the REST endpoint, so we're going to
+    // set context with that information from the endpoint.
 
-    if (cmdline.empty())
-    {
-        resp->status = 400;
-        resp->body = json_error("empty command");
-        return false; // not done
-    }
-
-    // DEBUG BUGBUG
-    if (cmdline.compare("malloc") == 0) {
-        // forcing the mtrace to account
-        return true; // is done
-    }
     // Configure StateMachine with DB context
-    StateMachine::instance().set_game_id(a.game_id);
+    StateMachine::instance().set_game_id(context.game_id);
 
     // BEGIN BUGBUG
     // This is probably OK --- the server is single threaded -
@@ -77,32 +98,44 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     //   ==> The state machine keeps track of the active player (the turn holding
     //       player).  All State Machine inhibits are based on the turn-holding
     //       player compared to the 'current' player issuing the candidate command.
-
-    StateMachine::instance().set_current_player(a.player);
-    StateMachine::instance().set_current_user_id(a.user_id);
+    StateMachine::instance().set_current_player(context.player);
+    StateMachine::instance().set_current_user_id(context.user_id);
     // END BUGBUG
 
-    // Clear telemetry message buffer before command execution
-    Telemetry::instance().clear_messages();
+    // Ok, let's go..
+    std::string cmdline = trim(json_get_string(req->body, "command"));
 
-    // Try parser first (handles migrated commands)
-    YY_BUFFER_STATE buffer = yy_scan_string(cmdline.c_str());
+    if (cmdline.empty())
+    {
+        Logger::instance().info("cmdline: " + cmdline);
+        resp->status = 400;
+        resp->body = json_error("empty command");
+        return false; // not done
+    }
 
-    int parse_result = yyparse();
-    yy_delete_buffer(buffer);
+    // we don't know what the parser will do yet, so we anticipate
+    // possible error msg
+    std::string errmsg; 
+
+    // now, give the parser the command line (from any player or AI)
+    int parse_result = internal_command_handler_body(cmdline, errmsg);
 
     // If parser succeeded, return response with Telemetry
+
+    // We've already done the inside work, so now let's disposition
+    // the HTTP response
     if (parse_result == 0)
     {
+        // Parse error was 0 -- this is successful
         // Check if game_id changed (e.g., after 'start' command)
         int new_game_id = StateMachine::instance().get_game_id();
-        if (new_game_id != a.game_id)
+        if (new_game_id != context.game_id)
         {
             // Update session with new game_id
             DatabaseManager& db = DatabaseManager::instance();
             db.exec(
                 "UPDATE sessions SET game_id=" + std::to_string(new_game_id) +
-                " WHERE token='" + db.esc(a.token) + "'");
+                " WHERE token='" + db.esc(context.token) + "'");
             Logger::instance().info("[CMD] Updated session game_id to " +
                                     std::to_string(new_game_id));
         }
@@ -113,23 +146,17 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         {
             GameState s = StateMachine::instance().load_game(new_game_id);
         }
-
+        // Get the message for sinking to the HTTP Response
         std::string event_msg;
         Telemetry::instance().source_messages(event_msg);
         resp->body = event_msg;
     }
     else {
-          std::string err;
-          bool found_cause = get_parser_error(err);
-          if (!found_cause && err.empty()) {
-             err = "Parser provided no error message";
-          }
-          // Parser failed
           resp->status = 400;
-          resp->body = json_error(err);
+          // Get the error message for sinking to the HTTP Response
+          resp->body = json_error(errmsg);
           Logger::instance().info("[CMD] User command: " + cmdline);
-          Logger::instance().info("[CMD] Parser error: " + err);
+          Logger::instance().info("[CMD] Parser error: " + errmsg);
     }
-
     return false; // not done
 }
