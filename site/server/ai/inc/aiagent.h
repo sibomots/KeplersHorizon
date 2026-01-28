@@ -9,43 +9,57 @@
 #define __AIAGENT_H__
 
 #include <string>
+#include "state.h"
+
+// Forward declare Task (defined in taskrunner.h)
+struct Task;
 
 /**
- * @brief AI Agent - Main controller for AI player behavior
+ * @brief AI Agent - Orchestrates AI player behavior via Task queue
  * 
- * Orchestrates AI turn execution by:
- * 1. Detecting when AI has initiative
- * 2. Executing phase-appropriate commands
- * 3. Advancing through phases until turn complete
+ * The AIAgent manages when the AI should act and creates Tasks containing
+ * commands to be executed by the TaskRunner. It does NOT cache any game state -
+ * StateMachine is the single source of truth for game_id, active_player, phase.
  * 
- * Phase 2: Simple implementation - just issues NEXT repeatedly
- * Phase 3+: Will load KHS scripts and make intelligent decisions
+ * AIAgent only tracks whether it's currently executing a turn (IDLE vs ACTIVE).
  */
 class AIAgent {
 public:
-    /**
-     * @brief Get singleton instance
-     */
     static AIAgent& instance();
     
-    /**
-     * @brief Execute AI turn
-     * 
-     * Called by StateMachine::advance_next() when AI gets initiative.
-     * For Phase 2: Simply issues NEXT commands to advance through phases.
-     * 
-     * @param game_id The game ID
-     * @param ai_player The AI's player side ('A' or 'B')
-     */
-    void take_turn(int game_id, char ai_player);
+    // Called from advance_next() hooks
+    void on_turn_start(int game_id, char ai_player);
+    void on_phase_advance(int game_id, char ai_player);
+    void on_turn_end(int game_id, char ai_player);  // NEW: Reset state when losing control
+    void on_combat_detected(int game_id, char ai_player);
+    
+    // Called from TaskRunner polling callback
+    bool requires_task();
+    bool next_task(Task** ppTask);
     
 private:
-    AIAgent() = default;
+    AIAgent();
     ~AIAgent() = default;
     
     // Prevent copying
     AIAgent(const AIAgent&) = delete;
     AIAgent& operator=(const AIAgent&) = delete;
+    
+    enum class TurnState {
+        IDLE,           // Not executing AI turn
+        ACTIVE,         // Currently executing AI turn
+        COMBAT_PENDING  // AI needs to draft combat orders (Phase 3+)
+    };
+    
+    TurnState m_state;
+    int m_task_sequence;  // Just for numbering tasks
+    
+    // NO cached game state - StateMachine is source of truth
+    
+    // Internal helpers
+    void push_next_command(int game_id, char ai_player);
+    std::string decide_next_command(const GameState& s);
+    Task* create_ai_task(int game_id, char ai_player, const std::string& cmd);
 };
 
 #endif // __AIAGENT_H__

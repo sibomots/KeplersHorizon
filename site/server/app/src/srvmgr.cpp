@@ -27,200 +27,18 @@
 #include <unistd.h>
 #include <utility>
 
+#include "aiagent.h"
 #include "comms.h"
 #include "srvmgr.h"
 #include "typedefs.h"
+#include "taskrunner.h"
 
 std::string ServerManager::listen = "127.0.0.1";
 unsigned short ServerManager::port = 8080;
 int ServerManager::server_socket = -1;
 
-typedef struct Task
-{
-    HttpRequest* phtreq;
-    HttpResponse* phtresp;
-    int sock;
-    int seq;
-    std::string on_behalf;
-
-    Task()
-        : seq(0), on_behalf("unknown"), phtreq(nullptr), phtresp(nullptr),
-          sock(-1)
-    {
-    }
-
-    Task(std::string nam, int n, HttpRequest* preq, HttpResponse* presp, int fd)
-        : on_behalf(nam), seq(n), phtreq(preq), phtresp(presp), sock(fd)
-    {
-    }
-
-    virtual ~Task()
-    {
-        SafeDelete(phtreq);
-        SafeDelete(phtresp);
-        if (sock != -1)
-        {
-            ::close(sock);
-            sock = -1;
-        }
-    }
-
-    Task(const Task& other)
-    {
-        deep_copy(this, other);
-    }
-
-    Task& operator=(const Task& other)
-    {
-        if (this != &other)
-        {
-            deep_copy(this, other);
-        }
-        return *this;
-    }
-
-    Task(Task&& other) noexcept
-    {
-        deep_move(this, other);
-    }
-
-    Task& operator=(Task&& other) noexcept
-    {
-        if (this != &other)
-        {
-            deep_move(this, other);
-        }
-        return *this;
-    }
-
-  private:
-    void deep_copy(Task* pdst, const Task& src)
-    {
-        pdst->sock = src.sock;
-        pdst->phtreq = src.phtreq;
-        pdst->phtresp = src.phtresp;
-        pdst->on_behalf = std::string(src.on_behalf);
-        pdst->seq = src.seq;
-    }
-    void deep_move(Task* pdst, Task& src)
-    {
-        pdst->sock = src.sock;
-        pdst->phtreq = src.phtreq;
-        pdst->phtresp = src.phtresp;
-        pdst->on_behalf = std::string(src.on_behalf);
-        pdst->seq = src.seq;
-        src.on_behalf.clear();
-        src.seq = 0;
-        src.sock = -1; // BUGBUG  we got the fd, but we don't want the other
-                       // to have it.
-        SafeDelete(src.phtreq);
-        SafeDelete(src.phtresp);
-    }
-} Task;
-
-class TaskRunner
-{
-  private:
-    std::queue<Task*> queue_;
-    std::mutex mutex_;
-    std::condition_variable cv_;
-    std::atomic<bool> running_{false};
-    std::thread workerThread_;
-
-    // This is the agent callback.  We use this callback
-    // to ask the AI Agency for any new task to perform
-    std::function<bool(Task**)> pollAgentCallback_;
-
-    void runLoop()
-    {
-        while (running_)
-        {
-#if 0
-            if (pollAgentCallback_)
-            {
-                Task* newItem = nullptr;
-                if (pollAgentCallback_(&newItem))
-                {
-                    push(newItem); // std::move(newItem));
-                }
-            }
-#endif
-            Task* item = nullptr; 
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                cv_.wait(lock, [this] { return !queue_.empty() || !running_; });
-
-                if (!running_ && queue_.empty())
-                {
-                    break;
-                }
-
-                if (queue_.empty())
-                {
-                    continue;
-                }
-
-                item = queue_.front();
-                queue_.pop();
-                processItem(item);
-                SafeDelete(item);
-            }
-        }
-    }
-    void processItem(Task* item)
-    {
-        bool done = false;
-        try
-        {
-            done = dispatch_request(item->phtreq, item->phtresp);
-        }
-        catch (const std::exception& ex)
-        {
-            item->phtresp->status = 500;
-            item->phtresp->body =
-                 json_error(std::string("server error: ") + ex.what());
-        }
-
-        std::string out = http_serialize(item->phtresp);
-        ::send(item->sock, out.c_str(), out.size(), 0);
-    }
-
-  public:
-    TaskRunner() = default;
-    ~TaskRunner()
-    {
-        stop();
-    }
-
-    // Anyone can push a task onto the queue
-    void push(Task* item)
-    {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            queue_.push(item); // std::move(item));
-        }
-        cv_.notify_one();
-    }
-
-    void start(std::function<bool(Task**)> pollCallback)
-    {
-        pollAgentCallback_ = std::move(pollCallback);
-        running_ = true;
-        workerThread_ = std::thread(&TaskRunner::runLoop, this);
-    }
-
-    void stop()
-    {
-        running_ = false;
-        cv_.notify_all();
-        if (workerThread_.joinable())
-        {
-            workerThread_.join();
-        }
-    }
-};
-
-TaskRunner aq;
+// BUGBUG
+extern int internal_command_handler_body(const std::string cmdline, std::string& errmsg);
 
 void ServerManager::connect()
 {
@@ -300,10 +118,10 @@ void ServerManager::run(void)
 
         // We are literally asking the AI-Agent to devise a new
         // Task -- and then we add it here to the queue.
-        return true;
+        return AIAgent::instance().next_task(ppNewItem); 
     };
 
-    aq.start(agentCallback);
+    TaskRunner::instance().start(agentCallback);
 
     // Now that the TaskRunner is running, we can now listen
     // for commands from REST endpoints
@@ -323,8 +141,8 @@ void ServerManager::run(void)
             HttpRequest* preq = http_parse(fd);
             HttpResponse* presp = new HttpResponse;
             Task* task = new Task("User", ++sequence, preq, presp, fd);
-            aq.push(task);
+            TaskRunner::instance().push(task);
         }
     }
-    aq.stop();
+    TaskRunner::instance().stop();
 }

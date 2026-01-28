@@ -481,6 +481,234 @@ void StateMachine::advance_next(GameState& s)
                 }
             }
         }
+        
+        // NEW: Save state after phase advance
+        save_game(s);
+        
+        // NEW: Notify AI if it's still active and not at end of turn
+        if (is_ai_player(s.active_player))
+        {
+            Logger::instance().info("[SM] AI continues, phase=" + 
+                                    std::to_string(s.phase_index));
+            AIAgent::instance().on_phase_advance(s.game_id, s.active_player[0]);
+        }
+        
+        return;
+    }
+
+    // --- Turn Boundary ---
+    
+    // Remember who had control before switching
+    char previous_active_player = s.active_player.empty() ? 'A' : s.active_player[0];
+    
+    if (s.active_player == "A")
+    {
+        s.active_player = "B";
+    }
+    else
+    {
+        s.active_player = "A";
+        s.round++;
+
+        // Trigger round-end processing (market, facilities, resources, income)
+        TurnEndProcessor::on_round_complete(s.game_id, s.round - 1);
+    }
+    s.phase_index = PH_BUILD_SHIPS;
+    apply_start_of_turn(s);
+
+    save_game(s);
+
+    // NEW: If AI just LOST control, notify it to reset state
+    if (is_ai_player(std::string(1, previous_active_player)))
+    {
+        Logger::instance().info(
+            "[SM] AI Player " + std::string(1, previous_active_player) +
+            " lost control");
+        AIAgent::instance().on_turn_end(s.game_id, previous_active_player);
+    }
+    
+    // NEW: If AI just GOT control, notify it to start
+    if (is_ai_player(s.active_player))
+    {
+        Logger::instance().info(
+            "[SM] AI Player " + s.active_player +
+            " has initiative, turn=" + std::to_string(s.round));
+        
+        AIAgent::instance().on_turn_start(s.game_id, s.active_player[0]);
+    }
+}
+
+#if 0
+void StateMachine::advance_next(GameState& s)
+{
+    if (s.game_over)
+    {
+        return;
+    }
+
+    if (s.phase_index < PH_END_TURN)
+    {
+        // --- Prevent skipping active combat ---
+        if (s.phase_index == PH_RESOLVE_COMBAT)
+        {
+            CombatEngine ce(s.game_id);
+            if (!ce.get_active_combats().empty())
+            {
+                // Cannot advance until all combats resolved
+                Logger::instance().info("[SM] Combat is still active.");
+                return;
+            }
+        }
+
+        s.phase_index++;
+
+        // --- Combat Trigger Logic ---
+        if (s.phase_index == PH_RESOLVE_COMBAT)
+        {
+            CombatEngine ce(s.game_id);
+            ce.check_for_combat_triggers();
+            auto combats = ce.get_active_combats();
+
+            Logger::instance().info(
+                "[SM][advance_next] Combat phase for game " +
+                std::to_string(s.game_id) +
+                ", combats found: " + std::to_string(combats.size()));
+
+            if (combats.empty())
+            {
+                // No combat? Auto-skip to next phase
+                Logger::instance().info("[SM][advance_next] No combat, "
+                                        "skipping to Pick/Drop phase");
+                s.phase_index = PH_SYSTEM_PICKDROP;
+            }
+            else
+            {
+                Logger::instance().info("[SM][advance_next] Combat detected! "
+                                        "Pausing at Combat phase");
+
+                // Notify BOTH players about combat detection with detailed
+                // listing
+                DatabaseManager& db = DatabaseManager::instance();
+                char meOwner =
+                    (s.active_player.empty() ? 'A' : s.active_player[0]);
+                char oppOwner = (meOwner == 'A') ? 'B' : 'A';
+
+                for (const auto& combat : combats)
+                {
+                    // Look up system name from hex
+                    std::string sysName = combat.hex_id;
+                    int mod = get_module_id_for_game(s.game_id);
+                    auto sysRow =
+                        db.query("SELECT name FROM star_systems "
+                                 "WHERE module_id=" +
+                                 std::to_string(mod) + " AND hex_id='" +
+                                 combat.hex_id + "' LIMIT 1");
+                    if (!sysRow.empty())
+                    {
+                        sysName = sysRow[0][0];
+                    }
+
+                    // Query ships in this hex
+                    auto shipRows = db.query(
+                        "SELECT ship_code, ship_name, ship_type, owner, pd, "
+                        "beam, screen, tube, missiles "
+                        "FROM ships WHERE game_id=" +
+                        std::to_string(s.game_id) + " AND at_hex='" +
+                        combat.hex_id +
+                        "' AND destroyed_at IS NULL ORDER BY owner, ship_code");
+
+                    // Generate message for each player (A and B) with their
+                    // perspective
+                    for (char viewer : {'A', 'B'})
+                    {
+                        char enemyOwner = (viewer == 'A') ? 'B' : 'A';
+
+                        std::ostringstream combatMsg;
+                        combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName
+                                  << " [" << combat.hex_id << "]\n";
+                        combatMsg << "     SHIPS IN SYSTEM " << sysName << "\n";
+
+                        // Blue-Force (viewer's ships) - show stats
+                        combatMsg << "         Blue-Force\n";
+                        int blueNum = 1;
+                        for (const auto& ship : shipRows)
+                        {
+                            if (ship[3][0] == viewer)
+                            {
+                                std::string shipClass = (ship[2] == "W")
+                                                            ? "WarpShip"
+                                                            : "SystemShip";
+                                combatMsg
+                                    << "             " << blueNum++ << ". "
+                                    << shipClass << " class " << ship[0] << " "
+                                    << ship[1] << " (PD:" << ship[4]
+                                    << " B:" << ship[5] << " S:" << ship[6]
+                                    << " T:" << ship[7] << " M:" << ship[8]
+                                    << ")\n";
+                            }
+                        }
+
+                        // Red-Force (enemy ships) - NO stats (private info)
+                        combatMsg << "         Red-Force\n";
+                        int redNum = 1;
+                        for (const auto& ship : shipRows)
+                        {
+                            if (ship[3][0] == enemyOwner)
+                            {
+                                std::string shipClass = (ship[2] == "W")
+                                                            ? "WarpShip"
+                                                            : "SystemShip";
+                                combatMsg << "             " << redNum++ << ". "
+                                          << shipClass << " class " << ship[0]
+                                          << " " << ship[1] << "\n";
+                            }
+                        }
+
+                        combatMsg << "     >> Draft orders:   'combat order'\n";
+                        combatMsg << "     >> Execute orders: 'combat commit'";
+
+                        Telemetry::instance().add_tell(s.game_id, viewer,
+                                                       combatMsg.str());
+                    }
+                }
+
+                // NEW: Notify AI if it has ships in combat
+                char ai_side = data.ai_player_side;
+                if (data.is_singleplayer_mode && ai_side != '\0')
+                {
+                    // Check if AI has ships in any combat hex
+                    for (const auto& combat : combats)
+                    {
+                        // Query ships in this hex
+                        auto srs =
+                            db.query("SELECT ship_code, ship_name, ship_type, "
+                                     "owner, pd, "
+                                     "beam, screen, tube, missiles "
+                                     "FROM ships WHERE game_id=" +
+                                     std::to_string(s.game_id) +
+                                     " AND at_hex='" + combat.hex_id +
+                                     "' AND destroyed_at IS NULL ORDER BY "
+                                     "owner, ship_code");
+                        bool ai_has_ships = false;
+                        for (const auto& ship : srs)
+                        {
+                            if (ship[3][0] == ai_side)
+                            {
+                                ai_has_ships = true;
+                                break;
+                            }
+                        }
+
+                        if (ai_has_ships)
+                        {
+                            AIAgent::instance().on_combat_detected(s.game_id,
+                                                                   ai_side);
+                            break; // Only notify once
+                        }
+                    }
+                }
+            }
+        }
         return;
     }
 
@@ -501,17 +729,35 @@ void StateMachine::advance_next(GameState& s)
 
     save_game(s);
 
-    // NEW: Trigger AI if it has initiative after turn/phase change
+    // NEW: Notify AIAgent about phase/turn changes
     if (is_ai_player(s.active_player))
     {
         Logger::instance().info(
             "[SM] AI Player " + s.active_player +
             " has initiative, turn=" + std::to_string(s.round));
 
-        // Phase 2: Uncomment below to trigger AI turn
-        AIAgent::instance().take_turn(s.game_id, s.active_player[0]);
+        // Determine if this is turn start or phase advance
+        // Turn starts when we just switched from other player
+        static char last_active_player = '\0';
+        static int last_game_id = 0;
+
+        bool is_turn_start = (last_game_id != s.game_id ||
+                              last_active_player != s.active_player[0]);
+
+        if (is_turn_start)
+        {
+            AIAgent::instance().on_turn_start(s.game_id, s.active_player[0]);
+        }
+        else
+        {
+            AIAgent::instance().on_phase_advance(s.game_id, s.active_player[0]);
+        }
+
+        last_game_id = s.game_id;
+        last_active_player = s.active_player[0];
     }
 }
+#endif
 
 void StateMachine::save_game(const GameState& s)
 {

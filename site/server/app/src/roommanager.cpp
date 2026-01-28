@@ -441,14 +441,13 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
             'A', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
     }
 
-    // NEW: If AI has first turn, execute it immediately
+    // NEW: If AI has first turn, trigger it immediately
     if (singleplayer && StateMachine::instance().is_ai_player(first_player))
     {
-        Logger::instance().info("[ROOM] AI has first turn, executing now");
-        AIAgent::instance().take_turn(game_id, first_player[0]);
+        Logger::instance().info("[ROOM] AI has first turn, triggering execution");
+        AIAgent::instance().on_turn_start(game_id, first_player[0]);
     }
 
-    Logger::instance().info("final game_id = " + std::to_string(game_id));
     return game_id;
 }
 
