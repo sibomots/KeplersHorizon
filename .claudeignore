@@ -6,3 +6,12 @@
 ./site/server/build
 ./site/tools
 ./docs/img
+./docs/BUGS.md
+./docs/BUILD.md
+./docs/CONTRIBUTING.md
+./docs/DESIGN_PATTERNS.md
+./docs/DEVELOPMENT.md
+./docs/README.md
+./HISTORY.md
+./LICENSE
+./README.md
