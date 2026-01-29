@@ -6,6 +6,8 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 #include "aiagent.h"
+#include "ailogic.h"
+#include "aigamestate.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "taskrunner.h"
@@ -24,42 +26,51 @@ AIAgent::AIAgent()
 
 void AIAgent::on_turn_start(int game_id, char ai_player)
 {
+    bool should_start = true;
+    
     if (m_state == TurnState::ACTIVE)
     {
         Logger::instance().info("[AI] Already active, ignoring turn start");
-        return;
+        should_start = false;
     }
+    
+    if (should_start)
+    {
+        m_state = TurnState::ACTIVE;
 
-    m_state = TurnState::ACTIVE;
+        Logger::instance().info("[AI] Turn started for Player " +
+                                std::string(1, ai_player) +
+                                ", game_id=" + std::to_string(game_id));
 
-    Logger::instance().info("[AI] Turn started for Player " +
-                            std::string(1, ai_player) +
-                            ", game_id=" + std::to_string(game_id));
-
-    // Push first task to runner
-    push_next_command(game_id, ai_player);
+        push_next_command(game_id, ai_player);
+    }
 }
 
 void AIAgent::on_phase_advance(int game_id, char ai_player)
 {
+    bool should_continue = true;
+    
     if (m_state != TurnState::ACTIVE)
     {
-        // Not executing a turn, ignore
-        return;
+        should_continue = false;
     }
-
-    // Verify we still have control by checking StateMachine
-    GameState s = StateMachine::instance().get_game_state();
-
-    if (s.active_player.empty() || s.active_player[0] != ai_player)
+    
+    if (should_continue)
     {
-        Logger::instance().info("[AI] Turn ended (control transferred during phase)");
-        m_state = TurnState::IDLE;
-        return;
-    }
+        GameState s = StateMachine::instance().get_game_state();
 
-    // Still our turn - push next command
-    push_next_command(game_id, ai_player);
+        if (s.active_player.empty() || s.active_player[0] != ai_player)
+        {
+            Logger::instance().info("[AI] Turn ended (control transferred during phase)");
+            m_state = TurnState::IDLE;
+            should_continue = false;
+        }
+    }
+    
+    if (should_continue)
+    {
+        push_next_command(game_id, ai_player);
+    }
 }
 
 void AIAgent::on_turn_end(int game_id, char ai_player)
@@ -72,130 +83,133 @@ void AIAgent::on_turn_end(int game_id, char ai_player)
 
 void AIAgent::on_combat_detected(int game_id, char ai_player)
 {
-    // Phase 2: Not handling combat yet
-    Logger::instance().info("[AI] Combat detected, but not handling yet (Phase 2)");
-
-    // Phase 3+: Check if AI has ships in combat, draft orders
-    // if (has_ships_in_combat(game_id, ai_player)) {
-    //     m_state = TurnState::COMBAT_PENDING;
-    //     push_combat_orders(game_id, ai_player);
-    // }
+    Logger::instance().info("[AI] Combat detected, but not handling yet (Phase 3.1)");
 }
 
 bool AIAgent::requires_task()
 {
-    // Guard against no game loaded
+    bool needs_task = false;
+    
     try
     {
         int sm_game_id = StateMachine::instance().get_game_id();
-        if (sm_game_id == 0)
+        
+        if (sm_game_id != 0)
         {
-            return false;  // No game loaded yet
+            GameState s = StateMachine::instance().get_game_state();
+
+            if (StateMachine::instance().is_ai_player(s.active_player) &&
+                m_state == TurnState::IDLE)
+            {
+                needs_task = true;
+            }
         }
-
-        GameState s = StateMachine::instance().get_game_state();
-
-        // Case 1: AI is active player but we haven't started turn yet
-        if (StateMachine::instance().is_ai_player(s.active_player) &&
-            m_state == TurnState::IDLE)
-        {
-            return true;
-        }
-
-        // Case 2: Combat with AI ships (Phase 3+)
-        // if (s.phase_index == PH_RESOLVE_COMBAT && has_ships_in_combat(s)) {
-        //     return true;
-        // }
     }
     catch (const std::runtime_error&)
     {
-        // Game not found - server starting up or no game created yet
-        return false;
+        needs_task = false;
     }
-
-    return false;
+    
+    return needs_task;
 }
 
 bool AIAgent::next_task(Task** ppTask)
 {
-    if (!requires_task())
+    bool created_task = false;
+    
+    if (requires_task())
     {
-        return false;
+        GameState s = StateMachine::instance().get_game_state();
+
+        if (StateMachine::instance().is_ai_player(s.active_player) &&
+            m_state == TurnState::IDLE)
+        {
+            m_state = TurnState::ACTIVE;
+
+            std::string cmd;
+            if (decide_next_command(s, s.active_player[0], cmd))
+            {
+                *ppTask = create_ai_task(s.game_id, s.active_player[0], cmd);
+                Logger::instance().info("[AI] Poll created task: " + cmd);
+                created_task = true;
+            }
+        }
     }
-
-    GameState s = StateMachine::instance().get_game_state();
-
-    // Start AI's turn
-    if (StateMachine::instance().is_ai_player(s.active_player) &&
-        m_state == TurnState::IDLE)
-    {
-        m_state = TurnState::ACTIVE;
-
-        std::string cmd = decide_next_command(s);
-        *ppTask = create_ai_task(s.game_id, s.active_player[0], cmd);
-
-        Logger::instance().info("[AI] Poll created task: " + cmd);
-        return true;
-    }
-
-    // Phase 3+: Handle combat orders
-    // if (s.phase_index == PH_RESOLVE_COMBAT) {
-    //     std::string combat_cmd = decide_combat_order(s);
-    //     *ppTask = create_ai_task(s.game_id, ai_player, combat_cmd);
-    //     return true;
-    // }
-
-    return false;
+    
+    return created_task;
 }
 
 void AIAgent::push_next_command(int game_id, char ai_player)
 {
-    // Query fresh state from StateMachine
+    bool should_push = true;
     GameState s = StateMachine::instance().get_game_state();
 
-    // Safety check - still our turn?
     if (s.active_player.empty() || s.active_player[0] != ai_player)
     {
         Logger::instance().info("[AI] Not our turn, stopping");
         m_state = TurnState::IDLE;
-        return;
+        should_push = false;
     }
-
-    std::string cmd = decide_next_command(s);
-    Task* task = create_ai_task(game_id, ai_player, cmd);
-
-    Logger::instance().info("[AI] Pushing task: " + cmd);
-
-    // Push to TaskRunner
-    TaskRunner::instance().push(task);
+    
+    if (should_push)
+    {
+        std::string cmd;
+        if (decide_next_command(s, ai_player, cmd))
+        {
+            Task* task = create_ai_task(game_id, ai_player, cmd);
+            Logger::instance().info("[AI] Pushing task: " + cmd);
+            TaskRunner::instance().push(task);
+        }
+    }
 }
 
-std::string AIAgent::decide_next_command(const GameState& s)
+bool AIAgent::decide_next_command(const GameState& s, char ai_player, std::string& command_out)
 {
-    // Phase 2: Simple logic - just advance through phases
-    if (s.phase_index == PH_END_TURN)
+    bool success = false;
+    AIGameState state(s.game_id, ai_player);
+    
+    switch (s.phase_index)
     {
-        return "DONE";
+        case PH_BUILD_SHIPS:
+        {
+            AILogic::BuildDecision decision;
+            success = AILogic::instance().decide_build_action(state, decision, command_out);
+            break;
+        }
+            
+        case PH_MOVEMENT:
+        {
+            AILogic::MovementDecision decision;
+            success = AILogic::instance().decide_movement_action(state, decision, command_out);
+            break;
+        }
+            
+        case PH_RESOLVE_COMBAT:
+        {
+            AILogic::CombatDecision decision;
+            success = AILogic::instance().decide_combat_action(state, decision, command_out);
+            break;
+        }
+            
+        case PH_SYSTEM_PICKDROP:
+        {
+            AILogic::PickDropDecision decision;
+            success = AILogic::instance().decide_pickup_drop_action(state, decision, command_out);
+            break;
+        }
+            
+        case PH_END_TURN:
+            command_out = "DONE";
+            success = true;
+            break;
+            
+        default:
+            command_out = "NEXT";
+            success = true;
+            break;
     }
-    else
-    {
-        return "NEXT";
-    }
-
-    // Phase 3+: Intelligent decisions per phase
-    // switch (s.phase_index)
-    // {
-    //     case PH_BUILD_SHIPS:
-    //         return AILogic::instance().decide_build_action(s);
-    //     case PH_MOVEMENT:
-    //         return AILogic::instance().decide_movement_action(s);
-    //     case PH_RESOLVE_COMBAT:
-    //         return AILogic::instance().decide_combat_tactic(s, ship);
-    //     case PH_SYSTEM_PICKDROP:
-    //         return check_pickup_drop(s);
-    //     case PH_END_TURN:
-    //         return "DONE";
-    // }
+    
+    return success;
 }
 
 Task* AIAgent::create_ai_task(int game_id, char ai_player, const std::string& cmd)

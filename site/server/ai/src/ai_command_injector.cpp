@@ -28,24 +28,6 @@ bool AICommandInjector::inject(int game_id, char ai_player,
     bool bres = false;
     Logger::instance().info("Inside AICommandInjector::inject");
 
-    // CAVEAT -- we really do not want this.
-    //  The mutex protects single thread access to the parser,
-    //  But we do not want the state machine to be corrupted
-    //  there's a chance we corrupt the state here:
-    //  then have to wait for another user to invoke command handler
-    //  they will have corrupted the statemachine!
-
-    // Therefore:
-    // IMPORTANT    
-    // What we want is a two step process:
-    //    1. Get the mutex for thet state machine
-    //    2. Modify the state per moment of "comamnd invocation"
-    //    3. Then get the mutex for the command parser, invoke() the command
-    //    4. Collect results (error messages or telemetry, or both)
-    //    5. release the inner mutex
-    //    6. release the outer mutex.
-
-#if 0
     // Set StateMachine context for AI player
     StateMachine::instance().set_game_id(game_id);
     StateMachine::instance().set_current_player(ai_player);
@@ -67,8 +49,6 @@ bool AICommandInjector::inject(int game_id, char ai_player,
                                  ": " + cmdline + " | Error: " + errmsg);
         bres = false;
     }
-#endif
-
     return bres;
 }
 

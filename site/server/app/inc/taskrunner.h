@@ -16,11 +16,11 @@
 #include <thread>
 #include <unistd.h>
 #include <utility>
-#include "aiagent.h"
 #include "comms.h"
 #include "srvmgr.h"
 #include "typedefs.h"
 #include "logger.h"
+#include "statemachine.h"
 
 typedef struct Task
 {

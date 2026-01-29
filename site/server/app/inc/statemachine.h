@@ -74,6 +74,18 @@ class GameState
         home_side_A = "";
         home_side_B = "";
     }
+
+    // get computed tech level
+    int get_current_tech_level() const
+    {
+       int lev = 0;
+       if (round >= 1)
+       {
+          lev =  ((round - 1) / 4);
+       }
+       return lev;
+    }
+
     std::string phase_name() const
     {
         static const char* P[] = {"Build Ships", "Movement", "Resolve Combat",
