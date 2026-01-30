@@ -247,7 +247,7 @@ void AutonomyAgency::gather()
     std::string sql_bases =
     "SELECT hex_id FROM base_stars WHERE game_id=? AND owner=?";
 
-    auto base_rows = db.Query(sql_bases, { game_id_str, aa_str });
+    auto base_rows = db.Query(sql_bases, { m_slate.game_id, m_slate.aa_player });
 
     for (const std::vector<std::string>& row : base_rows)
     {
@@ -258,11 +258,12 @@ void AutonomyAgency::gather()
     }
 
     // Own ships
-    std::string sql_own = "SELECT code, name, hex_id, pd, beam, screen, tube, "
-                          " missile, sr, tech_level, is_warpship "
-                          " FROM warpships WHERE game_id=? AND owner=?";
+    std::string sql_own =
+        "SELECT ship_code, ship_name, at_hex, pd, beam, screen, tube, "
+        "missiles, sr, tech_level, ship_type "
+        "FROM ships WHERE game_id=? AND owner=? AND destroyed_at IS NULL";
 
-    auto own_rows = db.Query(sql_own, { game_id_str, aa_str});
+    auto own_rows = db.Query(sql_own, {m_slate.game_id, m_slate.aa_player});
 
     for (const std::vector<std::string>& row : own_rows)
     {
@@ -279,18 +280,18 @@ void AutonomyAgency::gather()
             ship.missile = std::atoi(row[7].c_str());
             ship.sr = std::atoi(row[8].c_str());
             ship.tech_level = std::atoi(row[9].c_str());
-            ship.is_warpship = (row[10] == "1" || row[10] == "true");
+            ship.is_warpship = (row[10] == "W");
             m_slate.own_ships.push_back(ship);
         }
     }
 
     // Enemy ships
     std::string sql_enemy =
-        "SELECT code, name, hex_id, pd, beam, screen, tube, "
-        "missile, sr, tech_level, is_warpship "
-        "FROM warpships WHERE game_id=? AND owner!=?";
+        "SELECT ship_code, ship_name, at_hex, pd, beam, screen, tube, "
+        "missiles, sr, tech_level, ship_type "
+        "FROM ships WHERE game_id=? AND owner!=? AND destroyed_at IS NULL";
 
-    auto enemy_rows = db.Query(sql_enemy, {game_id_str, aa_str});
+    auto enemy_rows = db.Query(sql_enemy, {m_slate.game_id, m_slate.aa_player});
 
     for (const std::vector<std::string>& row : enemy_rows)
     {
@@ -307,21 +308,21 @@ void AutonomyAgency::gather()
             ship.missile = std::atoi(row[7].c_str());
             ship.sr = std::atoi(row[8].c_str());
             ship.tech_level = std::atoi(row[9].c_str());
-            ship.is_warpship = (row[10] == "1" || row[10] == "true");
+            ship.is_warpship = (row[10] == "W");
             m_slate.enemy_ships.push_back(ship);
         }
     }
 
-    // Draft ships
+    // Draft ships (from drafts table)
     std::string sql_drafts =
-        "SELECT code, name, pd, beam, screen, tube, missile, sr "
-        "FROM ship_drafts WHERE game_id=? AND owner=?";
+        "SELECT ship_code, ship_name, pd, beam, screen, tube, missiles, sr, "
+        "ship_type FROM drafts WHERE game_id=? AND owner=?";
 
-    auto draft_rows = db.Query(sql_drafts, { game_id_str, aa_str });
+    auto draft_rows = db.Query(sql_drafts, {m_slate.game_id, m_slate.aa_player});
 
     for (const std::vector<std::string>& row : draft_rows)
     {
-        if (row.size() >= 8)
+        if (row.size() >= 9)
         {
             AAShipInfo ship;
             ship.code = row[0];
@@ -333,17 +334,17 @@ void AutonomyAgency::gather()
             ship.missile = std::atoi(row[6].c_str());
             ship.sr = std::atoi(row[7].c_str());
             ship.tech_level = m_slate.tech_level;
-            ship.is_warpship = (ship.code[0] == 'W');
+            ship.is_warpship = (row[8] == "W");
             m_slate.draft_ships.push_back(ship);
         }
     }
 
     // Contested hexes (hexes with ships from both players)
-    // BUGBUG: This query may need adjustment based on actual schema
     std::string sql_contested =
-        "SELECT hex_id FROM warpships WHERE game_id=? GROUP BY hex_id HAVING COUNT(DISTINCT owner) > 1";
+        "SELECT at_hex FROM ships WHERE game_id=? AND destroyed_at IS NULL "
+        "AND at_hex IS NOT NULL GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1";
 
-    auto contested_rows = db.Query(sql_contested, {game_id_str });
+    auto contested_rows = db.Query(sql_contested, {m_slate.game_id});
 
     for (const std::vector<std::string>& row : contested_rows)
     {
