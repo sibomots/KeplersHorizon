@@ -21,12 +21,11 @@ int HexEventEngine::get_movement_modifier(int game_id, int round, const std::str
 
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query(
+    std::string qq =
         "SELECT COALESCE(SUM(modifier_value),0) FROM hex_events "
-        "WHERE game_id=" +
-        std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
-        "' AND event_type='NAVIGATION_HAZARD'"
-        " AND expires_turn > " + std::to_string(round));
+        "WHERE game_id=? AND hex_id=? AND event_type='NAVIGATION_HAZARD'"
+        " AND expires_turn > ?";
+    auto rows = db.Query( qq, {game_id, hex, round});
 
     if (rows.empty() || rows[0][0].empty())
     {
@@ -44,12 +43,11 @@ int HexEventEngine::get_combat_modifier(int game_id, int round, const std::strin
 
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query(
+    std::string qq = 
         "SELECT COALESCE(SUM(modifier_value),0) FROM hex_events "
-        "WHERE game_id=" +
-        std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
-        "' AND event_type='COMBAT_INTERFERENCE'"
-        " AND expires_turn > " + std::to_string(round));
+        "WHERE game_id=? AND hex_id=? AND event_type='COMBAT_INTERFERENCE'"
+        " AND expires_turn > ?";
+    auto rows = db.Query(qq, { game_id, hex, round});
 
     if (rows.empty() || rows[0][0].empty())
     {
@@ -67,12 +65,11 @@ float HexEventEngine::get_salvage_multiplier(int game_id, int round, const std::
 
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query(
+    std::string qq =
         "SELECT COUNT(*) FROM hex_events "
-        "WHERE game_id=" +
-        std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
-        "' AND event_type='SALVAGE_OPPORTUNITY'"
-        " AND expires_turn > " + std::to_string(round));
+        "WHERE game_id=? AND hex_id=? AND event_type='SALVAGE_OPPORTUNITY'"
+        " AND expires_turn > ?";
+    auto rows = db.Query(qq, {game_id, hex, round});
 
     if (rows.empty() || rows[0][0] == "0")
     {
@@ -90,12 +87,11 @@ int HexEventEngine::get_extraction_modifier(int game_id, int round, const std::s
 
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query(
+    std::string qq =
         "SELECT COALESCE(SUM(modifier_value),0) FROM hex_events "
-        "WHERE game_id=" +
-        std::to_string(game_id) + " AND hex_id='" + db.esc(hex) +
-        "' AND event_type='EXTRACTION_BONUS'"
-        " AND expires_turn > " + std::to_string(round));
+        "WHERE game_id=? AND hex_id=? AND event_type='EXTRACTION_BONUS'"
+        " AND expires_turn > ? ";
+    auto rows = db.Query(qq, {game_id, hex, round});
 
     if (rows.empty() || rows[0][0].empty())
     {

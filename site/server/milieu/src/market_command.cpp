@@ -53,10 +53,10 @@ void MarketCommand::show_all_prices()
         std::string res = BASE_PRICES[i].type;
 
         // Check if market price exists for this game
-        auto mp = db.query(
+        auto mp = db.Query(
             "SELECT current_price, price_trend FROM market_prices "
-            "WHERE game_id=" +
-            std::to_string(game_id) + " AND resource_type='" + res + "'");
+            "WHERE game_id=? AND resource_type=?",
+            {game_id, res});
 
         int price;
         std::string trend_char = "─";
@@ -65,12 +65,10 @@ void MarketCommand::show_all_prices()
         {
             // Initialize market price
             price = BASE_PRICES[i].base_price;
-            db.exec(
+            db.Exec(
                 "INSERT INTO market_prices(game_id,resource_type,current_price,"
-                "base_price,price_trend,last_updated_turn) VALUES(" +
-                std::to_string(game_id) + ",'" + res + "'," +
-                std::to_string(price) + "," + std::to_string(price) +
-                ",'STABLE'," + std::to_string(s.round) + ")");
+                "base_price,price_trend,last_updated_turn) VALUES(?,?,?,?,'STABLE',?)",
+                {game_id, res, price, price, s.round});
         }
         else
         {
@@ -112,9 +110,9 @@ void MarketCommand::show_price_history()
         c = toupper(c);
 
     auto history =
-        db.query("SELECT turn, price FROM market_history WHERE game_id=" +
-                 std::to_string(game_id) + " AND resource_type='" +
-                 db.esc(res_upper) + "' ORDER BY turn DESC LIMIT 10");
+        db.Query("SELECT turn, price FROM market_history WHERE game_id=? "
+                 "AND resource_type=? ORDER BY turn DESC LIMIT 10",
+                 {game_id, res_upper});
 
     std::ostringstream out;
     out << "     " << res_upper << " PRICE HISTORY\n"
@@ -148,10 +146,10 @@ void update_market_prices(int game_id, int round)
         std::string res = BASE_PRICES[i].type;
         int base = BASE_PRICES[i].base_price;
 
-        auto mp = db.query(
+        auto mp = db.Query(
             "SELECT current_price, total_bought, total_sold, base_price "
-            "FROM market_prices WHERE game_id=" +
-            std::to_string(game_id) + " AND resource_type='" + res + "'");
+            "FROM market_prices WHERE game_id=? AND resource_type=?",
+            {game_id, res});
 
         if (mp.empty())
         {
@@ -214,17 +212,15 @@ void update_market_prices(int game_id, int round)
         }
 
         // Update market
-        db.exec("UPDATE market_prices SET current_price=" +
-                std::to_string(new_price) + ", price_trend='" + new_trend +
-                "', total_bought=0, total_sold=0, last_updated_turn=" +
-                std::to_string(round) + " WHERE game_id=" +
-                std::to_string(game_id) + " AND resource_type='" + res + "'");
+        db.Exec("UPDATE market_prices SET current_price=?, price_trend=?, "
+                "total_bought=0, total_sold=0, last_updated_turn=? "
+                "WHERE game_id=? AND resource_type=?",
+                {new_price, new_trend, round, game_id, res});
 
         // Record history
-        db.exec("INSERT INTO market_history(game_id,resource_type,price,turn) "
-                "VALUES(" +
-                std::to_string(game_id) + ",'" + res + "'," +
-                std::to_string(new_price) + "," + std::to_string(round) + ")");
+        db.Exec("INSERT INTO market_history(game_id,resource_type,price,turn) "
+                "VALUES(?,?,?,?)",
+                {game_id, res, new_price, round});
     }
 
     Logger::instance().info("[MARKET] Prices updated for game " +

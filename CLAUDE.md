@@ -2,6 +2,11 @@
 
 If you don't understand these rules, stop now and ask me the question.
 
+## CLAUDE CODE RULES
+
+-  When editing files, apply changes directly and do not show diffs or verbose summaries.
+
+
 ## Git Rules
 
 - never make a branch unless you ask first.

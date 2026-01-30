@@ -69,9 +69,10 @@ char seat_for_user(int game_id, int user_id)
         return 0;
 
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query(
-        "SELECT seat FROM game_seats WHERE game_id=" + std::to_string(game_id) +
-        " AND user_id=" + std::to_string(user_id) + " LIMIT 1");
+    std::string q = 
+    "SELECT seat FROM game_seats WHERE game_id=? AND user_id=? LIMIT 1";
+    auto rows = db.Query(q, {game_id, user_id});
+
     if (!rows.empty() && !rows[0].empty() && !rows[0][0].empty())
     {
         return rows[0][0][0]; // Return 'A' or 'B'

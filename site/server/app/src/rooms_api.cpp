@@ -19,10 +19,12 @@ static int get_user_id_from_token(const std::string& token)
     if (token.empty())
         return 0;
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query("SELECT user_id FROM sessions WHERE token='" +
-                         db.esc(token) + "'");
-    if (rows.empty())
+    auto rows = db.Query("SELECT user_id FROM sessions WHERE token=?",
+                         {token});
+    if (rows.empty()) {
         return 0;
+    }
+    fprintf(stderr, "stoi 12\n");
     return std::stoi(rows[0][0]);
 }
 
@@ -60,8 +62,8 @@ void handle_rooms_list(const HttpRequest* req, HttpResponse* resp)
     if (user_id > 0)
     {
         DatabaseManager& db = DatabaseManager::instance();
-        db.exec("UPDATE sessions SET last_seen=NOW() WHERE user_id=" +
-                std::to_string(user_id));
+        db.Exec("UPDATE sessions SET last_seen=NOW() WHERE user_id=?",
+                {user_id});
     }
 
     RoomManager& rm = RoomManager::instance();
@@ -85,8 +87,8 @@ void handle_modules_list(const HttpRequest* /* req */, HttpResponse* resp)
 {
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto modules = db.query(
-        "SELECT module_id, name, description FROM modules ORDER BY module_id");
+    auto modules = db.Query(
+        "SELECT module_id, name, description FROM modules ORDER BY module_id", {});
 
     std::ostringstream o;
     o << "{\"ok\":true,\"modules\":[";
@@ -279,7 +281,7 @@ void handle_room_start(const std::string& code, const HttpRequest* req,
         if (current_room.seat_b == 0)
         {
           // rm.assignSeat(code, 3, 'B');  // AI_AGENT to seat B
-          db.exec("UPDATE rooms SET seat_b=3 WHERE room_code='" + db.esc(code) + "'");
+          db.Exec("UPDATE rooms SET seat_b=3 WHERE room_code=?", {code});
           Logger::instance().info("[ROOM] Single-player: Assigned AI_AGENT to seat B");
         }
     }

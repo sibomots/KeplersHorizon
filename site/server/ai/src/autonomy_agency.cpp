@@ -6,240 +6,465 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 
-#ifdef  HAS_BEEN_REFACTORED
-
 #include "autonomy_agency.h"
-#include <algorithm>
 
-AutonomyAgency::AutonomyAgency(Config cfg,
-                               std::shared_ptr<IRawCollector> raw_collector,
-                               std::shared_ptr<ICooker> cooker,
-                               std::shared_ptr<IPlanner> planner,
-                               std::shared_ptr<IRenderer> renderer,
-                               std::shared_ptr<ICommandInjector> injector,
-                               std::shared_ptr<ITelemetrySink> telemetry,
-                               std::shared_ptr<IAtomicPhaseGate> atomic_gate)
-  : cfg_(std::move(cfg))
-  , raw_collector_(std::move(raw_collector))
-  , cooker_(std::move(cooker))
-  , planner_(std::move(planner))
-  , renderer_(std::move(renderer))
-  , injector_(std::move(injector))
-  , telemetry_(std::move(telemetry))
-  , atomic_gate_(std::move(atomic_gate))
-{}
+#include <chrono>
+
+#include "ai_command_injector.h"
+#include "ai_db_mutex.h"
+#include "configr.h"
+#include "db.h"
+#include "ecl_bridge.h"
+#include "logger.h"
+#include "statemachine.h"
+
+// ----------------------------------------------------------------------------
+// Singleton
+// ----------------------------------------------------------------------------
+
+AutonomyAgency& AutonomyAgency::instance()
+{
+    static AutonomyAgency singleton;
+    return singleton;
+}
+
+// ----------------------------------------------------------------------------
+// Construction / Destruction
+// ----------------------------------------------------------------------------
+
+AutonomyAgency::AutonomyAgency()
+    : m_game_id(0), m_aa_player('\0'), m_cycle_counter(0), m_running(false),
+      m_stop_requested(false), m_pumped(false), m_ecl_initialized(false)
+{
+}
 
 AutonomyAgency::~AutonomyAgency()
 {
-    request_stop();
+    stop();
     join();
+    shutdown_ecl();
 }
 
-void AutonomyAgency::pre_init_load_dsl_files(const std::vector<std::string>& /*lisp_paths*/)
+// ----------------------------------------------------------------------------
+// Configuration
+// ----------------------------------------------------------------------------
+
+void AutonomyAgency::configure(int game_id, char aa_player)
 {
-    // Stub: real ECL init/load belongs in an EclPlanner implementation.
-    // Keep AA host ignorant of ECL specifics beyond "planner exists".
+    m_game_id = game_id;
+    m_aa_player = aa_player;
+    m_slate.game_id = game_id;
+    m_slate.aa_player = aa_player;
+
+    Logger::instance().info(
+        "[AA] Configured: game_id=" + std::to_string(game_id) +
+        " aa_player=" + aa_player);
 }
+
+// ----------------------------------------------------------------------------
+// Lifecycle
+// ----------------------------------------------------------------------------
 
 void AutonomyAgency::start()
 {
-    bool expected = false;
-    if (!started_.compare_exchange_strong(expected, true))
+    bool already_running = m_running.exchange(true);
+    if (already_running)
+    {
         return;
+    }
 
-    stop_.store(false);
-    worker_ = std::thread(&AutonomyAgency::thread_main, this);
-    pump(PumpReason::ManualKick);
+    m_stop_requested.store(false);
+
+    // Initialize ECL if not already done
+    if (!m_ecl_initialized)
+    {
+        init_ecl();
+    }
+
+    m_worker = std::thread(&AutonomyAgency::thread_main, this);
+
+    Logger::instance().info("[AA] Started");
 }
 
-void AutonomyAgency::request_stop()
+void AutonomyAgency::stop()
 {
-    stop_.store(true);
-    pump(PumpReason::Shutdown);
+    m_stop_requested.store(true);
+
+    {
+        std::lock_guard<std::mutex> lk(m_mtx);
+        m_pumped = true;
+    }
+    m_cv.notify_one();
 }
 
 void AutonomyAgency::join()
 {
-    if (worker_.joinable())
-        worker_.join();
+    if (m_worker.joinable())
+    {
+        m_worker.join();
+    }
+    m_running.store(false);
 }
 
-void AutonomyAgency::pump(PumpReason why)
+void AutonomyAgency::pump()
 {
     {
-        std::lock_guard<std::mutex> lk(mtx_);
-        pump_q_.push_back(why);
+        std::lock_guard<std::mutex> lk(m_mtx);
+        m_pumped = true;
     }
-    cv_.notify_one();
+    m_cv.notify_one();
 }
 
-void AutonomyAgency::notify_player_command_activity()
-{
-    player_cmd_flag_.store(true);
-    pump(PumpReason::PlayerCommandObserved);
-}
+// ----------------------------------------------------------------------------
+// Thread Entry
+// ----------------------------------------------------------------------------
 
 void AutonomyAgency::thread_main()
 {
-    while (!stop_.load())
+    MySqlThreadGuard mysql_guard;
+    Logger::instance().info("[AA] Thread started");
+
+    while (!m_stop_requested.load())
     {
-        PumpReason reason = PumpReason::UiPoll;
-
+        // Wait for pump or timeout
         {
-            std::unique_lock<std::mutex> lk(mtx_);
-            if (pump_q_.empty())
-            {
-                cv_.wait_for(lk, cfg_.default_wait, [&]{
-                    return stop_.load() || !pump_q_.empty();
-                });
-            }
+            std::unique_lock<std::mutex> lk(m_mtx);
+            bool signaled = m_cv.wait_for(
+                lk, std::chrono::milliseconds(3000),
+                [this] { return m_pumped || m_stop_requested.load(); });
 
-            if (stop_.load())
+            if (m_stop_requested.load())
+            {
                 break;
-
-            if (!pump_q_.empty())
-            {
-                reason = pump_q_.front();
-                pump_q_.pop_front();
             }
+
+            m_pumped = false;
         }
 
-        run_one_cycle(reason);
+        run_cycle();
+    }
+
+    Logger::instance().info("[AA] Thread exiting");
+}
+
+// ----------------------------------------------------------------------------
+// Run One Cycle
+// ----------------------------------------------------------------------------
+
+void AutonomyAgency::run_cycle()
+{
+    ++m_cycle_counter;
+    m_slate.cycle_id = m_cycle_counter;
+
+    // Step 1: Gather
+    gather();
+
+    // Guard: Only act if it's our turn
+    if (!m_slate.is_aa_turn)
+    {
+        return;
+    }
+
+    // Guard: Don't act if game is over
+    if (m_slate.game_over)
+    {
+        return;
+    }
+
+    Logger::instance().info("[AA] Cycle " + std::to_string(m_cycle_counter) +
+                            ": phase=" + std::to_string(m_slate.phase_index) +
+                            " credits=" + std::to_string(m_slate.credits));
+
+    // Step 2: Calculate
+    std::vector<std::string> commands;
+    calculate(commands);
+
+    // Step 3: Render
+    if (!commands.empty())
+    {
+        render(commands);
     }
 }
 
-void AutonomyAgency::run_one_cycle(PumpReason /*reason*/)
+// ----------------------------------------------------------------------------
+// Gather Step (C++)
+// ----------------------------------------------------------------------------
+
+void AutonomyAgency::gather()
 {
-    // If combat is in progress, we do the tighter internal loop.
-    // Combat loop itself still does Raw→Cook→Calc→Render→Telem per round.
-    bool player_observed = player_cmd_flag_.exchange(false);
-    combat_loop_if_needed(player_observed);
+    m_slate.clear();
+    m_slate.game_id = m_game_id;
+    m_slate.aa_player = m_aa_player;
+    m_slate.cycle_id = m_cycle_counter;
 
-    // Normal single pass (pachinko)
-    RawInputs raw = gather_raw();
-    CookedInputs cooked = cook_inputs(raw);
+    // ----------------------------------
+    // From StateMachine
+    // ----------------------------------
+    GameState gs = StateMachine::instance().get_game_state();
 
-    if (cooked.game_done)
-        return;
+    m_slate.round = gs.round;
+    m_slate.phase_index = gs.phase_index;
+    m_slate.game_over = gs.game_over;
 
-    Plan plan = calculate_plan(cooked);
-    render(cooked, plan);
-    telemeter(cooked, plan);
-}
-
-RawInputs AutonomyAgency::gather_raw()
-{
-    const bool player_observed = player_cmd_flag_.exchange(false);
-    const uint64_t cid = ++cycle_id_;
-
-    if (!raw_collector_)
-        return RawInputs{};
-
-    return raw_collector_->gather_raw(player_observed, cid);
-}
-
-CookedInputs AutonomyAgency::cook_inputs(const RawInputs& raw)
-{
-    if (!cooker_)
+    if (!gs.active_player.empty())
     {
-        CookedInputs cooked;
-        cooked.session_id = raw.snap.session_id;
-        cooked.turn_number = raw.snap.turn_number;
-        cooked.phase = raw.snap.phase;
-        cooked.aa_is_active_player = raw.snap.aa_is_active_player;
-        cooked.game_done = raw.snap.game_done;
-        cooked.in_combat = raw.snap.in_combat;
-        cooked.movement_atomic_now = (raw.snap.phase == GameSnapshot::Phase::Movement);
-        cooked.combat_atomic_now = (raw.snap.phase == GameSnapshot::Phase::Combat);
-        cooked.contested_hexes_sorted = raw.snap.contested_hexes;
-        cooked.monotonic_cycle_id = raw.monotonic_cycle_id;
-        return cooked;
+        m_slate.active_player = gs.active_player[0];
+    }
+    else
+    {
+        m_slate.active_player = 'A';
     }
 
-    return cooker_->cook(raw, slate_);
-}
+    m_slate.is_aa_turn = (m_slate.active_player == m_slate.aa_player);
 
-Plan AutonomyAgency::calculate_plan(const CookedInputs& cooked)
-{
-    if (!planner_)
-        return Plan{};
-
-    Plan plan = planner_->decide(cooked, slate_);
-
-    if (plan.commands.size() > cfg_.max_commands_per_cycle)
-        plan.commands.resize(cfg_.max_commands_per_cycle);
-
-    // Update slate if planner returned a patch.
-    if (plan.new_slate_json.has_value())
-        slate_.opaque_json = *plan.new_slate_json;
-
-    // Track last seen
-    slate_.last_session_id = cooked.session_id;
-    slate_.last_turn_seen  = cooked.turn_number;
-
-    return plan;
-}
-
-void AutonomyAgency::render(const CookedInputs& cooked, const Plan& plan)
-{
-    if (!renderer_ || !injector_)
-        return;
-
-    renderer_->render_and_inject(cooked, plan, *injector_, atomic_gate_.get());
-}
-
-void AutonomyAgency::telemeter(const CookedInputs& cooked, const Plan& plan)
-{
-    if (!telemetry_)
-        return;
-
-    for (auto ev : plan.telemetry)
+    if (m_slate.aa_player == 'A')
     {
-        if (ev.session_id == 0) ev.session_id = cooked.session_id;
-        if (ev.turn_number == 0) ev.turn_number = cooked.turn_number;
-        telemetry_->publish(ev);
+        m_slate.credits = gs.creditsA;
+        m_slate.vp = gs.vpA;
+        m_slate.enemy_vp = gs.vpB;
+        m_slate.home_side = gs.home_side_A;
+    }
+    else
+    {
+        m_slate.credits = gs.creditsB;
+        m_slate.vp = gs.vpB;
+        m_slate.enemy_vp = gs.vpA;
+        m_slate.home_side = gs.home_side_B;
+    }
+
+    m_slate.tech_level = gs.get_current_tech_level();
+
+    // ----------------------------------
+    // From Database (with mutex)
+    // ----------------------------------
+    std::lock_guard<std::mutex> db_lock(AIDBMutex::ai_mutex);
+    DatabaseManager& db = DatabaseManager::instance();
+
+    std::string aa_str(1, m_slate.aa_player);
+    std::string game_id_str = std::to_string(m_slate.game_id);
+
+    // Own base hexes
+    std::string sql_bases =
+    "SELECT hex_id FROM base_stars WHERE game_id=? AND owner=?";
+
+    auto base_rows = db.Query(sql_bases, { game_id_str, aa_str });
+
+    for (const std::vector<std::string>& row : base_rows)
+    {
+        if (!row.empty())
+        {
+            m_slate.own_base_hexes.push_back(row[0]);
+        }
+    }
+
+    // Own ships
+    std::string sql_own = "SELECT code, name, hex_id, pd, beam, screen, tube, "
+                          " missile, sr, tech_level, is_warpship "
+                          " FROM warpships WHERE game_id=? AND owner=?";
+
+    auto own_rows = db.Query(sql_own, { game_id_str, aa_str});
+
+    for (const std::vector<std::string>& row : own_rows)
+    {
+        if (row.size() >= 11)
+        {
+            AAShipInfo ship;
+            ship.code = row[0];
+            ship.name = row[1];
+            ship.hex_id = row[2];
+            ship.pd = std::atoi(row[3].c_str());
+            ship.beam = std::atoi(row[4].c_str());
+            ship.screen = std::atoi(row[5].c_str());
+            ship.tube = std::atoi(row[6].c_str());
+            ship.missile = std::atoi(row[7].c_str());
+            ship.sr = std::atoi(row[8].c_str());
+            ship.tech_level = std::atoi(row[9].c_str());
+            ship.is_warpship = (row[10] == "1" || row[10] == "true");
+            m_slate.own_ships.push_back(ship);
+        }
+    }
+
+    // Enemy ships
+    std::string sql_enemy =
+        "SELECT code, name, hex_id, pd, beam, screen, tube, "
+        "missile, sr, tech_level, is_warpship "
+        "FROM warpships WHERE game_id=? AND owner!=?";
+
+    auto enemy_rows = db.Query(sql_enemy, {game_id_str, aa_str});
+
+    for (const std::vector<std::string>& row : enemy_rows)
+    {
+        if (row.size() >= 11)
+        {
+            AAShipInfo ship;
+            ship.code = row[0];
+            ship.name = row[1];
+            ship.hex_id = row[2];
+            ship.pd = std::atoi(row[3].c_str());
+            ship.beam = std::atoi(row[4].c_str());
+            ship.screen = std::atoi(row[5].c_str());
+            ship.tube = std::atoi(row[6].c_str());
+            ship.missile = std::atoi(row[7].c_str());
+            ship.sr = std::atoi(row[8].c_str());
+            ship.tech_level = std::atoi(row[9].c_str());
+            ship.is_warpship = (row[10] == "1" || row[10] == "true");
+            m_slate.enemy_ships.push_back(ship);
+        }
+    }
+
+    // Draft ships
+    std::string sql_drafts =
+        "SELECT code, name, pd, beam, screen, tube, missile, sr "
+        "FROM ship_drafts WHERE game_id=? AND owner=?";
+
+    auto draft_rows = db.Query(sql_drafts, { game_id_str, aa_str });
+
+    for (const std::vector<std::string>& row : draft_rows)
+    {
+        if (row.size() >= 8)
+        {
+            AAShipInfo ship;
+            ship.code = row[0];
+            ship.name = row[1];
+            ship.pd = std::atoi(row[2].c_str());
+            ship.beam = std::atoi(row[3].c_str());
+            ship.screen = std::atoi(row[4].c_str());
+            ship.tube = std::atoi(row[5].c_str());
+            ship.missile = std::atoi(row[6].c_str());
+            ship.sr = std::atoi(row[7].c_str());
+            ship.tech_level = m_slate.tech_level;
+            ship.is_warpship = (ship.code[0] == 'W');
+            m_slate.draft_ships.push_back(ship);
+        }
+    }
+
+    // Contested hexes (hexes with ships from both players)
+    // BUGBUG: This query may need adjustment based on actual schema
+    std::string sql_contested =
+        "SELECT hex_id FROM warpships WHERE game_id=? GROUP BY hex_id HAVING COUNT(DISTINCT owner) > 1";
+
+    auto contested_rows = db.Query(sql_contested, {game_id_str });
+
+    for (const std::vector<std::string>& row : contested_rows)
+    {
+        if (!row.empty())
+        {
+            m_slate.contested_hexes.push_back(row[0]);
+        }
+    }
+
+    m_slate.in_combat = !m_slate.contested_hexes.empty();
+}
+
+// ----------------------------------------------------------------------------
+// Calculate Step (ECL)
+// ----------------------------------------------------------------------------
+
+void AutonomyAgency::calculate(std::vector<std::string>& commands_out)
+{
+    commands_out.clear();
+
+    if (!m_ecl_initialized)
+    {
+        Logger::instance().error("[AA] Calculate: ECL not initialized");
+        commands_out.push_back("NEXT");
+        return;
+    }
+
+    bool ok = EclBridge::calculate(m_slate, commands_out);
+    if (!ok)
+    {
+        Logger::instance().error(
+            "[AA] Calculate: ECL call failed, defaulting to NEXT");
+        commands_out.clear();
+        commands_out.push_back("NEXT");
     }
 }
 
-void AutonomyAgency::combat_loop_if_needed(bool player_command_observed)
+// ----------------------------------------------------------------------------
+// Render Step (C++)
+// ----------------------------------------------------------------------------
+
+void AutonomyAgency::render(const std::vector<std::string>& commands)
 {
-    // First, peek at current state (Raw→Cook).
-    const uint64_t cid = ++cycle_id_;
-    RawInputs raw0 = raw_collector_ ? raw_collector_->gather_raw(player_command_observed, cid) : RawInputs{};
-    CookedInputs cooked0 = cook_inputs(raw0);
-
-    if (!cooked0.in_combat && cooked0.phase != GameSnapshot::Phase::Combat)
-        return;
-
-    // Tight loop while combat persists.
-    for (int round = 0; round < cfg_.combat_round_cap && !stop_.load(); ++round)
+    for (const std::string& cmd : commands)
     {
-        const uint64_t rid = ++cycle_id_;
-        RawInputs raw = raw_collector_ ? raw_collector_->gather_raw(false, rid) : RawInputs{};
-        CookedInputs cooked = cook_inputs(raw);
+        Logger::instance().info("[AA] Render: " + cmd);
 
-        if (!cooked.in_combat && cooked.phase != GameSnapshot::Phase::Combat)
+        bool ok = AICommandInjector::inject(m_game_id, m_aa_player, cmd);
+        if (!ok)
+        {
+            Logger::instance().error("[AA] Inject failed: " + cmd);
+            // Stop on first failure
             break;
-
-        Plan plan = calculate_plan(cooked);
-        render(cooked, plan);
-        telemeter(cooked, plan);
-
-        std::this_thread::sleep_for(cfg_.combat_yield_every);
+        }
     }
 }
 
-void AutonomyAgency::publish_info(const CookedInputs& cooked, const std::string& msg)
-{
-    if (!telemetry_)
-        return;
+// ----------------------------------------------------------------------------
+// ECL Initialization
+// ----------------------------------------------------------------------------
 
-    TelemetryEvent ev;
-    ev.kind = TelemetryEvent::Kind::Info;
-    ev.text = msg;
-    ev.session_id = cooked.session_id;
-    ev.turn_number = cooked.turn_number;
-    telemetry_->publish(ev);
+void AutonomyAgency::init_ecl()
+{
+    if (m_ecl_initialized)
+    {
+        return;
+    }
+
+    // Boot ECL runtime
+    if (!EclBridge::boot())
+    {
+        Logger::instance().error("[AA] Failed to boot ECL");
+        return;
+    }
+
+    // Get DSL directory from config (--ai PATH)
+    std::string dsl_dir = Configr::instance().get<Key::ai>();
+    if (dsl_dir.empty())
+    {
+        dsl_dir = "dsl";
+    }
+
+    // Ensure trailing slash
+    if (!dsl_dir.empty() && dsl_dir.back() != '/')
+    {
+        dsl_dir += '/';
+    }
+
+    Logger::instance().info("[AA] Loading DSL from: " + dsl_dir);
+
+    // Load files in dependency order (util first, core last)
+    static const char* kDslFiles[] = {
+        "aa-util.lisp",
+        "aa-build.lisp",
+        "aa-movement.lisp",
+        "aa-combat.lisp",
+        "aa-core.lisp"
+    };
+
+    for (const char* fname : kDslFiles)
+    {
+        std::string path = dsl_dir + fname;
+        bool loaded = EclBridge::load_file(path);
+        if (!loaded)
+        {
+            Logger::instance().error("[AA] Failed to load " + path);
+            EclBridge::shutdown();
+            return;
+        }
+    }
+
+    m_ecl_initialized = true;
+    Logger::instance().info("[AA] ECL initialized");
 }
 
-#endif // HAS_BEEN_REFACTORED
+void AutonomyAgency::shutdown_ecl()
+{
+    if (m_ecl_initialized)
+    {
+        EclBridge::shutdown();
+        m_ecl_initialized = false;
+        Logger::instance().info("[AA] ECL shutdown");
+    }
+}

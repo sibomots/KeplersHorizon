@@ -52,15 +52,17 @@ bool SaveCommand::invoke()
     DatabaseManager& db = DatabaseManager::instance();
 
     // Check if save name already exists for this user
-    auto existing = db.query(
-        "SELECT id FROM saved_games WHERE user_id=" + std::to_string(user_id) +
-        " AND save_name='" + db.esc(m_name) + "'");
+    auto existing = db.Query(
+        "SELECT id FROM saved_games WHERE user_id=? AND save_name=?",
+        {user_id, m_name});
 
     if (!existing.empty())
     {
         // Update existing save to point to current game
-        db.exec("UPDATE saved_games SET game_id=" + std::to_string(game_id) +
-                ", saved_at=NOW() WHERE id=" + existing[0][0]);
+        fprintf(stderr, "stoi 5\n");
+        int sgid = std::stoi(existing[0][0]);
+        db.Exec("UPDATE saved_games SET game_id=?, saved_at=NOW() WHERE id=?",
+                {game_id, sgid});
         Telemetry::instance().write("SAVE: Updated '" + m_name +
                                        "' to point to current game (Turn " +
                                        std::to_string(gs.round) + ").");
@@ -68,9 +70,8 @@ bool SaveCommand::invoke()
     else
     {
         // Create new save
-        db.exec("INSERT INTO saved_games(user_id, save_name, game_id) VALUES(" +
-                std::to_string(user_id) + ",'" + db.esc(m_name) + "'," +
-                std::to_string(game_id) + ")");
+        db.Exec("INSERT INTO saved_games(user_id, save_name, game_id) VALUES(?,?,?)",
+                {user_id, m_name, game_id});
         Telemetry::instance().write("SAVE: Game saved as '" + m_name +
                                        "' (Turn " + std::to_string(gs.round) +
                                        ").");
@@ -94,13 +95,13 @@ bool LoadCommand::invoke()
     // If just listing saves
     if (m_list_saves || m_name.empty())
     {
-        auto saves = db.query(
+        auto saves = db.Query(
             "SELECT sg.save_name, sg.game_id, g.module_id, "
             "JSON_UNQUOTE(JSON_EXTRACT(g.state_json, '$.round')) as round, "
             "sg.saved_at FROM saved_games sg "
             "JOIN games g ON sg.game_id = g.id "
-            "WHERE sg.user_id=" +
-            std::to_string(user_id) + " ORDER BY sg.saved_at DESC LIMIT 10");
+            "WHERE sg.user_id=? ORDER BY sg.saved_at DESC LIMIT 10",
+            {user_id});
 
         if (saves.empty())
         {
@@ -131,13 +132,13 @@ bool LoadCommand::invoke()
     }
 
     // Find the saved game
-    auto saves = db.query(
+    auto saves = db.Query(
         "SELECT sg.game_id, g.module_id, "
         "JSON_UNQUOTE(JSON_EXTRACT(g.state_json, '$.round')) as round "
         "FROM saved_games sg "
         "JOIN games g ON sg.game_id = g.id "
-        "WHERE sg.user_id=" +
-        std::to_string(user_id) + " AND sg.save_name='" + db.esc(m_name) + "'");
+        "WHERE sg.user_id=? AND sg.save_name=?",
+        {user_id, m_name});
 
     if (saves.empty())
     {
@@ -146,7 +147,9 @@ bool LoadCommand::invoke()
         return false;
     }
 
+    fprintf(stderr, "stoi 6\n");
     int target_game_id = std::stoi(saves[0][0]);
+    fprintf(stderr, "stoi 7\n");
     int module_id = std::atoi(saves[0][1].c_str());
     std::string round = saves[0][2];
     (void)module_id;
@@ -159,9 +162,9 @@ bool LoadCommand::invoke()
     }
 
     // Check for existing pending request
-    auto pending = db.query(
-        "SELECT requester, save_name FROM load_requests WHERE game_id=" +
-        std::to_string(game_id));
+    auto pending = db.Query(
+        "SELECT requester, save_name FROM load_requests WHERE game_id=?",
+        {game_id});
 
     if (!pending.empty())
     {
@@ -176,21 +179,21 @@ bool LoadCommand::invoke()
 
             // Get both user IDs from game_seats
             auto seats =
-                db.query("SELECT user_id FROM game_seats WHERE game_id=" +
-                         std::to_string(game_id));
+                db.Query("SELECT user_id FROM game_seats WHERE game_id=?",
+                         {game_id});
 
             // Update both sessions to new game_id
             for (const auto& seat : seats)
             {
+                fprintf(stderr, "stoi 8\n");
                 int uid = std::stoi(seat[0]);
-                db.exec("UPDATE sessions SET game_id=" +
-                        std::to_string(target_game_id) +
-                        " WHERE user_id=" + std::to_string(uid));
+                db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
+                        {target_game_id, uid});
             }
 
             // Clear the pending request
-            db.exec("DELETE FROM load_requests WHERE game_id=" +
-                    std::to_string(game_id));
+            db.Exec("DELETE FROM load_requests WHERE game_id=?",
+                    {game_id});
 
             // Notify both players
             std::string msg = "COMMAND: Game '" + m_name +
@@ -213,15 +216,13 @@ bool LoadCommand::invoke()
     }
 
     // Create new load request
-    db.exec("INSERT INTO load_requests(game_id, requester, requester_user_id, "
-            "target_game_id, save_name) VALUES(" +
-            std::to_string(game_id) + ",'" + std::string(1, player) + "'," +
-            std::to_string(user_id) + "," + std::to_string(target_game_id) +
-            ",'" + db.esc(m_name) + "')");
+    db.Exec("INSERT INTO load_requests(game_id, requester, requester_user_id, "
+            "target_game_id, save_name) VALUES(?,?,?,?,?)",
+            {game_id, player, user_id, target_game_id, m_name});
 
     // Get requester's username
-    auto username_row = db.query("SELECT username FROM users WHERE id=" +
-                                 std::to_string(user_id));
+    auto username_row = db.Query("SELECT username FROM users WHERE id=?",
+                                 {user_id});
     std::string username = username_row.empty() ? "Player" : username_row[0][0];
 
     // Notify the requester
@@ -254,9 +255,9 @@ bool AcceptCommand::invoke()
     DatabaseManager& db = DatabaseManager::instance();
 
     // Find pending request
-    auto pending = db.query("SELECT requester, target_game_id, save_name FROM "
-                            "load_requests WHERE game_id=" +
-                            std::to_string(game_id));
+    auto pending = db.Query("SELECT requester, target_game_id, save_name FROM "
+                            "load_requests WHERE game_id=?",
+                            {game_id});
 
     if (pending.empty())
     {
@@ -265,6 +266,7 @@ bool AcceptCommand::invoke()
     }
 
     std::string requester = pending[0][0];
+    fprintf(stderr, "stoi 9\n");
     int target_game_id = std::stoi(pending[0][1]);
     std::string save_name = pending[0][2];
 
@@ -289,59 +291,51 @@ bool AcceptCommand::invoke()
                             std::to_string(target_game_id));
 
     // Get round from target game
-    auto target_state = db.query("SELECT JSON_UNQUOTE(JSON_EXTRACT(state_json, "
-                                 "'$.round')) FROM games WHERE id=" +
-                                 std::to_string(target_game_id));
+    auto target_state = db.Query("SELECT JSON_UNQUOTE(JSON_EXTRACT(state_json, "
+                                 "'$.round')) FROM games WHERE id=?",
+                                 {target_game_id});
     std::string round = target_state.empty() ? "?" : target_state[0][0];
 
     // Get both user IDs from game_seats
-    auto seats = db.query("SELECT user_id FROM game_seats WHERE game_id=" +
-                          std::to_string(game_id));
+    auto seats = db.Query("SELECT user_id FROM game_seats WHERE game_id=?",
+                          {game_id});
 
     // Update both sessions to new game_id
     for (const auto& seat : seats)
     {
+        fprintf(stderr, "stoi 10\n");
         int uid = std::stoi(seat[0]);
-        db.exec(
-            "UPDATE sessions SET game_id=" + std::to_string(target_game_id) +
-            " WHERE user_id=" + std::to_string(uid));
+        db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
+                {target_game_id, uid});
     }
 
     // Clear the pending request
-    db.exec("DELETE FROM load_requests WHERE game_id=" +
-            std::to_string(game_id));
+    db.Exec("DELETE FROM load_requests WHERE game_id=?",
+            {game_id});
 
 
-    // Bug #10: Check for combat condition after load
-    // If any hex has ships from both players, force COMBAT phase
-    // auto conflict_rows = db.query(
-    //    "SELECT at_hex FROM ships WHERE game_id=" +
-    //    std::to_string(target_game_id) +
-    //    " AND destroyed_at IS NULL AND at_hex IS NOT NULL AND at_hex != '' "
-    //    "GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1 LIMIT 1");
-
-    auto conflict_rows = db.query(
+    auto conflict_rows = db.Query(
     "SELECT s.at_hex "
-    "FROM ships s "
-    "JOIN star_systems ss ON ss.hex_id = s.at_hex "
-    "WHERE s.game_id=" + std::to_string(target_game_id) +
+    " FROM ships s "
+    " JOIN star_systems ss ON ss.hex_id = s.at_hex "
+    " WHERE s.game_id=? "
     " AND s.destroyed_at IS NULL "
     " AND s.racked_in IS NULL "
     " AND s.at_hex IS NOT NULL AND s.at_hex <> '' "
-    " AND s.owner IN ('A','B') "          // ignore neutral
-    " AND ss.is_base = 1 "                // must be a base star-hex
-    "GROUP BY s.at_hex "
-    "HAVING COUNT(DISTINCT s.owner) = 2 " // both A and B present
-    "LIMIT 1");
+    " AND s.owner IN ('A','B') "
+    " AND ss.is_base = 1 "
+    " GROUP BY s.at_hex "
+    " HAVING COUNT(DISTINCT s.owner) = 2 "
+    " LIMIT 1",
+    {target_game_id});
 
     std::string extra_msg;
     if (!conflict_rows.empty())
     {
         // Force combat phase - update state_json
-        db.exec("UPDATE games SET state_json = JSON_SET(state_json, "
-                "'$.phase_index', 3) "
-                "WHERE id=" +
-                std::to_string(target_game_id));
+        db.Exec("UPDATE games SET state_json = JSON_SET(state_json, "
+                "'$.phase_index', 3) WHERE id=?",
+                {target_game_id});
         extra_msg = "\nALERT: Ships in conflict detected at " +
                     conflict_rows[0][0] + ". Entering combat phase.";
     }
@@ -366,9 +360,9 @@ bool RejectCommand::invoke()
     DatabaseManager& db = DatabaseManager::instance();
 
     // Find pending request
-    auto pending = db.query("SELECT requester, requester_user_id, save_name "
-                            "FROM load_requests WHERE game_id=" +
-                            std::to_string(game_id));
+    auto pending = db.Query("SELECT requester, requester_user_id, save_name "
+                            "FROM load_requests WHERE game_id=?",
+                            {game_id});
 
     if (pending.empty())
     {
@@ -377,6 +371,7 @@ bool RejectCommand::invoke()
     }
 
     std::string requester = pending[0][0];
+    fprintf(stderr, "stoi 11\n");
     int requester_user_id = std::stoi(pending[0][1]);
     std::string save_name = pending[0][2];
 
@@ -390,13 +385,13 @@ bool RejectCommand::invoke()
 
     // Get rejector's username
     int user_id = sm.get_current_user_id();
-    auto username_row = db.query("SELECT username FROM users WHERE id=" +
-                                 std::to_string(user_id));
+    auto username_row = db.Query("SELECT username FROM users WHERE id=?",
+                                 {user_id});
     std::string username = username_row.empty() ? "Player" : username_row[0][0];
 
     // Delete the request
-    db.exec("DELETE FROM load_requests WHERE game_id=" +
-            std::to_string(game_id));
+    db.Exec("DELETE FROM load_requests WHERE game_id=?",
+            {game_id});
 
     // Notify the rejector
     Telemetry::instance().write("REJECT: Load request for '" + save_name +

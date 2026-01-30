@@ -13,6 +13,7 @@
 #include "telemetry.h"
 #include "typedefs.h"
 #include "util.h"
+#include "autonomy_agency.h"
 
 void handle_state(const HttpRequest* req, HttpResponse* resp)
 {
@@ -37,6 +38,12 @@ void handle_state(const HttpRequest* req, HttpResponse* resp)
     // Telemetry::status() accesses StateMachine singleton and builds complete
     // JSON, including queued messages for this player
     Telemetry::instance().status(a.player, resp);
+
+    bool is_singlep = StateMachine::instance().is_singlep();
+    if (is_singlep) {
+       AutonomyAgency::instance().pump();
+    }
+
     return;
 }
 

@@ -31,11 +31,13 @@ void ScoreCommand::show_overview()
 
     // Get active player's username (whose turn it is)
     std::string active_username = "Unknown";
-    auto active_seat = db.query("SELECT u.username FROM users u "
-                                "JOIN game_seats gs ON gs.user_id = u.id "
-                                "WHERE gs.game_id=" +
-                                std::to_string(game_id) + " AND gs.seat='" +
-                                s.active_player + "'");
+    std::string q = 
+    "SELECT u.username FROM users u "
+    "JOIN game_seats gs ON gs.user_id = u.id "
+    "WHERE gs.game_id=? AND gs.seat=?";
+
+    auto active_seat = db.Query(q, {game_id, s.active_player});
+
     if (!active_seat.empty())
         active_username = active_seat[0][0];
 
@@ -47,10 +49,12 @@ void ScoreCommand::show_overview()
     int my_credits = (me == 'A') ? s.creditsA : s.creditsB;
 
     // Get tech level from ships (highest tech_level among player's ships)
-    auto tech_row = db.query(
-        "SELECT COALESCE(MAX(tech_level), 0) FROM ships WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-        "' AND destroyed_at IS NULL");
+    std::string qq =
+    "SELECT COALESCE(MAX(tech_level), 0) FROM ships WHERE game_id=? "
+    " AND owner=? AND destroyed_at IS NULL";
+
+    auto tech_row = db.Query(qq, {game_id, me});
+
     int tech_level = tech_row.empty() ? 0 : std::atoi(tech_row[0][0].c_str());
 
     std::ostringstream out;

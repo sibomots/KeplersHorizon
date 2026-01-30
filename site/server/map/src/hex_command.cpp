@@ -20,11 +20,10 @@ bool HexCommand::invoke(void)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Try to find system by hex_id or name
-    auto sys = db.query(
+    std::string q  =
         "SELECT name, hex_id, is_base, base_owner FROM star_systems "
-        "WHERE module_id=1 AND (hex_id='" +
-        db.esc(m_location) + "' OR UPPER(name)=UPPER('" + db.esc(m_location) +
-        "')) LIMIT 1");
+        " WHERE module_id=1 AND (hex_id=? OR UPPER(name)=UPPER(?)) LIMIT 1";
+    auto sys = db.Query(q, {m_location, m_location});
 
     std::ostringstream out;
     if (sys.empty())
@@ -56,12 +55,11 @@ bool HexCommand::invoke(void)
         out << "───────────────────────────────────────────\n";
 
         // Get ships at this hex
-        auto ships = db.query(
+        std::string q =
             "SELECT ship_code, ship_name, owner, ship_type FROM ships "
-            "WHERE game_id=" +
-            std::to_string(game_id) + " AND at_hex='" + db.esc(hexId) +
-            "' AND destroyed_at IS NULL "
-            "ORDER BY owner, ship_code");
+            " WHERE game_id=? AND at_hex=? AND destroyed_at IS NULL "
+            " ORDER BY owner, ship_code";
+        auto ships = db.Query(q, {game_id, hexId});
 
         if (ships.empty())
         {

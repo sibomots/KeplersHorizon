@@ -55,11 +55,11 @@ bool AIGameState::get_ai_base_hex(std::string& hex_out) const
     DatabaseManager& db = DatabaseManager::instance();
     
     // Query base_stars table for AI's claimed base
-    auto base_rows = db.query(
-        "SELECT hex_id FROM base_stars WHERE game_id=" + 
-        std::to_string(m_game_id) + " AND owner='" + 
-        std::string(1, m_ai_player) + "' LIMIT 1");
-    
+    std::string q =
+        "SELECT hex_id FROM base_stars WHERE game_id=? AND owner=? LIMIT 1";
+   
+    auto base_rows = db.Query(q, std::vector<SqlArg>{m_game_id, m_ai_player});
+ 
     if (!base_rows.empty())
     {
         hex_out = base_rows[0][0];
@@ -69,10 +69,10 @@ bool AIGameState::get_ai_base_hex(std::string& hex_out) const
     {
         // Fallback: Query star_systems for base_side matching AI's side
         // Need to get module_id first
-        auto module_rows = db.query(
-            "SELECT module_id FROM games WHERE id=" + 
-            std::to_string(m_game_id) + " LIMIT 1");
-        
+        std::string qq =
+            "SELECT module_id FROM games WHERE id=? LIMIT 1";
+        auto module_rows = db.Query( qq, std::vector<SqlArg>{m_game_id });
+ 
         if (!module_rows.empty())
         {
             int module_id = std::atoi(module_rows[0][0].c_str());
@@ -93,11 +93,12 @@ bool AIGameState::get_ai_base_hex(std::string& hex_out) const
             if (!ai_side.empty())
             {
                 // Query for base with matching base_side
-                auto sys_rows = db.query(
-                    "SELECT hex_id FROM star_systems WHERE module_id=" + 
-                    std::to_string(module_id) + " AND is_base=1 AND base_side='" + 
-                    db.esc(ai_side) + "' LIMIT 1");
-                
+                std::string qh = 
+                    "SELECT hex_id FROM star_systems WHERE module_id=?"
+                    " AND is_base=1 AND base_side=? LIMIT 1";
+               
+                auto sys_rows = db.Query(qh, {module_id, ai_side});
+ 
                 if (!sys_rows.empty())
                 {
                     hex_out = sys_rows[0][0];

@@ -74,10 +74,11 @@ bool DoneCommand::invoke(void)
 
     // Check for pending retreats
     DatabaseManager& db = DatabaseManager::instance();
-    auto retreat_pending = db.query(
-        "SELECT ship_code FROM ships WHERE game_id=" +
-        std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
-        "' AND escape_pending=1 AND destroyed_at IS NULL");
+    std::string qq = 
+        "SELECT ship_code FROM ships WHERE game_id=? AND owner=? "
+        " AND escape_pending=1 AND destroyed_at IS NULL";
+    auto retreat_pending = db.Query( qq, { s.game_id, me});
+
     if (!retreat_pending.empty())
     {
         std::ostringstream msg;
@@ -107,11 +108,13 @@ bool DoneCommand::invoke(void)
         // Look up opponent's username for the broadcast
         DatabaseManager& db = DatabaseManager::instance();
         std::string oppUser = s.active_player;
-        auto oppRow = db.query("SELECT u.username FROM users u "
-                               "JOIN game_seats gs ON gs.user_id = u.id "
-                               "WHERE gs.game_id=" +
-                               std::to_string(s.game_id) + " AND gs.seat='" +
-                               s.active_player + "'");
+
+        std::string qq = "SELECT u.username FROM users u "
+                               " JOIN game_seats gs ON gs.user_id = u.id "
+                               " WHERE gs.game_id=? AND gs.seat=?";
+
+        auto oppRow = db.Query(qq, {s.game_id, s.active_player});
+
         if (!oppRow.empty())
         {
             oppUser = oppRow[0][0];

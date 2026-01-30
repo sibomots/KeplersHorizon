@@ -26,9 +26,11 @@ bool GalaxyCommand::invoke(void)
     out << "---------------------------------------------------------\n";
 
     // Get all systems
-    auto systems = db.query(
+    std::string q = 
         "SELECT name, hex_id, is_base, base_owner FROM star_systems "
-        "WHERE module_id=1 ORDER BY name");
+        "WHERE module_id=1 ORDER BY name";
+
+    auto systems = db.Query(q, {});
 
     for (const auto& sys : systems)
     {
@@ -38,14 +40,12 @@ bool GalaxyCommand::invoke(void)
         std::string owner = sys[3];
 
         // Count ships at this hex
-        auto countA = db.query(
-            "SELECT COUNT(*) FROM ships WHERE game_id=" +
-            std::to_string(game_id) + " AND at_hex='" + db.esc(hex) +
-            "' AND owner='A' AND destroyed_at IS NULL");
-        auto countB = db.query(
-            "SELECT COUNT(*) FROM ships WHERE game_id=" +
-            std::to_string(game_id) + " AND at_hex='" + db.esc(hex) +
-            "' AND owner='B' AND destroyed_at IS NULL");
+        std::string q = 
+            "SELECT COUNT(*) FROM ships WHERE game_id=? "
+            " AND at_hex=? AND owner=? AND destroyed_at IS NULL";
+
+        auto countA = db.Query(q, { game_id, hex, 'A'});
+        auto countB = db.Query(q, { game_id, hex, 'B'});
 
         int shipsA = countA.empty() ? 0 : std::atoi(countA[0][0].c_str());
         int shipsB = countB.empty() ? 0 : std::atoi(countB[0][0].c_str());

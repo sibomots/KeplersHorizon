@@ -20,8 +20,8 @@ bool SurveyCommand::has_ship_in_system(const std::string& system)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Get the hex for this system
-    auto hex_rows = db.query("SELECT hex_id FROM star_systems WHERE name='" +
-                             db.esc(system) + "'");
+    auto hex_rows = db.Query("SELECT hex_id FROM star_systems WHERE name=?",
+                             {system});
     if (hex_rows.empty())
     {
         return false;
@@ -29,15 +29,15 @@ bool SurveyCommand::has_ship_in_system(const std::string& system)
     std::string hex = hex_rows[0][0];
 
     // Check for ships at this hex
-    auto ship_rows = db.query("SELECT COUNT(*) FROM ships WHERE game_id=" +
-                              std::to_string(s.game_id) + " AND owner='" +
-                              std::string(1, owner) + "' AND at_hex='" +
-                              db.esc(hex) + "' AND destroyed_at IS NULL");
+    auto ship_rows = db.Query("SELECT COUNT(*) FROM ships WHERE game_id=? "
+                              "AND owner=? AND at_hex=? AND destroyed_at IS NULL",
+                              {s.game_id, owner, hex});
 
     if (ship_rows.empty())
     {
         return false;
     }
+    fprintf(stderr, "stoi 3\n");
     return std::stoi(ship_rows[0][0]) > 0;
 }
 
@@ -66,12 +66,11 @@ bool SurveyCommand::invoke(void)
     if (target_system.empty())
     {
         // Find first system where player has a ship
-        auto loc_rows = db.query("SELECT DISTINCT ss.name FROM ships s "
+        auto loc_rows = db.Query("SELECT DISTINCT ss.name FROM ships s "
                                  "JOIN star_systems ss ON s.at_hex = ss.hex_id "
-                                 "WHERE s.game_id=" +
-                                 std::to_string(s.game_id) + " AND s.owner='" +
-                                 std::string(1, owner) +
-                                 "' AND s.destroyed_at IS NULL LIMIT 1");
+                                 "WHERE s.game_id=? AND s.owner=? "
+                                 "AND s.destroyed_at IS NULL LIMIT 1",
+                                 {s.game_id, owner});
 
         if (loc_rows.empty())
         {
@@ -84,8 +83,8 @@ bool SurveyCommand::invoke(void)
 
     // Validate system exists
     auto check =
-        db.query("SELECT name FROM star_systems WHERE UPPER(name)=UPPER('" +
-                 db.esc(target_system) + "')");
+        db.Query("SELECT name FROM star_systems WHERE UPPER(name)=UPPER(?)",
+                 {target_system});
     if (check.empty())
     {
         Telemetry::instance().write("SURVEY: Unknown system '" +
@@ -105,11 +104,9 @@ bool SurveyCommand::invoke(void)
     }
 
     // Get current knowledge level
-    auto know_rows = db.query("SELECT knowledge_level FROM codex_entries "
-                              "WHERE game_id=" +
-                              std::to_string(s.game_id) + " AND player='" +
-                              std::string(1, owner) + "' AND system_name='" +
-                              db.esc(target_system) + "'");
+    auto know_rows = db.Query("SELECT knowledge_level FROM codex_entries "
+                              "WHERE game_id=? AND player=? AND system_name=?",
+                              {s.game_id, owner, target_system});
 
     std::string current_level = "Unknown";
     if (!know_rows.empty())
@@ -129,22 +126,18 @@ bool SurveyCommand::invoke(void)
     }
 
     // Update or insert codex entry
-    std::string turn_str = std::to_string(s.round);
     if (know_rows.empty())
     {
-        db.exec("INSERT INTO codex_entries (game_id, player, system_name, "
-                "knowledge_level, last_updated_turn) VALUES (" +
-                std::to_string(s.game_id) + ", '" + std::string(1, owner) +
-                "', '" + db.esc(target_system) + "', '" + new_level + "', '" +
-                turn_str + "')");
+        db.Exec("INSERT INTO codex_entries (game_id, player, system_name, "
+                "knowledge_level, last_updated_turn) VALUES (?,?,?,?,?)",
+                {s.game_id, owner, target_system, new_level, s.round});
     }
     else
     {
-        db.exec("UPDATE codex_entries SET knowledge_level='" + new_level +
-                "', last_updated_turn='" + turn_str +
-                "' WHERE game_id=" + std::to_string(s.game_id) +
-                " AND player='" + std::string(1, owner) +
-                "' AND system_name='" + db.esc(target_system) + "'");
+        db.Exec("UPDATE codex_entries SET knowledge_level=?, "
+                "last_updated_turn=? WHERE game_id=? AND player=? "
+                "AND system_name=?",
+                {new_level, s.round, s.game_id, owner, target_system});
     }
 
     // Report success

@@ -26,6 +26,7 @@ void Configr::reset_defaults() noexcept {
   values_[idx(Key::dbusr)]   = std::string{};
   values_[idx(Key::dbpass)]  = std::string{};
   values_[idx(Key::port)]    = 0;
+  values_[idx(Key::ai)]       = std::string{};
   values_[idx(Key::monitor)] = false;
   values_[idx(Key::log)]     = std::string{};
 
@@ -72,6 +73,7 @@ template const std::string& Configr::get_impl<Key::dbhost>() const noexcept;
 template const std::string& Configr::get_impl<Key::dbname>() const noexcept;
 template const std::string& Configr::get_impl<Key::dbusr>() const noexcept;
 template const std::string& Configr::get_impl<Key::dbpass>() const noexcept;
+template const std::string& Configr::get_impl<Key::ai>() const noexcept;
 template const int&         Configr::get_impl<Key::port>() const noexcept;
 template const bool&        Configr::get_impl<Key::monitor>() const noexcept;
 template const std::string& Configr::get_impl<Key::log>() const noexcept;
@@ -112,6 +114,7 @@ bool Configr::parse(int argc, char** argv) noexcept {
     {"dbname",  required_argument, nullptr, 'd'},
     {"dbusr",   required_argument, nullptr, 'u'},
     {"dbpass",  required_argument, nullptr, 'p'},
+    {"ai",      required_argument, nullptr, 'A'},
     {"port",    required_argument, nullptr, 'P'},
     {"monitor", no_argument,       nullptr, 'M'},
     {"log",     required_argument, nullptr, 'L'},
@@ -139,6 +142,9 @@ bool Configr::parse(int argc, char** argv) noexcept {
         break;
       case 'u':
         set_user_value<Key::dbusr>(std::string(optarg ? optarg : ""));
+        break;
+      case 'A':
+        set_user_value<Key::ai>(std::string(optarg ? optarg : "dsl"));
         break;
       case 'p':
         set_user_value<Key::dbpass>(std::string(optarg ? optarg : ""));

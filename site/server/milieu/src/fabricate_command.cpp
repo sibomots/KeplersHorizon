@@ -145,11 +145,11 @@ bool FabricateCommand::do_fabricate()
     }
 
     // Check if player has ships at a facility
-    auto ships = db.query(
+    auto ships = db.Query(
         "SELECT s.ship_code, s.at_system FROM ships s "
-        "WHERE s.game_id=" +
-        std::to_string(game_id) + " AND s.owner='" + std::string(1, me) +
-        "' AND s.destroyed_at IS NULL AND s.at_hex IS NOT NULL LIMIT 1");
+        "WHERE s.game_id=? AND s.owner=? "
+        "AND s.destroyed_at IS NULL AND s.at_hex IS NOT NULL LIMIT 1",
+        {game_id, me});
 
     if (ships.empty())
     {
@@ -178,18 +178,19 @@ bool FabricateCommand::do_fabricate()
     }
 
     // Check if player has enough resources across all ships
-    std::ostringstream check_query;
-    check_query << "SELECT ";
+    std::string check_query;
+    check_query.append("SELECT ");
     for (int i = 0; i < 8; i++)
     {
-        if (i > 0)
-            check_query << ", ";
-        check_query << "COALESCE(SUM(" << CARGO_COLS[i] << "),0)";
+        if (i > 0) {
+            check_query.append(", ");
+        }
+        check_query.append("COALESCE(SUM(");
+        check_query.append(CARGO_COLS[i]);
+        check_query.append("),0)");
     }
-    check_query << " FROM ships WHERE game_id=" << game_id << " AND owner='"
-                << me << "' AND destroyed_at IS NULL";
-
-    auto cargo = db.query(check_query.str());
+    check_query.append(" FROM ships WHERE game_id=? AND owner=? AND destroyed_at IS NULL");
+    auto cargo = db.Query(check_query, {game_id, me});
 
     if (cargo.empty())
     {
@@ -219,11 +220,11 @@ bool FabricateCommand::do_fabricate()
             continue;
 
         int remaining = total_cost[res];
-        auto res_ships = db.query(
+        auto res_ships = db.Query(
             "SELECT ship_code, " + std::string(CARGO_COLS[res]) +
-            " FROM ships WHERE game_id=" + std::to_string(game_id) +
-            " AND owner='" + std::string(1, me) +
-            "' AND destroyed_at IS NULL AND " + CARGO_COLS[res] + ">0");
+            " FROM ships WHERE game_id=? AND owner=? "
+            "AND destroyed_at IS NULL AND " + CARGO_COLS[res] + ">0",
+            {game_id, me});
 
         for (const auto& rs : res_ships)
         {
@@ -233,11 +234,10 @@ bool FabricateCommand::do_fabricate()
             int take = std::min(remaining, has);
             remaining -= take;
 
-            db.exec("UPDATE ships SET " + std::string(CARGO_COLS[res]) + "=" +
-                    CARGO_COLS[res] + "-" + std::to_string(take) +
-                    " WHERE game_id=" + std::to_string(game_id) +
-                    " AND owner='" + std::string(1, me) + "' AND ship_code='" +
-                    db.esc(rs[0]) + "'");
+            db.Exec("UPDATE ships SET " + std::string(CARGO_COLS[res]) + "=" +
+                    CARGO_COLS[res] + "-? WHERE game_id=? AND owner=? "
+                    "AND ship_code=?",
+                    {take, game_id, me, rs[0]});
         }
     }
 
@@ -246,10 +246,9 @@ bool FabricateCommand::do_fabricate()
     if (std::string(recipe->output_type) == "missiles")
     {
         int total_missiles = recipe->output * m_quantity;
-        db.exec("UPDATE ships SET cargo_missiles=cargo_missiles+" +
-                std::to_string(total_missiles) + " WHERE game_id=" +
-                std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-                "' AND ship_code='" + db.esc(ship_code) + "'");
+        db.Exec("UPDATE ships SET cargo_missiles=cargo_missiles+? "
+                "WHERE game_id=? AND owner=? AND ship_code=?",
+                {total_missiles, game_id, me, ship_code});
         result_msg = "Fabricated " + std::to_string(total_missiles) +
                      " missiles, loaded to " + ship_code;
     }
@@ -257,12 +256,10 @@ bool FabricateCommand::do_fabricate()
     {
         // Queue for later (ship upgrades take time)
         int completion = s.round + recipe->time_rounds;
-        db.exec("INSERT INTO fabrication_queue(game_id,player,ship_code,recipe,"
-                "quantity,started_turn,completion_turn,status) VALUES(" +
-                std::to_string(game_id) + ",'" + std::string(1, me) + "','" +
-                db.esc(ship_code) + "','" + db.esc(m_recipe) + "'," +
-                std::to_string(m_quantity) + "," + std::to_string(s.round) +
-                "," + std::to_string(completion) + ",'IN_PROGRESS')");
+        db.Exec("INSERT INTO fabrication_queue(game_id,player,ship_code,recipe,"
+                "quantity,started_turn,completion_turn,status) VALUES("
+                "?,?,?,?,?,?,?,'IN_PROGRESS')",
+                {game_id, me, ship_code, m_recipe, m_quantity, s.round, completion});
         result_msg = "Queued " + m_recipe + " x" + std::to_string(m_quantity) +
                      ". Completes round " + std::to_string(completion);
     }

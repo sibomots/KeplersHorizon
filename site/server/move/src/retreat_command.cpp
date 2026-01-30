@@ -28,12 +28,11 @@ bool RetreatCommand::invoke(void)
     std::transform(ship_code.begin(), ship_code.end(), ship_code.begin(),
                    ::toupper);
 
-    // Get ship info
-    auto ship_rows = db.query(
-        "SELECT at_hex, escape_pending FROM ships WHERE game_id=" +
-        std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
-        "' AND ship_code='" + db.esc(ship_code) +
-        "' AND destroyed_at IS NULL");
+    std::string q = 
+     "SELECT at_hex, escape_pending FROM ships WHERE game_id=?"
+     " AND owner=? AND ship_code=? AND destroyed_at IS NULL";
+
+    auto ship_rows = db.Query(q, { s.game_id, owner, ship_code });
 
     if (ship_rows.empty())
     {
@@ -84,10 +83,12 @@ bool RetreatCommand::invoke(void)
         {
             // Get system name if any
             int mod = get_module_id_for_game(s.game_id);
-            auto sys_rows =
-                db.query("SELECT name FROM star_systems WHERE module_id=" +
-                         std::to_string(mod) + " AND hex_id='" + db.esc(adj) +
-                         "'");
+            std::string q =
+            "SELECT name FROM star_systems "
+            " WHERE module_id=? AND hex_id=?";
+
+            auto sys_rows = db.Query(q, { mod,  adj });
+
             if (!sys_rows.empty())
             {
                 out << "\n  " << sys_rows[0][0] << " (" << adj << ")";
@@ -102,16 +103,20 @@ bool RetreatCommand::invoke(void)
     }
 
     // Perform retreat - move ship to destination (no PD cost)
-    db.exec("UPDATE ships SET at_hex='" + db.esc(dest_hex) +
-            "', escape_pending=0 WHERE game_id=" + std::to_string(s.game_id) +
-            " AND ship_code='" + db.esc(ship_code) + "'");
+    std::string qq =
+    "UPDATE ships SET at_hex=?, escape_pending=0 "
+    " WHERE game_id=? AND ship_code=?";
 
+    db.Exec(qq, { dest_hex,s.game_id, ship_code});
 
     // Get destination system name for message
     int mod = get_module_id_for_game(s.game_id);
-    auto dest_sys = db.query("SELECT name FROM star_systems WHERE module_id=" +
-                             std::to_string(mod) + " AND hex_id='" +
-                             db.esc(dest_hex) + "'");
+ 
+    
+    std::string qqq = 
+    "SELECT name FROM star_systems WHERE module_id=? "
+    " AND hex_id=?";
+    auto dest_sys = db.Query(qqq, {mod, dest_hex});
 
     std::string dest_name = dest_hex;
     if (!dest_sys.empty())
@@ -140,30 +145,21 @@ bool RetreatCommand::invoke(void)
     Logger::instance().info(santest);
 
     // BUGBUG: Update the DB here.  JDWJDW
-    std::string clear_combats;
-    clear_combats.append("UPDATE combat_state AS cs "
-                         "JOIN ( "
-                         " SELECT DISTINCT game_id, at_hex "
-                         " FROM ships "
-                         " WHERE game_id =");
-    clear_combats.append(std::to_string(s.game_id));
-    clear_combats.append(" AND owner ='");
-    clear_combats += owner;
-    clear_combats.append("' ");
-    clear_combats.append(" AND at_hex='");
-    clear_combats.append(current_hex);
-    clear_combats.append("' ");
-    clear_combats.append(" AND escape_pending = 1 "
-                         " ) AS s "
-                         " ON s.game_id = cs.game_id "
-                         " AND s.at_hex = cs.hex_id "
-                         " SET cs.attacker_remains = 0 "
-                         " WHERE cs.attacker_remains = 1 "
-                         " AND cs.stalemate_counter > 2");
-    Logger::instance().info("Trying to clear combats:");
-    Logger::instance().info(clear_combats.c_str());
+    std::string qqqq = 
+    "UPDATE combat_state AS cs "
+     " JOIN ( "
+     " SELECT DISTINCT game_id, at_hex "
+     " FROM ships "
+     " WHERE game_id =?  AND owner =?  AND at_hex=? "
+     " AND escape_pending = 1 ) "
+     " AS s "
+     " ON s.game_id = cs.game_id "
+     " AND s.at_hex = cs.hex_id "
+     " SET cs.attacker_remains = 0 "
+     " WHERE cs.attacker_remains = 1 "
+     " AND cs.stalemate_counter > 2";
 
-    db.exec(clear_combats.c_str());
+    db.Exec(qqqq, {s.game_id, owner, current_hex });
 
     return true;
 }

@@ -77,8 +77,8 @@ bool HelpCommand::invoke(void)
         // Special case: "topics" lists all available topics
         if (m_topic.compare(topics_keyword) == 0)
         {
-            auto rows = db.query("SELECT DISTINCT topic_keyword FROM "
-                                 "help_lookup ORDER BY topic_keyword");
+            auto rows = db.Query("SELECT DISTINCT topic_keyword FROM "
+                                 "help_lookup ORDER BY topic_keyword", {});
 
             if (rows.empty())
             {
@@ -115,19 +115,19 @@ bool HelpCommand::invoke(void)
         }
 
         // Actually trying to find help on m_topic
-        auto rows =
-            db.query("SELECT t.topic_info FROM help_topics t "
+        std::string q =
+          "SELECT t.topic_info FROM help_topics t "
                      "JOIN help_lookup l ON l.help_topic_id = t.help_topic_id "
-                     "WHERE l.topic_keyword = '" +
-                     db.esc(m_topic) + "' LIMIT 1");
+                     " WHERE l.topic_keyword =? LIMIT 1";
+        auto rows = db.Query(q, {m_topic});
 
         if (rows.empty())
         {
             // Fallback to 'general' topic
-            rows = db.query(
+            rows = db.Query(
                 "SELECT t.topic_info FROM help_topics t "
                 "JOIN help_lookup l ON l.help_topic_id = t.help_topic_id "
-                "WHERE l.topic_keyword = 'general' LIMIT 1");
+                "WHERE l.topic_keyword = 'general' LIMIT 1", {});
         }
 
         if (!rows.empty() && !rows[0].empty())

@@ -275,6 +275,8 @@ class StateMachine
     StateMachine(StateMachine&&) = delete;
     StateMachine& operator=(StateMachine&&) = delete;
 
+    bool is_singlep(void) const;
+
     /**
      * @brief Check if a player is AI-controlled
      * @param player The player string ("A" or "B")

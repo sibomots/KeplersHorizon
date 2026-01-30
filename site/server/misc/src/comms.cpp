@@ -220,11 +220,10 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
         return a;
     }
 
-    std::string q = "SELECT s.user_id,u.username,COALESCE(s.game_id,0) FROM "
-                    "sessions s JOIN users u ON "
-                    "u.id=s.user_id WHERE s.token='" +
-                    db.esc(tok) + "'";
-    auto rows = db.query(q);
+    std::string q =
+        "SELECT s.user_id,u.username,COALESCE(s.game_id,0) FROM "
+        "sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?";
+    auto rows = db.Query(q, {tok});
     if (rows.empty())
     {
         resp->status = 401;
@@ -251,8 +250,7 @@ AuthContext require_auth(const HttpRequest* req, HttpResponse* resp)
     }
 
     // heartbeat
-    db.exec("UPDATE sessions SET last_seen=NOW() WHERE token='" + db.esc(tok) +
-            "'");
+    db.Exec("UPDATE sessions SET last_seen=NOW() WHERE token=?", {tok});
 
     return a;
 }

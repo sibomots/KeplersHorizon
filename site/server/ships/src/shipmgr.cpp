@@ -15,10 +15,11 @@
 bool ShipManager::ship_exists(int game_id, char owner, const std::string& code)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query(
-        "SELECT id FROM ships WHERE game_id=" + std::to_string(game_id) +
-        " AND owner='" + std::string(1, owner) + "' AND ship_code='" +
-        db.esc(code) + "' AND destroyed_at IS NULL LIMIT 1");
+    std::string q = 
+        "SELECT id FROM ships "
+        " WHERE game_id=? AND owner=? AND ship_code=? "
+        " AND destroyed_at IS NULL LIMIT 1";
+    auto rows = db.Query(q, { game_id, owner, code });
     return !rows.empty();
 }
 
@@ -26,25 +27,12 @@ bool ShipManager::ship_exists_by_code_or_name(int game_id, char owner,
                                               const std::string& code)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    std::string q;
-    q.append("SELECT id FROM ships "
-             "WHERE game_id=");
-    q.append(std::to_string(game_id));
-    q.append(" AND destroyed_at IS NULL ");
-    q.append(" AND owner='");
-    q.append(std::string(1, owner));
-    q.append("' ");
-    q.append("  AND  ( ");
-    q.append("   ship_code='");
-    q.append(db.esc(code));
-    q.append("' ");
-    q.append(" OR ");
-    q.append(" ship_name='");
-    q.append(db.esc(code));
-    q.append("') LIMIT 1");
+    std::string q =
+    "SELECT id FROM ships "
+    " WHERE game_id=? AND destroyed_at IS NULL "
+    " AND owner=? AND ( ship_code=? OR ship_name=? ) LIMIT 1";
 
-    auto rows = db.query(q.c_str());
-    // jdw db.dump(rows);
+    auto rows = db.Query(q, { game_id, owner, code, code });
     return (rows.size() != 0);
 }
 
@@ -55,13 +43,13 @@ bool ShipManager::load_drafts_by_owner(std::vector<DraftRow>& drafts,
     DatabaseManager& db = DatabaseManager::instance();
     std::vector<DraftRow> candidate_drafts;
 
-    auto rows = db.query(
+    std::string q = 
         "SELECT ship_code,ship_name,ship_type,pd,beam,screen,tube,missiles,sr "
         " FROM drafts "
         " WHERE "
-        " game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
-        "' " + " ORDER BY ship_code");
+        " game_id=? AND owner=? ORDER BY ship_code";
+
+    auto rows = db.Query(q, { game_id, owner });
 
     for (auto& r : rows)
     {
@@ -91,22 +79,17 @@ bool ShipManager::load_ship_draft_by_spec(DraftRow& row, int did, int game_id,
 {
     bool result = false;
     DatabaseManager& db = DatabaseManager::instance();
-    std::string qry(
-        "SELECT ship_code,ship_name,ship_type,pd,beam,screen,tube,missiles,sr "
-        "FROM drafts "
-        "WHERE game_id=");
-    qry.append(std::to_string(game_id));
-    qry.append(" AND id =");
-    qry.append(std::to_string(did));
-    qry.append(" AND owner='");
-    qry.append(std::string(1, owner));
-    qry.append("' AND ( ship_code='");
-    qry.append(db.esc(code));
-    qry.append("' OR ship_name ='");
-    qry.append(db.esc(code));
-    qry.append("') LIMIT 1");
 
-    auto rows = db.query(qry.c_str());
+    std::string q =
+    "SELECT ship_code,ship_name,ship_type,pd,beam,screen,tube,missiles,sr "
+    "FROM drafts "
+    "WHERE game_id=? "
+    " AND id =? "
+    " AND owner=? "
+    " AND ( ship_code=? OR ship_name=? )"
+    " LIMIT 1";
+
+    auto rows = db.Query(q, {game_id, did, owner, code, code});
 
     if (rows.empty())
     {
@@ -136,49 +119,36 @@ void ShipManager::insert_draft(int game_id, char owner, const DraftRow& d)
     std::string q =
         "INSERT INTO "
         "drafts(game_id,owner,ship_code,ship_name,ship_type,pd,beam,"
-        "screen,tube,missiles,sr) VALUES(" +
-        std::to_string(game_id) + ",'" + std::string(1, owner) + "','" +
-        db.esc(d.code) + "','" + db.esc(d.name) + "','" +
-        std::string(1, d.get_type()) + "'," + std::to_string(d.get_PD()) + "," +
-        std::to_string(d.get_B()) + "," + std::to_string(d.get_S()) + "," +
-        std::to_string(d.get_T()) + "," + std::to_string(d.get_M()) + "," +
-        std::to_string(d.get_SR()) + ")";
-    db.exec(q);
+        "screen,tube,missiles,sr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    db.Exec(q, { game_id, owner, d.code, d.name, d.get_type(), 
+                 d.get_PD(), d.get_B(), d.get_S(), d.get_T(), d.get_M(), d.get_SR()});
 }
 
 void ShipManager::update_draft_attrs(int did, int game_id, char owner,
                                      const std::string& code, const DraftRow& d)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    std::string q = "UPDATE drafts SET pd=" + std::to_string(d.get_PD()) +
-                    ",beam=" + std::to_string(d.get_B()) +
-                    ",screen=" + std::to_string(d.get_S()) +
-                    ",tube=" + std::to_string(d.get_T()) +
-                    ",missiles=" + std::to_string(d.get_M()) +
-                    ",sr=" + std::to_string(d.get_SR()) +
-                    " WHERE game_id=" + std::to_string(game_id) +
-                    " AND ID=" + std::to_string(did) + " AND owner='" +
-                    std::string(1, owner) + "' AND ( ship_code='" +
-                    db.esc(code) + "' OR " + " ship_name='" + db.esc(code) +
-                    "')";
-    db.exec(q);
+    std::string q = "UPDATE drafts SET pd=?, "
+                    "beam=?, "
+                    "screen=?, "
+                    "tube=?, "
+                    "missiles=?, "
+                    "sr=? "
+                    " WHERE game_id=? "
+                    " AND ID=? "
+                    " AND owner=? AND ( ship_code=? OR ship_name= ?)";
+    db.Exec(q,
+            { d.get_PD(), d.get_B(), d.get_S(), d.get_T(), d.get_M(), d.get_SR(),
+             game_id, did, owner, code, code}); 
 }
 
 void ShipManager::delete_draft(int did, int game_id, char owner,
                                const std::string& code)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    db.exec("DELETE FROM drafts "
-            " WHERE id =" +
-            std::to_string(did) + " AND game_id=" + std::to_string(game_id) +
-            " AND id=" + std::to_string(did) + " AND owner='" +
-            std::string(1, owner) +
-            "' "
-            " AND ( ship_code='" +
-            db.esc(code) +
-            "' "
-            "       OR ship_name='" +
-            db.esc(code) + "')");
+    std::string q = "DELETE FROM drafts WHERE id=? AND game_id=? AND id=? AND owner=? "
+                    " AND (ship_code=? OR ship_name=?)";
+    db.Exec(q, {did, game_id, did, owner, code, code});
 }
 
 ShipRow ShipManager::prepare_ship_row_from_row(std::vector<std::string> row)
@@ -208,25 +178,18 @@ bool ShipManager::load_ship_by_code_or_name(ShipRow& shiprow, int game_id,
 {
     bool result = false;
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query(
+    std::string q = 
         "SELECT "
         "ship_code,ship_name,ship_type,tech_level,built_turn,pd,"
         "beam,screen,tube,missiles,sr,at_system,at_hex,racked_in,pd_spent "
-        "FROM ships WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, owner) +
-        "' "
-        " AND "
-        " ( "
-        "    ship_code='" +
-        db.esc(code) +
-        "' "
-        "      OR "
-        "    ship_name='" +
-        db.esc(code) +
-        "' "
-        "  )  "
+        "FROM ships "
+        " WHERE game_id=? AND owner=? "
+        " AND ( ship_code=? OR ship_name=? ) "
         " AND destroyed_at IS NULL "
-        " LIMIT 1");
+        " LIMIT 1";
+
+    auto rows = db.Query( q, {game_id, owner, code, code });
+
     if (rows.empty())
     {
         result = false;
@@ -257,32 +220,33 @@ void ShipManager::insert_ship(int game_id, char owner, const ShipRow& ship)
         "INSERT INTO "
         "ships(game_id,owner,ship_code,ship_name,ship_type,tech_level,"
         "built_turn,"
-        "pd,pd_max,"             // Set both current and max
-        "beam,beam_max,"         // Set both current and max
-        "screen,screen_max,"     // Set both current and max
-        "tube,tube_max,"         // Set both current and max
-        "missiles,missiles_max," // Set both current and max
-        "sr,sr_max,"             // Set both current and max
+        "pd,pd_max,"
+        "beam,beam_max,"
+        "screen,screen_max,"
+        "tube,tube_max,"
+        "missiles,missiles_max,"
+        "sr,sr_max,"
         "at_system,at_hex,racked_in,pd_spent) "
-        "VALUES(" +
-        std::to_string(game_id) + ",'" + std::string(1, owner) + "','" +
-        db.esc(s.code) + "','" + db.esc(s.name) + "','" +
-        std::string(1, s.get_type()) + "'," + std::to_string(s.get_tech()) +
-        ",'" + db.esc(s.built_turn) + "'," +
-        // Set current and max values (same at build time)
-        std::to_string(pd) + "," + std::to_string(pd) + "," +
-        std::to_string(beam) + "," + std::to_string(beam) + "," +
-        std::to_string(screen) + "," + std::to_string(screen) + "," +
-        std::to_string(tube) + "," + std::to_string(tube) + "," +
-        std::to_string(missiles) + "," + std::to_string(missiles) + "," +
-        std::to_string(sr) + "," + std::to_string(sr) + "," +
-        (s.at_system.empty() ? "NULL" : ("'" + db.esc(s.at_system) + "'")) +
-        "," + (s.at_hex.empty() ? "NULL" : ("'" + db.esc(s.at_hex) + "'")) +
-        "," +
-        (s.racked_in.empty() ? "NULL" : ("'" + db.esc(s.racked_in) + "'")) +
-        "," + "0)";
+        "VALUES ( "
+        "  ? ,?, ?, ?, ?, ?, "
+        "  ?, "
+        "  ?, ?, "
+        "  ?, ?, "
+        "  ?, ?, "
+        "  ?, ?, "
+        "  ?, ?, "
+        "  ?, ?, "
+        "  ?, ?, ?, ? "
+        " )";
 
-    db.exec(q);
+    db.Exec(q,
+        { game_id, owner, s.code, s.name, s.get_type(), s.get_tech(),
+        s.built_turn, pd, pd, beam, beam, screen, screen,
+        tube, tube, missiles, missiles, sr, sr,
+        s.at_system,
+        s.at_hex,
+        s.racked_in, 0});
+
 }
 
 void ShipManager::update_ship_location(int game_id, char owner,
@@ -293,26 +257,12 @@ void ShipManager::update_ship_location(int game_id, char owner,
 {
     DatabaseManager& db = DatabaseManager::instance();
     std::string q =
-        "UPDATE ships SET at_system=" +
-        (at_system.empty() ? "NULL" : ("'" + db.esc(at_system) + "'")) +
-        ",at_hex=" + (at_hex.empty() ? "NULL" : ("'" + db.esc(at_hex) + "'")) +
-        ",racked_in=" +
-        (racked_in.empty() ? "NULL" : ("'" + db.esc(racked_in) + "'")) +
-        " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-        std::string(1, owner) +
-        "' "
-        " AND "
-        " ( "
-        "     ship_code='" +
-        db.esc(code) +
-        "' "
-        "       OR  "
-        "     ship_name='" +
-        db.esc(code) +
-        "' "
-        " ) ";
+        "UPDATE ships SET at_system=?, at_hex=?, racked_in=? "
+        " WHERE game_id=? AND owner=? "
+        " AND ( ship_code=? OR ship_name=? )";
+    db.Exec(q,
+        { at_system, at_hex, racked_in, game_id, owner, code, code});
 
-    db.exec(q);
 }
 
 bool ShipManager::is_ship_draft_valid(DraftRow& drow,

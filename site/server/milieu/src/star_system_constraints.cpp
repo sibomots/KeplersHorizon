@@ -22,9 +22,8 @@ std::string StarSystemConstraints::getSystemForHex(int game_id,
     DatabaseManager& db = DatabaseManager::instance();
     int mod = get_module_id_for_game(game_id);
 
-    auto rows =
-        db.query("SELECT name FROM star_systems WHERE module_id=" +
-                 std::to_string(mod) + " AND hex_id='" + db.esc(hex_id) + "'");
+    std::string q = "SELECT name FROM star_systems WHERE module_id=? AND hex_id=?";
+    auto rows = db.Query(q, {mod, hex_id });
 
     return rows.empty() ? "" : rows[0][0];
 }
@@ -40,11 +39,11 @@ int StarSystemConstraints::getConstraintModifier(int game_id,
 
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows =
-        db.query("SELECT modifier_type, modifier_value FROM system_constraints "
-                 "WHERE system_name='" +
-                 db.esc(system) + "' AND constraint_type='" +
-                 db.esc(constraint_type) + "'");
+    std::string q = 
+      "SELECT modifier_type, modifier_value FROM system_constraints "
+      "WHERE system_name=? AND constraint_type=?";
+
+    auto rows = db.Query(q, {system, constraint_type});
 
     int total = 0;
     for (const auto& row : rows)

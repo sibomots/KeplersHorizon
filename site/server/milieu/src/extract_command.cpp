@@ -43,10 +43,10 @@ void ExtractCommand::do_scan()
     DatabaseManager& db = DatabaseManager::instance();
 
     // Get all ships and their locations
-    auto ships = db.query(
-        "SELECT ship_code, at_system, at_hex FROM ships WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-        "' AND destroyed_at IS NULL AND at_hex IS NOT NULL");
+    auto ships = db.Query(
+        "SELECT ship_code, at_system, at_hex FROM ships WHERE game_id=? "
+        "AND owner=? AND destroyed_at IS NULL AND at_hex IS NOT NULL",
+        {game_id, me});
 
     if (ships.empty())
     {
@@ -69,23 +69,21 @@ void ExtractCommand::do_scan()
             continue;
 
         // Look up resources by system name via planets
-        auto resources = db.query(
+        auto resources = db.Query(
             "SELECT sr.resource_type, sr.abundance, sr.extraction_difficulty, "
             "sp.common_name "
             "FROM system_resources sr "
             "JOIN system_planets sp ON sr.location_type='Planet' AND "
             "sr.location_id=sp.id "
-            "WHERE sp.system_name='" +
-            db.esc(sys) +
-            "' "
+            "WHERE sp.system_name=? "
             "UNION "
             "SELECT sr.resource_type, sr.abundance, sr.extraction_difficulty, "
             "sb.designation "
             "FROM system_resources sr "
             "JOIN system_asteroid_belts sb ON sr.location_type='Belt' AND "
             "sr.location_id=sb.id "
-            "WHERE sb.system_name='" +
-            db.esc(sys) + "'");
+            "WHERE sb.system_name=?",
+            {sys, sys});
 
         if (resources.empty())
         {
@@ -138,27 +136,25 @@ bool ExtractCommand::do_extract()
     for (auto& c : res_upper)
         c = toupper(c);
 
-    auto res_check = db.query(
+    auto res_check = db.Query(
         "SELECT sr.id, sr.abundance, sr.extraction_difficulty, sp.common_name "
         "FROM system_resources sr "
         "JOIN system_planets sp ON sr.location_type='Planet' AND "
         "sr.location_id=sp.id "
-        "WHERE sp.system_name='" +
-        db.esc(ship.at_system) + "' AND sr.resource_type='" +
-        db.esc(res_upper) + "' LIMIT 1");
+        "WHERE sp.system_name=? AND sr.resource_type=? LIMIT 1",
+        {ship.at_system, res_upper});
 
     if (res_check.empty())
     {
         // Try asteroid belts
-        res_check = db.query(
+        res_check = db.Query(
             "SELECT sr.id, sr.abundance, sr.extraction_difficulty, "
             "sb.designation "
             "FROM system_resources sr "
             "JOIN system_asteroid_belts sb ON sr.location_type='Belt' AND "
             "sr.location_id=sb.id "
-            "WHERE sb.system_name='" +
-            db.esc(ship.at_system) + "' AND sr.resource_type='" +
-            db.esc(res_upper) + "' LIMIT 1");
+            "WHERE sb.system_name=? AND sr.resource_type=? LIMIT 1",
+            {ship.at_system, res_upper});
     }
 
     if (res_check.empty())
@@ -192,10 +188,10 @@ bool ExtractCommand::do_extract()
         modifier = 0.2;
 
     // Query knowledge level for yield modifier
-    auto knowledge = db.query(
-        "SELECT knowledge_level FROM codex_entries WHERE game_id=" +
-        std::to_string(game_id) + " AND player='" + std::string(1, me) +
-        "' AND system_name='" + db.esc(ship.at_system) + "'");
+    auto knowledge = db.Query(
+        "SELECT knowledge_level FROM codex_entries WHERE game_id=? "
+        "AND player=? AND system_name=?",
+        {game_id, me, ship.at_system});
 
     std::string know_level = knowledge.empty() ? "Unknown" : knowledge[0][0];
     double intel_mod = 1.0;
@@ -214,12 +210,11 @@ bool ExtractCommand::do_extract()
 
     // Check cargo capacity
     auto cargo =
-        db.query("SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
+        db.Query("SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
                  "cargo_crystalline+cargo_volatile+cargo_water+cargo_organic+"
                  "cargo_exotic+cargo_missiles, cargo_capacity FROM ships WHERE "
-                 "game_id=" +
-                 std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-                 "' AND ship_code='" + db.esc(m_ship_code) + "'");
+                 "game_id=? AND owner=? AND ship_code=?",
+                 {game_id, me, m_ship_code});
 
     int current_cargo = cargo.empty() ? 0 : std::atoi(cargo[0][0].c_str());
     int capacity = cargo.empty() ? 10 : std::atoi(cargo[0][1].c_str());
@@ -253,18 +248,17 @@ bool ExtractCommand::do_extract()
         col = "cargo_exotic";
 
     // Update cargo
-    db.exec(
-        "UPDATE ships SET " + col + "=" + col + "+" + std::to_string(yield) +
-        " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-        std::string(1, me) + "' AND ship_code='" + db.esc(m_ship_code) + "'");
+    db.Exec(
+        "UPDATE ships SET " + col + "=" + col + "+? "
+        "WHERE game_id=? AND owner=? AND ship_code=?",
+        {yield, game_id, me, m_ship_code});
 
     // Log extract operation
-    db.exec(
+    db.Exec(
         "INSERT INTO extract_operations(game_id,ship_code,owner,location_type,"
-        "location_id,resource_type,started_turn,completed,yield) VALUES(" +
-        std::to_string(game_id) + ",'" + db.esc(m_ship_code) + "','" +
-        std::string(1, me) + "','Planet',0,'" + db.esc(res_upper) + "'," +
-        std::to_string(s.round) + ",1," + std::to_string(yield) + ")");
+        "location_id,resource_type,started_turn,completed,yield) VALUES("
+        "?,?,?,'Planet',0,?,?,1,?)",
+        {game_id, m_ship_code, me, res_upper, s.round, yield});
 
     std::ostringstream msg;
     msg << "HARVEST: " << ship.name << " extracted " << yield << " units of "

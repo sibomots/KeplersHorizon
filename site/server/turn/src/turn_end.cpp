@@ -56,10 +56,10 @@ void TurnEndProcessor::update_market_prices(int game_id, int round)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Get all tracked resources
-    auto resources = db.query(
+    auto resources = db.Query(
         "SELECT resource_type, base_price, current_price, total_bought, "
-        "total_sold FROM market_prices WHERE game_id=" +
-        std::to_string(game_id));
+        "total_sold FROM market_prices WHERE game_id=?",
+        {game_id});
 
     srand(time(NULL) + game_id + round);
 
@@ -99,18 +99,15 @@ void TurnEndProcessor::update_market_prices(int game_id, int round)
             trend = "falling";
 
         // Record history before updating
-        db.exec(
+        db.Exec(
             "INSERT INTO market_history(game_id, resource_type, price, turn) "
-            "VALUES(" +
-            std::to_string(game_id) + ",'" + db.esc(res_type) + "'," +
-            std::to_string(current_price) + "," + std::to_string(round) + ")");
+            "VALUES(?,?,?,?)",
+            {game_id, res_type, current_price, round});
 
         // Update current price and reset counters
-        db.exec("UPDATE market_prices SET current_price=" +
-                std::to_string(new_price) + ", trend='" + trend +
-                "', total_bought=0, total_sold=0 WHERE game_id=" +
-                std::to_string(game_id) + " AND resource_type='" +
-                db.esc(res_type) + "'");
+        db.Exec("UPDATE market_prices SET current_price=?, trend=?, "
+                "total_bought=0, total_sold=0 WHERE game_id=? AND resource_type=?",
+                {new_price, trend, game_id, res_type});
 
         if (delta_percent != 0 || variance != 0)
         {
@@ -126,12 +123,11 @@ void TurnEndProcessor::regenerate_resources(int game_id, int round)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Regenerate resources that haven't been extracted this round
-    db.exec("UPDATE resource_state SET current_supply = "
+    db.Exec("UPDATE resource_state SET current_supply = "
             "LEAST(max_supply, current_supply + regen_rate) "
-            "WHERE game_id=" +
-            std::to_string(game_id) +
-            " AND (last_extracted_turn IS NULL OR last_extracted_turn < " +
-            std::to_string(round) + ")");
+            "WHERE game_id=? "
+            "AND (last_extracted_turn IS NULL OR last_extracted_turn < ?)",
+            {game_id, round});
 
     Logger::instance().info("[RESOURCES] Regeneration applied for game " +
                             std::to_string(game_id));
@@ -150,8 +146,8 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
         if (income > 0)
         {
             // Get current credits from game state
-            auto state_row = db.query("SELECT state_json FROM games WHERE id=" +
-                                      std::to_string(game_id));
+            auto state_row = db.Query("SELECT state_json FROM games WHERE id=?",
+                                      {game_id});
 
             if (!state_row.empty())
             {
@@ -185,8 +181,8 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
                     std::string new_json = json.substr(0, credits_pos) +
                                            new_credits + json.substr(b_end + 1);
 
-                    db.exec("UPDATE games SET state_json='" + db.esc(new_json) +
-                            "' WHERE id=" + std::to_string(game_id));
+                    db.Exec("UPDATE games SET state_json=? WHERE id=?",
+                            {new_json, game_id});
 
                     Logger::instance().info(
                         "[INCOME] Player " + std::string(1, player) +
@@ -209,11 +205,10 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Find all jobs that are IN_PROGRESS and complete this round
-    auto jobs = db.query(
+    auto jobs = db.Query(
         "SELECT id, player, ship_code, recipe, quantity FROM fabrication_queue "
-        "WHERE game_id=" +
-        std::to_string(game_id) +
-        " AND status='IN_PROGRESS' AND completion_turn<=" + std::to_string(round));
+        "WHERE game_id=? AND status='IN_PROGRESS' AND completion_turn<=?",
+        {game_id, round});
 
     for (const auto& job : jobs)
     {
@@ -261,9 +256,8 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
         // Apply to ship
         if (!ship_code.empty())
         {
-            update_sql += " WHERE game_id=" + std::to_string(game_id) +
-                          " AND ship_code='" + db.esc(ship_code) + "'";
-            db.exec(update_sql);
+            update_sql += " WHERE game_id=? AND ship_code=?";
+            db.Exec(update_sql, {game_id, ship_code});
 
             // Notify player
             Telemetry::instance().add_tell(
@@ -272,8 +266,8 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
         }
 
         // Mark job complete
-        db.exec("UPDATE fabrication_queue SET status='COMPLETED' WHERE id=" +
-                std::to_string(job_id));
+        db.Exec("UPDATE fabrication_queue SET status='COMPLETED' WHERE id=?",
+                {job_id});
 
         Logger::instance().info("[FABRICATION] Job " + std::to_string(job_id) +
                                 " completed for player " + std::string(1, player));
@@ -285,8 +279,8 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Check if game already has a winner
-    auto game_rows = db.query("SELECT vp_A, vp_B, winner FROM games WHERE id=" +
-                              std::to_string(game_id));
+    auto game_rows = db.Query("SELECT vp_A, vp_B, winner FROM games WHERE id=?",
+                              {game_id});
     if (game_rows.empty())
         return;
 
@@ -299,9 +293,9 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
 
     // Check for enemy base star control
     // Get base stars from base_stars table
-    auto base_stars = db.query(
-        "SELECT hex_id, owner FROM base_stars WHERE game_id=" +
-        std::to_string(game_id));
+    auto base_stars = db.Query(
+        "SELECT hex_id, owner FROM base_stars WHERE game_id=?",
+        {game_id});
 
     for (const auto& bs : base_stars)
     {
@@ -310,24 +304,24 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
         char enemy = (base_owner == 'A') ? 'B' : 'A';
 
         // Check if enemy has ships at this base star
-        auto ships = db.query(
-            "SELECT 1 FROM ships WHERE game_id=" + std::to_string(game_id) +
-            " AND at_hex='" + db.esc(hex_id) + "' AND owner='" +
-            std::string(1, enemy) + "' AND destroyed_at IS NULL LIMIT 1");
+        auto ships = db.Query(
+            "SELECT 1 FROM ships WHERE game_id=? AND at_hex=? AND owner=? "
+            "AND destroyed_at IS NULL LIMIT 1",
+            {game_id, hex_id, enemy});
 
         // Check if owner has NO ships at their base star
-        auto owner_ships = db.query(
-            "SELECT 1 FROM ships WHERE game_id=" + std::to_string(game_id) +
-            " AND at_hex='" + db.esc(hex_id) + "' AND owner='" +
-            std::string(1, base_owner) + "' AND destroyed_at IS NULL LIMIT 1");
+        auto owner_ships = db.Query(
+            "SELECT 1 FROM ships WHERE game_id=? AND at_hex=? AND owner=? "
+            "AND destroyed_at IS NULL LIMIT 1",
+            {game_id, hex_id, base_owner});
 
         // Enemy controls if they have ships AND owner has none
         if (!ships.empty() && owner_ships.empty())
         {
             // Award +2 VP for controlling enemy base star
             std::string vp_col = (enemy == 'A') ? "vp_A" : "vp_B";
-            db.exec("UPDATE games SET " + vp_col + "=" + vp_col +
-                    "+2 WHERE id=" + std::to_string(game_id));
+            db.Exec("UPDATE games SET " + vp_col + "=" + vp_col +
+                    "+2 WHERE id=?", {game_id});
 
             // Update local count
             if (enemy == 'A')
@@ -347,8 +341,7 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
     // Check for win condition (3 VP)
     if (vp_A >= 3)
     {
-        db.exec("UPDATE games SET winner='A' WHERE id=" +
-                std::to_string(game_id));
+        db.Exec("UPDATE games SET winner='A' WHERE id=?", {game_id});
         Telemetry::instance().add_tell(game_id, 'A',
                                           "*** VICTORY! You have won the game! ***");
         Telemetry::instance().add_tell(game_id, 'B',
@@ -358,8 +351,7 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
     }
     else if (vp_B >= 3)
     {
-        db.exec("UPDATE games SET winner='B' WHERE id=" +
-                std::to_string(game_id));
+        db.Exec("UPDATE games SET winner='B' WHERE id=?", {game_id});
         Telemetry::instance().add_tell(game_id, 'B',
                                           "*** VICTORY! You have won the game! ***");
         Telemetry::instance().add_tell(game_id, 'A',

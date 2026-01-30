@@ -437,16 +437,14 @@ bool BuildAgent::get_draft_by_spec(int& did, int gid, char owner,
 {
     bool result = false;
     DatabaseManager& db = DatabaseManager::instance();
-    std::string qry = "SELECT DISTINCT "
-                      "d.id, d.game_id, d.owner, d.ship_code, d.ship_name, "
-                      "d.ship_type "
-                      " FROM drafts d "
-                      " WHERE d.owner = '" +
-                      std::string(1, owner) +
-                      "'  AND d.game_id = " + std::to_string(gid) +
-                      " AND ( d.ship_code = '" + db.esc(target) +
-                      "' OR d.ship_name = '" + db.esc(target) + "')";
-    auto rows = db.query(qry.c_str());
+    std::string q =
+    "SELECT DISTINCT "
+    "d.id, d.game_id, d.owner, d.ship_code, d.ship_name, d.ship_type "
+    " FROM drafts d "
+    " WHERE d.owner =? AND d.game_id=? AND ( d.ship_code=? OR d.ship_name=? ) ";
+
+    auto rows = db.Query(q, {owner, gid, target, target });
+
     size_t sz = rows.size();
     if (sz == 0)
     {
@@ -472,16 +470,16 @@ bool BuildAgent::apply(BuildFleetListParam& param)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Join with star_systems table to get star names for at_hex
-    auto rows = db.query(
-        "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
-        "s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, "
-        "ss.name "
-        "FROM ships s "
-        "LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = "
-        "1 "
-        "WHERE s.game_id=" +
-        std::to_string(gid) + " AND s.owner='" + std::string(1, owner) +
-        "' AND s.destroyed_at IS NULL ORDER BY s.ship_code");
+    std::string q = 
+    "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
+    " s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, "
+    " ss.name "
+    " FROM ships s "
+    " LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = "
+    " 1 "
+    " WHERE s.game_id=? AND s.owner=? AND s.destroyed_at IS NULL ORDER BY s.ship_code";
+
+    auto rows = db.Query(q, {gid, owner});
 
     if (rows.empty())
     {

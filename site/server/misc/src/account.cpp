@@ -30,11 +30,8 @@ void handle_login(const HttpRequest* req, HttpResponse* resp)
         return;
     }
 
-    auto rows = DatabaseManager::instance().query(
-        "SELECT id,password_plain "
-        "FROM users "
-        "WHERE username='" +
-        DatabaseManager::instance().esc(u) + "' LIMIT 1");
+    auto rows = DatabaseManager::instance().Query(
+        "SELECT id,password_plain FROM users WHERE username=? LIMIT 1", {u});
     if (rows.empty() || rows[0][1] != p)
     {
         resp->status = 401;
@@ -45,10 +42,8 @@ void handle_login(const HttpRequest* req, HttpResponse* resp)
 
     std::string token = rand_hex_64();
 
-    DatabaseManager::instance().exec(
-        "INSERT INTO sessions(token,user_id) VALUES('" +
-        DatabaseManager::instance().esc(token) + "'," +
-        std::to_string(user_id) + ")");
+    DatabaseManager::instance().Exec(
+        "INSERT INTO sessions(token,user_id) VALUES(?,?)", {token, user_id});
 
     resp->body = std::string("{\"ok\":true,\"token\":\"") + token +
                  "\",\"username\":\"" + json_escape(u) + "\"" +
@@ -71,9 +66,8 @@ void handle_logout(const HttpRequest* req, HttpResponse* resp)
 
     if (!tok.empty())
     {
-        DatabaseManager::instance().exec(
-            "DELETE FROM sessions WHERE token='" +
-            DatabaseManager::instance().esc(tok) + "'");
+        DatabaseManager::instance().Exec(
+            "DELETE FROM sessions WHERE token=?", {tok});
     }
     resp->body = "{\"ok\":true}";
     return;
@@ -127,8 +121,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Check if username already exists
-    auto existing = db.query("SELECT id FROM users WHERE username='" +
-                             db.esc(username) + "'");
+    auto existing = db.Query("SELECT id FROM users WHERE username=?", {username});
     if (!existing.empty())
     {
         resp->status = 409;
@@ -139,8 +132,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
     // Check if email already exists (if provided)
     if (!email.empty())
     {
-        auto email_check = db.query("SELECT id FROM users WHERE email='" +
-                                    db.esc(email) + "'");
+        auto email_check = db.Query("SELECT id FROM users WHERE email=?", {email});
         if (!email_check.empty())
         {
             resp->status = 409;
@@ -150,30 +142,31 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
     }
 
     // Insert new user (using password_plain for now, bcrypt to be added)
-    std::string sql = "INSERT INTO users(username, password_plain";
     if (!email.empty())
-        sql += ", email";
-    sql += ") VALUES('" + db.esc(username) + "','" + db.esc(password) + "'";
-    if (!email.empty())
-        sql += ",'" + db.esc(email) + "'";
-    sql += ")";
-
-    db.exec(sql);
+    {
+        db.Exec("INSERT INTO users(username, password_plain, email) VALUES(?,?,?)",
+                {username, password, email});
+    }
+    else
+    {
+        db.Exec("INSERT INTO users(username, password_plain) VALUES(?,?)",
+                {username, password});
+    }
 
     // Get the new user's ID
-    auto id_rows = db.query("SELECT LAST_INSERT_ID()");
+    auto id_rows = db.Query("SELECT LAST_INSERT_ID()", {});
     if (id_rows.empty())
     {
         resp->status = 500;
         resp->body = json_error("failed to create account");
         return;
     }
+    fprintf(stderr, "stoi 1\n");
     int user_id = std::stoi(id_rows[0][0]);
 
     // Auto-login: create session
     std::string token = rand_hex_64();
-    db.exec("INSERT INTO sessions(token, user_id) VALUES('" + db.esc(token) +
-            "'," + std::to_string(user_id) + ")");
+    db.Exec("INSERT INTO sessions(token, user_id) VALUES(?,?)", {token, user_id});
 
     resp->body = "{\"ok\":true,\"token\":\"" + token + "\",\"username\":\"" +
                  json_escape(username) +

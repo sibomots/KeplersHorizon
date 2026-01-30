@@ -21,14 +21,14 @@ bool CargoCommand::invoke(void)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Query ship with cargo info
-    auto rows = db.query(
+    std::string q =
         "SELECT ship_name, pd, sr, "
-        "cargo_ferrous, cargo_rare_earth, cargo_radioactive, cargo_crystalline, "
-        "cargo_volatile, cargo_water, cargo_organic, cargo_exotic, cargo_missiles "
-        "FROM ships WHERE game_id=" +
-        std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
-        "' AND ship_code='" + db.esc(m_ship_code) +
-        "' AND destroyed_at IS NULL");
+        " cargo_ferrous, cargo_rare_earth, cargo_radioactive, cargo_crystalline, "
+        " cargo_volatile, cargo_water, cargo_organic, cargo_exotic, cargo_missiles "
+        " FROM ships WHERE game_id=?  AND owner=? "
+        " AND ( ship_code=? OR ship_name=?) AND destroyed_at IS NULL";
+
+    auto rows = db.Query(q, {s.game_id, owner, m_ship_code, m_ship_code });
 
     if (rows.empty())
     {

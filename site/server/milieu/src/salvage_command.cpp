@@ -47,10 +47,10 @@ void SalvageCommand::do_scan()
 
     // Get player's ship locations
     auto ships =
-        db.query("SELECT DISTINCT at_system FROM ships WHERE game_id=" +
-                 std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-                 "' AND at_system IS NOT NULL AND at_system != '' AND "
-                 "destroyed_at IS NULL");
+        db.Query("SELECT DISTINCT at_system FROM ships WHERE game_id=? "
+                 "AND owner=? AND at_system IS NOT NULL AND at_system != '' AND "
+                 "destroyed_at IS NULL",
+                 {game_id, me});
 
     if (ships.empty())
     {
@@ -70,10 +70,10 @@ void SalvageCommand::do_scan()
         std::string sys = loc[0];
 
         // Query salvageables in this system
-        auto salvs = db.query(
+        auto salvs = db.Query(
             "SELECT id, name, description, discovery_chance FROM salvageables "
-            "WHERE system_name='" +
-            db.esc(sys) + "'");
+            "WHERE system_name=?",
+            {sys});
 
         if (salvs.empty())
             continue;
@@ -88,11 +88,10 @@ void SalvageCommand::do_scan()
             int disc_chance = std::atoi(salv[3].c_str());
 
             // Check if already discovered
-            auto disc = db.query(
+            auto disc = db.Query(
                 "SELECT discovered_by, depleted FROM discovered_salvageables "
-                "WHERE game_id=" +
-                std::to_string(game_id) +
-                " AND salvageable_id=" + std::to_string(salv_id));
+                "WHERE game_id=? AND salvageable_id=?",
+                {game_id, salv_id});
 
             if (!disc.empty())
             {
@@ -107,10 +106,10 @@ void SalvageCommand::do_scan()
             else
             {
                 // Query knowledge level for discovery modifier
-                auto knowledge = db.query(
-                    "SELECT knowledge_level FROM codex_entries WHERE game_id=" +
-                    std::to_string(game_id) + " AND player='" + std::string(1, me) +
-                    "' AND system_name='" + db.esc(sys) + "'");
+                auto knowledge = db.Query(
+                    "SELECT knowledge_level FROM codex_entries WHERE game_id=? "
+                    "AND player=? AND system_name=?",
+                    {game_id, me, sys});
 
                 std::string know_level = knowledge.empty() ? "Unknown" : knowledge[0][0];
                 double intel_mult = 0.5; // Unknown = half chance
@@ -128,13 +127,10 @@ void SalvageCommand::do_scan()
                 if (roll < effective_chance)
                 {
                     // Discovered!
-                    db.exec("INSERT INTO "
+                    db.Exec("INSERT INTO "
                             "discovered_salvageables(game_id,salvageable_id,"
-                            "discovered_by,discovered_turn) VALUES(" +
-                            std::to_string(game_id) + "," +
-                            std::to_string(salv_id) + ",'" +
-                            std::string(1, me) + "'," +
-                            std::to_string(s.round) + ")");
+                            "discovered_by,discovered_turn) VALUES(?,?,?,?)",
+                            {game_id, salv_id, me, s.round});
 
                     out << "  [NEW!] " << name << "\n";
                     out << "         \"" << desc << "\"\n";
@@ -191,14 +187,11 @@ bool SalvageCommand::do_salvage()
     // If no target, list available
     if (m_target_name.empty())
     {
-        auto avail = db.query(
+        auto avail = db.Query(
             "SELECT s.name, ds.depleted FROM salvageables s "
             "JOIN discovered_salvageables ds ON s.id=ds.salvageable_id "
-            "WHERE s.system_name='" +
-            db.esc(ship.at_system) +
-            "' "
-            "AND ds.game_id=" +
-            std::to_string(game_id) + " AND ds.depleted=0");
+            "WHERE s.system_name=? AND ds.game_id=? AND ds.depleted=0",
+            {ship.at_system, game_id});
 
         if (avail.empty())
         {
@@ -221,18 +214,14 @@ bool SalvageCommand::do_salvage()
 
     // Find target salvageable
     auto target =
-        db.query("SELECT s.id, s.name, s.hazard_chance, s.hazard_damage_min, "
+        db.Query("SELECT s.id, s.name, s.hazard_chance, s.hazard_damage_min, "
                  "s.hazard_damage_max, s.max_salvages, ds.times_salvaged "
                  "FROM salvageables s "
                  "JOIN discovered_salvageables ds ON s.id=ds.salvageable_id "
-                 "WHERE s.system_name='" +
-                 db.esc(ship.at_system) +
-                 "' "
-                 "AND UPPER(s.name) LIKE UPPER('%" +
-                 db.esc(m_target_name) +
-                 "%') "
-                 "AND ds.game_id=" +
-                 std::to_string(game_id) + " AND ds.depleted=0 LIMIT 1");
+                 "WHERE s.system_name=? "
+                 "AND UPPER(s.name) LIKE UPPER(CONCAT('%',?,'%')) "
+                 "AND ds.game_id=? AND ds.depleted=0 LIMIT 1",
+                 {ship.at_system, m_target_name, game_id});
 
     if (target.empty())
     {
@@ -252,10 +241,9 @@ bool SalvageCommand::do_salvage()
     int times_salvaged = std::atoi(target[0][6].c_str());
 
     // Check ship has drones
-    auto dr_check = db.query(
-        "SELECT dr FROM ships WHERE game_id=" + std::to_string(game_id) +
-        " AND owner='" + std::string(1, me) + "' AND ship_code='" +
-        db.esc(m_ship_code) + "'");
+    auto dr_check = db.Query(
+        "SELECT dr FROM ships WHERE game_id=? AND owner=? AND ship_code=?",
+        {game_id, me, m_ship_code});
 
     int drones = dr_check.empty() ? 0 : std::atoi(dr_check[0][0].c_str());
     if (drones < 1)
@@ -270,10 +258,10 @@ bool SalvageCommand::do_salvage()
     std::ostringstream result;
 
     // Query knowledge level for hazard modifier
-    auto knowledge = db.query(
-        "SELECT knowledge_level FROM codex_entries WHERE game_id=" +
-        std::to_string(game_id) + " AND player='" + std::string(1, me) +
-        "' AND system_name='" + db.esc(ship.at_system) + "'");
+    auto knowledge = db.Query(
+        "SELECT knowledge_level FROM codex_entries WHERE game_id=? "
+        "AND player=? AND system_name=?",
+        {game_id, me, ship.at_system});
 
     std::string know_level = knowledge.empty() ? "Unknown" : knowledge[0][0];
     int hazard_mod = 20; // Unknown = +20% more dangerous
@@ -300,28 +288,26 @@ bool SalvageCommand::do_salvage()
         if (new_pd < 0)
             new_pd = 0;
 
-        db.exec("UPDATE ships SET pd=" + std::to_string(new_pd) +
-                " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-                std::string(1, me) + "' AND ship_code='" + db.esc(m_ship_code) +
-                "'");
+        db.Exec("UPDATE ships SET pd=? WHERE game_id=? AND owner=? "
+                "AND ship_code=?",
+                {new_pd, game_id, me, m_ship_code});
 
         if (new_pd == 0)
         {
             result << "Ship destroyed!";
-            db.exec("UPDATE ships SET destroyed_at=NOW() WHERE game_id=" +
-                    std::to_string(game_id) + " AND owner='" +
-                    std::string(1, me) + "' AND ship_code='" +
-                    db.esc(m_ship_code) + "'");
+            db.Exec("UPDATE ships SET destroyed_at=NOW() WHERE game_id=? "
+                    "AND owner=? AND ship_code=?",
+                    {game_id, me, m_ship_code});
             Telemetry::instance().write(result.str());
             return true;
         }
     }
 
     // Process drops
-    auto drops = db.query(
+    auto drops = db.Query(
         "SELECT item_type, item_name, drop_chance, quantity_min, quantity_max "
-        "FROM salvageable_drops WHERE salvageable_id=" +
-        std::to_string(salv_id));
+        "FROM salvageable_drops WHERE salvageable_id=?",
+        {salv_id});
 
     bool got_something = false;
     for (const auto& drop : drops)
@@ -363,30 +349,26 @@ bool SalvageCommand::do_salvage()
             else if (item_name == "EXOTIC")
                 col = "cargo_exotic";
 
-            db.exec("UPDATE ships SET " + col + "=" + col + "+" +
-                    std::to_string(qty) +
-                    " WHERE game_id=" + std::to_string(game_id) +
-                    " AND owner='" + std::string(1, me) + "' AND ship_code='" +
-                    db.esc(m_ship_code) + "'");
+            db.Exec("UPDATE ships SET " + col + "=" + col + "+? "
+                    "WHERE game_id=? AND owner=? AND ship_code=?",
+                    {qty, game_id, me, m_ship_code});
 
             result << "  Recovered " << qty << " " << item_name << "\n";
         }
         else if (item_type == "missiles")
         {
-            db.exec("UPDATE ships SET missiles=missiles+" +
-                    std::to_string(qty) +
-                    " WHERE game_id=" + std::to_string(game_id) +
-                    " AND owner='" + std::string(1, me) + "' AND ship_code='" +
-                    db.esc(m_ship_code) + "'");
+            db.Exec("UPDATE ships SET missiles=missiles+? "
+                    "WHERE game_id=? AND owner=? AND ship_code=?",
+                    {qty, game_id, me, m_ship_code});
 
             result << "  Recovered " << qty << " missiles\n";
         }
         else if (item_type == "credits")
         {
             std::string cred_col = (me == 'A') ? "credits_A" : "credits_B";
-            db.exec("UPDATE games SET " + cred_col + "=" + cred_col + "+" +
-                    std::to_string(qty) +
-                    " WHERE id=" + std::to_string(game_id));
+            db.Exec("UPDATE games SET " + cred_col + "=" + cred_col + "+? "
+                    "WHERE id=?",
+                    {qty, game_id});
 
             result << "  Found " << qty << " CR in valuables\n";
         }
@@ -405,27 +387,25 @@ bool SalvageCommand::do_salvage()
     }
 
     // Update salvage count and check depletion
-    db.exec(
+    db.Exec(
         "UPDATE discovered_salvageables SET times_salvaged=times_salvaged+1 "
-        "WHERE game_id=" +
-        std::to_string(game_id) +
-        " AND salvageable_id=" + std::to_string(salv_id));
+        "WHERE game_id=? AND salvageable_id=?",
+        {game_id, salv_id});
 
     if (max_salvages > 0 && times_salvaged + 1 >= max_salvages)
     {
-        db.exec("UPDATE discovered_salvageables SET depleted=1 "
-                "WHERE game_id=" +
-                std::to_string(game_id) +
-                " AND salvageable_id=" + std::to_string(salv_id));
+        db.Exec("UPDATE discovered_salvageables SET depleted=1 "
+                "WHERE game_id=? AND salvageable_id=?",
+                {game_id, salv_id});
         result << salv_name << " is now depleted.\n";
     }
 
     // Log operation
-    db.exec("INSERT INTO salvage_operations(game_id,system_name,ship_code,turn,"
-            "resources_found,hazard_encountered) VALUES(" +
-            std::to_string(game_id) + ",'" + db.esc(ship.at_system) + "','" +
-            db.esc(m_ship_code) + "'," + std::to_string(s.round) +
-            ",'{}',FALSE)");
+
+    // BUGBUG the empty string for resources
+    db.Exec("INSERT INTO salvage_operations(game_id,system_name,ship_code,turn,"
+            "resources_found,hazard_encountered) VALUES(?,?,?,?,'{}',FALSE)",
+            {game_id, ship.at_system, m_ship_code, s.round});
 
     Logger::instance().info(result.str());
     Telemetry::instance().write(result.str());

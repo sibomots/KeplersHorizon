@@ -33,9 +33,9 @@ static const int NUM_PRICES = sizeof(PRICES) / sizeof(PRICES[0]);
 static int get_market_price(int game_id, const std::string& res)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto mp = db.query(
-        "SELECT current_price FROM market_prices WHERE game_id=" +
-        std::to_string(game_id) + " AND resource_type='" + db.esc(res) + "'");
+    auto mp = db.Query(
+        "SELECT current_price FROM market_prices WHERE game_id=? "
+        "AND resource_type=?", {game_id, res});
 
     if (!mp.empty())
     {
@@ -58,9 +58,8 @@ static void track_trade(int game_id, const std::string& res, int qty,
     DatabaseManager& db = DatabaseManager::instance();
     std::string col = is_buy ? "total_bought" : "total_sold";
 
-    db.exec("UPDATE market_prices SET " + col + "=" + col + "+" +
-            std::to_string(qty) + " WHERE game_id=" + std::to_string(game_id) +
-            " AND resource_type='" + db.esc(res) + "'");
+    db.Exec("UPDATE market_prices SET " + col + "=" + col + "+? "
+            "WHERE game_id=? AND resource_type=?", {qty, game_id, res});
 }
 
 static std::string get_cargo_column(const std::string& res)
@@ -156,14 +155,11 @@ bool TradeCommand::do_buy()
 
     // Find a ship at a trade hub to receive cargo
     int mod = get_module_id_for_game(game_id);
-    auto ships = db.query(
+    auto ships = db.Query(
         "SELECT s.ship_code, s.ship_name, s.at_system FROM ships s "
-        "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
-        std::to_string(mod) +
-        " "
-        "WHERE s.game_id=" +
-        std::to_string(game_id) + " AND s.owner='" + std::string(1, me) +
-        "' AND s.destroyed_at IS NULL AND s.at_hex IS NOT NULL LIMIT 1");
+        "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=? "
+        "WHERE s.game_id=? AND s.owner=? AND s.destroyed_at IS NULL "
+        "AND s.at_hex IS NOT NULL LIMIT 1", {mod, game_id, me});
 
     if (ships.empty())
     {
@@ -183,10 +179,9 @@ bool TradeCommand::do_buy()
         s.creditsB -= total_cost;
 
     // Update cargo
-    db.exec("UPDATE ships SET " + col + "=" + col + "+" +
-            std::to_string(m_quantity) +
-            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-            std::string(1, me) + "' AND ship_code='" + db.esc(ship_code) + "'");
+    db.Exec("UPDATE ships SET " + col + "=" + col + "+? "
+            "WHERE game_id=? AND owner=? AND ship_code=?",
+            {m_quantity, game_id, me, ship_code});
 
     StateMachine::instance().save_game(s);
 
@@ -225,11 +220,9 @@ bool TradeCommand::do_sell()
     std::string col = get_cargo_column(res_upper);
 
     // Find total of this resource across all ships
-    auto cargo = db.query("SELECT COALESCE(SUM(" + col +
-                          "),0) FROM ships WHERE "
-                          "game_id=" +
-                          std::to_string(game_id) + " AND owner='" +
-                          std::string(1, me) + "' AND destroyed_at IS NULL");
+    auto cargo = db.Query("SELECT COALESCE(SUM(" + col + "),0) FROM ships "
+                          "WHERE game_id=? AND owner=? AND destroyed_at IS NULL",
+                          {game_id, me});
 
     int available = cargo.empty() ? 0 : std::atoi(cargo[0][0].c_str());
 
@@ -245,10 +238,10 @@ bool TradeCommand::do_sell()
 
     // Deduct from first ship that has cargo
     int remaining = m_quantity;
-    auto ships =
-        db.query("SELECT ship_code, " + col + " FROM ships WHERE game_id=" +
-                 std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-                 "' AND destroyed_at IS NULL AND " + col + ">0");
+    auto ships = db.Query(
+        "SELECT ship_code, " + col + " FROM ships WHERE game_id=? "
+        "AND owner=? AND destroyed_at IS NULL AND " + col + ">0",
+        {game_id, me});
 
     for (const auto& ship : ships)
     {
@@ -258,10 +251,9 @@ bool TradeCommand::do_sell()
         int take = std::min(remaining, has);
         remaining -= take;
 
-        db.exec(
-            "UPDATE ships SET " + col + "=" + col + "-" + std::to_string(take) +
-            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-            std::string(1, me) + "' AND ship_code='" + db.esc(ship[0]) + "'");
+        db.Exec("UPDATE ships SET " + col + "=" + col + "-? "
+                "WHERE game_id=? AND owner=? AND ship_code=?",
+                {take, game_id, me, ship[0]});
     }
 
     // Add credits
@@ -310,10 +302,9 @@ bool TradeCommand::do_transfer()
     }
 
     // Check source ship cargo
-    auto src = db.query("SELECT " + col +
-                        " FROM ships WHERE game_id=" + std::to_string(game_id) +
-                        " AND owner='" + std::string(1, me) +
-                        "' AND ship_code='" + db.esc(m_from_ship) + "'");
+    auto src = db.Query("SELECT " + col + " FROM ships WHERE game_id=? "
+                        "AND owner=? AND ship_code=?",
+                        {game_id, me, m_from_ship});
 
     if (src.empty())
     {
@@ -331,15 +322,13 @@ bool TradeCommand::do_transfer()
     }
 
     // Transfer
-    db.exec("UPDATE ships SET " + col + "=" + col + "-" +
-            std::to_string(m_quantity) + " WHERE game_id=" +
-            std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-            "' AND ship_code='" + db.esc(m_from_ship) + "'");
+    db.Exec("UPDATE ships SET " + col + "=" + col + "-? "
+            "WHERE game_id=? AND owner=? AND ship_code=?",
+            {m_quantity, game_id, me, m_from_ship});
 
-    db.exec("UPDATE ships SET " + col + "=" + col + "+" +
-            std::to_string(m_quantity) +
-            " WHERE game_id=" + std::to_string(game_id) + " AND owner='" +
-            std::string(1, me) + "' AND ship_code='" + db.esc(m_to_ship) + "'");
+    db.Exec("UPDATE ships SET " + col + "=" + col + "+? "
+            "WHERE game_id=? AND owner=? AND ship_code=?",
+            {m_quantity, game_id, me, m_to_ship});
 
     std::ostringstream msg;
     msg << "TRADE: Transferred " << m_quantity << " " << res_upper << " from "

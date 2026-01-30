@@ -8,247 +8,190 @@
 #ifndef __KH_AUTONOMY_AGENCY_H__
 #define __KH_AUTONOMY_AGENCY_H__
 
-
-#if HAS_BEEN_REFACTORED
-
 #include <atomic>
 #include <condition_variable>
-#include <cstdint>
-#include <deque>
-#include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
 #include <thread>
-#include <utility>
 #include <vector>
-#include <chrono>
 
-// ----------------------------
-// Host-facing primitives
-// ----------------------------
+// ----------------------------------------------------------------------------
+// AASlate: The AA's cached view of game state
+//
+// Populated during Gather step (C++), consumed by Calculate step (ECL).
+// ----------------------------------------------------------------------------
 
-struct TelemetryEvent
+struct AAShipInfo
 {
-    enum class Kind : uint8_t { Info, Decision, Warning, Error, Combat };
-    Kind kind = Kind::Info;
-    std::string text;
-    uint32_t session_id = 0;
-    uint32_t turn_number = 0;
+    std::string code;
+    std::string name;
+    std::string hex_id;
+    int pd;
+    int beam;
+    int screen;
+    int tube;
+    int missile;
+    int sr;
+    int tech_level;
+    bool is_warpship;
+    std::vector<std::string> carried_systemships;
+
+    AAShipInfo()
+        : pd(0), beam(0), screen(0), tube(0), missile(0), sr(0), tech_level(0),
+          is_warpship(true)
+    {
+    }
 };
 
-struct InjectedCommand
+struct AASlate
 {
-    std::string text;   // EXACT user-grammar command line
-    std::string tag;    // for logging/debug (optional)
+    // Identity
+    int game_id;
+    char aa_player;
+
+    // Turn state (from StateMachine)
+    int round;
+    int phase_index;
+    char active_player;
+    bool is_aa_turn;
+    bool game_over;
+
+    // Resources (from GameState)
+    int credits;
+    int tech_level;
+    int vp;
+    int enemy_vp;
+
+    // Territory (from DB)
+    std::vector<std::string> own_base_hexes;
+    std::string home_side;
+
+    // Fleet (from DB: warpships table)
+    std::vector<AAShipInfo> own_ships;
+    std::vector<AAShipInfo> enemy_ships;
+
+    // Drafts (from DB: ship_drafts table)
+    std::vector<AAShipInfo> draft_ships;
+
+    // Combat (from DB)
+    bool in_combat;
+    std::vector<std::string> contested_hexes;
+
+    // Cycle tracking
+    unsigned int cycle_id;
+
+    AASlate()
+        : game_id(0), aa_player('\0'), round(0), phase_index(0),
+          active_player('\0'), is_aa_turn(false), game_over(false), credits(0),
+          tech_level(0), vp(0), enemy_vp(0), in_combat(false), cycle_id(0)
+    {
+    }
+
+    void clear()
+    {
+        game_id = 0;
+        round = 0;
+        phase_index = 0;
+        active_player = '\0';
+        is_aa_turn = false;
+        game_over = false;
+        credits = 0;
+        tech_level = 0;
+        vp = 0;
+        enemy_vp = 0;
+        own_base_hexes.clear();
+        home_side.clear();
+        own_ships.clear();
+        enemy_ships.clear();
+        draft_ships.clear();
+        in_combat = false;
+        contested_hexes.clear();
+    }
 };
 
-struct ICommandInjector
-{
-    virtual ~ICommandInjector() = default;
-    virtual void inject(const InjectedCommand& cmd) = 0;
-};
-
-struct ITelemetrySink
-{
-    virtual ~ITelemetrySink() = default;
-    virtual void publish(const TelemetryEvent& ev) = 0;
-};
-
-// Optional but recommended: host provides "atomic phase" gate.
-// If you already have turn locks / phase locks, map them here.
-struct IAtomicPhaseGate
-{
-    virtual ~IAtomicPhaseGate() = default;
-
-    // Acquire exclusive gate for atomic phases (movement/combat resolution).
-    virtual void lock() = 0;
-    virtual void unlock() = 0;
-};
-
-// ----------------------------
-// Raw/Cooked boundary
-// ----------------------------
-
-struct RawInputs
-{
-    GameSnapshot snap;
-
-    // Raw DB rows / metrics / session tables etc (opaque placeholder).
-    // Replace with typed results later.
-    std::string db_blob_json;
-
-    // Raw event indicators (UI tick / player activity).
-    bool player_command_observed = false;
-
-    // Timing
-    uint32_t monotonic_cycle_id = 0;
-};
-
-// ----------------------------
-// AA private state ("Slate")
-// ----------------------------
-
-struct Slate
-{
-    uint32_t last_session_id = 0;
-    uint32_t last_turn_seen = 0;
-
-    // Your “memory”: plan fragments, combat intent, economic goals, etc.
-    // Keep opaque for now; you can refactor later.
-    std::string opaque_json = "{}";
-};
-
-// ----------------------------
-// Planner output ("Plan")
-// ----------------------------
-
-struct Plan
-{
-    // Commands to inject this cycle/round
-    std::vector<InjectedCommand> commands;
-
-    // Telemetry to emit
-    std::vector<TelemetryEvent> telemetry;
-
-    // Optional: slate patch (or just mutate slate in-place in the planner)
-    // Here we keep it simple: planner may return an updated opaque json.
-    std::optional<std::string> new_slate_json;
-};
-
-// ----------------------------
-// Interfaces: collection, cooking, planning, rendering
-// ----------------------------
-
-struct IRawCollector
-{
-    virtual ~IRawCollector() = default;
-    virtual RawInputs gather_raw(bool player_command_observed,
-                                 uint32_t monotonic_cycle_id) = 0;
-};
-
-struct ICooker
-{
-    virtual ~ICooker() = default;
-    virtual CookedInputs cook(const RawInputs& raw, const Slate& slate) = 0;
-};
-
-struct IPlanner
-{
-    virtual ~IPlanner() = default;
-
-    // ECL boundary later: planner reads Cooked only.
-    virtual Plan decide(const CookedInputs& cooked, const Slate& slate) = 0;
-};
-
-struct IRenderer
-{
-    virtual ~IRenderer() = default;
-
-    // Renderer may:
-    // - filter/sequence commands
-    // - respect atomic phase policies
-    // - chunk combat sequence (order/commit/assign)
-    virtual void render_and_inject(const CookedInputs& cooked,
-                                   const Plan& plan,
-                                   ICommandInjector& injector,
-                                   IAtomicPhaseGate* gate_or_null) = 0;
-};
-
-// ----------------------------
-// AutonomyAgency
-// ----------------------------
+// ----------------------------------------------------------------------------
+// AutonomyAgency: Threaded Mealy State Machine for single-player AI
+//
+// Steps:
+//   Gather    (C++)  - Populate AASlate from StateMachine + DB
+//   Calculate (ECL)  - Marshal slate to Lisp, get command specs back
+//   Render    (C++)  - Inject commands via AICommandInjector
+// ----------------------------------------------------------------------------
 
 class AutonomyAgency
 {
-public:
-    struct Config
-    {
-        std::chrono::milliseconds default_wait = std::chrono::milliseconds(3000);
-        size_t max_commands_per_cycle = 16;
+  public:
+    static AutonomyAgency& instance();
 
-        // Safety: how long a combat internal loop may spin before yielding
-        std::chrono::milliseconds combat_yield_every = std::chrono::milliseconds(50);
-        int combat_round_cap = 64;
-    };
+    // Configuration
+    void configure(int game_id, char aa_player);
 
-    enum class PumpReason : uint8_t
-    {
-        UiPoll,
-        PlayerCommandObserved,
-        ServerStateChanged,
-        ManualKick,
-        Shutdown
-    };
-
-    AutonomyAgency(Config cfg,
-                   std::shared_ptr<IRawCollector> raw_collector,
-                   std::shared_ptr<ICooker> cooker,
-                   std::shared_ptr<IPlanner> planner,
-                   std::shared_ptr<IRenderer> renderer,
-                   std::shared_ptr<ICommandInjector> injector,
-                   std::shared_ptr<ITelemetrySink> telemetry,
-                   std::shared_ptr<IAtomicPhaseGate> atomic_gate = nullptr);
-
-    ~AutonomyAgency();
-
-    // ECL/DSL pre-init hook (stubbed here; real work in planner impl)
-    void pre_init_load_dsl_files(const std::vector<std::string>& lisp_paths);
-
+    // Lifecycle
     void start();
-    void request_stop();
+    void stop();
     void join();
 
-    void pump(PumpReason why);
-    void notify_player_command_activity();
+    // Wake the thread to run a cycle
+    void pump();
 
-private:
+    // Accessors
+    int get_game_id() const
+    {
+        return m_game_id;
+    }
+
+    char get_aa_player() const
+    {
+        return m_aa_player;
+    }
+
+    bool is_running() const
+    {
+        return m_running.load();
+    }
+
+  private:
+    AutonomyAgency();
+    ~AutonomyAgency();
+
+    // Prevent copying
+    AutonomyAgency(const AutonomyAgency&) = delete;
+    AutonomyAgency& operator=(const AutonomyAgency&) = delete;
+
+    // Thread entry
     void thread_main();
-    void run_one_cycle(PumpReason reason);
 
-    // MSS stages
-    RawInputs gather_raw();
-    CookedInputs cook_inputs(const RawInputs& raw);
-    Plan calculate_plan(const CookedInputs& cooked);
-    void render(const CookedInputs& cooked, const Plan& plan);
-    void telemeter(const CookedInputs& cooked, const Plan& plan);
-    void wait_or_block();
+    // Run one MSS cycle
+    void run_cycle();
 
-    // Combat internal loop: repeats Raw→Cook→Calc→Render→Telem while combat persists
-    void combat_loop_if_needed(bool player_command_observed);
+    // MSS steps
+    void gather();
+    void calculate(std::vector<std::string>& commands_out);
+    void render(const std::vector<std::string>& commands);
 
-    void publish_info(const CookedInputs& cooked, const std::string& msg);
+    // ECL initialization
+    void init_ecl();
+    void shutdown_ecl();
 
-private:
-    Config cfg_;
+  private:
+    // Configuration
+    int m_game_id;
+    char m_aa_player;
 
-    std::shared_ptr<IRawCollector> raw_collector_;
-    std::shared_ptr<ICooker> cooker_;
-    std::shared_ptr<IPlanner> planner_;
-    std::shared_ptr<IRenderer> renderer_;
-    std::shared_ptr<ICommandInjector> injector_;
-    std::shared_ptr<ITelemetrySink> telemetry_;
-    std::shared_ptr<IAtomicPhaseGate> atomic_gate_;
+    // State
+    AASlate m_slate;
+    unsigned int m_cycle_counter;
 
-    std::atomic<bool> started_{false};
-    std::atomic<bool> stop_{false};
+    // Threading
+    std::thread m_worker;
+    std::atomic<bool> m_running;
+    std::atomic<bool> m_stop_requested;
+    std::mutex m_mtx;
+    std::condition_variable m_cv;
+    bool m_pumped;
 
-    std::thread worker_;
-
-    std::mutex mtx_;
-    std::condition_variable cv_;
-    std::deque<PumpReason> pump_q_;
-
-    // edge-trigger: “player command observed since last cycle”
-    std::atomic<bool> player_cmd_flag_{false};
-
-    // AA state (Mealy state)
-    Slate slate_;
-
-    // monotonic cycle id
-    std::atomic<uint32_t> cycle_id_{0};
+    // ECL state
+    bool m_ecl_initialized;
 };
-
-#endif // HAS_BEEN_REFACTORED
 
 #endif

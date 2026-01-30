@@ -30,20 +30,21 @@ bool QuitCommand::invoke(void)
 
     // Check for existing auto-save from quit, update or insert
     auto existing =
-        db.query("SELECT id FROM saved_games WHERE user_id=" +
-                 std::to_string(user_id) + " AND save_name LIKE 'ASF-%'");
+        db.Query("SELECT id FROM saved_games WHERE user_id=? "
+                 "AND save_name LIKE 'ASF-%'",
+                 {user_id});
 
     if (!existing.empty())
     {
-        db.exec("UPDATE saved_games SET game_id=" + std::to_string(game_id) +
-                ", save_name='" + db.esc(save_name) +
-                "', saved_at=NOW() WHERE id=" + existing[0][0]);
+        fprintf(stderr, "stoi 32\n");
+        db.Exec("UPDATE saved_games SET game_id=?, save_name=?, saved_at=NOW() "
+                "WHERE id=?",
+                {game_id, save_name, std::stoi(existing[0][0])});
     }
     else
     {
-        db.exec("INSERT INTO saved_games(user_id, save_name, game_id) VALUES(" +
-                std::to_string(user_id) + ",'" + db.esc(save_name) + "'," +
-                std::to_string(game_id) + ")");
+        db.Exec("INSERT INTO saved_games(user_id, save_name, game_id) VALUES(?,?,?)",
+                {user_id, save_name, game_id});
     }
 
     Logger::instance().info("QUIT: Auto-saved game as '" + save_name + "'");

@@ -54,25 +54,9 @@ void apply_arguments(int argc, char** argv)
     }
     else
     {
-       Configr::instance().summary();
-           
-       DatabaseManager::instance().configure();
+       DatabaseManager::instance().init();
        ServerManager::instance().configure();
-    }
-}
-
-// Static Functions
-
-void activate_db()
-{
-    try
-    {
-        DatabaseManager::instance().connect();
-    }
-    catch (const std::exception& ex)
-    {
-        std::fprintf(stderr, "fatal: %s\n", ex.what());
-        return;
+       Configr::instance().summary();
     }
 }
 
@@ -90,7 +74,7 @@ void test_db(void)
     // Test 1: Connection test (already connected by activate_db)
     try
     {
-        auto ping = db.query("SELECT 1");
+        auto ping = db.Query("SELECT 1", {});
         if (ping.empty())
         {
             std::cerr << dbfail
@@ -139,12 +123,12 @@ void test_db(void)
         try
         {
             auto check =
-                db.query("SELECT COUNT(*) "
+                db.Query("SELECT COUNT(*) "
                          "FROM information_schema.tables "
                          "WHERE "
                          "table_schema = DATABASE() "
-                         " AND table_name = '" +
-                         std::string(table) + "'");
+                         " AND table_name = ?",
+                         {std::string(table)});
 
             if (check.empty() || check[0][0] == "0")
             {
@@ -183,27 +167,26 @@ void test_db(void)
     try
     {
         // Need a user to reference - check if test user exists
-        auto userCheck = db.query("SELECT id FROM users LIMIT 1");
+        auto userCheck = db.Query("SELECT id FROM users LIMIT 1", {});
         if (!userCheck.empty())
         {
+            fprintf(stderr, "stoi 4\n");
             int user_id = std::stoi(userCheck[0][0]);
             std::string test_token =
                 "__test_token_" 
                 + std::to_string(std::time(nullptr));
 
             // Insert test session
-            db.exec("INSERT INTO "
-                    "sessions(token, user_id) VALUES('" +
-                    db.esc(test_token)
-                    + "', "
-                    + std::to_string(user_id) + ")");
+            db.Exec("INSERT INTO "
+                    "sessions(token, user_id) VALUES(?,?)",
+                    {test_token, user_id});
 
             // Verify it exists
             auto verify =
-                db.query("SELECT token "
+                db.Query("SELECT token "
                          "FROM sessions "
-                         "WHERE token='"
-                         + db.esc(test_token) + "'");
+                         "WHERE token=?",
+                         {test_token});
             if (verify.empty())
             {
                 std::cerr << dbfail
@@ -218,10 +201,10 @@ void test_db(void)
             }
 
             // Cleanup: delete test row
-            db.exec("DELETE "
+            db.Exec("DELETE "
                     "FROM sessions "
-                    "WHERE token='" + db.esc(test_token)
-                    + "'");
+                    "WHERE token=?",
+                    {test_token});
             std::cout << dbpass
                       << "Cleanup OK (test row deleted)"
                       << std::endl;
@@ -244,7 +227,7 @@ void test_db(void)
     // Test 4: Check that at least one module exists
     try
     {
-        auto moduleCheck = db.query("SELECT COUNT(*) FROM modules");
+        auto moduleCheck = db.Query("SELECT COUNT(*) FROM modules", {});
         if (!moduleCheck.empty() && moduleCheck[0][0] != "0")
         {
             std::cout << dbpass
@@ -274,16 +257,6 @@ void load_services()
 {
     // Backend Services
     //////////////////////
-    try {
-       activate_db();
-    }
-    catch(const std::exception& ex)
-    {
-        std::cerr << dbfail
-                  << "activation of database failed: "
-                  << ex.what() << std::endl;
-        return;
-    }
     test_db();
 
     // This creates the server and descritpr for

@@ -115,3 +115,57 @@ target_include_directories(kh PRIVATE
 
 # Preserved from your prior working file
 target_link_libraries(kh PRIVATE mysqlclient)
+
+# ECL (Embeddable Common Lisp) for AutonomyAgency
+# Use ecl-config to get compile/link flags
+execute_process(
+    COMMAND ecl-config --cflags
+    OUTPUT_VARIABLE ECL_CFLAGS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+    COMMAND ecl-config --libs
+    OUTPUT_VARIABLE ECL_LIBS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+# Parse flags into lists
+separate_arguments(ECL_CFLAGS_LIST UNIX_COMMAND "${ECL_CFLAGS}")
+separate_arguments(ECL_LIBS_LIST UNIX_COMMAND "${ECL_LIBS}")
+target_compile_options(kh PRIVATE ${ECL_CFLAGS_LIST})
+target_link_libraries(kh PRIVATE ${ECL_LIBS_LIST})
+
+# =============================================================================
+# Installation
+# =============================================================================
+include(GNUInstallDirs)
+
+# Binary
+install(TARGETS kh
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# Man page
+install(FILES ${CMAKE_SOURCE_DIR}/../../docs/kh.1
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+)
+
+# DSL (Lisp files for AutonomyAgency)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/ai/lisp/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/kh/dsl
+    FILES_MATCHING PATTERN "*.lisp"
+)
+
+# =============================================================================
+# CPack for .deb packaging
+# =============================================================================
+set(CPACK_PACKAGE_NAME "kh")
+set(CPACK_PACKAGE_VENDOR "sibomots")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Kepler's Horizon game server")
+set(CPACK_PACKAGE_VERSION_MAJOR "1")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "sibomots")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libmysqlclient21, libecl21.2.1")
+set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+include(CPack)

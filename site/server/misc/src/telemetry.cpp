@@ -84,11 +84,9 @@ void Telemetry::add_tell(int game_id, char player, const std::string& msg)
 
     seq_log(TLM_ADD_TELL, msg);
     DatabaseManager& db = DatabaseManager::instance();
-    std::string target = std::string(1, player);
-    std::string ins =
-        "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
-        std::to_string(game_id) + ",'" + target + "','" + db.esc(msg) + "')";
-    db.exec(ins);
+    std::string q =
+    "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(?, ?, ?)";
+    db.Exec(q, { game_id, player, msg }); 
 }
 
 void Telemetry::add_broadcast(const std::string& msg)
@@ -101,10 +99,9 @@ void Telemetry::add_broadcast(int game_id, const std::string& msg)
 {
     DatabaseManager& db = DatabaseManager::instance();
     seq_log(TLM_ADD_BCAST, msg);
-    std::string ins =
-        "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(" +
-        std::to_string(game_id) + ",'BOTH','" + db.esc(msg) + "')";
-    db.exec(ins);
+    std::string q =
+    "INSERT INTO telemetry_queue(game_id, target_player, message) VALUES(?, 'BOTH', ?)";
+    db.Exec(q, { game_id, msg }); 
 }
 
 Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
@@ -113,13 +110,15 @@ Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
     DatabaseManager& db = DatabaseManager::instance();
     int game_id = StateMachine::instance().get_game_id();
 
-    std::string target = std::string(1, player);
     result.player = player;
     // Get direct messages (target_player = A or B, use sent_at)
-    auto direct_rows =
-        db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +
-                 std::to_string(game_id) + " AND target_player='" + target +
-                 "' AND sent_at IS NULL ORDER BY id");
+    std::string q = 
+    "SELECT id, message "
+    " FROM telemetry_queue "
+    " WHERE game_id=? AND target_player=? AND sent_at IS NULL ORDER BY id";
+
+    auto direct_rows = db.Query(q, {game_id, player});
+
 
     for (const auto& row : direct_rows)
     {
@@ -129,10 +128,10 @@ Telemetry::QueuedMessages Telemetry::get_queued_messages(char player)
 
     // Get broadcast messages (target_player = BOTH, use sent_to_A/sent_to_B)
     std::string sent_col = (player == 'A') ? "sent_to_A" : "sent_to_B";
-    auto both_rows =
-        db.query("SELECT id, message FROM telemetry_queue WHERE game_id=" +
-                 std::to_string(game_id) + " AND target_player='BOTH' AND " +
-                 sent_col + "=0 ORDER BY id");
+    std::string both_q =
+        "SELECT id, message FROM telemetry_queue WHERE game_id=? "
+        "AND target_player='BOTH' AND " + sent_col + "=0 ORDER BY id";
+    auto both_rows = db.Query(both_q, {game_id});
 
     for (const auto& row : both_rows)
     {
@@ -162,8 +161,7 @@ void Telemetry::mark_messages_sent(const QueuedMessages& msgs)
                 id_list += ",";
             id_list += *it;
         }
-        db.exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" +
-                id_list + ")");
+        db.Exec("UPDATE telemetry_queue SET sent_at=NOW() WHERE id IN (" + id_list + ")", {});
     }
 
     // Mark broadcast messages as sent TO THIS PLAYER ONLY (sent_to_A or
@@ -178,8 +176,7 @@ void Telemetry::mark_messages_sent(const QueuedMessages& msgs)
                 id_list += ",";
             id_list += *it;
         }
-        db.exec("UPDATE telemetry_queue SET " + sent_col + "=1 WHERE id IN (" +
-                id_list + ")");
+        db.Exec("UPDATE telemetry_queue SET " + sent_col + "=1 WHERE id IN (" + id_list + ")", {});
     }
 }
 
@@ -265,26 +262,11 @@ static std::string getShipsJson(int game_id, char player)
     out << "{";
 
     // Friendly ships (owned by current player) - include specs for tooltip
-    // auto friendly = db.query(
-    //    "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
-    //    "tube, missiles, sr, ship_name FROM ships "
-    //    "WHERE game_id=" +
-    //    std::to_string(game_id) + " AND owner='" + std::string(1, player) +
-    //    "'"
-    //    " AND destroyed_at IS NULL");
-
-    std::string sql;
-    sql.reserve(DatabaseManager::SQLSZ);
-    sql += "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
-           "tube, missiles, sr, ship_name FROM ships "
-           "WHERE destroyed_at is NULL "
-           "AND game_id=";
-    sql += std::to_string(game_id);
-    sql += " AND owner='";
-    sql.push_back(player);
-    sql += "'";
-
-    auto friendly = db.query(sql);
+    std::string friendly_q =
+        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
+        "tube, missiles, sr, ship_name FROM ships "
+        "WHERE destroyed_at IS NULL AND game_id=? AND owner=?";
+    auto friendly = db.Query(friendly_q, {game_id, player});
 
     out << "\"friendly\":[";
     for (size_t i = 0; i < friendly.size(); ++i)
@@ -304,24 +286,10 @@ static std::string getShipsJson(int game_id, char player)
     out << "]";
 
     // Enemy ships (owned by opponent)
-    //auto enemy = db.query(
-    //    "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
-    //    "WHERE game_id=" +
-    //    std::to_string(game_id) + " AND owner='" + std::string(1, opponent) +
-    //    "'"
-    //    " AND destroyed_at IS NULL");
-
-    sql.clear();
-    sql.reserve(DatabaseManager::SQLSZ);
-    sql += "SELect ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
-        "WHERE destroyed_at IS NULL "
-        "AND game_id=";
-    sql += std::to_string(game_id);
-    sql += " AND owner='";
-    sql.push_back(opponent);
-    sql += "'";
-
-    auto enemy = db.query(sql);
+    std::string enemy_q =
+        "SELECT ship_code, ship_type, at_hex, at_system, ship_name FROM ships "
+        "WHERE destroyed_at IS NULL AND game_id=? AND owner=?";
+    auto enemy = db.Query(enemy_q, {game_id, opponent});
 
     out << ",\"enemy\":[";
     for (size_t i = 0; i < enemy.size(); ++i)
@@ -338,21 +306,10 @@ static std::string getShipsJson(int game_id, char player)
     out << "]";
 
     // Neutral ships (owner N or X for xeno/third-party)
-    //auto neutral =
-    //    db.query("SELECT ship_code, ship_type, at_hex, at_system FROM ships "
-    //             "WHERE game_id=" +
-    //             std::to_string(game_id) +
-    //             " AND owner NOT IN ('A','B')"
-    //             " AND destroyed_at IS NULL");
-
-    sql.clear();
-    sql.reserve(DatabaseManager::SQLSZ);
-    sql += "SeLeCt ship_code, ship_type, at_hex, at_system FROM ships "
-           " WHERE destroyed_at IS NULL "
-           " AND owner NOT IN ('A','B')"
-           " AND game_id=";
-    sql += std::to_string(game_id);
-    auto neutral = db.query(sql);
+    std::string neutral_q =
+        "SELECT ship_code, ship_type, at_hex, at_system FROM ships "
+        "WHERE destroyed_at IS NULL AND owner NOT IN ('A','B') AND game_id=?";
+    auto neutral = db.Query(neutral_q, {game_id});
 
     out << ",\"neutral\":[";
     for (size_t i = 0; i < neutral.size(); ++i)
@@ -387,13 +344,14 @@ void Telemetry::status(char player, HttpResponse* resp)
         // We need to find any OTHER user who has an active session
 
         // Query all active sessions (within 90 seconds) grouped by user
-        auto sessionsQuery =
-            db.query("SELECT u.username, "
-                     "DATE_FORMAT(MAX(s.last_seen),'%Y-%m-%d %H:%i:%s') "
-                     "FROM sessions s JOIN users u ON u.id = s.user_id "
-                     "WHERE TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 6 "
-                     "GROUP BY u.id, u.username "
-                     "ORDER BY MAX(s.last_seen) DESC");
+        std::string sessions_q =
+            "SELECT u.username, "
+            "DATE_FORMAT(MAX(s.last_seen),'%Y-%m-%d %H:%i:%s') "
+            "FROM sessions s JOIN users u ON u.id = s.user_id "
+            "WHERE TIMESTAMPDIFF(SECOND, s.last_seen, NOW()) <= 6 "
+            "GROUP BY u.id, u.username "
+            "ORDER BY MAX(s.last_seen) DESC";
+        auto sessionsQuery = db.Query(sessions_q, {});
 
         // If there are 2+ distinct users with active sessions, peer is online
         bool peerOnline = false;
@@ -469,16 +427,12 @@ void Telemetry::status(char player, HttpResponse* resp)
 
     // Look up actual usernames from game_seats
     std::string selfUser, oppUser;
-    auto selfRow = db.query("SELECT u.username FROM users u "
-                            "JOIN game_seats gs ON gs.user_id = u.id "
-                            "WHERE gs.game_id=" +
-                            std::to_string(game_id) + " AND gs.seat='" +
-                            std::string(1, selfOwner) + "'");
-    auto oppRow = db.query("SELECT u.username FROM users u "
-                           "JOIN game_seats gs ON gs.user_id = u.id "
-                           "WHERE gs.game_id=" +
-                           std::to_string(game_id) + " AND gs.seat='" +
-                           std::string(1, oppOwner) + "'");
+    std::string seat_q =
+        "SELECT u.username FROM users u "
+        "JOIN game_seats gs ON gs.user_id = u.id "
+        "WHERE gs.game_id=? AND gs.seat=?";
+    auto selfRow = db.Query(seat_q, {game_id, selfOwner});
+    auto oppRow = db.Query(seat_q, {game_id, oppOwner});
 
     selfUser = selfRow.empty() ? "" : selfRow[0][0];
     oppUser = oppRow.empty() ? "" : oppRow[0][0];
@@ -487,20 +441,20 @@ void Telemetry::status(char player, HttpResponse* resp)
     bool oppOnline = false;
     std::string oppLastSeen;
 
-    auto prow =
-        db.query("SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
-                 "sessions s JOIN users u ON u.id=s.user_id "
-                 "WHERE u.username='" +
-                 db.esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
+    std::string lastseen_q =
+        "SELECT DATE_FORMAT(last_seen,'%Y-%m-%d %H:%i:%s') FROM "
+        "sessions s JOIN users u ON u.id=s.user_id "
+        "WHERE u.username=? ORDER BY s.last_seen DESC LIMIT 1";
+    auto prow = db.Query(lastseen_q, {oppUser});
 
     if (!prow.empty())
     {
         oppLastSeen = prow[0][0];
-        auto prow2 =
-            db.query("SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6) "
-                     "FROM sessions s JOIN users u ON u.id=s.user_id "
-                     "WHERE u.username='" +
-                     db.esc(oppUser) + "' ORDER BY s.last_seen DESC LIMIT 1");
+        std::string online_q =
+            "SELECT (TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6) "
+            "FROM sessions s JOIN users u ON u.id=s.user_id "
+            "WHERE u.username=? ORDER BY s.last_seen DESC LIMIT 1";
+        auto prow2 = db.Query(online_q, {oppUser});
 
         if (!prow2.empty() && !prow2[0][0].empty() && prow2[0][0] != "0")
         {

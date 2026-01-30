@@ -70,9 +70,9 @@ bool DeployCommand::invoke(void)
     // Validate destination is a base-star system
     int mod_id = get_module_id_for_game(m_game_id);
     auto base_info =
-        db.query("SELECT is_base, base_side, territory_name FROM star_systems "
-                 "WHERE module_id=" +
-                 std::to_string(mod_id) + " AND name='" + db.esc(sys) + "'");
+        db.Query("SELECT is_base, base_side, territory_name FROM star_systems "
+                 "WHERE module_id=? AND name=?",
+                 {mod_id, sys});
 
     if (base_info.empty())
     {
@@ -114,8 +114,8 @@ bool DeployCommand::invoke(void)
 
         // Get player's actual username for the broadcast
         int user_id = StateMachine::instance().get_current_user_id();
-        auto user_rows = DatabaseManager::instance().query(
-            "SELECT username FROM users WHERE id=" + std::to_string(user_id));
+        auto user_rows = DatabaseManager::instance().Query(
+            "SELECT username FROM users WHERE id=?", {user_id});
         std::string player_name =
             user_rows.empty() ? "Player" : user_rows[0][0];
 
@@ -282,9 +282,9 @@ bool MoveCommand::invoke(void)
     // hex_id -> (system_name, is_base)
     std::unordered_map<std::string, std::pair<std::string, bool>> starByHex;
     {
-        auto sysList = db.query("SELECT hex_id, name, is_base "
-                                "FROM star_systems WHERE module_id=" +
-                                std::to_string(mod));
+        auto sysList = db.Query("SELECT hex_id, name, is_base "
+                                "FROM star_systems WHERE module_id=?",
+                                {mod});
         starByHex.reserve(sysList.size() * 2);
         for (const auto& row : sysList)
         {
@@ -306,8 +306,8 @@ bool MoveCommand::invoke(void)
     std::unordered_set<std::string> warplineEdges;
     {
         auto wr =
-            db.query("SELECT a_hex, b_hex FROM warplines WHERE module_id=" +
-                     std::to_string(mod));
+            db.Query("SELECT a_hex, b_hex FROM warplines WHERE module_id=?",
+                     {mod});
         warplineEdges.reserve(wr.size() * 2);
         for (const auto& row : wr)
         {
@@ -465,10 +465,9 @@ bool MoveCommand::invoke(void)
     }
     shipmgr.update_ship_location(m_game_id, active_player, sh.code, finalSystem,
                          finalHex);
-    db.exec("UPDATE ships SET pd_spent=pd_spent+" + std::to_string(totalCost) +
-            " WHERE game_id=" + std::to_string(m_game_id) + " AND owner='" +
-            std::string(1, active_player) + "'" + " AND ship_code='" +
-            db.esc(sh.code) + "'");
+    db.Exec("UPDATE ships SET pd_spent=pd_spent+? "
+            "WHERE game_id=? AND owner=? AND ship_code=?",
+            {totalCost, m_game_id, active_player, sh.code});
 
     // Save game state to persist changes
     StateMachine::instance().save_game(s);
@@ -479,11 +478,9 @@ bool MoveCommand::invoke(void)
     if (!finalSystem.empty())
     {
         // Check current knowledge level
-        auto know = db.query("SELECT knowledge_level FROM codex_entries "
-                             "WHERE game_id=" +
-                             std::to_string(m_game_id) + " AND player='" +
-                             std::string(1, active_player) +
-                             "' AND system_name='" + db.esc(finalSystem) + "'");
+        auto know = db.Query("SELECT knowledge_level FROM codex_entries "
+                             "WHERE game_id=? AND player=? AND system_name=?",
+                             {m_game_id, active_player, finalSystem});
 
         std::string current_level = know.empty() ? "Unknown" : know[0][0];
 
@@ -491,10 +488,9 @@ bool MoveCommand::invoke(void)
         if (current_level == "Unknown")
         {
             auto lrs_check =
-                db.query("SELECT lrs FROM ships WHERE game_id=" +
-                         std::to_string(m_game_id) + " AND owner='" +
-                         std::string(1, active_player) + "' AND ship_code='" +
-                         db.esc(sh.code) + "'");
+                db.Query("SELECT lrs FROM ships WHERE game_id=? "
+                         "AND owner=? AND ship_code=?",
+                         {m_game_id, active_player, sh.code});
 
             int lrs =
                 lrs_check.empty() ? 0 : std::atoi(lrs_check[0][0].c_str());
@@ -502,22 +498,19 @@ bool MoveCommand::invoke(void)
 
             if (know.empty())
             {
-                db.exec("INSERT INTO codex_entries(game_id, player, "
+                db.Exec("INSERT INTO codex_entries(game_id, player, "
                         "system_name, knowledge_level, last_updated_turn) "
-                        "VALUES(" +
-                        std::to_string(m_game_id) + ",'" +
-                        std::string(1, active_player) + "','" +
-                        db.esc(finalSystem) + "','" + new_level + "'," +
-                        std::to_string(s.round) + ")");
+                        "VALUES(?,?,?,?,?)",
+                        {m_game_id, active_player, finalSystem,
+                         new_level, s.round});
             }
             else
             {
-                db.exec("UPDATE codex_entries SET knowledge_level='" +
-                        new_level +
-                        "', last_updated_turn=" + std::to_string(s.round) +
-                        " WHERE game_id=" + std::to_string(m_game_id) +
-                        " AND player='" + std::string(1, active_player) +
-                        "' AND system_name='" + db.esc(finalSystem) + "'");
+                db.Exec("UPDATE codex_entries SET knowledge_level=?, "
+                        "last_updated_turn=? WHERE game_id=? AND player=? "
+                        "AND system_name=?",
+                        {new_level, s.round, m_game_id,
+                         active_player, finalSystem});
             }
 
             milieu_report.append("CODEX: ");
@@ -546,9 +539,9 @@ bool MoveCommand::invoke(void)
         std::unordered_map<std::string, StarInfo> hexToStar;
 
         int mod = get_module_id_for_game(m_game_id);
-        auto sysList = db.query(
-            "SELECT hex_id, name, is_base FROM star_systems WHERE module_id=" +
-            std::to_string(mod));
+        auto sysList = db.Query(
+            "SELECT hex_id, name, is_base FROM star_systems WHERE module_id=?",
+            {mod});
         hexToStar.reserve(sysList.size() * 2);
         for (const auto& row : sysList)
         {
@@ -569,8 +562,8 @@ bool MoveCommand::invoke(void)
         std::unordered_set<std::string> warplineEdges;
         {
             auto wr =
-                db.query("SELECT a_hex, b_hex FROM warplines WHERE module_id=" +
-                         std::to_string(mod));
+                db.Query("SELECT a_hex, b_hex FROM warplines WHERE module_id=?",
+                         {mod});
             warplineEdges.reserve(wr.size() * 2);
             for (const auto& row : wr)
             {
@@ -658,61 +651,57 @@ bool MoveCommand::invoke(void)
         // this is not a star-base hex.  So we cannot initiate combat
         // even if there are enemy ships.  let's see what is there for
         // alerting the player(s)
-        std::ostringstream inprox;
-        inprox << "SELECT "
-               << " UPPER(s.ship_code), UPPER(s.ship_name),  s.owner, "
-               << " CASE WHEN s.owner='" << std::string(1, active_player)
-               << "' "
-               << "    THEN 1 ELSE 0 END AS is_friendly, "
-               << " CASE WHEN s.owner <> '" << std::string(1, active_player)
-               << "' "
-               << " THEN 1 ELSE 0 END AS is_enemy, "
-               << " 0 AS is_neither_friend_nor_enemy, "
-               << "  hx.ships_in_hex, s.at_hex "
-               << " FROM ships s "
-               << " JOIN ( "
-               << " SELECT "
-               << " s2.at_hex, "
-               << " COUNT(*) AS ships_in_hex "
-               << "  FROM ships s2 "
-               << "  LEFT JOIN star_systems ss "
-               << "    ON ss.hex_id    = s2.at_hex "
-               << "  WHERE s2.game_id=" << std::to_string(m_game_id)
-               << "    AND s2.destroyed_at IS NULL "
-               << "    AND s2.racked_in IS NULL "
-               << "    AND s2.at_hex IS NOT NULL "
-               << "  GROUP BY s2.at_hex "
-               << "  HAVING "
-               << "    SUM(CASE WHEN s2.owner = '"
-               << std::string(1, active_player) << "' "
-               << "   THEN 1 ELSE 0 END) > 0 "
-               << "    AND "
-               << "    SUM(CASE WHEN s2.owner <> '"
-               << std::string(1, active_player) << "' "
-               << "   THEN 1 ELSE 0 END) > 0 "
-               << ") hx "
-               << "  ON hx.at_hex = s.at_hex "
-               << "  WHERE s.game_id=" << std::to_string(m_game_id)
-               << "  AND s.destroyed_at IS NULL "
-               << "  AND s.racked_in IS NULL "
-               << "  AND s.at_hex IS NOT NULL "
-               << "ORDER BY s.at_hex, s.owner, s.ship_code";
+        std::string qprox =
+        "SELECT "
+        " UPPER(s.ship_code), UPPER(s.ship_name),  s.owner, "
+        " CASE WHEN s.owner=? "
+        "    THEN 1 ELSE 0 END AS is_friendly, "
+        " CASE WHEN s.owner <> ? "
+        " THEN 1 ELSE 0 END AS is_enemy, "
+        " 0 AS is_neither_friend_nor_enemy, "
+        "  hx.ships_in_hex, s.at_hex "
+        " FROM ships s "
+        " JOIN ( "
+        " SELECT "
+        " s2.at_hex, "
+        " COUNT(*) AS ships_in_hex "
+        "  FROM ships s2 "
+        "  LEFT JOIN star_systems ss "
+        "    ON ss.hex_id    = s2.at_hex "
+        "  WHERE s2.game_id=? "
+        "    AND s2.destroyed_at IS NULL "
+        "    AND s2.racked_in IS NULL "
+        "    AND s2.at_hex IS NOT NULL "
+        "  GROUP BY s2.at_hex "
+        "  HAVING "
+        "    SUM(CASE WHEN s2.owner =? "
+        "   THEN 1 ELSE 0 END) > 0 "
+        "    AND "
+        "    SUM(CASE WHEN s2.owner <> ? "
+        "   THEN 1 ELSE 0 END) > 0 "
+        ") hx "
+        "  ON hx.at_hex = s.at_hex "
+        "  WHERE s.game_id=? "
+        "  AND s.destroyed_at IS NULL "
+        "  AND s.racked_in IS NULL "
+        "  AND s.at_hex IS NOT NULL "
+        "ORDER BY s.at_hex, s.owner, s.ship_code";
 
-        std::vector<std::vector<std::string>> obprox = db.query(inprox.str());
+        auto obprox = db.Query(qprox, { active_player, active_player, m_game_id, active_player, active_player, m_game_id });
 
         // If there are opposing forces in any non-star hex, we want to alert
         // this!
         if (!obprox.empty())
         {
             std::ostringstream pids;
-            pids << "SELECT u.id, UPPER(u.username), u.id, gs.seat "
-                 << " FROM users u, game_seats gs "
-                 << " WHERE gs.user_id = u.id "
-                 << " AND gs.game_id=" << std::to_string(m_game_id) << " AND "
-                 << " (gs.seat='" << std::string(1, active_player) << "' "
-                 << " OR gs.seat = '" << std::string(1, enemy) << "') "
-                 << " ORDER by gs.seat ASC";
-            auto involved = db.query(pids.str());
+            std::string  qqr =
+            "SELECT u.id, UPPER(u.username), u.id, gs.seat "
+            " FROM users u, game_seats gs "
+            " WHERE gs.user_id = u.id "
+            " AND gs.game_id=?  AND "
+            " (gs.seat=?  OR gs.seat =?) "
+            " ORDER by gs.seat ASC";
+            auto involved = db.Query(qqr,{ m_game_id, active_player, enemy});
 
             std::ostringstream whodat;
             std::string you("You");

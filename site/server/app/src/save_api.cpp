@@ -21,12 +21,15 @@ static bool get_session_from_token(const std::string& token, int& user_id,
     if (token.empty())
         return false;
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query(
-        "SELECT user_id, COALESCE(game_id, 0) FROM sessions WHERE token='" +
-        db.esc(token) + "'");
-    if (rows.empty())
+    auto rows = db.Query(
+        "SELECT user_id, COALESCE(game_id, 0) FROM sessions WHERE token=?",
+        {token});
+    if (rows.empty()) {
         return false;
+    }
+    fprintf(stderr, "stoi 13\n");
     user_id = std::stoi(rows[0][0]);
+    fprintf(stderr, "stoi 14\n");
     game_id = std::stoi(rows[0][1]);
     return true;
 }
@@ -35,8 +38,8 @@ static bool get_session_from_token(const std::string& token, int& user_id,
 static std::string get_username(int user_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query("SELECT username FROM users WHERE id=" +
-                         std::to_string(user_id));
+    auto rows = db.Query("SELECT username FROM users WHERE id=?",
+                         {user_id});
     if (rows.empty())
         return "";
     return rows[0][0];
@@ -75,8 +78,8 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
 
     // Get game state
     auto game_rows =
-        db.query("SELECT state_json, module_id FROM games WHERE id=" +
-                 std::to_string(game_id));
+        db.Query("SELECT state_json, module_id FROM games WHERE id=?",
+                 {game_id});
     if (game_rows.empty())
     {
         resp->status = 404;
@@ -89,15 +92,15 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     (void)module_id;
 
     // Get room code if exists
-    auto room_rows = db.query("SELECT room_code FROM rooms WHERE game_id=" +
-                              std::to_string(game_id));
+    auto room_rows = db.Query("SELECT room_code FROM rooms WHERE game_id=?",
+                              {game_id});
     std::string room_code = room_rows.empty() ? "" : room_rows[0][0];
 
     // Get player names from game_seats
-    auto seat_rows = db.query("SELECT gs.seat, u.username FROM game_seats gs "
+    auto seat_rows = db.Query("SELECT gs.seat, u.username FROM game_seats gs "
                               "JOIN users u ON gs.user_id = u.id "
-                              "WHERE gs.game_id=" +
-                              std::to_string(game_id));
+                              "WHERE gs.game_id=?",
+                              {game_id});
 
     std::string player_a_name, player_b_name;
     for (const auto& row : seat_rows)
@@ -117,41 +120,33 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
     }
 
     // Insert save
-    std::string insert_sql =
-        "INSERT INTO saved_games(save_name, user_id, original_game_id, "
-        "room_code, state_json, round, player_a_name, player_b_name) "
-        "VALUES('" +
-        db.esc(save_name) + "'," + std::to_string(user_id) + "," +
-        std::to_string(game_id) + ",'" + db.esc(room_code) + "','" +
-        db.esc(state_json) + "'," +
-        std::to_string(round) + ",'" + db.esc(player_a_name) + "','" +
-        db.esc(player_b_name) + "')";
-
-    db.exec(insert_sql);
+    db.Exec("INSERT INTO saved_games(save_name, user_id, original_game_id, "
+            "room_code, state_json, round, player_a_name, player_b_name) "
+            "VALUES(?,?,?,?,?,?,?,?)",
+            {save_name, user_id, game_id, room_code, state_json,
+             round, player_a_name, player_b_name});
 
     // Get save ID
-    auto id_rows = db.query("SELECT LAST_INSERT_ID()");
+    auto id_rows = db.Query("SELECT LAST_INSERT_ID()", {});
+    fprintf(stderr, "stoi 15\n");
     int save_id = id_rows.empty() ? 0 : std::stoi(id_rows[0][0]);
 
     auto ships =
-        db.query("SELECT ship_code, ship_name, owner, "
+        db.Query("SELECT ship_code, ship_name, owner, "
                  "CONCAT('{\"pd\":', pd, ',\"beam\":', beam, ',\"screen\":', "
                  "screen, ',\"tube\":', tube, "
                  "',\"missiles\":', missiles, ',\"sr\":', sr, "
                  "',\"pd_spent\":', pd_spent, "
                  "',\"at_hex\":\"', IFNULL(at_hex,''), '\",\"at_system\":\"', "
                  "IFNULL(at_system,''), '\"}') "
-                 "FROM ships WHERE game_id=" +
-                 std::to_string(game_id) + " AND destroyed_at IS NULL");
+                 "FROM ships WHERE game_id=? AND destroyed_at IS NULL",
+                 {game_id});
 
     for (const auto& ship : ships)
     {
-        db.exec("INSERT INTO saved_ships(save_id, ship_code, ship_name, owner, "
-                "ship_json) "
-                "VALUES(" +
-                std::to_string(save_id) + ",'" + db.esc(ship[0]) + "','" +
-                db.esc(ship[1]) + "','" + ship[2] + "','" + db.esc(ship[3]) +
-                "')");
+        db.Exec("INSERT INTO saved_ships(save_id, ship_code, ship_name, owner, "
+                "ship_json) VALUES(?,?,?,?,?)",
+                {save_id, ship[0], ship[1], ship[2], ship[3]});
     }
 
     std::ostringstream o;
@@ -175,10 +170,10 @@ void handle_saves_list(const HttpRequest* req, HttpResponse* resp)
     }
 
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query(
+    auto rows = db.Query(
         "SELECT id, save_name, round, player_a_name, player_b_name, "
-        "saved_at FROM saved_games WHERE user_id=" +
-        std::to_string(user_id) + " ORDER BY saved_at DESC LIMIT 20");
+        "saved_at FROM saved_games WHERE user_id=? ORDER BY saved_at DESC LIMIT 20",
+        {user_id});
 
     std::ostringstream o;
     o << "{\"ok\":true,\"saves\":[";
@@ -213,10 +208,10 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Get save data
-    auto save_rows = db.query(
+    auto save_rows = db.Query(
         "SELECT save_name, state_json, player_a_name, player_b_name "
-        "FROM saved_games WHERE id=" +
-        std::to_string(save_id) + " AND user_id=" + std::to_string(user_id));
+        "FROM saved_games WHERE id=? AND user_id=?",
+        {save_id, user_id});
 
     if (save_rows.empty())
     {
@@ -231,11 +226,11 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
     std::string player_b_name = save_rows[0][3];
 
     // Create new game with saved state (use default module_id=1)
-    std::string ins = "INSERT INTO games(module_id, state_json) VALUES(1,'" +
-                      db.esc(state_json) + "')";
-    db.exec(ins);
+    db.Exec("INSERT INTO games(module_id, state_json) VALUES(1,?)",
+            {state_json});
 
-    auto id_rows = db.query("SELECT LAST_INSERT_ID()");
+    auto id_rows = db.Query("SELECT LAST_INSERT_ID()", {});
+    fprintf(stderr, "stoi 16\n");
     int new_game_id = id_rows.empty() ? 0 : std::stoi(id_rows[0][0]);
 
     if (new_game_id == 0)
@@ -246,9 +241,9 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
     }
 
     // Load saved ships
-    auto ships = db.query("SELECT ship_code, ship_name, owner, ship_json "
-                          "FROM saved_ships WHERE save_id=" +
-                          std::to_string(save_id));
+    auto ships = db.Query("SELECT ship_code, ship_name, owner, ship_json "
+                          "FROM saved_ships WHERE save_id=?",
+                          {save_id});
 
     for (const auto& ship : ships)
     {
@@ -259,12 +254,9 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
         char owner = ship[2][0];
 
         // TODO: Parse ship_json for full restoration
-        db.exec("INSERT INTO ships(game_id, ship_code, ship_name, owner, pd, "
-                "b, s, t) "
-                "VALUES(" +
-                std::to_string(new_game_id) + ",'" + db.esc(ship_code) + "','" +
-                db.esc(ship_name) + "','" + std::string(1, owner) +
-                "',1,1,1,1)");
+        db.Exec("INSERT INTO ships(game_id, ship_code, ship_name, owner, pd, "
+                "b, s, t) VALUES(?,?,?,?,1,1,1,1)",
+                {new_game_id, ship_code, ship_name, owner});
     }
 
     // Create room for this game
@@ -276,19 +268,15 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
     }
 
     std::string room_name = "Resumed: " + save_name;
-    db.exec("INSERT INTO rooms(room_code, name, created_by, seat_a, status, "
-            "module_id, game_id) "
-            "VALUES('" +
-            db.esc(room_code) + "','" + db.esc(room_name) + "'," +
-            std::to_string(user_id) + "," + std::to_string(user_id) +
-            ",'waiting',1," + std::to_string(new_game_id) + ")");
+    db.Exec("INSERT INTO rooms(room_code, name, created_by, seat_a, status, "
+            "module_id, game_id) VALUES(?,?,?,?,'waiting',1,?)",
+            {room_code, room_name, user_id, user_id, new_game_id});
 
     // Link user to game
-    db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
-            std::to_string(new_game_id) + "," + std::to_string(user_id) +
-            ",'A')");
-    db.exec("UPDATE sessions SET game_id=" + std::to_string(new_game_id) +
-            " WHERE user_id=" + std::to_string(user_id));
+    db.Exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(?,?,'A')",
+            {new_game_id, user_id});
+    db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
+            {new_game_id, user_id});
 
     std::ostringstream o;
     o << "{\"ok\":true,\"game_id\":" << new_game_id << ",\"room_code\":\""
@@ -313,9 +301,9 @@ void handle_save_delete(int save_id, const HttpRequest* req, HttpResponse* resp)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Check ownership
-    auto rows = db.query(
-        "SELECT id FROM saved_games WHERE id=" + std::to_string(save_id) +
-        " AND user_id=" + std::to_string(user_id));
+    auto rows = db.Query(
+        "SELECT id FROM saved_games WHERE id=? AND user_id=?",
+        {save_id, user_id});
     if (rows.empty())
     {
         resp->status = 404;
@@ -324,7 +312,7 @@ void handle_save_delete(int save_id, const HttpRequest* req, HttpResponse* resp)
     }
 
     // Delete (cascade will remove saved_ships)
-    db.exec("DELETE FROM saved_games WHERE id=" + std::to_string(save_id));
+    db.Exec("DELETE FROM saved_games WHERE id=?", {save_id});
     resp->body = "{\"ok\":true}";
 }
 

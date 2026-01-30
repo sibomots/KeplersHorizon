@@ -12,11 +12,10 @@ CombatAgent::get_combat_state_at_hex(const int gid, const std::string& hex_id)
 
     // BUGBUG need to be more precise about the combat_state record that is
     // found. module id and players involved?
-    auto rows =
-        db.query("SELECT round, stage, attacker_remains, stalemate_counter, "
-                 "last_log "
-                 "FROM combat_state WHERE game_id=" +
-                 std::to_string(gid) + " AND hex_id='" + hex_id + "'");
+    std::string q =
+        "SELECT round, stage, attacker_remains, stalemate_counter, last_log "
+        "FROM combat_state WHERE game_id=? AND hex_id=?";
+    auto rows = db.Query(q, {gid, hex_id});
     if (rows.empty())
     {
         return CombatSessionState();
@@ -153,20 +152,12 @@ bool CombatAgent::apply(CombatOrderParam& param)
     // Validate Ship Ownership of the Attackee
     /////////////////////////////////////////////////////////
 
-    std::string pick_attacker;
-    pick_attacker.append("SELECT S.owner FROM ships S WHERE S.game_id =");
-    pick_attacker.append(std::to_string(gid));
-    pick_attacker.append(" AND S.destroyed_at is NULL ");
-    pick_attacker.append(" AND S.owner='");
-    pick_attacker += combatting_players.first;
-    pick_attacker.append("' ");
-    pick_attacker.append(" AND ( S.ship_code='");
-    pick_attacker.append(db.esc(attacker));
-    pick_attacker.append("' OR S.ship_name ='");
-    pick_attacker.append(db.esc(attacker));
-    pick_attacker.append("')");
-
-    auto attacker_owner = db.query(pick_attacker);
+    std::string pick_attacker =
+        "SELECT S.owner FROM ships S WHERE S.game_id=? "
+        "AND S.destroyed_at IS NULL AND S.owner=? "
+        "AND (S.ship_code=? OR S.ship_name=?)";
+    auto attacker_owner = db.Query(pick_attacker,
+        {gid, combatting_players.first, attacker, attacker});
 
     if (attacker_owner.empty())
     {
@@ -174,20 +165,12 @@ bool CombatAgent::apply(CombatOrderParam& param)
         // ship is not found
         return false;
     }
-    std::string pick_attackee;
-    pick_attackee.append("SELECT S.owner FROM ships S WHERE S.game_id =");
-    pick_attackee.append(std::to_string(gid));
-    pick_attackee.append(" AND S.destroyed_at is NULL ");
-    pick_attackee.append(" AND S.owner='");
-    pick_attackee += combatting_players.second;
-    pick_attackee.append("' ");
-    pick_attackee.append(" AND ( S.ship_code='");
-    pick_attackee.append(db.esc(attackee));
-    pick_attackee.append("' OR S.ship_name ='");
-    pick_attackee.append(db.esc(attackee));
-    pick_attackee.append("')");
-
-    auto attackee_owner = db.query(pick_attackee);
+    std::string pick_attackee =
+        "SELECT S.owner FROM ships S WHERE S.game_id=? "
+        "AND S.destroyed_at IS NULL AND S.owner=? "
+        "AND (S.ship_code=? OR S.ship_name=?)";
+    auto attackee_owner = db.Query(pick_attackee,
+        {gid, combatting_players.second, attackee, attackee});
 
     if (attackee_owner.empty())
     {
@@ -200,18 +183,11 @@ bool CombatAgent::apply(CombatOrderParam& param)
     // 2.
     // Validate combat state and stats
     ////////////////////////////////////////////////////////
-    std::string query_stats_attacker;
-    query_stats_attacker.append(
-        "SELECT at_hex, pd, beam, screen, tube, missiles, sr ");
-    query_stats_attacker.append(" FROM ships WHERE game_id=");
-    query_stats_attacker.append(std::to_string(gid));
-    query_stats_attacker.append(" AND destroyed_at is NULL ");
-    query_stats_attacker.append(" AND ( ship_code='");
-    query_stats_attacker.append(db.esc(attacker));
-    query_stats_attacker.append("' OR ship_name='");
-    query_stats_attacker.append(db.esc(attacker));
-    query_stats_attacker.append("')");
-    auto attacker_stats = db.query(query_stats_attacker.c_str());
+    std::string query_stats_attacker =
+        "SELECT at_hex, pd, beam, screen, tube, missiles, sr "
+        "FROM ships WHERE game_id=? AND destroyed_at IS NULL "
+        "AND (ship_code=? OR ship_name=?)";
+    auto attacker_stats = db.Query(query_stats_attacker, {gid, attacker, attacker});
 
     if (attacker_stats.empty() || attacker_stats[0][0].empty())
     {
@@ -320,68 +296,26 @@ bool CombatAgent::apply(CombatOrderParam& param)
     // We are ok to proceed with this new combat order.
 
     // 3. Insert/Update
-    std::string combat_order;
+    std::string combat_order =
+        "INSERT INTO combat_orders "
+        "(game_id, owner, ship_code, round, tactic, target_id, "
+        "power_d, power_b, power_s, power_t, missiles_data, committed) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) "
+        "ON DUPLICATE KEY UPDATE "
+        "tactic=?, target_id=?, power_d=?, power_b=?, power_s=?, power_t=?, "
+        "missiles_data=?, committed=0";
 
-    combat_order.append("INSERT INTO combat_orders "
-                        " (game_id, "
-                        " owner, "
-                        " ship_code, "
-                        " round, "
-                        " tactic, "
-                        " target_id, "
-                        " power_d, "
-                        " power_b, "
-                        " power_s, "
-                        " power_t, "
-                        " missiles_data, "
-                        " committed) ");
-    combat_order.append(" VALUES (");
-    combat_order.append(std::to_string(gid));
-    combat_order.append(", '");
-    combat_order += combatting_players.first;
-    combat_order.append("', '");
-    combat_order.append(attacker);
-    combat_order.append("', ");
-    combat_order.append(std::to_string(combat_state.round));
-    combat_order.append(", '");
-    combat_order += tactic;
-    combat_order.append("', '");
-    combat_order.append(attackee);
-    combat_order.append("', ");
-    combat_order.append(std::to_string(combat_attr[AttributeID::POWER_DRIVE]));
-    combat_order.append(", ");
-    combat_order.append(std::to_string(combat_attr[AttributeID::BEAM]));
-    combat_order.append(", ");
-    combat_order.append(std::to_string(combat_attr[AttributeID::SCREEN]));
-    combat_order.append(", ");
-    combat_order.append(std::to_string(combat_attr[AttributeID::TUBE]));
-    combat_order.append(", '");
-    combat_order.append(packed_missile_data);
-    combat_order.append("', 0) ");
-    combat_order.append("ON DUPLICATE KEY UPDATE ");
-    combat_order.append("tactic='");
-    combat_order += tactic;
-    combat_order.append("', ");
-    combat_order.append("target_id='");
-    combat_order.append(attackee);
-    combat_order.append("', ");
-    combat_order.append("power_d=");
-    combat_order.append(std::to_string(combat_attr[AttributeID::POWER_DRIVE]));
-    combat_order.append(", ");
-    combat_order.append("power_b=");
-    combat_order.append(std::to_string(combat_attr[AttributeID::BEAM]));
-    combat_order.append(", ");
-    combat_order.append("power_s=");
-    combat_order.append(std::to_string(combat_attr[AttributeID::SCREEN]));
-    combat_order.append(", ");
-    combat_order.append("power_t=");
-    combat_order.append(std::to_string(combat_attr[AttributeID::TUBE]));
-    combat_order.append(", ");
-    combat_order.append("missiles_data='");
-    combat_order.append(packed_missile_data);
-    combat_order.append("', committed=0");
-
-    db.exec(combat_order.c_str());
+    db.Exec(combat_order, {
+        gid, combatting_players.first, attacker, combat_state.round,
+        tactic, attackee,
+        combat_attr[AttributeID::POWER_DRIVE], combat_attr[AttributeID::BEAM],
+        combat_attr[AttributeID::SCREEN], combat_attr[AttributeID::TUBE],
+        packed_missile_data,
+        tactic, attackee,
+        combat_attr[AttributeID::POWER_DRIVE], combat_attr[AttributeID::BEAM],
+        combat_attr[AttributeID::SCREEN], combat_attr[AttributeID::TUBE],
+        packed_missile_data
+    });
 
     // Resolution triggered by explicit 'combat commit'
     // BUGBUG
@@ -419,8 +353,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
     char owner = param.get_player();
 
     // Get the active combat hex
-    auto gameRow = db.query("SELECT active_combat_hex FROM games WHERE id=" +
-                            std::to_string(gid));
+    auto gameRow = db.Query("SELECT active_combat_hex FROM games WHERE id=?", {gid});
 
     std::string activeHex;
     if (!gameRow.empty() && !gameRow[0][0].empty())
@@ -429,13 +362,13 @@ bool CombatAgent::apply(CombatCommitParam& param)
     }
 
     // Get all hexes with uncommitted orders for this player
-    auto hexRows = db.query("SELECT DISTINCT s.at_hex FROM combat_orders co "
-                            "JOIN ships s ON s.game_id=co.game_id AND "
-                            "s.owner=co.owner AND s.ship_code=co.ship_code "
-                            "WHERE co.game_id=" +
-                            std::to_string(gid) + " AND co.owner='" +
-                            std::string(1, owner) +
-                            "' AND co.committed=0 AND s.destroyed_at IS NULL");
+    std::string hex_q =
+        "SELECT DISTINCT s.at_hex FROM combat_orders co "
+        "JOIN ships s ON s.game_id=co.game_id AND s.owner=co.owner "
+        "AND s.ship_code=co.ship_code "
+        "WHERE co.game_id=? AND co.owner=? AND co.committed=0 "
+        "AND s.destroyed_at IS NULL";
+    auto hexRows = db.Query(hex_q, {gid, owner});
 
     if (hexRows.empty())
     {
@@ -459,9 +392,8 @@ bool CombatAgent::apply(CombatCommitParam& param)
     }
 
     // Mark all uncommitted orders as committed
-    db.exec("UPDATE combat_orders SET committed=1 WHERE game_id=" +
-            std::to_string(gid) + " AND owner='" + std::string(1, owner) +
-            "' AND committed=0");
+    db.Exec("UPDATE combat_orders SET committed=1 WHERE game_id=? "
+            "AND owner=? AND committed=0", {gid, owner});
 
     Telemetry::instance().write("TACTICAL: Combat orders transmitted.");
 
@@ -475,16 +407,15 @@ bool CombatAgent::apply(CombatCommitParam& param)
         if (ce.all_orders_committed(hex_id, cs.round))
         {
             // Reveal all orders to both players before resolution (per rules)
-            auto orders = db.query(
+            std::string orders_q =
                 "SELECT co.owner, co.ship_code, co.tactic, co.target_id, "
                 "co.power_d, co.power_b, co.power_s, co.power_t "
                 "FROM combat_orders co "
                 "JOIN ships s ON s.game_id=co.game_id AND "
                 "s.ship_code=co.ship_code AND s.owner=co.owner "
-                "WHERE co.game_id=" +
-                std::to_string(gid) + " AND s.at_hex='" + hex_id +
-                "' AND co.round=" + std::to_string(cs.round) +
-                " AND s.destroyed_at IS NULL ORDER BY co.owner, co.ship_code");
+                "WHERE co.game_id=? AND s.at_hex=? AND co.round=? "
+                "AND s.destroyed_at IS NULL ORDER BY co.owner, co.ship_code";
+            auto orders = db.Query(orders_q, {gid, hex_id, cs.round});
 
             std::ostringstream reveal;
             reveal << "=== COMBAT ORDERS REVEALED ===\n";
@@ -539,10 +470,9 @@ bool CombatAgent::apply(CombatCancelParam& param)
     char owner = param.get_player();
 
     // Check if there are any uncommitted orders to cancel (Bug #1)
-    auto orderRows =
-        db.query("SELECT COUNT(*) FROM combat_orders WHERE game_id=" +
-                 std::to_string(gid) + " AND owner='" +
-                 std::string(1, owner) + "' AND committed=0");
+    auto orderRows = db.Query(
+        "SELECT COUNT(*) FROM combat_orders WHERE game_id=? "
+        "AND owner=? AND committed=0", {gid, owner});
 
     if (orderRows.empty() || orderRows[0][0] == "0")
     {
@@ -552,9 +482,8 @@ bool CombatAgent::apply(CombatCancelParam& param)
     }
 
     // Delete all uncommitted orders for this player
-    db.exec(
-        "DELETE FROM combat_orders WHERE game_id=" + std::to_string(gid) +
-        " AND owner='" + std::string(1, owner) + "' AND committed=0");
+    db.Exec("DELETE FROM combat_orders WHERE game_id=? AND owner=? "
+            "AND committed=0", {gid, owner});
 
     Telemetry::instance().write(
         "TACTICAL: Orders rescinded. Issue new commands.");
@@ -569,16 +498,15 @@ bool CombatAgent::apply(CombatDraftsParam& param)
     char owner = param.get_player();
 
     // Query uncommitted orders for this player, grouped by hex
-    auto rows = db.query(
+    std::string drafts_q =
         "SELECT s.at_hex, co.ship_code, co.tactic, co.target_id, "
         "co.power_d, co.power_b, co.power_s, co.power_t, co.missiles_data "
         "FROM combat_orders co "
         "JOIN ships s ON s.game_id=co.game_id AND s.owner=co.owner AND "
         "s.ship_code=co.ship_code "
-        "WHERE co.game_id=" +
-        std::to_string(gid) + " AND co.owner='" + std::string(1, owner) +
-        "' AND co.committed=0 AND s.destroyed_at IS NULL "
-        "ORDER BY s.at_hex, co.ship_code");
+        "WHERE co.game_id=? AND co.owner=? AND co.committed=0 "
+        "AND s.destroyed_at IS NULL ORDER BY s.at_hex, co.ship_code";
+    auto rows = db.Query(drafts_q, {gid, owner});
 
     if (rows.empty())
     {

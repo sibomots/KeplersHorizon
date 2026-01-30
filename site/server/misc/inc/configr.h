@@ -16,6 +16,7 @@ enum class Key : std::size_t {
   dbname,
   dbusr,
   dbpass,
+  ai,
   port,
   monitor,
   log,
@@ -42,6 +43,7 @@ template <> struct KeyType<Key::dbhost>  { using type = std::string; };
 template <> struct KeyType<Key::dbname>  { using type = std::string; };
 template <> struct KeyType<Key::dbusr>   { using type = std::string; };
 template <> struct KeyType<Key::dbpass>  { using type = std::string; };
+template <> struct KeyType<Key::ai>      { using type = std::string; };
 template <> struct KeyType<Key::port>    { using type = int; };
 template <> struct KeyType<Key::monitor> { using type = bool; };
 template <> struct KeyType<Key::log>     { using type = std::string; };
@@ -84,6 +86,9 @@ public:
      }
      if (has<Key::dbusr>()) {
         std::cout << "dbusr: " << get<Key::dbusr>() << "\n";
+     }
+     if (has<Key::ai>()) {
+        std::cout << "ai: " << get<Key::ai>() << "\n";
      }
      if (has<Key::port>()) {
        std::cout << "port: " << get<Key::port>() << "\n";

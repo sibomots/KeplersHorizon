@@ -1236,35 +1236,35 @@ deployable_ship:
 
 deploy_cmd:
    // deploy - list undeployed ships
-   TOK_DEPLOY {
-       GameState s = StateMachine::instance().get_game_state();
-       char owner = StateMachine::instance().get_current_player();
-       DatabaseManager& db = DatabaseManager::instance();
-
-       auto rows = db.query(
-           "SELECT ship_code, ship_name FROM ships WHERE game_id=" +
-           std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
-           "' AND destroyed_at IS NULL AND (at_hex IS NULL OR at_hex = '') "
-           "AND (at_system IS NULL OR at_system = '') ORDER BY ship_code");
-
-       if (rows.empty())
-       {
-           Telemetry::instance().write(
-               "DEPLOY: All vessels are deployed. None in spacedock.");
-       }
-       else
-       {
-           std::ostringstream out;
-           out << "DEPLOY: Ships in spacedock awaiting deployment:\n";
-           for (const auto& r : rows)
-           {
-               out << "  " << r[0] << " - " << r[1] << "\n";
-           }
-           out << "Use: deploy <SHIP> <BASE_SYSTEM>";
-           Telemetry::instance().write(out.str());
-       }
-   }
-   | TOK_DEPLOY deployable_ship TOK_STRING {
+//     TOK_DEPLOY {
+//         GameState s = StateMachine::instance().get_game_state();
+//         char owner = StateMachine::instance().get_current_player();
+//         DatabaseManager& db = DatabaseManager::instance();
+//  
+//         auto rows = db.query(
+//             "SELECT ship_code, ship_name FROM ships WHERE game_id=" +
+//             std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
+//             "' AND destroyed_at IS NULL AND (at_hex IS NULL OR at_hex = '') "
+//             "AND (at_system IS NULL OR at_system = '') ORDER BY ship_code");
+//  
+//         if (rows.empty())
+//         {
+//             Telemetry::instance().write(
+//                 "DEPLOY: All vessels are deployed. None in spacedock.");
+//         }
+//         else
+//         {
+//             std::ostringstream out;
+//             out << "DEPLOY: Ships in spacedock awaiting deployment:\n";
+//             for (const auto& r : rows)
+//             {
+//                 out << "  " << r[0] << " - " << r[1] << "\n";
+//             }
+//             out << "Use: deploy <SHIP> <BASE_SYSTEM>";
+//             Telemetry::instance().write(out.str());
+//         }
+//     }
+    TOK_DEPLOY deployable_ship TOK_STRING {
        std::string ship(*$2);
        std::string dest(*$3);
        ICmd* pCmd = DeployCommand::Builder()

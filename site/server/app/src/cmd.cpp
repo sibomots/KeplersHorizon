@@ -133,9 +133,8 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         {
             // Update session with new game_id
             DatabaseManager& db = DatabaseManager::instance();
-            db.exec(
-                "UPDATE sessions SET game_id=" + std::to_string(new_game_id) +
-                " WHERE token='" + db.esc(context.token) + "'");
+            db.Exec("UPDATE sessions SET game_id=? WHERE token=?",
+                    {new_game_id, context.token});
             Logger::instance().info("[CMD] Updated session game_id to " +
                                     std::to_string(new_game_id));
         }

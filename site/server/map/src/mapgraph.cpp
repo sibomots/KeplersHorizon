@@ -26,8 +26,10 @@ static int get_module_id_for_game(int game_id)
         return DEFAULT_MODULE_ID;
 
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query("SELECT module_id FROM games WHERE id=" +
-                         std::to_string(game_id));
+
+    std::string q = "SELECT module_id FROM games WHERE id=?";
+    auto rows = db.Query(q, {game_id});
+
     if (rows.empty() || rows[0].empty() || rows[0][0].empty())
         return DEFAULT_MODULE_ID;
     return std::atoi(rows[0][0].c_str());
@@ -44,9 +46,10 @@ void MapGraph::load_hexes()
 {
     DatabaseManager& db = DatabaseManager::instance();
     // Module hexes are shared across all games using same module
-    std::vector<std::vector<std::string>> allHex =
-        db.query("SELECT hex_id,q,r FROM hexes WHERE module_id=" +
-                 std::to_string(module_id));
+
+    std::string ahq =
+        "SELECT hex_id,q,r FROM hexes WHERE module_id=?";
+    auto allHex = db.Query(ahq, {module_id});
 
     for (size_t i = 0; i < allHex.size(); i++)
     {
@@ -64,16 +67,16 @@ void MapGraph::load_warplines()
 {
     DatabaseManager& db = DatabaseManager::instance();
     // Warplines are shared across all games using same module
-    std::vector<std::vector<std::string>> wh = db.query(
-        "SELECT wh.hex_id,w.a_hex,w.b_hex "
-        "FROM warpline_hexes wh "
-        "JOIN warplines w ON w.id=wh.warpline_id AND w.module_id=wh.module_id "
-        "WHERE wh.module_id=" +
-        std::to_string(module_id));
 
-    std::vector<std::vector<std::string>> wlines =
-        db.query("SELECT a_hex,b_hex FROM warplines WHERE module_id=" +
-                 std::to_string(module_id));
+    std::string  whq = 
+        "SELECT wh.hex_id,w.a_hex,w.b_hex "
+        " FROM warpline_hexes wh "
+        " JOIN warplines w ON w.id=wh.warpline_id AND w.module_id=wh.module_id "
+        " WHERE wh.module_id=?";
+    auto wh = db.Query(whq, {module_id});
+
+    std::string wlq = "SELECT a_hex,b_hex FROM warplines WHERE module_id=?";
+    auto wlines = db.Query(wlq, {module_id});
 
     for (size_t i = 0; i < wh.size(); i++)
     {
@@ -100,14 +103,12 @@ void MapGraph::load_state(char owner)
     enemyBlockades.clear();
 
     // Ships are game-specific (use game_id), but star_systems uses module_id
-    std::vector<std::vector<std::string>> blocks = db.query(
+
+    std::string q = 
         "SELECT DISTINCT ss.hex_id FROM ships s "
-        "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=" +
-        std::to_string(module_id) +
-        " "
-        "WHERE s.game_id=" +
-        std::to_string(game_id) + " AND s.owner='" + std::string(1, enemy) +
-        "' AND s.destroyed_at IS NULL");
+        "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=? "
+        "WHERE s.game_id=? AND s.owner=? AND s.destroyed_at IS NULL";
+    auto blocks = db.Query(q, {module_id, game_id, enemy});
 
     for (const auto& r : blocks)
     {
@@ -157,11 +158,11 @@ std::string MapGraph::resolve_hex(const std::string& token)
 std::string MapGraph::resolve_system(const std::string& token)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    std::string u = upper_ascii(token);
+    std::string tok = upper_ascii(token);
     // Star systems use module_id (shared across all games using same module)
-    auto r = db.query("SELECT hex_id FROM star_systems WHERE module_id=" +
-                      std::to_string(module_id) + " AND UPPER(name)='" +
-                      db.esc(u) + "' LIMIT 1");
+    std::string q = "SELECT hex_id FROM star_systems WHERE module_id=? AND UPPER(name)=? LIMIT 1";
+    auto r = db.Query(q, { module_id, tok});
+
     if (!r.empty() && !r[0].empty())
     {
         return r[0][0];

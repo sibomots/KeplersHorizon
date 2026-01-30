@@ -35,11 +35,10 @@ std::string SystemCommand::get_knowledge_level()
     char owner = StateMachine::instance().get_current_player();
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query("SELECT knowledge_level FROM codex_entries "
-                         "WHERE game_id=" +
-                         std::to_string(s.game_id) + " AND player='" +
-                         std::string(1, owner) + "' AND system_name='" +
-                         db.esc(m_system_name) + "'");
+    std::string q = 
+    "SELECT knowledge_level FROM codex_entries "
+    " WHERE game_id=?  AND player=? AND system_name=?";
+    auto rows = db.Query(q, { s.game_id, owner, m_system_name});
 
     if (rows.empty())
     {
@@ -53,12 +52,13 @@ bool SystemCommand::invoke(void)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Validate system exists
-    auto check = db.query("SELECT name FROM star_systems WHERE UPPER(name)='" +
-                          db.esc(m_system_name) + "'");
+    std::string q =
+    "SELECT name FROM star_systems WHERE UPPER(name)=?";
+    auto check = db.Query(q, {m_system_name});
+
     if (check.empty())
     {
-        Telemetry::instance().write("SYSTEM: Unknown system '" +
-                                       m_system_name + "'");
+        Telemetry::instance().write("SYSTEM: Unknown system '" + m_system_name + "'");
         return false;
     }
 
@@ -114,10 +114,10 @@ void SystemCommand::show_overview()
     // Always show star info if at least Rumored
     if (rank >= 1)
     {
-        auto stars =
-            db.query("SELECT designation, star_class, luminosity, color, notes "
-                     "FROM system_stars WHERE system_name='" +
-                     db.esc(m_system_name) + "'");
+        std::string sq = 
+            "SELECT designation, star_class, luminosity, color, notes "
+            " FROM system_stars WHERE system_name=?";
+        auto stars = db.Query(sq, { m_system_name });
 
         if (!stars.empty())
         {
@@ -136,28 +136,27 @@ void SystemCommand::show_overview()
         }
 
         // Planet count
-        auto pcount =
-            db.query("SELECT COUNT(*) FROM system_planets WHERE system_name='" +
-                     db.esc(m_system_name) + "'");
+        std::string pq = "SELECT COUNT(*) FROM system_planets WHERE system_name=?";
+        auto pcount = db.Query(pq, { m_system_name});
+
         if (!pcount.empty())
         {
             out << "Planets: " << pcount[0][0] << "\n";
         }
 
         // Belt count
-        auto bcount = db.query(
-            "SELECT COUNT(*) FROM system_asteroid_belts WHERE system_name='" +
-            db.esc(m_system_name) + "'");
+        std::string bc = "SELECT COUNT(*) FROM system_asteroid_belts WHERE system_name=?";
+        auto bcount = db.Query(bc, {m_system_name});
+
         if (!bcount.empty() && bcount[0][0] != "0")
         {
             out << "Asteroid Belts: " << bcount[0][0] << "\n";
         }
     }
 
-    // Show rumors if available
-    auto rumors = db.query(
-        "SELECT rumor_text FROM system_codex_rumors WHERE system_name='" +
-        db.esc(m_system_name) + "'");
+    std::string q = "SELECT rumor_text FROM system_codex_rumors WHERE system_name=?";
+    auto rumors = db.Query(q, {m_system_name});
+
     if (!rumors.empty())
     {
         out << "\nRUMORS:\n";
@@ -205,11 +204,11 @@ void SystemCommand::show_planets()
     std::ostringstream out;
     out << "=== " << m_system_name << " PLANETS ===\n\n";
 
-    auto rows = db.query(
+    std::string q = 
         "SELECT orbital_position, designation, common_name, planet_type, "
-        "atmosphere, habitability, notes FROM system_planets "
-        "WHERE system_name='" +
-        db.esc(m_system_name) + "' ORDER BY orbital_position");
+        " atmosphere, habitability, notes FROM system_planets "
+        " WHERE system_name=? ORDER BY orbital_position";
+    auto rows = db.Query(q, {m_system_name});
 
     if (rows.empty())
     {
@@ -252,24 +251,26 @@ void SystemCommand::show_resources()
     out << "=== " << m_system_name << " RESOURCES ===\n\n";
 
     // Get resources from planets
-    auto rows = db.query(
+    std::string pq = 
         "SELECT p.common_name, p.designation, r.resource_type, r.abundance, "
-        "r.extraction_difficulty "
-        "FROM system_resources r "
-        "JOIN system_planets p ON r.location_type='Planet' AND "
-        "r.location_id=p.id "
-        "WHERE p.system_name='" +
-        db.esc(m_system_name) + "' ORDER BY r.resource_type");
+        " r.extraction_difficulty "
+        " FROM system_resources r "
+        " JOIN system_planets p ON r.location_type='Planet' AND "
+        " r.location_id=p.id "
+        " WHERE p.system_name=? ORDER BY r.resource_type";
+
+    auto rows = db.Query(pq, {m_system_name });
 
     // Get resources from belts
-    auto belt_rows =
-        db.query("SELECT b.designation, r.resource_type, r.abundance, "
-                 "r.extraction_difficulty "
-                 "FROM system_resources r "
-                 "JOIN system_asteroid_belts b ON r.location_type='Belt' AND "
-                 "r.location_id=b.id "
-                 "WHERE b.system_name='" +
-                 db.esc(m_system_name) + "' ORDER BY r.resource_type");
+    std::string bq =
+    "SELECT b.designation, r.resource_type, r.abundance, "
+    " r.extraction_difficulty "
+    " FROM system_resources r "
+    " JOIN system_asteroid_belts b ON r.location_type='Belt' AND "
+    " r.location_id=b.id "
+    " WHERE b.system_name=?  ORDER BY r.resource_type";
+
+    auto belt_rows = db.Query(bq, {m_system_name});
 
     if (rows.empty() && belt_rows.empty())
     {
@@ -324,15 +325,15 @@ void SystemCommand::show_populations()
     std::ostringstream out;
     out << "=== " << m_system_name << " POPULATIONS ===\n\n";
 
-    auto rows = db.query(
+    std::string q =
         "SELECT p.common_name, p.designation, sp.name, pop.pop_class, "
-        "pop.population_millions, pop.tech_level, pop.disposition "
-        "FROM system_populations pop "
-        "JOIN system_planets p ON pop.location_type='Planet' AND "
-        "pop.location_id=p.id "
-        "JOIN system_species sp ON pop.species_id=sp.id "
-        "WHERE p.system_name='" +
-        db.esc(m_system_name) + "' ORDER BY pop.population_millions DESC");
+        " pop.population_millions, pop.tech_level, pop.disposition "
+        " FROM system_populations pop "
+        " JOIN system_planets p ON pop.location_type='Planet' AND "
+        " pop.location_id=p.id "
+        " JOIN system_species sp ON pop.species_id=sp.id "
+        " WHERE p.system_name=? ORDER BY pop.population_millions DESC";
+    auto rows = db.Query(q, {m_system_name});
 
     if (rows.empty())
     {
@@ -384,14 +385,14 @@ void SystemCommand::show_facilities()
     std::ostringstream out;
     out << "=== " << m_system_name << " FACILITIES ===\n\n";
 
-    auto rows = db.query(
+    std::string q =
         "SELECT p.common_name, p.designation, f.facility_type, f.name, "
-        "f.capacity, f.owner, f.operational "
-        "FROM system_facilities f "
-        "JOIN system_planets p ON f.location_type='Planet' AND "
-        "f.location_id=p.id "
-        "WHERE p.system_name='" +
-        db.esc(m_system_name) + "' ORDER BY f.facility_type");
+        " f.capacity, f.owner, f.operational "
+        " FROM system_facilities f "
+        " JOIN system_planets p ON f.location_type='Planet' AND "
+        " f.location_id=p.id "
+        " WHERE p.system_name=? ORDER BY f.facility_type";
+    auto rows = db.Query(q, {m_system_name });
 
     if (rows.empty())
     {
@@ -443,10 +444,10 @@ void SystemCommand::show_anomalies()
     DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << m_system_name << " ANOMALIES ===\n\n";
-
-    auto rows = db.query("SELECT name, anomaly_type, effect, discovery_text "
-                         "FROM system_anomalies WHERE system_name='" +
-                         db.esc(m_system_name) + "'");
+    std::string q = 
+    "SELECT name, anomaly_type, effect, discovery_text "
+    " FROM system_anomalies WHERE system_name=?";
+    auto rows = db.Query(q, {m_system_name});
 
     if (rows.empty())
     {

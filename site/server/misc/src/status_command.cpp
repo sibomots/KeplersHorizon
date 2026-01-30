@@ -33,14 +33,14 @@ bool StatusCommand::invoke(void)
         << std::setw(8) << s.vpB << "\n";
 
     // Count ships
-    auto countA = db.query(
-        "SELECT COUNT(*) FROM ships WHERE game_id=" + std::to_string(game_id) +
-        " AND owner='A' AND destroyed_at IS NULL");
-    auto countB = db.query(
-        "SELECT COUNT(*) FROM ships WHERE game_id=" + std::to_string(game_id) +
-        " AND owner='B' AND destroyed_at IS NULL");
+    std::string q =
+    "SELECT COUNT(*) FROM ships WHERE game_id=? AND owner=? AND destroyed_at IS NULL";
+    auto countA = db.Query(q, { game_id, 'A'} );
+    auto countB = db.Query(q, { game_id, 'B'} );
+
     int shipsA = countA.empty() ? 0 : std::atoi(countA[0][0].c_str());
     int shipsB = countB.empty() ? 0 : std::atoi(countB[0][0].c_str());
+
     out << "Ships:   " << std::setw(8) << shipsA << "    "
         << std::setw(8) << shipsB << "\n";
     out << "===========================================\n";

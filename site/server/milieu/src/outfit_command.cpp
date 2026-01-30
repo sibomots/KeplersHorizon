@@ -105,11 +105,10 @@ bool OutfitCommand::do_outfit()
         c = toupper(c);
 
     // Find the ship
-    auto ships = db.query(
-        "SELECT at_hex, at_system FROM ships WHERE game_id=" +
-        std::to_string(game_id) + " AND owner='" + std::string(1, me) +
-        "' AND ship_code='" + db.esc(ship_upper) +
-        "' AND destroyed_at IS NULL");
+    auto ships = db.Query(
+        "SELECT at_hex, at_system FROM ships WHERE game_id=? "
+        "AND owner=? AND ship_code=? AND destroyed_at IS NULL",
+        {game_id, me, ship_upper});
 
     if (ships.empty())
     {
@@ -132,9 +131,9 @@ bool OutfitCommand::do_outfit()
     if (at_system.empty())
     {
         // Get system name from hex
-        auto sys_rows = db.query(
-            "SELECT name FROM star_systems WHERE hex_id='" + db.esc(at_hex) +
-            "' AND module_id=1");
+        auto sys_rows = db.Query(
+            "SELECT name FROM star_systems WHERE hex_id=? AND module_id=1",
+            {at_hex});
         if (!sys_rows.empty())
         {
             at_system = sys_rows[0][0];
@@ -175,10 +174,9 @@ bool OutfitCommand::do_outfit()
     StateMachine::instance().save_game(s);
 
     // Add equipment to ship
-    db.exec("UPDATE ships SET " + std::string(item->column) + "=" +
-            item->column + "+1 WHERE game_id=" + std::to_string(game_id) +
-            " AND owner='" + std::string(1, me) + "' AND ship_code='" +
-            db.esc(ship_upper) + "'");
+    db.Exec("UPDATE ships SET " + std::string(item->column) + "=" +
+            item->column + "+1 WHERE game_id=? AND owner=? AND ship_code=?",
+            {game_id, me, ship_upper});
 
     std::ostringstream msg;
     msg << "OUTFIT: Installed " << item->description << " on " << ship_upper

@@ -45,8 +45,8 @@ std::string RoomManager::createRoom(int user_id, const std::string& name)
     do
     {
         code = generateRoomCode();
-        auto existing = db.query("SELECT id FROM rooms WHERE room_code='" +
-                                 db.esc(code) + "'");
+        auto existing = db.Query("SELECT id FROM rooms WHERE room_code=?",
+                                 {code});
         if (existing.empty())
             break;
     } while (++attempts < 10);
@@ -57,12 +57,9 @@ std::string RoomManager::createRoom(int user_id, const std::string& name)
     }
 
     // Create room with user in seat A
-    std::string sql = "INSERT INTO rooms(room_code, name, created_by, seat_a, "
-                      "status) VALUES('" +
-                      db.esc(code) + "','" + db.esc(name) + "'," +
-                      std::to_string(user_id) + "," + std::to_string(user_id) +
-                      ",'waiting')";
-    db.exec(sql);
+    db.Exec("INSERT INTO rooms(room_code, name, created_by, seat_a, "
+            "status) VALUES(?,?,?,?,'waiting')",
+            {code, name, user_id, user_id});
 
     return code;
 }
@@ -72,9 +69,9 @@ bool RoomManager::joinRoom(const std::string& code, int user_id)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Check room exists and has empty seat
-    auto rows = db.query(
-        "SELECT id, seat_a, seat_b, status FROM rooms WHERE room_code='" +
-        db.esc(code) + "'");
+    auto rows = db.Query(
+        "SELECT id, seat_a, seat_b, status FROM rooms WHERE room_code=?",
+        {code});
     if (rows.empty())
         return false;
 
@@ -93,13 +90,13 @@ bool RoomManager::joinRoom(const std::string& code, int user_id)
     // Join appropriate seat (don't change status yet)
     if (seat_a == 0)
     {
-        db.exec("UPDATE rooms SET seat_a=" + std::to_string(user_id) +
-                " WHERE room_code='" + db.esc(code) + "'");
+        db.Exec("UPDATE rooms SET seat_a=? WHERE room_code=?",
+                {user_id, code});
     }
     else if (seat_b == 0)
     {
-        db.exec("UPDATE rooms SET seat_b=" + std::to_string(user_id) +
-                " WHERE room_code='" + db.esc(code) + "'");
+        db.Exec("UPDATE rooms SET seat_b=? WHERE room_code=?",
+                {user_id, code});
     }
     else
     {
@@ -107,12 +104,12 @@ bool RoomManager::joinRoom(const std::string& code, int user_id)
     }
 
     // Update status to ready if both seats filled
-    auto check = db.query("SELECT seat_a, seat_b FROM rooms WHERE room_code='" +
-                          db.esc(code) + "'");
+    auto check = db.Query("SELECT seat_a, seat_b FROM rooms WHERE room_code=?",
+                          {code});
     if (!check.empty() && !check[0][0].empty() && !check[0][1].empty())
     {
-        db.exec("UPDATE rooms SET status='ready' WHERE room_code='" +
-                db.esc(code) + "'");
+        db.Exec("UPDATE rooms SET status='ready' WHERE room_code=?",
+                {code});
     }
 
     return true;
@@ -122,9 +119,9 @@ bool RoomManager::leaveRoom(const std::string& code, int user_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query(
-        "SELECT id, seat_a, seat_b, status FROM rooms WHERE room_code='" +
-        db.esc(code) + "'");
+    auto rows = db.Query(
+        "SELECT id, seat_a, seat_b, status FROM rooms WHERE room_code=?",
+        {code});
     if (rows.empty())
         return false;
 
@@ -139,13 +136,13 @@ bool RoomManager::leaveRoom(const std::string& code, int user_id)
 
     if (seat_a == user_id)
     {
-        db.exec("UPDATE rooms SET seat_a=NULL, status='waiting' WHERE id=" +
-                std::to_string(room_id));
+        db.Exec("UPDATE rooms SET seat_a=NULL, status='waiting' WHERE id=?",
+                {room_id});
     }
     else if (seat_b == user_id)
     {
-        db.exec("UPDATE rooms SET seat_b=NULL, status='waiting' WHERE id=" +
-                std::to_string(room_id));
+        db.Exec("UPDATE rooms SET seat_b=NULL, status='waiting' WHERE id=?",
+                {room_id});
     }
     else
     {
@@ -172,8 +169,8 @@ bool RoomManager::deleteRoom(const std::string& code, int user_id)
     DatabaseManager& db = DatabaseManager::instance();
 
     auto rows =
-        db.query("SELECT id, created_by, status FROM rooms WHERE room_code='" +
-                 db.esc(code) + "'");
+        db.Query("SELECT id, created_by, status FROM rooms WHERE room_code=?",
+                 {code});
     if (rows.empty())
         return false;
 
@@ -186,7 +183,7 @@ bool RoomManager::deleteRoom(const std::string& code, int user_id)
     if (status == "playing")
         return false;
 
-    db.exec("DELETE FROM rooms WHERE room_code='" + db.esc(code) + "'");
+    db.Exec("DELETE FROM rooms WHERE room_code=?", {code});
     return true;
 }
 
@@ -196,7 +193,7 @@ std::vector<RoomInfo> RoomManager::listOpenRooms()
     std::vector<RoomInfo> rooms;
 
     auto rows =
-        db.query("SELECT r.id, r.room_code, r.name, r.created_by, u.username, "
+        db.Query("SELECT r.id, r.room_code, r.name, r.created_by, u.username, "
                  "r.seat_a, ua.username, r.seat_b, ub.username, "
                  "r.game_id, r.status, r.module_id, r.created_at "
                  "FROM rooms r "
@@ -204,7 +201,7 @@ std::vector<RoomInfo> RoomManager::listOpenRooms()
                  "LEFT JOIN users ua ON r.seat_a = ua.id "
                  "LEFT JOIN users ub ON r.seat_b = ub.id "
                  "WHERE r.status IN ('waiting', 'ready') "
-                 "ORDER BY r.created_at DESC");
+                 "ORDER BY r.created_at DESC", {});
 
     for (const auto& row : rows)
     {
@@ -234,20 +231,23 @@ RoomInfo RoomManager::getRoom(const std::string& code)
     RoomInfo info = {};
 
     auto rows =
-        db.query("SELECT r.id, r.room_code, r.name, r.created_by, u.username, "
-                 "r.seat_a, ua.username, r.seat_b, ub.username, "
-                 "r.game_id, r.status, r.module_id, r.created_at "
-                 "FROM rooms r "
-                 "LEFT JOIN users u ON r.created_by = u.id "
-                 "LEFT JOIN users ua ON r.seat_a = ua.id "
-                 "LEFT JOIN users ub ON r.seat_b = ub.id "
-                 "WHERE r.room_code='" +
-                 db.esc(code) + "'");
+        db.Query("SELECT r.id, r.room_code, r.name, r.created_by, u.username, "
+                 " r.seat_a, ua.username, r.seat_b, ub.username, "
+                 " r.game_id, r.status, r.module_id, r.created_at "
+                 " FROM rooms r "
+                 " LEFT JOIN users u ON r.created_by = u.id "
+                 " LEFT JOIN users ua ON r.seat_a = ua.id "
+                 " LEFT JOIN users ub ON r.seat_b = ub.id "
+                 " WHERE r.room_code=?",
+                 {code});
 
     if (rows.empty())
+    {
         return info;
+    }
 
     const auto& row = rows[0];
+
     info.id = std::stoi(row[0]);
     info.room_code = row[1];
     info.name = row[2];
@@ -269,10 +269,10 @@ RoomInfo RoomManager::getRoomByUser(int user_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
 
-    auto rows = db.query(
-        "SELECT room_code FROM rooms WHERE (seat_a=" + std::to_string(user_id) +
-        " OR seat_b=" + std::to_string(user_id) +
-        ") AND status != 'finished' LIMIT 1");
+    auto rows = db.Query(
+        "SELECT room_code FROM rooms WHERE (seat_a=? OR seat_b=?) "
+        "AND status != 'finished' LIMIT 1",
+        {user_id, user_id});
 
     if (rows.empty())
     {
@@ -286,7 +286,7 @@ bool RoomManager::roomExists(const std::string& code)
 {
     DatabaseManager& db = DatabaseManager::instance();
     auto rows =
-        db.query("SELECT id FROM rooms WHERE room_code='" + db.esc(code) + "'");
+        db.Query("SELECT id FROM rooms WHERE room_code=?", {code});
     return !rows.empty();
 }
 
@@ -299,8 +299,8 @@ bool RoomManager::setModule(const std::string& code, int module_id)
         module_id = 1;
 
     // For now, just accept any module_id (schema validates via FK)
-    db.exec("UPDATE rooms SET module_id=" + std::to_string(module_id) +
-            " WHERE room_code='" + db.esc(code) + "'");
+    db.Exec("UPDATE rooms SET module_id=? WHERE room_code=?",
+            {module_id, code});
     return true;
 }
 
@@ -328,7 +328,7 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
         // seat_b should be AI_AGENT (id=3), but we'll verify/assign if needed
         if (room.seat_b != 3) {
             // Force AI_AGENT into seat B
-            db.exec("UPDATE rooms SET seat_b=3 WHERE id=" + std::to_string(room.id));
+            db.Exec("UPDATE rooms SET seat_b=3 WHERE id=?", {room.id});
             room = getRoom(code);  // Reload
         }
         // Override status check - single-player doesn't need 'ready' status
@@ -351,14 +351,11 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
     gs.active_player = (dis(gen) == 0) ? "A" : "B";
 
     // Insert game with room_id and module_id
-    std::string sql =
-        "INSERT INTO games(room_id, module_id, state_json) VALUES(" +
-        std::to_string(room.id) + "," + std::to_string(module_id) + ",'" +
-        db.esc(gs.to_json()) + "')";
-    db.exec(sql);
+    db.Exec("INSERT INTO games(room_id, module_id, state_json) VALUES(?,?,?)",
+            {room.id, module_id, gs.to_json()});
 
     // Get new game ID
-    auto id_rows = db.query("SELECT LAST_INSERT_ID()");
+    auto id_rows = db.Query("SELECT LAST_INSERT_ID()", {});
     if (id_rows.empty())
     {
         Logger::instance().info("getting new game ID had zero rows");
@@ -368,22 +365,20 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
     game_id = std::stoi(id_rows[0][0]);
 
     // Update room
-    db.exec("UPDATE rooms SET game_id=" + std::to_string(game_id) +
-            ", status='playing' WHERE id=" + std::to_string(room.id));
+    db.Exec("UPDATE rooms SET game_id=?, status='playing' WHERE id=?",
+            {game_id, room.id});
 
     // Create game_seats
-    db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
-            std::to_string(game_id) + "," + std::to_string(room.seat_a) +
-            ",'A')");
-    db.exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(" +
-            std::to_string(game_id) + "," + std::to_string(room.seat_b) +
-            ",'B')");
+    db.Exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(?,?,'A')",
+            {game_id, room.seat_a});
+    db.Exec("INSERT INTO game_seats(game_id, user_id, seat) VALUES(?,?,'B')",
+            {game_id, room.seat_b});
 
     // Update both players' sessions with the new game_id
-    db.exec("UPDATE sessions SET game_id=" + std::to_string(game_id) +
-            " WHERE user_id=" + std::to_string(room.seat_a));
-    db.exec("UPDATE sessions SET game_id=" + std::to_string(game_id) +
-            " WHERE user_id=" + std::to_string(room.seat_b));
+    db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
+            {game_id, room.seat_a});
+    db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
+            {game_id, room.seat_b});
 
     // Set StateMachine context for this operation
     // This ensures all subsequent state operations (like Telemetry) work
@@ -409,10 +404,10 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
     // Look up player usernames
     std::string playerA_name = "PLAYER 1";
     std::string playerB_name = "PLAYER 2";
-    auto userA = db.query("SELECT username FROM users WHERE id=" +
-                          std::to_string(room.seat_a));
-    auto userB = db.query("SELECT username FROM users WHERE id=" +
-                          std::to_string(room.seat_b));
+    auto userA = db.Query("SELECT username FROM users WHERE id=?",
+                          {room.seat_a});
+    auto userB = db.Query("SELECT username FROM users WHERE id=?",
+                          {room.seat_b});
     if (!userA.empty())
         playerA_name = userA[0][0];
     if (!userB.empty())
@@ -454,9 +449,10 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
 bool RoomManager::isUserOnline(int user_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query(
-        "SELECT 1 FROM sessions WHERE user_id=" + std::to_string(user_id) +
-        " AND TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6 LIMIT 1");
+    auto rows = db.Query(
+        "SELECT 1 FROM sessions WHERE user_id=? "
+        "AND TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6 LIMIT 1",
+        {user_id});
     return !rows.empty();
 }
 
@@ -465,8 +461,8 @@ std::vector<int> RoomManager::getOnlineUserIds()
     DatabaseManager& db = DatabaseManager::instance();
     std::vector<int> ids;
 
-    auto rows = db.query("SELECT DISTINCT user_id FROM sessions "
-                         "WHERE TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6");
+    auto rows = db.Query("SELECT DISTINCT user_id FROM sessions "
+                         "WHERE TIMESTAMPDIFF(SECOND, last_seen, NOW()) <= 6", {});
 
     for (const auto& row : rows)
     {

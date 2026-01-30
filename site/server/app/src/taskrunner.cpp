@@ -63,6 +63,8 @@ void TaskRunner::processItem(Task* item)
 
 void TaskRunner::runLoop()
 {
+    MySqlThreadGuard mysql_guard;
+
     while (running_)
     {
         if (pollAgentCallback_)

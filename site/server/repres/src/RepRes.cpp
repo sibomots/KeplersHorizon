@@ -25,20 +25,19 @@ bool RepairCommand::invoke(void)
     if (m_ship_code.empty())
     {
         // Find ships at player's base stars that have damage
-        auto rows = db.query(
+        auto rows = db.Query(
             "SELECT s.ship_code, s.ship_name, s.at_hex, s.pd, s.beam, "
             "s.screen, "
             "s.tube, s.missiles, s.pd_max, s.beam_max, s.screen_max, "
             "s.tube_max, s.missiles_max FROM ships s "
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = "
             "s.game_id "
-            "WHERE s.game_id=" +
-            std::to_string(s.game_id) + " AND s.owner='" +
-            std::string(1, owner) + "' AND bs.owner='" + std::string(1, owner) +
-            "' AND s.destroyed_at IS NULL AND ("
+            "WHERE s.game_id=? AND s.owner=? AND bs.owner=? "
+            "AND s.destroyed_at IS NULL AND ("
             "s.pd < s.pd_max OR s.beam < s.beam_max OR "
             "s.screen < s.screen_max OR s.tube < s.tube_max OR "
-            "s.missiles < s.missiles_max)");
+            "s.missiles < s.missiles_max)",
+            {s.game_id, owner, owner});
 
         if (rows.empty())
         {
@@ -61,17 +60,16 @@ bool RepairCommand::invoke(void)
 
     // Validate ship exists and is at player's base star OR controlled repair
     // facility
-    auto shipRow = db.query(
+    auto shipRow = db.Query(
         "SELECT s.at_hex, s.pd, s.beam, s.screen, s.tube, s.missiles, "
         "s.pd_max, s.beam_max, s.screen_max, s.tube_max, s.missiles_max, "
         "ss.name "
         "FROM ships s "
         "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.module_id = "
         "1 "
-        "WHERE s.game_id=" +
-        std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
-        "' AND s.ship_code='" + db.esc(m_ship_code) +
-        "' AND s.destroyed_at IS NULL");
+        "WHERE s.game_id=? AND s.owner=? AND s.ship_code=? "
+        "AND s.destroyed_at IS NULL",
+        {s.game_id, owner, m_ship_code});
 
     if (shipRow.empty())
     {
@@ -83,10 +81,9 @@ bool RepairCommand::invoke(void)
     std::string at_hex = shipRow[0][0];
 
     // Check if at base star
-    auto base_check = db.query(
-        "SELECT 1 FROM base_stars WHERE game_id=" + std::to_string(s.game_id) +
-        " AND hex_id='" + db.esc(at_hex) + "' AND owner='" +
-        std::string(1, owner) + "'");
+    auto base_check = db.Query(
+        "SELECT 1 FROM base_stars WHERE game_id=? AND hex_id=? AND owner=?",
+        {s.game_id, at_hex, owner});
 
     bool can_repair = !base_check.empty();
 
@@ -191,9 +188,8 @@ bool RepairCommand::invoke(void)
 
     // Apply repair
     int newVal = current + repairAmt;
-    db.exec("UPDATE ships SET " + col + "=" + std::to_string(newVal) +
-            " WHERE game_id=" + std::to_string(s.game_id) + " AND ship_code='" +
-            db.esc(m_ship_code) + "'");
+    db.Exec("UPDATE ships SET " + col + "=? WHERE game_id=? AND ship_code=?",
+            {newVal, s.game_id, m_ship_code});
 
     // Deduct BP via GameState
     if (owner == 'A')
@@ -218,16 +214,15 @@ bool ResupplyCommand::invoke(void)
     if (m_ship_code.empty())
     {
         // Find ships at player's base stars that can take missiles
-        auto rows = db.query(
+        auto rows = db.Query(
             "SELECT s.ship_code, s.ship_name, s.at_hex, s.missiles, "
             "s.missiles_max "
             "FROM ships s "
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = "
             "s.game_id "
-            "WHERE s.game_id=" +
-            std::to_string(s.game_id) + " AND s.owner='" +
-            std::string(1, owner) + "' AND bs.owner='" + std::string(1, owner) +
-            "' AND s.missiles < s.missiles_max AND s.destroyed_at IS NULL");
+            "WHERE s.game_id=? AND s.owner=? AND bs.owner=? "
+            "AND s.missiles < s.missiles_max AND s.destroyed_at IS NULL",
+            {s.game_id, owner, owner});
 
         if (rows.empty())
         {
@@ -252,14 +247,13 @@ bool ResupplyCommand::invoke(void)
     }
 
     // Validate ship exists and is at player's base star
-    auto shipRow = db.query(
+    auto shipRow = db.Query(
         "SELECT s.missiles, s.missiles_max, s.at_hex "
         "FROM ships s "
         "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
-        "WHERE s.game_id=" +
-        std::to_string(s.game_id) + " AND s.owner='" + std::string(1, owner) +
-        "' AND s.ship_code='" + db.esc(m_ship_code) + "' AND bs.owner='" +
-        std::string(1, owner) + "' AND s.destroyed_at IS NULL");
+        "WHERE s.game_id=? AND s.owner=? AND s.ship_code=? AND bs.owner=? "
+        "AND s.destroyed_at IS NULL",
+        {s.game_id, owner, m_ship_code, owner});
 
     if (shipRow.empty())
     {
@@ -308,9 +302,8 @@ bool ResupplyCommand::invoke(void)
 
     // Apply resupply
     int newMissiles = curMissiles + addAmt;
-    db.exec("UPDATE ships SET missiles=" + std::to_string(newMissiles) +
-            " WHERE game_id=" + std::to_string(s.game_id) + " AND ship_code='" +
-            db.esc(m_ship_code) + "'");
+    db.Exec("UPDATE ships SET missiles=? WHERE game_id=? AND ship_code=?",
+            {newMissiles, s.game_id, m_ship_code});
 
     // Deduct BP via GameState
     if (owner == 'A')

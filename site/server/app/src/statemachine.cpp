@@ -5,15 +5,17 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
+#include "statemachine.h"
+
 #include <iostream>
 
 #include "aiagent.h"
+#include "autonomy_agency.h"
 #include "ce.h"
 #include "db.h"
 #include "logger.h"
 #include "moduleutil.h"
 #include "shipmgr.h"
-#include "statemachine.h"
 #include "telemetry.h"
 #include "turn_end.h"
 
@@ -24,6 +26,13 @@ bool StateMachine::is_ai_player(const std::string& player) const
     if (player.empty())
         return false;
     return (player[0] == data.ai_player_side);
+}
+
+bool StateMachine::is_singlep(void) const 
+{
+    fprintf(stderr, "[SM] POLLED -- is this single player? %s\n",
+          data.is_singleplayer_mode ? "true" : "false" );
+    return data.is_singleplayer_mode;
 }
 
 void StateMachine::set_game_mode(bool singleplayer, char ai_player)
@@ -68,8 +77,8 @@ bool StateMachine::start_game_for_random_player()
 GameState StateMachine::load_game(int game_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query("SELECT module_id,state_json FROM games WHERE id=" +
-                         std::to_string(game_id) + " LIMIT 1");
+    auto rows = db.Query("SELECT module_id,state_json FROM games WHERE id=? LIMIT 1",
+                         {game_id});
     if (rows.empty())
     {
         throw std::runtime_error("game not found");
@@ -287,17 +296,13 @@ void StateMachine::apply_start_of_turn(GameState& s)
     {
         // star_systems uses module_id from game, ships use game_id
         int mod = get_module_id_for_game(s.game_id);
-        std::string q =
+        auto r = db.Query(
             "SELECT COUNT(DISTINCT ss.name) "
-            "FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND "
-            "ss.module_id=" +
-            std::to_string(mod) +
-            " WHERE sh.game_id=" + std::to_string(s.game_id) +
-            " AND sh.owner='" + std::string(1, me) +
-            "' AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
-            " AND ss.is_base=1 AND ss.base_owner='" +
-            std::string(1, enemy) + "'";
-        auto r = db.query(q);
+            " FROM ships sh JOIN star_systems ss ON sh.at_system = ss.name AND "
+            " ss.module_id=? WHERE sh.game_id=? AND sh.owner=? "
+            " AND sh.racked_in IS NULL AND sh.destroyed_at IS NULL "
+            " AND ss.is_base=1 AND ss.base_owner=?",
+            {mod, s.game_id, me, enemy});
         if (!r.empty() && !r[0].empty())
         {
             vp_gain = std::atoi(r[0][0].c_str());
@@ -342,9 +347,7 @@ void StateMachine::apply_start_of_turn(GameState& s)
     }
 
     // Reset movement points for active player's ships
-    db.exec("UPDATE ships SET pd_spent=0 WHERE game_id=" +
-            std::to_string(s.game_id) + " AND owner='" + std::string(1, me) +
-            "'");
+    db.Exec("UPDATE ships SET pd_spent=0 WHERE game_id=? AND owner=?", {s.game_id, me});
 }
 
 void StateMachine::advance_next(GameState& s)
@@ -407,23 +410,21 @@ void StateMachine::advance_next(GameState& s)
                     std::string sysName = combat.hex_id;
                     int mod = get_module_id_for_game(s.game_id);
                     auto sysRow =
-                        db.query("SELECT name FROM star_systems "
-                                 "WHERE module_id=" +
-                                 std::to_string(mod) + " AND hex_id='" +
-                                 combat.hex_id + "' LIMIT 1");
+                        db.Query("SELECT name FROM star_systems "
+                                 "WHERE module_id=? AND hex_id=? LIMIT 1",
+                                 {mod, combat.hex_id});
                     if (!sysRow.empty())
                     {
                         sysName = sysRow[0][0];
                     }
 
                     // Query ships in this hex
-                    auto shipRows = db.query(
+                    auto shipRows = db.Query(
                         "SELECT ship_code, ship_name, ship_type, owner, pd, "
                         "beam, screen, tube, missiles "
-                        "FROM ships WHERE game_id=" +
-                        std::to_string(s.game_id) + " AND at_hex='" +
-                        combat.hex_id +
-                        "' AND destroyed_at IS NULL ORDER BY owner, ship_code");
+                        "FROM ships WHERE game_id=? AND at_hex=? "
+                        "AND destroyed_at IS NULL ORDER BY owner, ship_code",
+                        {s.game_id, combat.hex_id});
 
                     // Generate message for each player (A and B) with their
                     // perspective
@@ -481,26 +482,28 @@ void StateMachine::advance_next(GameState& s)
                 }
             }
         }
-        
+
         // NEW: Save state after phase advance
         save_game(s);
-        
+
         // NEW: Notify AI if it's still active and not at end of turn
         if (is_ai_player(s.active_player))
         {
-            Logger::instance().info("[SM] AI continues, phase=" + 
+            Logger::instance().info("[SM] AI continues, phase=" +
                                     std::to_string(s.phase_index));
             AIAgent::instance().on_phase_advance(s.game_id, s.active_player[0]);
+            AutonomyAgency::instance().pump();
         }
-        
+
         return;
     }
 
     // --- Turn Boundary ---
-    
+
     // Remember who had control before switching
-    char previous_active_player = s.active_player.empty() ? 'A' : s.active_player[0];
-    
+    char previous_active_player =
+        s.active_player.empty() ? 'A' : s.active_player[0];
+
     if (s.active_player == "A")
     {
         s.active_player = "B";
@@ -521,20 +524,28 @@ void StateMachine::advance_next(GameState& s)
     // NEW: If AI just LOST control, notify it to reset state
     if (is_ai_player(std::string(1, previous_active_player)))
     {
-        Logger::instance().info(
-            "[SM] AI Player " + std::string(1, previous_active_player) +
-            " lost control");
+        Logger::instance().info("[SM] AI Player " +
+                                std::string(1, previous_active_player) +
+                                " lost control");
         AIAgent::instance().on_turn_end(s.game_id, previous_active_player);
     }
-    
+
     // NEW: If AI just GOT control, notify it to start
     if (is_ai_player(s.active_player))
     {
         Logger::instance().info(
             "[SM] AI Player " + s.active_player +
             " has initiative, turn=" + std::to_string(s.round));
-        
+
         AIAgent::instance().on_turn_start(s.game_id, s.active_player[0]);
+
+        // Configure and pump AutonomyAgency
+        AutonomyAgency::instance().configure(s.game_id, s.active_player[0]);
+        if (!AutonomyAgency::instance().is_running())
+        {
+            AutonomyAgency::instance().start();
+        }
+        AutonomyAgency::instance().pump();
     }
 }
 
@@ -599,23 +610,21 @@ void StateMachine::advance_next(GameState& s)
                     std::string sysName = combat.hex_id;
                     int mod = get_module_id_for_game(s.game_id);
                     auto sysRow =
-                        db.query("SELECT name FROM star_systems "
-                                 "WHERE module_id=" +
-                                 std::to_string(mod) + " AND hex_id='" +
-                                 combat.hex_id + "' LIMIT 1");
+                        db.Query("SELECT name FROM star_systems "
+                                 "WHERE module_id=? AND hex_id=? LIMIT 1",
+                                 {mod, combat.hex_id});
                     if (!sysRow.empty())
                     {
                         sysName = sysRow[0][0];
                     }
 
                     // Query ships in this hex
-                    auto shipRows = db.query(
+                    auto shipRows = db.Query(
                         "SELECT ship_code, ship_name, ship_type, owner, pd, "
                         "beam, screen, tube, missiles "
-                        "FROM ships WHERE game_id=" +
-                        std::to_string(s.game_id) + " AND at_hex='" +
-                        combat.hex_id +
-                        "' AND destroyed_at IS NULL ORDER BY owner, ship_code");
+                        "FROM ships WHERE game_id=? AND at_hex=? "
+                        "AND destroyed_at IS NULL ORDER BY owner, ship_code",
+                        {s.game_id, combat.hex_id});
 
                     // Generate message for each player (A and B) with their
                     // perspective
@@ -680,15 +689,16 @@ void StateMachine::advance_next(GameState& s)
                     for (const auto& combat : combats)
                     {
                         // Query ships in this hex
-                        auto srs =
-                            db.query("SELECT ship_code, ship_name, ship_type, "
-                                     "owner, pd, "
-                                     "beam, screen, tube, missiles "
-                                     "FROM ships WHERE game_id=" +
-                                     std::to_string(s.game_id) +
-                                     " AND at_hex='" + combat.hex_id +
-                                     "' AND destroyed_at IS NULL ORDER BY "
-                                     "owner, ship_code");
+                        std::string q =
+                            "SELECT ship_code, ship_name, ship_type, "
+                                     " owner, pd, "
+                                     " beam, screen, tube, missiles "
+                                     " FROM ships WHERE game_id=? "
+                                     " AND at_hex=? AND destroyed_at IS NULL ORDER BY "
+                                     " owner, ship_code";
+
+                        auto srs = db.Query(q, { s.game_id, combat.hex_id});
+
                         bool ai_has_ships = false;
                         for (const auto& ship : srs)
                         {
@@ -762,17 +772,16 @@ void StateMachine::advance_next(GameState& s)
 void StateMachine::save_game(const GameState& s)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    std::string q = "UPDATE games SET state_json='" + db.esc(s.to_json()) +
-                    "' WHERE id=" + std::to_string(s.game_id);
-    db.exec(q);
+    db.Exec("UPDATE games SET state_json=? WHERE id=?",
+            {s.to_json(), s.game_id});
 }
 
 int StateMachine::next_event_seq(int game_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto r = db.query(
-        "SELECT COALESCE(MAX(seq),0)+1 FROM game_events WHERE game_id=" +
-        std::to_string(game_id));
+    auto r = db.Query(
+        "SELECT COALESCE(MAX(seq),0)+1 FROM game_events WHERE game_id=?",
+        {game_id});
     if (r.empty())
         return 1;
     return std::atoi(r[0][0].c_str());
@@ -781,11 +790,10 @@ int StateMachine::next_event_seq(int game_id)
 std::string StateMachine::get_player_name(int game_id, const std::string& seat)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.query("SELECT u.username FROM game_seats gs "
+    auto rows = db.Query("SELECT u.username FROM game_seats gs "
                          "JOIN users u ON gs.user_id = u.id "
-                         "WHERE gs.game_id=" +
-                         std::to_string(game_id) + " AND gs.seat='" +
-                         db.esc(seat) + "'");
+                         "WHERE gs.game_id=? AND gs.seat=?",
+                         {game_id, seat});
     return rows.empty() ? seat : rows[0][0];
 }
 
