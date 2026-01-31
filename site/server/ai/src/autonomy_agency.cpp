@@ -511,17 +511,22 @@ void AutonomyAgency::gather()
 
     // Get active combats
     std::string sql_combats =
-        "SELECT hex_id, stage, round FROM combat_state WHERE game_id=?";
+        "SELECT hex_id, stage, round, stalemate_counter, attacker_remains "
+        "FROM combat_state WHERE game_id=?";
     auto combat_rows = db.Query(sql_combats, {m_slate.game_id});
 
     for (const std::vector<std::string>& row : combat_rows)
     {
-        if (row.size() >= 3)
+        if (row.size() >= 5)
         {
             AACombatHex ch;
             ch.hex_id = row[0];
             ch.stage = std::atoi(row[1].c_str());
             ch.round = std::atoi(row[2].c_str());
+            ch.stalemate_counter = std::atoi(row[3].c_str());
+            // attacker_remains indicates if attacker still has initiative
+            // AI is attacker if they moved into the hex (simplified: check later)
+            ch.ai_is_attacker = (row[4] == "1");
 
             // Check if AI has committed orders for this round
             std::string sql_committed =
@@ -536,6 +541,8 @@ void AutonomyAgency::gather()
             Logger::instance().info("[AA] Combat at " + ch.hex_id +
                                     " stage=" + std::to_string(ch.stage) +
                                     " round=" + std::to_string(ch.round) +
+                                    " stalemate=" +
+                                    std::to_string(ch.stalemate_counter) +
                                     " ai_committed=" +
                                     (ch.ai_committed ? "Y" : "N"));
         }

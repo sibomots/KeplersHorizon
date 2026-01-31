@@ -128,6 +128,14 @@
 (defun combat-ai-committed-p (ch)
   (getf ch :ai-committed))
 
+(defun combat-stalemate-count (ch)
+  "Get consecutive no-damage round count."
+  (or (getf ch :stalemate) 0))
+
+(defun combat-ai-attacker-p (ch)
+  "Check if AI is the attacker (moved into hex, has initiative)."
+  (getf ch :ai-attacker))
+
 ;;; ----------------------------------------------------------------------------
 ;;; Predicates
 ;;; ----------------------------------------------------------------------------

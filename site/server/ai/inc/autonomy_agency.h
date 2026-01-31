@@ -63,9 +63,13 @@ struct AACombatHex
     std::string hex_id;
     int stage;  // 0=ORDERS, 1=RESOLVE, 2=DAMAGE, 3=RETREAT
     int round;
-    bool ai_committed;  // Has AI committed orders this round?
+    bool ai_committed;        // Has AI committed orders this round?
+    int stalemate_counter;    // Consecutive no-damage rounds
+    bool ai_is_attacker;      // Did AI move into this hex (initiative)?
 
-    AACombatHex() : stage(0), round(0), ai_committed(false)
+    AACombatHex()
+        : stage(0), round(0), ai_committed(false), stalemate_counter(0),
+          ai_is_attacker(false)
     {
     }
 };

@@ -308,8 +308,14 @@ EclBridge::marshal_combat_list(const std::vector<AACombatHex>& combats)
     {
         const AACombatHex& ch = *it;
 
-        // Combat hex is a plist: (:hex "X" :stage N :round N :ai-committed T/NIL)
+        // Combat hex plist with stalemate tracking
         cl_object plist = ECL_NIL;
+
+        plist = make_cons(make_bool(ch.ai_is_attacker), plist);
+        plist = make_cons(make_keyword("ai-attacker"), plist);
+
+        plist = make_cons(make_int(ch.stalemate_counter), plist);
+        plist = make_cons(make_keyword("stalemate"), plist);
 
         plist = make_cons(make_bool(ch.ai_committed), plist);
         plist = make_cons(make_keyword("ai-committed"), plist);
