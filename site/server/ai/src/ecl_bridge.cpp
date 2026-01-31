@@ -8,6 +8,8 @@
 
 #include "ecl_bridge.h"
 
+#include <cctype>
+
 #include "logger.h"
 
 // ----------------------------------------------------------------------------
@@ -343,7 +345,13 @@ std::string EclBridge::extract_string(cl_object obj)
 
 cl_object EclBridge::make_keyword(const char* name)
 {
-    return ecl_make_keyword(name);
+    // ECL keywords must be uppercase to match Lisp reader default
+    std::string upper;
+    for (const char* p = name; *p; ++p)
+    {
+        upper.push_back(static_cast<char>(std::toupper(*p)));
+    }
+    return ecl_make_keyword(upper.c_str());
 }
 
 cl_object EclBridge::make_cons(cl_object car, cl_object cdr)

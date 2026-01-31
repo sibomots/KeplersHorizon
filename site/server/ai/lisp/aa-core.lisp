@@ -21,14 +21,21 @@
   "Main decision function. Dispatches by phase.
    SLATE is an alist from C++.
    Returns list of command specs: ((:cmd \"CMD\" :args \"ARGS\") ...)"
-  (let ((phase (cdr (assoc :phase slate))))
-    (case phase
-      (#.+PH-BUILD-SHIPS+    (decide-build-phase slate))
-      (#.+PH-MOVEMENT+       (decide-movement-phase slate))
-      (#.+PH-RESOLVE-COMBAT+ (decide-combat-phase slate))
-      (#.+PH-SYSTEM-PICKDROP+ (decide-pickdrop-phase slate))
-      (#.+PH-END-TURN+       (decide-end-turn-phase slate))
-      (otherwise             (list '(:cmd "NEXT" :args ""))))))
+  (format t "~&[LISP] aa-calculate called~%")
+  (format t "[LISP] slate keys: ~A~%" (mapcar #'car slate))
+  (let* ((phase-pair (assoc :phase slate))
+         (phase (if phase-pair (cdr phase-pair) -1)))
+    (format t "[LISP] phase-pair=~A phase=~A~%" phase-pair phase)
+    (let ((result
+            (case phase
+              (#.+PH-BUILD-SHIPS+    (decide-build-phase slate))
+              (#.+PH-MOVEMENT+       (decide-movement-phase slate))
+              (#.+PH-RESOLVE-COMBAT+ (decide-combat-phase slate))
+              (#.+PH-SYSTEM-PICKDROP+ (decide-pickdrop-phase slate))
+              (#.+PH-END-TURN+       (decide-end-turn-phase slate))
+              (otherwise             (list '(:cmd "NEXT" :args ""))))))
+      (format t "[LISP] result=~A~%" result)
+      result)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; End Turn Phase

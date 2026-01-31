@@ -25,17 +25,24 @@
    1. If we have drafts, commit them
    2. If we can afford a warpship, build one
    3. Otherwise, advance"
+  (format t "[LISP] decide-build-phase called~%")
+  (format t "[LISP] credits=~A drafts=~A~%"
+          (slate-credits slate) (slate-drafts slate))
   (cond
     ;; Commit pending drafts first
     ((has-drafts-p slate)
+     (format t "[LISP] -> commit draft~%")
      (commit-first-draft slate))
 
     ;; Build a warpship if we can afford minimum (17 BP for a basic fighter)
     ((can-afford-p slate 17)
+     (format t "[LISP] -> build warpship (credits=~A)~%" (slate-credits slate))
      (build-basic-warpship slate))
 
     ;; Otherwise advance to movement
-    (t (list (cmd-next)))))
+    (t
+     (format t "[LISP] -> advance (cannot afford)~%")
+     (list (cmd-next)))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Build Actions
