@@ -255,7 +255,7 @@ void AutonomyAgency::run_cycle()
 
         case MS_WAIT:
             // Let TaskRunner process command and DB update propagate
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             ++m_cycle_counter;
             state = MS_GATHER; // Back to top with fresh state
             break;
@@ -547,15 +547,25 @@ void AutonomyAgency::gather()
                 // don't re-issue
                 if (ch.stage == 0)
                 {
+                    std::string aa_owner(1, m_slate.aa_player);
                     std::string sql_has_order =
                         "SELECT COUNT(*) FROM combat_orders "
                         "WHERE game_id=? AND owner=? AND ship_code=? AND "
                         "round=?";
-                    auto order_rows = db.Query(
-                        sql_has_order, {m_slate.game_id, m_slate.aa_player,
-                                        ship.code, ch.round});
-                    if (order_rows.empty() ||
-                        std::atoi(order_rows[0][0].c_str()) == 0)
+                    auto order_rows =
+                        db.Query(sql_has_order, {m_slate.game_id, aa_owner,
+                                                 ship.code, ch.round});
+
+                    int order_count = order_rows.empty()
+                                          ? 0
+                                          : std::atoi(order_rows[0][0].c_str());
+
+                    Logger::instance().info(
+                        "[AA] Order check: ship=" + ship.code + " hex=" +
+                        ch.hex_id + " round=" + std::to_string(ch.round) +
+                        " found=" + std::to_string(order_count));
+
+                    if (order_count == 0)
                     {
                         ship.needs_combat_order = true;
                     }
