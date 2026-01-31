@@ -50,11 +50,11 @@ void CombatEngine::check_for_combat_triggers()
     }
 
     {
-        auto rows = db.Query(
-            "SELECT at_hex, owner FROM ships "
-            "WHERE game_id=? AND at_hex IS NOT NULL AND racked_in IS NULL "
-            "AND destroyed_at IS NULL",
-            {game_id});
+        auto rows = db.Query("SELECT at_hex, owner FROM ships "
+                             "WHERE game_id=? AND at_hex IS NOT NULL AND "
+                             "(racked_in IS NULL OR racked_in = '')"
+                             "AND destroyed_at IS NULL",
+                             {game_id});
 
         std::map<std::string, std::set<char>> hexOccupants;
         for (const auto& r : rows)
@@ -96,7 +96,7 @@ bool CombatEngine::is_real_combat_state(int gid)
     auto conflict_rows = db.Query("SELECT at_hex, COUNT(DISTINCT owner) "
                                   "FROM ships "
                                   "WHERE game_id=? AND destroyed_at IS NULL "
-                                  "AND racked_in IS NULL "
+                                  "AND (racked_in IS NULL OR racked_in = '') "
                                   "AND at_hex IS NOT NULL AND at_hex <> '' "
                                   "AND owner IN ('A','B') "
                                   "GROUP BY at_hex",
@@ -262,10 +262,10 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
 {
     DatabaseManager& db = DatabaseManager::instance();
     // Count ships in hex
-    auto sr =
-        db.Query("SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
-                 "AND racked_in IS NULL AND destroyed_at IS NULL",
-                 {game_id, hex_id});
+    auto sr = db.Query(
+        "SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
+        "AND (racked_in IS NULL OR racked_in = '') AND destroyed_at IS NULL",
+        {game_id, hex_id});
     int shipCount = std::atoi(sr[0][0].c_str());
 
     // Count orders
@@ -289,10 +289,10 @@ bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
 {
     DatabaseManager& db = DatabaseManager::instance();
     // Count ships in hex
-    auto sr =
-        db.Query("SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
-                 "AND racked_in IS NULL AND destroyed_at IS NULL",
-                 {game_id, hex_id});
+    auto sr = db.Query(
+        "SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
+        "AND (racked_in IS NULL OR racked_in = '') AND destroyed_at IS NULL",
+        {game_id, hex_id});
     int shipCount = std::atoi(sr[0][0].c_str());
 
     // Count COMMITTED orders
@@ -553,7 +553,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     // Load active ships in hex (exclude ships pending retreat)
     auto r =
         db.Query("SELECT ship_code, ship_name, owner, tech_level FROM ships "
-                 "WHERE game_id=? AND at_hex=? AND racked_in IS NULL "
+                 "WHERE game_id=? AND at_hex=? AND (racked_in IS NULL OR "
+                 "racked_in = '') "
                  "AND destroyed_at IS NULL AND escape_pending=0",
                  {game_id, hex_id});
     for (const auto& row : r)

@@ -466,10 +466,12 @@ void AutonomyAgency::gather()
     }
 
     // Contested hexes (hexes with ships from both players)
+    // CRITICAL: Exclude racked systemships (racked_in NULL or empty)
     std::string sql_contested =
         "SELECT at_hex FROM ships WHERE game_id=? AND destroyed_at IS NULL "
-        "AND at_hex IS NOT NULL GROUP BY at_hex HAVING COUNT(DISTINCT owner) > "
-        "1";
+        "AND (racked_in IS NULL OR racked_in = '') "
+        "AND at_hex IS NOT NULL AND at_hex <> '' "
+        "GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1";
 
     auto contested_rows = db.Query(sql_contested, {m_slate.game_id});
 
@@ -487,18 +489,31 @@ void AutonomyAgency::gather()
     // Combat State (from combat_state, combat_orders, pending_damage)
     // ----------------------------------
 
-    // Get active combats
+    // Get active combats - only for hexes that are actually contested
+    // This filters out stale combat_state entries from resolved combats
     std::string sql_combats =
         "SELECT hex_id, stage, round, stalemate_counter, attacker_remains "
         "FROM combat_state WHERE game_id=?";
     auto combat_rows = db.Query(sql_combats, {m_slate.game_id});
 
+    // Build set of contested hexes for fast lookup
+    std::set<std::string> contested_set(m_slate.contested_hexes.begin(),
+                                        m_slate.contested_hexes.end());
+
     for (const std::vector<std::string>& row : combat_rows)
     {
         if (row.size() >= 5)
         {
+            std::string hex_id = row[0];
+
+            // Skip combat_state entries for hexes that are no longer contested
+            if (contested_set.find(hex_id) == contested_set.end())
+            {
+                continue;
+            }
+
             AACombatHex ch;
-            ch.hex_id = row[0];
+            ch.hex_id = hex_id;
             ch.stage = std::atoi(row[1].c_str());
             ch.round = std::atoi(row[2].c_str());
             ch.stalemate_counter = std::atoi(row[3].c_str());
@@ -527,17 +542,20 @@ void AutonomyAgency::gather()
         {
             if (ship.hex_id == ch.hex_id)
             {
-                // Stage 0: Check if this ship has a committed order
+                // Stage 0: Check if this ship has ANY order (draft or
+                // committed) Once an order exists (even uncommitted draft),
+                // don't re-issue
                 if (ch.stage == 0)
                 {
                     std::string sql_has_order =
-                        "SELECT committed FROM combat_orders "
+                        "SELECT COUNT(*) FROM combat_orders "
                         "WHERE game_id=? AND owner=? AND ship_code=? AND "
                         "round=?";
                     auto order_rows = db.Query(
                         sql_has_order, {m_slate.game_id, m_slate.aa_player,
                                         ship.code, ch.round});
-                    if (order_rows.empty() || order_rows[0][0] != "1")
+                    if (order_rows.empty() ||
+                        std::atoi(order_rows[0][0].c_str()) == 0)
                     {
                         ship.needs_combat_order = true;
                     }
