@@ -324,16 +324,27 @@ std::string EclBridge::extract_string(cl_object obj)
         str_obj = cl_princ_to_string(obj);
     }
 
-    // ECL strings are UTF-32 (wchar_t)
-    // Access the internal string data directly
-    std::wstring ws((wchar_t*)str_obj->string.self, str_obj->string.fillp);
-
-    // Convert wchar_t to char (ASCII subset)
+    // ECL has two string types:
+    // - base-string: 8-bit characters (ecl_base_char)
+    // - extended-string: 32-bit characters (ecl_character)
     std::string result;
-    result.reserve(ws.length());
-    for (size_t idx = 0; idx < ws.length(); ++idx)
+    cl_index len = str_obj->string.fillp;
+
+    if (ECL_BASE_STRING_P(str_obj))
     {
-        result.push_back(static_cast<char>(ws[idx]));
+        // Base string: 8-bit chars, direct copy
+        const char* data = (const char*)str_obj->base_string.self;
+        result.assign(data, len);
+    }
+    else
+    {
+        // Extended string: 32-bit chars (ecl_character)
+        const ecl_character* data = str_obj->string.self;
+        result.reserve(len);
+        for (cl_index idx = 0; idx < len; ++idx)
+        {
+            result.push_back(static_cast<char>(data[idx] & 0xFF));
+        }
     }
 
     return result;

@@ -51,13 +51,11 @@
 (defun commit-first-draft (slate)
   "Commit the first draft ship and deploy it."
   (let* ((draft (first (slate-drafts slate)))
-         (code (ship-code draft))
-         (base (first-base slate)))
-    (if base
-        (list (make-cmd "bc" code)
-              (make-cmd "deploy" (format nil "~A ~A" code base)))
-        ;; No base? Just commit
-        (list (make-cmd "bc" code)))))
+         (name (ship-name draft)))
+    ;; BC uses ship name, DS uses ship name + starbase name
+    ;; AI player B's home starbase is ASTREX
+    (list (make-cmd "bc" name)
+          (make-cmd "ds" (format nil "~A ASTREX" name)))))
 
 (defun build-basic-warpship (slate)
   "Build a basic warpship: PD=5 B=3 S=2 T=1 M=3 (17 BP total)."
