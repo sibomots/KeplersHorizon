@@ -5,10 +5,12 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
+#include <format>
 #include <iostream>
 #include <queue>
 #include <unordered_map>
 
+#include "ai_db_mutex.h"
 #include "app.h"
 #include "ce.h"
 #include "comms.h"
@@ -21,7 +23,6 @@
 #include "telemetry.h"
 #include "typedefs.h"
 #include "util.h"
-#include "ai_db_mutex.h"
 
 typedef struct yy_buffer_state* YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(const char* str);
@@ -31,7 +32,8 @@ extern bool get_parser_error(std::string& err);
 
 // input: command line from user
 // output: modified errmsg (if any)
-int internal_command_handler_body(const std::string cmdline, std::string& errmsg)
+int internal_command_handler_body(const std::string cmdline,
+                                  std::string& errmsg)
 {
     // Clear telemetry message buffer before command execution
     Telemetry::instance().clear_messages();
@@ -41,16 +43,21 @@ int internal_command_handler_body(const std::string cmdline, std::string& errmsg
     int parse_result = yyparse();
     yy_delete_buffer(buffer);
 
-    fprintf(stderr, "parse_result = %d\n", parse_result);
+    const std::string parsediag = std::format(
+        "[INTERNAL] Parse result for >{}< is: {}", cmdline, parse_result);
+    Logger::instance().info(parsediag);
     // if error with parse
     if (parse_result != 0)
     {
-          bool found_cause = get_parser_error(errmsg);
-          if (!found_cause && errmsg.empty()) {
-             errmsg = "Parser provided no error message";
-          }
-          // Parser failed
-          Logger::instance().info("parserfailed");
+
+        bool found_cause = get_parser_error(errmsg);
+        if (!found_cause && errmsg.empty())
+        {
+            errmsg = "Parser provided no error message";
+        }
+        const std::string parseerr = std::format(
+            "[INTERNAL] Parse error for >{}< is: >{}<", cmdline, errmsg);
+        Logger::instance().info(parseerr);
     }
     return parse_result;
 }
@@ -95,9 +102,11 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
     //  owns the turn being played.
     // This game loop will take commands from either player at any time.
     //   ==> Handling per user commands is tied to the current_player
-    //   ==> The state machine keeps track of the active player (the turn holding
+    //   ==> The state machine keeps track of the active player (the turn
+    //   holding
     //       player).  All State Machine inhibits are based on the turn-holding
-    //       player compared to the 'current' player issuing the candidate command.
+    //       player compared to the 'current' player issuing the candidate
+    //       command.
     StateMachine::instance().set_current_player(context.player);
     StateMachine::instance().set_current_user_id(context.user_id);
     // END BUGBUG
@@ -115,7 +124,7 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
 
     // we don't know what the parser will do yet, so we anticipate
     // possible error msg
-    std::string errmsg; 
+    std::string errmsg;
 
     // now, give the parser the command line (from any player or AI)
     int parse_result = internal_command_handler_body(cmdline, errmsg);
@@ -150,12 +159,13 @@ bool handle_usr_command(const HttpRequest* req, HttpResponse* resp)
         Telemetry::instance().source_messages(event_msg);
         resp->body = event_msg;
     }
-    else {
-          resp->status = 400;
-          // Get the error message for sinking to the HTTP Response
-          resp->body = json_error(errmsg);
-          Logger::instance().info("[CMD] User command: " + cmdline);
-          Logger::instance().info("[CMD] Parser error: " + errmsg);
+    else
+    {
+        resp->status = 400;
+        // Get the error message for sinking to the HTTP Response
+        resp->body = json_error(errmsg);
+        Logger::instance().info("[CMD] User command: " + cmdline);
+        Logger::instance().info("[CMD] Parser error: " + errmsg);
     }
     return false; // not done
 }

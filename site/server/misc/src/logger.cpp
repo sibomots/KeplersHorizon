@@ -6,6 +6,7 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 #include "logger.h"
+#include <fstream>
 
 #include "util.h"
 
@@ -33,6 +34,10 @@ void Logger::debug(const std::string& msg)
 void Logger::log(const std::string& level, const std::string& msg)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    std::cout << "[" << now_iso() << "] " << "[" << level << "] " << msg
+    static std::string filepath = "kh.log";
+    std::ofstream file(filepath, std::ios::app);
+    if (file.is_open()) {
+       file << "[" << now_iso() << "] " << "[" << level << "] " << msg
               << std::endl;
+    } 
 }

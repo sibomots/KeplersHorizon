@@ -161,7 +161,7 @@ void handle_register(const HttpRequest* req, HttpResponse* resp)
         resp->body = json_error("failed to create account");
         return;
     }
-    fprintf(stderr, "stoi 1\n");
+
     int user_id = std::stoi(id_rows[0][0]);
 
     // Auto-login: create session

@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <sstream>
 #include <iostream>
+#include <format>
 #include <string>
 #include <vector>
 #include <map>
@@ -62,7 +63,6 @@
 #include "quit_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
-// #include "game.h"
 #include "db.h"
 
 extern "C" int yylex();
@@ -1542,10 +1542,12 @@ void yyerror(const char* msg)
     // If location tracking is enabled, yylloc is the best available hint.
     // yyerror(&yylloc, msg);
     if (msg) {
-       fprintf(stderr, "yyerror: %s\n", msg);
+       const std::string yyerr = std::format("[YACC] Error: >{}<", msg);
+       Logger::instance().debug(yyerr);
     }
     else {
-       fprintf(stderr, "yyerror: (null)\n");
+       const std::string yyerr("[YACC] Error");
+       Logger::instance().debug(yyerr);
     }
 }
 
@@ -1569,9 +1571,10 @@ void yyerror(YYLTYPE* loc, const char* msg)
         error_state.user_errors.push_back(oerr.str());
     }
     std::string dbgstr = oerr.str();
-    fprintf(stderr, "yyerror %s%s: %s\n",
-            (const char*)((hasloc)?"(loc,":"("),
-            (const char*)((!hasloc)?"(msg)":",msg)"),
-            dbgstr.c_str());
+    const std::string yyerr = std::format("[YACC] yyerror {}{}: {}",
+       (const char*)((hasloc)?"(loc,":"("),
+       (const char*)((!hasloc)?"(msg)":",msg)"),
+       dbgstr.c_str());
+    Logger::instance().debug(yyerr);
 }
 

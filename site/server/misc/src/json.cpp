@@ -5,9 +5,10 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include "json.h"
+#include <format>
 
 #include "app.h"
+#include "json.h"
 
 std::string json_escape(const std::string& s)
 {
@@ -41,9 +42,7 @@ std::string json_escape(const std::string& s)
         default:
             if (c < 0x20)
             {
-                char buf[8];
-                std::snprintf(buf, sizeof(buf), "\\u%04x", c);
-                o << buf;
+                o << std::format("\\u{:04x}", c);
             }
             else
             {

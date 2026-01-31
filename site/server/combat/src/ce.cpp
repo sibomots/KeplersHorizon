@@ -127,7 +127,6 @@ bool CombatEngine::is_real_combat_state(int gid)
     // for each hex, look at the number of distinct ship owners at that hex.
     for (const std::vector<std::string>& row : conflict_rows)
     {
-        fprintf(stderr, "stoi 2\n");
         int owner_count = std::stoi(row[1]);
         Logger::instance().info("[COMBAT][is_real_combat_state] "
                                 "Number of ships at " +

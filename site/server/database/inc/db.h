@@ -8,6 +8,7 @@
 #ifndef __DB_H__
 #define __DB_H__
 
+#include <format>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -16,18 +17,22 @@
 #include <variant>
 #include <vector>
 
-#include "ai_db_mutex.h"
+//bugjdw  #include "ai_db_mutex.h"
 #include "app.h"
 #include "typedefs.h"
+#include "logger.h"
 
 using SqlArg = std::variant<char, int, long long, double, std::string, bool>;
 
-struct MySqlThreadGuard {
-    MySqlThreadGuard() {
+struct MySqlThreadGuard
+{
+    MySqlThreadGuard()
+    {
         // Initializes thread-specific variables
         mysql_thread_init();
     }
-    ~MySqlThreadGuard() {
+    ~MySqlThreadGuard()
+    {
         // Cleans them up when the thread exits
         mysql_thread_end();
     }
@@ -107,9 +112,16 @@ class DatabaseManager
 
             if (mysql_query(conn, final_query.c_str()))
             {
-                std::cerr << "Error: " << mysql_error(conn) << std::endl;
-                fprintf(stderr, "EXEC SQL FORMAT= >%s<\n", query_template.c_str());
-                fprintf(stderr, "EXEC FINAL SQL= >%s<\n", final_query.c_str());
+                const std::string raw_mysql_err = mysql_error(conn);
+                const std::string mysql_err_msg =
+                    std::format("MYSQL Error: >{}<", raw_mysql_err);
+                Logger::instance().debug(mysql_err_msg);
+                const std::string sql_format =
+                    std::format("EXEC SQL FORMAT= >{}<", query_template);
+                Logger::instance().debug(sql_format);
+                const std::string sql_final =
+                    std::format("EXEC FINAL SQL= >%s<", final_query);
+                Logger::instance().debug(sql_final);
                 return false;
             }
             return true;
@@ -123,9 +135,16 @@ class DatabaseManager
             std::string final_query = query_template;
             if (mysql_query(conn, final_query.c_str()))
             {
-                std::cerr << "Error: " << mysql_error(conn) << std::endl;
-                fprintf(stderr, "EXEC SQL FORMAT= >%s<\n", query_template.c_str());
-                fprintf(stderr, "EXEC FINAL SQL= >%s<\n", final_query.c_str());
+                const std::string raw_mysql_err = mysql_error(conn);
+                const std::string mysql_err_msg =
+                    std::format("MYSQL Error: >{}<", raw_mysql_err);
+                Logger::instance().debug(mysql_err_msg);
+                const std::string sql_format =
+                    std::format("EXEC SQL FORMAT= >{}<", query_template);
+                Logger::instance().debug(sql_format);
+                const std::string sql_final =
+                    std::format("EXEC FINAL SQL= >%s<", final_query);
+                Logger::instance().debug(sql_final);
                 return false;
             }
             return true;
@@ -176,8 +195,12 @@ class DatabaseManager
 
             if (mysql_query(conn, final_query.c_str()))
             {
-                fprintf(stderr, "QUERY SQL FORMAT= >%s<\n", query_template.c_str());
-                fprintf(stderr, "QUERY FINAL SQL= >%s<\n", final_query.c_str());
+                const std::string sql_format =
+                    std::format("QUERY SQL FORMAT= >{}<", query_template);
+                Logger::instance().debug(sql_format);
+                const std::string sql_final =
+                    std::format("QUERY FINAL SQL= >%s<", final_query);
+                Logger::instance().debug(sql_final);
                 throw std::runtime_error(mysql_error(conn));
             }
 
@@ -187,7 +210,14 @@ class DatabaseManager
                 // mysql_store_result returns NULL if the query didn't return a
                 // result set (e.g., UPDATE)
                 if (mysql_field_count(conn) > 0)
-                    throw std::runtime_error(mysql_error(conn));
+                {
+                    const std::string raw_mysql_err = mysql_error(conn);
+                    const std::string raw_err =
+                        std::format("RAW MYSQL ERROR= >{}<", raw_mysql_err);
+                    Logger::instance().debug(raw_err);
+                    throw std::runtime_error(raw_mysql_err.c_str());
+                }
+
                 return {};
             }
 
@@ -201,7 +231,8 @@ class DatabaseManager
                 for (int i = 0; i < num_fields; i++)
                 {
                     // row[i] can be NULL for SQL NULL values
-                    current_row.push_back(row[i] ? row[i] : ""); //BUGBUG NULL");
+                    current_row.push_back(row[i] ? row[i]
+                                                 : ""); // BUGBUG NULL");
                 }
                 results.push_back(std::move(current_row));
             }
@@ -220,8 +251,6 @@ class DatabaseManager
 
             if (mysql_query(conn, final_query.c_str()))
             {
-                fprintf(stderr, "QUERY SQL FORMAT= >%s<\n", query_template.c_str());
-                fprintf(stderr, "QUERY FINAL SQL= >%s<\n", final_query.c_str());
                 throw std::runtime_error(mysql_error(conn));
             }
 
@@ -231,7 +260,13 @@ class DatabaseManager
                 // mysql_store_result returns NULL if the query didn't return a
                 // result set (e.g., UPDATE)
                 if (mysql_field_count(conn) > 0)
-                    throw std::runtime_error(mysql_error(conn));
+                {
+                    const std::string raw_mysql_err = mysql_error(conn);
+                    const std::string raw_err =
+                        std::format("RAW MYSQL ERROR= >{}<", raw_mysql_err);
+                    Logger::instance().debug(raw_err);
+                    throw std::runtime_error(raw_mysql_err.c_str());
+                }
                 return {};
             }
 
@@ -245,7 +280,8 @@ class DatabaseManager
                 for (int i = 0; i < num_fields; i++)
                 {
                     // row[i] can be NULL for SQL NULL values
-                    current_row.push_back(row[i] ? row[i] : ""); //BUGBUG NULL");
+                    current_row.push_back(row[i] ? row[i]
+                                                 : ""); // BUGBUG NULL");
                 }
                 results.push_back(std::move(current_row));
             }
@@ -286,13 +322,15 @@ class DatabaseManager
     // Setup
     void init();
 
-    bool Exec(const std::string& query_template, const std::vector<SqlArg>& args);
+    bool Exec(const std::string& query_template,
+              const std::vector<SqlArg>& args);
     bool Exec(const std::string& query_template);
 
     std::vector<std::vector<std::string>>
     Query(const std::string& query_template, const std::vector<SqlArg>& args);
 
-    std::vector<std::vector<std::string>> Query(const std::string& query_template);
+    std::vector<std::vector<std::string>>
+    Query(const std::string& query_template);
 
   private:
     static MySQLWrapper* driver;

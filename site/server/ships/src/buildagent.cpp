@@ -184,11 +184,6 @@ bool BuildAgent::apply(BuildSetParam& param)
         return false;
     }
 
-    // jdw for (const auto& [attr_id, value] : attributes.data)
-    // jdw {
-    // jdw     fprintf(stderr, "BuildSet: Found Attribute: %d = %d\n",
-    // (int)attr_id, value); jdw }
-
     // Apply attributes using AttributeMap
     for (const auto& [attr_id, value] : attributes.data)
     {

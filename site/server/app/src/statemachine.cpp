@@ -5,8 +5,7 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include "statemachine.h"
-
+#include <format>
 #include <iostream>
 
 #include "aiagent.h"
@@ -16,6 +15,7 @@
 #include "logger.h"
 #include "moduleutil.h"
 #include "shipmgr.h"
+#include "statemachine.h"
 #include "telemetry.h"
 #include "turn_end.h"
 
@@ -30,8 +30,10 @@ bool StateMachine::is_ai_player(const std::string& player) const
 
 bool StateMachine::is_singlep(void) const
 {
-    fprintf(stderr, "[SM] POLLED -- is this single player? %s\n",
-            data.is_singleplayer_mode ? "true" : "false");
+    const std::string message =
+        std::format("[SM] POLLED -- is this single player? {}",
+                    data.is_singleplayer_mode ? "true" : "false");
+    Logger::instance().info(message);
     return data.is_singleplayer_mode;
 }
 

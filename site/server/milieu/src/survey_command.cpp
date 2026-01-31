@@ -37,7 +37,6 @@ bool SurveyCommand::has_ship_in_system(const std::string& system)
     {
         return false;
     }
-    fprintf(stderr, "stoi 3\n");
     return std::stoi(ship_rows[0][0]) > 0;
 }
 

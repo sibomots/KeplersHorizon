@@ -59,7 +59,6 @@ bool SaveCommand::invoke()
     if (!existing.empty())
     {
         // Update existing save to point to current game
-        fprintf(stderr, "stoi 5\n");
         int sgid = std::stoi(existing[0][0]);
         db.Exec("UPDATE saved_games SET game_id=?, saved_at=NOW() WHERE id=?",
                 {game_id, sgid});
@@ -147,9 +146,7 @@ bool LoadCommand::invoke()
         return false;
     }
 
-    fprintf(stderr, "stoi 6\n");
     int target_game_id = std::stoi(saves[0][0]);
-    fprintf(stderr, "stoi 7\n");
     int module_id = std::atoi(saves[0][1].c_str());
     std::string round = saves[0][2];
     (void)module_id;
@@ -185,7 +182,6 @@ bool LoadCommand::invoke()
             // Update both sessions to new game_id
             for (const auto& seat : seats)
             {
-                fprintf(stderr, "stoi 8\n");
                 int uid = std::stoi(seat[0]);
                 db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
                         {target_game_id, uid});
@@ -266,7 +262,6 @@ bool AcceptCommand::invoke()
     }
 
     std::string requester = pending[0][0];
-    fprintf(stderr, "stoi 9\n");
     int target_game_id = std::stoi(pending[0][1]);
     std::string save_name = pending[0][2];
 
@@ -303,7 +298,6 @@ bool AcceptCommand::invoke()
     // Update both sessions to new game_id
     for (const auto& seat : seats)
     {
-        fprintf(stderr, "stoi 10\n");
         int uid = std::stoi(seat[0]);
         db.Exec("UPDATE sessions SET game_id=? WHERE user_id=?",
                 {target_game_id, uid});
@@ -371,7 +365,6 @@ bool RejectCommand::invoke()
     }
 
     std::string requester = pending[0][0];
-    fprintf(stderr, "stoi 11\n");
     int requester_user_id = std::stoi(pending[0][1]);
     std::string save_name = pending[0][2];
 

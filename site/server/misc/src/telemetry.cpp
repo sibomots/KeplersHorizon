@@ -184,8 +184,7 @@ void Telemetry::write(const std::string& msg)
 {
     // Add message to buffer for later retrieval
     add_message(msg);
-
-    std::ostringstream oss;
+    Logger::instance().info(msg); 
 }
 
 
@@ -238,18 +237,14 @@ void Telemetry::tell(PlayerTarget target, const std::string& msg)
     Logger::instance().info(oss.str());
 
     add_tell(target_player, msg);
-
-    // Don't return via write() - tell() is for async delivery via heartbeat
-    // only Returning empty so the caller's response isn't duplicated
+    Logger::instance().info(msg); 
 }
 
 void Telemetry::broadcast(const std::string& raw_msg)
 {
     // Queue message for all players (delivered via heartbeat)
     add_broadcast(raw_msg);
-
-    // source_messages(raw_msg, result);
-    // return result;
+    Logger::instance().info(raw_msg); 
 }
 
 // Helper: Build ships JSON for map rendering

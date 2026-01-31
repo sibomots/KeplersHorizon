@@ -318,7 +318,8 @@ void ShipManager::psnum(std::ostringstream& out, const int& n, int w)
 std::string ShipManager::sr_na_glyph()
 {
     // U+274C CROSS MARK (often rendered as a red X glyph)
-    return u8"❌";
+    //return u8"❌";
+    return std::string(reinterpret_cast<const char*>(u8"❌"));
 }
 
 std::string ShipManager::itos(int v)

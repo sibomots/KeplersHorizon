@@ -5,15 +5,15 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
-#include "mapgraph.h"
-
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <format>
 #include <queue>
 #include <sstream>
 
 #include "db.h"
+#include "mapgraph.h"
 #include "util.h"
 
 // Default module_id for cases where game doesn't exist yet
@@ -47,8 +47,7 @@ void MapGraph::load_hexes()
     DatabaseManager& db = DatabaseManager::instance();
     // Module hexes are shared across all games using same module
 
-    std::string ahq =
-        "SELECT hex_id,q,r FROM hexes WHERE module_id=?";
+    std::string ahq = "SELECT hex_id,q,r FROM hexes WHERE module_id=?";
     auto allHex = db.Query(ahq, {module_id});
 
     for (size_t i = 0; i < allHex.size(); i++)
@@ -68,7 +67,7 @@ void MapGraph::load_warplines()
     DatabaseManager& db = DatabaseManager::instance();
     // Warplines are shared across all games using same module
 
-    std::string  whq = 
+    std::string whq =
         "SELECT wh.hex_id,w.a_hex,w.b_hex "
         " FROM warpline_hexes wh "
         " JOIN warplines w ON w.id=wh.warpline_id AND w.module_id=wh.module_id "
@@ -104,7 +103,7 @@ void MapGraph::load_state(char owner)
 
     // Ships are game-specific (use game_id), but star_systems uses module_id
 
-    std::string q = 
+    std::string q =
         "SELECT DISTINCT ss.hex_id FROM ships s "
         "JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id=? "
         "WHERE s.game_id=? AND s.owner=? AND s.destroyed_at IS NULL";
@@ -160,8 +159,9 @@ std::string MapGraph::resolve_system(const std::string& token)
     DatabaseManager& db = DatabaseManager::instance();
     std::string tok = upper_ascii(token);
     // Star systems use module_id (shared across all games using same module)
-    std::string q = "SELECT hex_id FROM star_systems WHERE module_id=? AND UPPER(name)=? LIMIT 1";
-    auto r = db.Query(q, { module_id, tok});
+    std::string q = "SELECT hex_id FROM star_systems WHERE module_id=? AND "
+                    "UPPER(name)=? LIMIT 1";
+    auto r = db.Query(q, {module_id, tok});
 
     if (!r.empty() && !r[0].empty())
     {
@@ -317,8 +317,7 @@ std::vector<std::string> MapGraph::get_adjacent_hexes(const std::string& hex_id)
         return neighbors;
 
     // Parse label "XXYY" -> XX, YY
-    if (hex_id.size() != 4 ||
-        !std::isdigit((unsigned char)hex_id[0]) ||
+    if (hex_id.size() != 4 || !std::isdigit((unsigned char)hex_id[0]) ||
         !std::isdigit((unsigned char)hex_id[1]) ||
         !std::isdigit((unsigned char)hex_id[2]) ||
         !std::isdigit((unsigned char)hex_id[3]))
@@ -339,17 +338,20 @@ std::vector<std::string> MapGraph::get_adjacent_hexes(const std::string& hex_id)
     const int col = XX - ((S + 1) / 2);
 
     // Helper: (S, col) -> hex label "XXYY"
-    auto make_hex = [&](int nS, int nCol) -> std::string {
+    auto make_hex = [&](int nS, int nCol) -> std::string
+    {
         // invert
         const int nXX = nCol + ((nS + 1) / 2);
         const int nYY = nS - nXX;
 
         if (nXX < 0 || nXX > 99 || nYY < 0 || nYY > 99)
+        {
             return std::string();
+        }
 
-        char buf[5];
-        std::snprintf(buf, sizeof(buf), "%02d%02d", nXX, nYY);
-        return std::string(buf);
+        // char buf[5];
+        // std::snprintf(buf, sizeof(buf), "%02d%02d", nXX, nYY);
+        return std::format("{:02d}{:02d}", nXX, nYY);
     };
 
     // Neighbor coordinates in the UI's double-height staggered grid.
@@ -357,7 +359,11 @@ std::vector<std::string> MapGraph::get_adjacent_hexes(const std::string& hex_id)
     // based on parity of S.
     const bool odd = (S & 1) != 0;
 
-    struct SC { int s; int c; };
+    struct SC
+    {
+        int s;
+        int c;
+    };
     const SC cand[6] = {
         {S - 2, col},
         {S + 2, col},

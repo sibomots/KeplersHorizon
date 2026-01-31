@@ -17,14 +17,16 @@
 static int get_user_id_from_token(const std::string& token)
 {
     if (token.empty())
+    {
         return 0;
+    }
     DatabaseManager& db = DatabaseManager::instance();
     auto rows = db.Query("SELECT user_id FROM sessions WHERE token=?",
                          {token});
-    if (rows.empty()) {
+    if (rows.empty())
+    {
         return 0;
     }
-    fprintf(stderr, "stoi 12\n");
     return std::stoi(rows[0][0]);
 }
 

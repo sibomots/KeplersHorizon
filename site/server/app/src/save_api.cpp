@@ -27,9 +27,7 @@ static bool get_session_from_token(const std::string& token, int& user_id,
     if (rows.empty()) {
         return false;
     }
-    fprintf(stderr, "stoi 13\n");
     user_id = std::stoi(rows[0][0]);
-    fprintf(stderr, "stoi 14\n");
     game_id = std::stoi(rows[0][1]);
     return true;
 }
@@ -128,7 +126,6 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
 
     // Get save ID
     auto id_rows = db.Query("SELECT LAST_INSERT_ID()", {});
-    fprintf(stderr, "stoi 15\n");
     int save_id = id_rows.empty() ? 0 : std::stoi(id_rows[0][0]);
 
     auto ships =
@@ -230,7 +227,6 @@ void handle_save_load(int save_id, const HttpRequest* req, HttpResponse* resp)
             {state_json});
 
     auto id_rows = db.Query("SELECT LAST_INSERT_ID()", {});
-    fprintf(stderr, "stoi 16\n");
     int new_game_id = id_rows.empty() ? 0 : std::stoi(id_rows[0][0]);
 
     if (new_game_id == 0)

@@ -36,7 +36,6 @@ bool QuitCommand::invoke(void)
 
     if (!existing.empty())
     {
-        fprintf(stderr, "stoi 32\n");
         db.Exec("UPDATE saved_games SET game_id=?, save_name=?, saved_at=NOW() "
                 "WHERE id=?",
                 {game_id, save_name, std::stoi(existing[0][0])});

@@ -170,7 +170,6 @@ void test_db(void)
         auto userCheck = db.Query("SELECT id FROM users LIMIT 1", {});
         if (!userCheck.empty())
         {
-            fprintf(stderr, "stoi 4\n");
             int user_id = std::stoi(userCheck[0][0]);
             std::string test_token =
                 "__test_token_" 
