@@ -126,51 +126,45 @@
   (find-if (lambda (ch) (string= (combat-hex ch) hex)) combats))
 
 (defun find-actionable-combat (combats own-ships)
-  "Find first combat that needs AI action.
-   Priority: Stage 0 with ships needing orders, then stage 2 with damage.
-   Returns NIL if all combats are waiting for enemy/user."
-  (or
-   ;; First: find combat at stage 0 where AI has ships needing orders
-   (find-if (lambda (ch)
-              (and (= (combat-stage ch) 0)
-                   (not (combat-ai-committed-p ch))
-                   (let ((hex (combat-hex ch)))
-                     (some (lambda (s)
-                             (and (string= (ship-hex s) hex)
-                                  (ship-needs-order-p s)))
-                           own-ships))))
-            combats)
-   ;; Second: find combat at stage 0 where AI needs to commit
-   (find-if (lambda (ch)
-              (and (= (combat-stage ch) 0)
-                   (not (combat-ai-committed-p ch))
-                   (let ((hex (combat-hex ch)))
-                     ;; Has ships in hex but none need orders (ready to commit)
-                     (and (some (lambda (s) (string= (ship-hex s) hex))
-                                own-ships)
-                          (not (some (lambda (s)
-                                       (and (string= (ship-hex s) hex)
-                                            (ship-needs-order-p s)))
-                                     own-ships))))))
-            combats)
-   ;; Third: find combat at stage 2 where AI has damage to assign
-   (find-if (lambda (ch)
-              (and (= (combat-stage ch) 2)
-                   (let ((hex (combat-hex ch)))
-                     (some (lambda (s)
-                             (and (string= (ship-hex s) hex)
-                                  (> (ship-pending-damage s) 0)))
-                           own-ships))))
-            combats)
-   ;; Fourth: find combat at stage 3 where AI has ships to retreat
-   (find-if (lambda (ch)
-              (and (= (combat-stage ch) 3)
-                   (let ((hex (combat-hex ch)))
-                     (some (lambda (s)
-                             (and (string= (ship-hex s) hex)
-                                  (ship-escape-pending-p s)))
-                           own-ships))))
-            combats)))
+  "Return the FIRST combat if AI can act on it, NIL if waiting.
+   RULE: Finish one hex completely before moving to the next.
+   Combat ends only when: enemy destroyed OR stalemate retreat."
+  (when combats
+    (let* ((ch (first combats))
+           (hex (combat-hex ch))
+           (stage (combat-stage ch))
+           (ships-here (remove-if-not
+                        (lambda (s) (string= (ship-hex s) hex))
+                        own-ships)))
+      ;; Only return this combat if AI has action to take
+      (cond
+        ;; Stage 0: need to issue orders or commit
+        ((= stage 0)
+         (cond
+           ;; Need to commit (have ships, none need orders, not committed)
+           ((and ships-here
+                 (not (combat-ai-committed-p ch))
+                 (not (some #'ship-needs-order-p ships-here)))
+            ch)
+           ;; Need to issue orders
+           ((and ships-here
+                 (not (combat-ai-committed-p ch))
+                 (some #'ship-needs-order-p ships-here))
+            ch)
+           ;; Waiting for enemy to commit - return NIL, don't skip to next hex
+           (t nil)))
+        ;; Stage 2: damage assignment
+        ((= stage 2)
+         (if (some (lambda (s) (> (ship-pending-damage s) 0)) ships-here)
+             ch
+             nil))
+        ;; Stage 3: retreat
+        ((= stage 3)
+         (if (some #'ship-escape-pending-p ships-here)
+             ch
+             nil))
+        ;; Stage 1 or other: resolution in progress, wait
+        (t nil)))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Focus Fire - All AI ships target same enemy
