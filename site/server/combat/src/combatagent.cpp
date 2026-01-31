@@ -288,6 +288,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
 
     if (!cls)
     {
+        Logger::instance().info(limit_errors);
         // we have errors in the ordered combat attributes
         // limit_errors has the errors.
         return false;

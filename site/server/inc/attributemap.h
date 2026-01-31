@@ -54,10 +54,10 @@ typedef struct AttributeMap
     AttributeValue& operator[](AttributeID key) {
         // Simplified: The map handles the lookup. 
         // Use a single check for validity if you want to restrict keys.
-        if (data.find(key) != data.end()) {
+        //jdw if (data.find(key) != data.end()) {
             return data[key];
-        }
-        return data[AttributeID::UNKNOWN];
+        //jdw }
+        //jdw return data[AttributeID::UNKNOWN];
     }
 
     void clear() {
