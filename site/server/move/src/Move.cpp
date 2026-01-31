@@ -625,16 +625,24 @@ bool MoveCommand::invoke(void)
         Telemetry::instance().write(milieu_report);
     }
 
-    // Check for combat trigger: enemy ships in destination hex
+    // Check for combat trigger: enemy ships in THIS destination hex
     char enemy = (active_player == 'A') ? 'B' : 'A';
-    bool litmus = CombatEngine::is_real_combat_state(m_game_id);
 
-    // if (!enemy_ships.empty() && std::atoi(enemy_ships[0][0].c_str()) > 0)
-    if (litmus) //  && std::atoi(enemy_ships[0][0].c_str()) > 0)
+    // Query for enemy ships specifically in the destination hex
+    auto enemy_in_dest =
+        db.Query("SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
+                 "AND owner=? AND destroyed_at IS NULL "
+                 "AND (racked_in IS NULL OR racked_in = '')",
+                 {m_game_id, finalHex, enemy});
+
+    bool enemies_here =
+        (!enemy_in_dest.empty() && std::atoi(enemy_in_dest[0][0].c_str()) > 0);
+
+    if (enemies_here)
     {
-        // Enemy ships present - trigger combat check
+        // Enemy ships present in THIS hex - trigger combat check
         CombatEngine ce(m_game_id);
-        ce.check_for_combat_triggers(); // Creates combat if not exists
+        ce.check_for_combat_triggers();
 
         // Notify both players
         std::string sysName = finalSystem.empty() ? finalHex : finalSystem;

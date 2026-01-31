@@ -28,7 +28,7 @@ typedef enum : char
     KH_N_TACTIC = 0,
     KH_A_TACTIC = 'A', // attack
     KH_D_TACTIC = 'D', // dodge
-    KH_R_TACTIC = 'R', // retreat
+    KH_R_TACTIC = 'E', // escape
 } CombatOpTactic;
 
 typedef enum : int

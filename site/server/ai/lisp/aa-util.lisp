@@ -50,13 +50,18 @@
 ;;; ----------------------------------------------------------------------------
 
 (defun ship-code (ship)
-  (getf ship :code))
+  "Return ship code in lowercase for command generation."
+  (let ((code (getf ship :code)))
+    (if code (string-downcase code) "")))
 
 (defun ship-name (ship)
+  "Return ship name (preserves case for display)."
   (getf ship :name))
 
 (defun ship-hex (ship)
-  (getf ship :hex))
+  "Return hex ID in lowercase for command generation."
+  (let ((hex (getf ship :hex)))
+    (if hex (string-downcase hex) "")))
 
 (defun ship-pd (ship)
   (or (getf ship :pd) 0))
@@ -83,8 +88,9 @@
   (getf ship :warpship))
 
 (defun ship-suggested-dest (ship)
-  "Get C++ computed suggested destination for this ship."
-  (getf ship :suggested-dest))
+  "Get C++ computed suggested destination for this ship (lowercase)."
+  (let ((dest (getf ship :suggested-dest)))
+    (if dest (string-downcase dest) "")))
 
 ;; Combat state accessors
 (defun ship-needs-order-p (ship)
@@ -101,7 +107,7 @@
 
 ;; Revealed enemy order accessors (public after both players commit)
 (defun ship-last-tactic (ship)
-  "Get enemy's tactic from prior round (A, D, R, or NIL if unknown)."
+  "Get enemy's tactic from prior round (A, D, E, or NIL if unknown)."
   (getf ship :last-tactic))
 
 (defun ship-last-drive (ship)
@@ -173,7 +179,7 @@
   (list :cmd cmd :args (or args "")))
 
 (defun cmd-next ()
-  (make-cmd "NEXT"))
+  (make-cmd "next"))
 
 (defun cmd-done ()
-  (make-cmd "DONE"))
+  (make-cmd "done"))

@@ -16,9 +16,9 @@
 (defparameter *ship-name-counter* 0)
 
 (defun next-ship-name ()
-  "Generate next ship name."
+  "Generate next ship name (lowercase)."
   (incf *ship-name-counter*)
-  (format nil "ALPHA~D" *ship-name-counter*))
+  (format nil "alpha~D" *ship-name-counter*))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Ship Design Templates
@@ -85,7 +85,7 @@
       ((ship-needs-deploy-p ships)
        (let ((ship (find-undeployed-ship ships)))
          (format t "[LISP] -> ds ~A~%" (ship-name ship))
-         (list (make-cmd "ds" (format nil "~A ASTREX" (ship-name ship))))))
+         (list (make-cmd "ds" (format nil "~A astrex" (ship-code ship))))))
 
       ;; Check for repairs needed
       ((should-repair-p slate)
@@ -94,14 +94,14 @@
       ;; Should we build a base defender (systemship)?
       ((should-build-defender-p slate)
        (let ((name (next-ship-name)))
-         (format t "[LISP] -> bn S ~A (base defender)~%" name)
-         (list (make-cmd "bn" (format nil "S ~A" name)))))
+         (format t "[LISP] -> bn s ~A (base defender)~%" name)
+         (list (make-cmd "bn" (format nil "s ~A" name)))))
 
       ;; Should we start building a new warpship?
       ((should-build-p slate)
        (let ((name (next-ship-name)))
-         (format t "[LISP] -> bn W ~A~%" name)
-         (list (make-cmd "bn" (format nil "W ~A" name)))))
+         (format t "[LISP] -> bn w ~A~%" name)
+         (list (make-cmd "bn" (format nil "w ~A" name)))))
 
       ;; Done with build phase
       (t
@@ -263,7 +263,7 @@
     (if damaged
         (let ((repair-pd (min 3 (- 6 (ship-pd damaged))))) ; Repair up to PD=6
           (format t "[LISP] -> rp ~A pd=~A~%" (ship-name damaged) repair-pd)
-          (list (make-cmd "rp" (format nil "~A pd=~A" (ship-name damaged) repair-pd))))
+          (list (make-cmd "rp" (format nil "~A pd=~A" (ship-code damaged) repair-pd))))
         (list (cmd-next)))))
 
 ;;; ----------------------------------------------------------------------------

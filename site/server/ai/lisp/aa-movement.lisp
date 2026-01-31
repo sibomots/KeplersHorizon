@@ -36,7 +36,7 @@
                 (list (cmd-next)))
               (progn
                 (format t "[LISP] -> move ~A to h~A~%" (ship-name ship) dest)
-                (list (make-cmd "m" (format nil "~A h~A" (ship-name ship) dest))))))
+                (list (make-cmd "m" (format nil "~A h~A" (ship-code ship) dest))))))
         (progn
           (format t "[LISP] -> NEXT (no ships can move)~%")
           (list (cmd-next))))))

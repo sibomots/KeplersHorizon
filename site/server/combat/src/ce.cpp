@@ -372,7 +372,7 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
             }
             return -999;
         }
-        if (tactic_target == 'R')
+        if (tactic_target == 'E')
         {
             if (drive_diff <= -3)
             {
@@ -450,7 +450,7 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
             }
             return -999;
         }
-        if (tactic_target == 'R')
+        if (tactic_target == 'E')
         {
             return -999; // Always escapes against Dodge according to "Escapes"
                          // in all rows roughly?
@@ -465,7 +465,7 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
             return -999;
         }
     }
-    else if (tactic_fire == 'R')
+    else if (tactic_fire == 'E')
     {
         // RETREAT firing
         if (tactic_target == 'A')
@@ -487,7 +487,7 @@ static int get_crt_mod(int drive_diff, char tactic_fire, char tactic_target,
         {
             return -999; // Miss
         }
-        else if (tactic_target == 'R')
+        else if (tactic_target == 'E')
         {
             escaped = true;
             return -999;
@@ -688,7 +688,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                 log << ship.code << " has no target '" << tid << "'\n";
             }
         }
-        else if (ship.ord.tactic == 'R')
+        else if (ship.ord.tactic == 'E')
         {
             // Retreating ships hold fire - log acknowledgment
             log << ship.code << " '" << ship.name

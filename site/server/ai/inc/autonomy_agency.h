@@ -45,7 +45,7 @@ struct AAShipInfo
     bool escape_pending;     // Successful retreat, needs retreat command
 
     // Revealed enemy order from prior round (public after both commit)
-    char last_tactic; // 'A', 'D', 'R', or '\0' if unknown
+    char last_tactic; // 'A', 'D', 'E', or '\0' if unknown
     int last_drive;   // Power allocated to drive
     int last_beam;    // Power allocated to beam
 

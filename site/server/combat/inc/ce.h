@@ -46,7 +46,7 @@ struct CombatOrder
     char owner; // 'A' or 'B'
     std::string ship_code;
     int round;
-    char tactic; // 'A', 'D', 'R'
+    char tactic; // 'A', 'D', 'E'
     std::string target_id;
     int power_d;
     int power_b;

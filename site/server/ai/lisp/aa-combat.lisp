@@ -23,53 +23,67 @@
 
 (defun decide-combat-phase (slate)
   "Decide ONE combat action. Called repeatedly until NEXT.
+   RULE: Focus on ONE combat hex at a time. Finish it before moving to next.
    Priority:
    1. Ships with escape_pending need retreat command
    2. Ships with pending_damage need damage assignment
-   3. Ships needing orders get combat orders (CRT-aware)
+   3. Ships needing orders in FIRST combat hex get combat orders
    4. If all orders issued but not committed, commit
-   5. Otherwise advance"
-  (let ((combats (slate-active-combats slate))
-        (own-ships (slate-own-ships slate)))
-    (format t "[LISP] decide-combat: combats=~A ships=~A~%"
-            (length combats) (length own-ships))
+   5. If waiting for enemy to commit, do nothing (wait)
+   6. Otherwise advance"
+  (let* ((combats (slate-active-combats slate))
+         (own-ships (slate-own-ships slate))
+         ;; CRITICAL: Focus on FIRST combat hex only
+         (focus-combat (first combats))
+         (focus-hex (when focus-combat (combat-hex focus-combat)))
+         ;; Filter ships to only those in focus hex
+         (ships-in-focus (when focus-hex
+                           (remove-if-not
+                            (lambda (s) (string= (ship-hex s) focus-hex))
+                            own-ships))))
+    (format t "[LISP] decide-combat: combats=~A focus-hex=~A ships-in-focus=~A~%"
+            (length combats) focus-hex (length ships-in-focus))
     (cond
-      ;; Priority 1: Handle escaping ships
+      ;; Priority 1: Handle escaping ships (any hex)
       ((find-escaping-ship own-ships)
        (let ((ship (find-escaping-ship own-ships)))
          (format t "[LISP] -> retreat ~A~%" (ship-name ship))
          (issue-retreat ship)))
 
-      ;; Priority 2: Assign pending damage
+      ;; Priority 2: Assign pending damage (any hex)
       ((find-ship-with-damage own-ships)
        (let ((ship (find-ship-with-damage own-ships)))
          (format t "[LISP] -> apply damage to ~A~%" (ship-name ship))
          (issue-damage-assignment ship)))
 
-      ;; Priority 3: Issue combat orders for ships that need them
-      ((find-ship-needing-order own-ships)
-       (let* ((ship (find-ship-needing-order own-ships))
-              (hex (ship-hex ship))
+      ;; Priority 3: Issue combat orders for ships in FOCUS HEX only
+      ((and focus-hex (find-ship-needing-order ships-in-focus))
+       (let* ((ship (find-ship-needing-order ships-in-focus))
+              (hex focus-hex)
               (enemies-here (ships-at-hex (slate-enemy-ships slate) hex))
               ;; FOCUS FIRE: All AI ships target the same enemy (weakest first)
               (focus-target (pick-focus-target enemies-here))
-              ;; Check stalemate status for this combat
-              (combat-hex (find-combat-at-hex combats hex))
-              (stalemate (if combat-hex (combat-stalemate-count combat-hex) 0))
-              (ai-attacker (if combat-hex (combat-ai-attacker-p combat-hex) nil)))
+              (stalemate (combat-stalemate-count focus-combat))
+              (ai-attacker (combat-ai-attacker-p focus-combat)))
          ;; Stalemate warning: if AI is attacker and stalemate=2, must deal damage
          (when (and ai-attacker (>= stalemate 2))
            (format t "[LISP] WARNING: Stalemate=~A, must deal damage or retreat!~%"
                    stalemate))
-         (format t "[LISP] -> combat order for ~A (focus: ~A stalemate: ~A)~%"
-                 (ship-name ship) (when focus-target (ship-code focus-target)) stalemate)
+         (format t "[LISP] -> combat order for ~A in ~A (focus: ~A stalemate: ~A)~%"
+                 (ship-name ship) hex
+                 (when focus-target (ship-code focus-target)) stalemate)
          (issue-combat-order-with-stalemate ship focus-target enemies-here
                                             stalemate ai-attacker)))
 
       ;; Priority 4: Commit if orders are ready but not committed
-      ((needs-combat-commit-p combats own-ships)
+      ((needs-combat-commit-p combats ships-in-focus focus-hex)
        (format t "[LISP] -> cc~%")
        (list (make-cmd "cc")))
+
+      ;; Priority 5: Waiting for enemy to commit - output nothing
+      ((waiting-for-enemy-p combats focus-hex)
+       (format t "[LISP] -> WAIT (enemy has not committed)~%")
+       nil)
 
       ;; Otherwise advance
       (t
@@ -92,19 +106,27 @@
   "Find a ship that needs a combat order."
   (find-if #'ship-needs-order-p ships))
 
-(defun needs-combat-commit-p (combats ships)
-  "Check if we have orders to commit.
+(defun needs-combat-commit-p (combats ships-in-focus focus-hex)
+  "Check if we have orders to commit for the focus hex.
    True if: stage=0, AI has ships with orders, but not committed."
   (and combats
+       focus-hex
        (let ((ch (first combats)))
          (and (= (combat-stage ch) 0)
               (not (combat-ai-committed-p ch))
-              ;; At least one ship is in combat (has hex matching combat)
-              (some (lambda (s)
-                      (string= (ship-hex s) (combat-hex ch)))
-                    ships)
-              ;; No ships still need orders
-              (not (find-ship-needing-order ships))))))
+              ;; Have ships in focus hex
+              ships-in-focus
+              ;; No ships in focus hex still need orders
+              (not (find-ship-needing-order ships-in-focus))))))
+
+(defun waiting-for-enemy-p (combats focus-hex)
+  "Check if AI is waiting for enemy to commit orders.
+   True if: we have combat, stage=0, AI has committed, enemy hasn't."
+  (and combats
+       focus-hex
+       (let ((ch (first combats)))
+         (and (= (combat-stage ch) 0)
+              (combat-ai-committed-p ch)))))
 
 (defun find-combat-at-hex (combats hex)
   "Find combat state for a specific hex."
@@ -134,10 +156,10 @@
 
 (defun issue-retreat (ship)
   "Issue retreat command. Pick adjacent hex toward friendly territory."
-  ;; Format: retreat SHIPNAME hXXYY
+  ;; Format: retreat SHIPCODE hXXYY
   (let* ((hex (ship-hex ship))
          (adj-hex (compute-retreat-hex hex)))
-    (list (make-cmd "retreat" (format nil "~A h~A" (ship-name ship) adj-hex)))))
+    (list (make-cmd "retreat" (format nil "~A h~A" (ship-code ship) adj-hex)))))
 
 (defun compute-retreat-hex (hex)
   "Compute retreat hex toward friendly bases.
@@ -201,11 +223,11 @@
     ;; If damage >= total HP, ship is destroyed - assign all
     (if (>= damage total-hp)
         (list (make-cmd "ca" (format nil "~A pd=~A b=~A s=~A t=~A"
-                                     (ship-name ship) pd beam screen tube)))
+                                     (ship-code ship) pd beam screen tube)))
         ;; Otherwise, allocate damage preserving PD and screens
         (let ((alloc (allocate-damage damage tube beam screen pd)))
           (list (make-cmd "ca" (format nil "~A pd=~A b=~A s=~A t=~A"
-                                       (ship-name ship)
+                                       (ship-code ship)
                                        (getf alloc :pd)
                                        (getf alloc :b)
                                        (getf alloc :s)
@@ -269,8 +291,8 @@
                   (length missiles))
           (list (make-cmd "co" cmd-str)))
         ;; No target visible - dodge defensively
-        (list (make-cmd "co" (format nil "~A d W1 d=~A b=0 s=0"
-                                     (ship-name ship)
+        (list (make-cmd "co" (format nil "~A d w1 pd=~A b=0 s=0"
+                                     (ship-code ship)
                                      (ship-pd ship)))))))
 
 (defun analyze-must-damage-situation (ship target enemies)
@@ -296,8 +318,8 @@
 
 (defun build-combat-command (ship target tactic alloc missiles)
   "Build the full combat order string including missiles."
-  (let ((base (format nil "~A ~A ~A d=~A b=~A s=~A"
-                      (ship-name ship)
+  (let ((base (format nil "~A ~A ~A pd=~A b=~A s=~A"
+                      (ship-code ship)
                       tactic
                       (ship-code target)
                       (getf alloc :d)
@@ -345,10 +367,10 @@
             (ship-warpship-p ship))
        (format t "[LISP] Outmatched (~A vs ~A total) - retreating~%"
                my-pd total-enemy-pd)
-       (list :tactic "r" :alloc (list :d my-pd :b 0 :s 0) :missiles nil))
+       (list :tactic "e" :alloc (list :d my-pd :b 0 :s 0) :missiles nil))
 
       ;; Enemy was retreating last round: ATTACK with +3/+4 drive to catch
-      ((eql enemy-tactic #\R)
+      ((eql enemy-tactic #\E)
        (format t "[LISP] Enemy retreating - attacking to pursue~%")
        (crt-attack-alloc my-pd my-beam my-screen (or enemy-drive 0) :pursue))
 

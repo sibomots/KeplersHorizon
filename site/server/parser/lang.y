@@ -681,7 +681,7 @@ combat_tactic:
       $$ = 'D';
   }
   | TOK_ESCAPE {
-      $$ = 'R';
+      $$ = 'E';
   }
   ;
 
