@@ -19,30 +19,54 @@
 ;;; Build Phase Entry
 ;;; ----------------------------------------------------------------------------
 
+(defparameter *credit-reserve* 50
+  "Keep this many credits in reserve for repairs/resupply.")
+
+(defparameter *ship-cost* 19
+  "Cost of a basic warpship (WG=5 + PD=5 + B=3 + S=2 + T=1 + M=3).")
+
+(defun should-build-p (slate)
+  "Heuristic: Should we build another ship?
+   - Keep a credit reserve for repairs/resupply
+   - Build if we have fewer ships than enemy + 1
+   - Don't overbuild in early game"
+  (let ((credits (slate-credits slate))
+        (our-ships (length (slate-own-ships slate)))
+        (enemy-ships (length (slate-enemy-ships slate)))
+        (round (slate-round slate)))
+    ;; Must have enough credits beyond reserve
+    (and (>= credits (+ *ship-cost* *credit-reserve*))
+         ;; Fleet size heuristic: match enemy + small advantage
+         ;; Early game (round 1): build up to 2 ships
+         ;; Later: build to match enemy + 1, max 5
+         (< our-ships (min 5 (max 2 (+ enemy-ships 1)))))))
+
 (defun decide-build-phase (slate)
   "Decide what to do in build phase.
    Priority:
    1. If we have drafts, commit them
-   2. If we can afford a warpship, build one
+   2. If heuristics say build, build one
    3. Otherwise, advance"
-  (format t "[LISP] decide-build-phase called~%")
-  (format t "[LISP] credits=~A drafts=~A~%"
-          (slate-credits slate) (slate-drafts slate))
-  (cond
-    ;; Commit pending drafts first
-    ((has-drafts-p slate)
-     (format t "[LISP] -> commit draft~%")
-     (commit-first-draft slate))
+  (let ((fleet-size (length (slate-own-ships slate)))
+        (enemy-size (length (slate-enemy-ships slate)))
+        (draft-count (length (slate-drafts slate))))
+    (format t "[LISP] decide-build-phase: ships=~A enemy=~A drafts=~A credits=~A~%"
+            fleet-size enemy-size draft-count (slate-credits slate))
+    (cond
+      ;; Commit pending drafts first
+      ((has-drafts-p slate)
+       (format t "[LISP] -> commit draft~%")
+       (commit-first-draft slate))
 
-    ;; Build a warpship if we can afford minimum (17 BP for a basic fighter)
-    ((can-afford-p slate 17)
-     (format t "[LISP] -> build warpship (credits=~A)~%" (slate-credits slate))
-     (build-basic-warpship slate))
+      ;; Build if heuristic says so
+      ((should-build-p slate)
+       (format t "[LISP] -> build warpship~%")
+       (build-basic-warpship slate))
 
-    ;; Otherwise advance to movement
-    (t
-     (format t "[LISP] -> advance (cannot afford)~%")
-     (list (cmd-next)))))
+      ;; Otherwise advance to movement
+      (t
+       (format t "[LISP] -> advance~%")
+       (list (cmd-next))))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Build Actions

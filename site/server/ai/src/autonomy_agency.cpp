@@ -16,6 +16,7 @@
 #include "db.h"
 #include "ecl_bridge.h"
 #include "logger.h"
+#include "mapgraph.h"
 #include "statemachine.h"
 
 // ----------------------------------------------------------------------------
@@ -274,6 +275,18 @@ void AutonomyAgency::gather()
         }
     }
 
+    // Enemy base hexes (opposite side)
+    std::string enemy_side = (our_side == "A") ? "B" : "A";
+    auto enemy_base_rows = db.Query(sql_bases, {enemy_side});
+
+    for (const std::vector<std::string>& row : enemy_base_rows)
+    {
+        if (!row.empty())
+        {
+            m_slate.enemy_base_hexes.push_back(row[0]);
+        }
+    }
+
     // Own ships
     std::string sql_own =
         "SELECT ship_code, ship_name, at_hex, pd, beam, screen, tube, "
@@ -374,6 +387,49 @@ void AutonomyAgency::gather()
     }
 
     m_slate.in_combat = !m_slate.contested_hexes.empty();
+
+    // Compute suggested destinations for movement planning
+    // Use MapGraph to find reachable waypoints toward enemy bases
+    if (!m_slate.enemy_base_hexes.empty())
+    {
+        MapGraph graph(m_slate.game_id);
+        graph.load_state(m_slate.aa_player);
+
+        for (AAShipInfo& ship : m_slate.own_ships)
+        {
+            // Skip ships that can't move
+            if (!ship.is_warpship || ship.pd <= 0 || ship.hex_id.empty())
+            {
+                continue;
+            }
+
+            // Already at enemy base? No need to move
+            bool at_enemy_base = false;
+            for (const std::string& eb : m_slate.enemy_base_hexes)
+            {
+                if (ship.hex_id == eb)
+                {
+                    at_enemy_base = true;
+                    break;
+                }
+            }
+            if (at_enemy_base)
+            {
+                continue;
+            }
+
+            // Find path to first enemy base with ship's PD as limit
+            std::string target = m_slate.enemy_base_hexes[0];
+            std::vector<std::string> path =
+                graph.get_path(ship.hex_id, target, ship.pd);
+
+            if (!path.empty())
+            {
+                // Last element in path is farthest reachable waypoint
+                ship.suggested_destination = path.back();
+            }
+        }
+    }
 }
 
 // ----------------------------------------------------------------------------

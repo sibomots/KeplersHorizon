@@ -165,6 +165,9 @@ cl_object EclBridge::marshal_slate(const AASlate& slate)
     alist = make_cons(make_cons(make_keyword("own-bases"),
                                 marshal_string_list(slate.own_base_hexes)),
                       alist);
+    alist = make_cons(make_cons(make_keyword("enemy-bases"),
+                                marshal_string_list(slate.enemy_base_hexes)),
+                      alist);
     alist = make_cons(
         make_cons(make_keyword("home-side"), make_string(slate.home_side)),
         alist);
@@ -212,6 +215,10 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
 
         plist = make_cons(make_bool(s.is_warpship), plist);
         plist = make_cons(make_keyword("warpship"), plist);
+
+        // AI movement suggestion (empty if no valid move)
+        plist = make_cons(make_string(s.suggested_destination), plist);
+        plist = make_cons(make_keyword("suggested-dest"), plist);
 
         plist = make_cons(make_int(s.tech_level), plist);
         plist = make_cons(make_keyword("tech"), plist);

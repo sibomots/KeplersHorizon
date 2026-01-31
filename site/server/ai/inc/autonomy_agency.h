@@ -36,6 +36,9 @@ struct AAShipInfo
     bool is_warpship;
     std::vector<std::string> carried_systemships;
 
+    // AI movement planning: farthest reachable waypoint toward strategic goal
+    std::string suggested_destination;
+
     AAShipInfo()
         : pd(0), beam(0), screen(0), tube(0), missile(0), sr(0), tech_level(0),
           is_warpship(true)
@@ -64,6 +67,7 @@ struct AASlate
 
     // Territory (from DB)
     std::vector<std::string> own_base_hexes;
+    std::vector<std::string> enemy_base_hexes;
     std::string home_side;
 
     // Fleet (from DB: warpships table)

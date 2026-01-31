@@ -6,17 +6,27 @@
 
 (defun decide-movement-phase (slate)
   "Decide what to do in movement phase.
-   For now: just advance (movement AI is future work)."
-  (declare (ignore slate))
-  ;; STUB: Real movement logic would:
-  ;; 1. Identify ships that can move
-  ;; 2. Evaluate strategic positions (enemy bases, defense)
-  ;; 3. Generate move commands
-  (list (cmd-next)))
+   Uses C++ computed suggested destinations for pathfinding."
+  (let ((ship (find-ship-with-move slate)))
+    (format t "[LISP] decide-movement: looking for ships with suggested moves~%")
+    (if ship
+        (let ((dest (ship-suggested-dest ship)))
+          (format t "[LISP] -> move ~A to ~A~%" (ship-name ship) dest)
+          (list (make-cmd "m" (format nil "~A ~A" (ship-name ship) dest))))
+        (progn
+          (format t "[LISP] -> advance (no suggested moves)~%")
+          (list (cmd-next))))))
 
 ;;; ----------------------------------------------------------------------------
-;;; Movement Helpers (future use)
+;;; Movement Helpers
 ;;; ----------------------------------------------------------------------------
+
+(defun find-ship-with-move (slate)
+  "Find a ship that has a C++ suggested destination."
+  (find-if (lambda (s)
+             (let ((dest (ship-suggested-dest s)))
+               (and dest (not (string= dest "")))))
+           (slate-own-ships slate)))
 
 (defun movable-ships (slate)
   "Get ships that can move (warpships with PD > 0)."
@@ -25,9 +35,3 @@
      (and (ship-warpship-p s)
           (> (ship-pd s) 0)))
    (slate-own-ships slate)))
-
-(defun ship-can-reach-p (ship hex-from hex-to)
-  "Check if ship can reach hex-to from hex-from.
-   STUB: Need hex graph/warpline data."
-  (declare (ignore ship hex-from hex-to))
-  nil)

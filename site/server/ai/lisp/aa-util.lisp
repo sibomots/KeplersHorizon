@@ -33,6 +33,9 @@
 (defun slate-own-bases (slate)
   (slate-get slate :own-bases nil))
 
+(defun slate-enemy-bases (slate)
+  (slate-get slate :enemy-bases nil))
+
 (defun slate-contested-hexes (slate)
   (slate-get slate :contested-hexes nil))
 
@@ -75,6 +78,10 @@
 
 (defun ship-warpship-p (ship)
   (getf ship :warpship))
+
+(defun ship-suggested-dest (ship)
+  "Get C++ computed suggested destination for this ship."
+  (getf ship :suggested-dest))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Predicates
