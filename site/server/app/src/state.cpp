@@ -6,6 +6,7 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 #include "app.h"
+#include "autonomy_agency.h"
 #include "comms.h"
 #include "db.h"
 #include "json.h"
@@ -13,7 +14,6 @@
 #include "telemetry.h"
 #include "typedefs.h"
 #include "util.h"
-#include "autonomy_agency.h"
 
 void handle_state(const HttpRequest* req, HttpResponse* resp)
 {
@@ -39,10 +39,8 @@ void handle_state(const HttpRequest* req, HttpResponse* resp)
     // JSON, including queued messages for this player
     Telemetry::instance().status(a.player, resp);
 
-    bool is_singlep = StateMachine::instance().is_singlep();
-    if (is_singlep) {
-       AutonomyAgency::instance().pump();
-    }
+    // NOTE: Removed pump() here. TaskRunner handles pump decisions after
+    // executing commands. Pumping on every state poll was excessive.
 
     return;
 }

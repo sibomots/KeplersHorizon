@@ -5,6 +5,8 @@
 //
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
+#include "srvmgr.h"
+
 #include <arpa/inet.h>
 #include <atomic>
 #include <cctype>
@@ -29,16 +31,16 @@
 
 #include "aiagent.h"
 #include "comms.h"
-#include "srvmgr.h"
-#include "typedefs.h"
 #include "taskrunner.h"
+#include "typedefs.h"
 
 std::string ServerManager::listen = "127.0.0.1";
 unsigned short ServerManager::port = 8080;
 int ServerManager::server_socket = -1;
 
 // BUGBUG
-extern int internal_command_handler_body(const std::string cmdline, std::string& errmsg);
+extern int internal_command_handler_body(const std::string cmdline,
+                                         std::string& errmsg);
 
 void ServerManager::connect()
 {
@@ -71,57 +73,10 @@ void ServerManager::run(void)
     int sequence = 0;
     bool done = false;
 
-    auto agentCallback = [](Task** ppNewItem) -> bool
-    {
-        // go fetch any pending task from the AI Agent.
-        // if there is one, populate newItem
-        // Here is where we are going to POLL the AI AGENT
-        // The AI Agent is going to PUSH new Tasks
-        // on the TaskRunner queue.
-
-        // Whenever advance_next() is called,
-        // The AI AGENT will have the opportunity to
-        // Add tasks to the TaskRunner Queue.
-
-        // This call back is here for two reason:
-        //  In the case where the user is the active player
-        //  their commands can change the dynamics of the game
-        //  and thus, the AI agent has the opportunity to
-        //  make responses -- and the opportunity for injecting
-        //  commands from the AI Agent occurs when the advance_next
-        //  method is called -- meaning only on phase changes
-        //  of the user-player.
-
-        // Second, when the AI-Agent is the active player, it
-        //  "injects" commands to execute by likewise offering
-        //  new tasks to the Queue.
-
-        // The AI-Agent is in a "Command/Response" mode then
-        // at the turn phase boundary when the User is the
-        // Active Player (again, advance_next() is the place
-        // for the AI-Agent to prepare new Tasks to offer here.
-
-        // When the user-player is NOT the active player
-        // The Task queue will be LIKELY empty unless a new Task
-        // is inserted by the user.
-        //  But there is no guarentee..
-        //  For the AI-Agent to then marshall new Tasks
-        //  it has to do so by stepping through the turn phases
-        //   when it is the active player.
-        //  That insertion can only happen in that
-        // case when
-        //   1) the AI_Agent is the active player
-        //   2) during the AI_Agent evolution of advance_turn()
-        // Doing so does not prohibit the user-player from
-        //  running commands.  Both players's Tasks
-        //  rendevous in the thread handler:  runLoop
-
-        // We are literally asking the AI-Agent to devise a new
-        // Task -- and then we add it here to the queue.
-        return AIAgent::instance().next_task(ppNewItem); 
-    };
-
-    TaskRunner::instance().start(agentCallback);
+    // TaskRunner is the single consumer of Tasks
+    // Producers: HTTP thread (user commands), AI thread (via inject())
+    // TaskRunner executes commands and pumps AI when it still has initiative
+    TaskRunner::instance().start();
 
     // Now that the TaskRunner is running, we can now listen
     // for commands from REST endpoints

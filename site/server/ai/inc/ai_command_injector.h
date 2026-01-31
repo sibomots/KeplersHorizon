@@ -33,19 +33,21 @@ class AICommandInjector
     }
 
     /**
-     * @brief Execute a single command as the AI player
+     * @brief Enqueue a command to be executed as the AI player
      *
      * @param game_id The game ID
      * @param ai_player The AI's player side ('A' or 'B')
      * @param cmdline The command to execute (e.g., "bn w destroyer")
-     * @return true if command succeeded, false if parser error
+     *
+     * NOTE: This does NOT execute the command. It enqueues a Task for
+     * the TaskRunner to execute. Fire-and-forget semantics.
      *
      * Example:
      *   inject(42, 'B', "bn w attacker");
      *   inject(42, 'B', "bs w1 pd=5 b=3 s=2");
      *   inject(42, 'B', "bc w1");
      */
-    static bool inject(int game_id, char ai_player, const std::string& cmdline);
+    static void inject(int game_id, char ai_player, const std::string& cmdline);
 
     /**
      * @brief Execute a sequence of commands

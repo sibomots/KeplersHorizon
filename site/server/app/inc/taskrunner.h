@@ -16,11 +16,12 @@
 #include <thread>
 #include <unistd.h>
 #include <utility>
+
 #include "comms.h"
-#include "srvmgr.h"
-#include "typedefs.h"
 #include "logger.h"
+#include "srvmgr.h"
 #include "statemachine.h"
+#include "typedefs.h"
 
 typedef struct Task
 {
@@ -136,13 +137,14 @@ typedef struct Task
 
 } Task;
 
-class TaskRunner {
-public:
-    static TaskRunner& instance() {
-        static TaskRunner _instance; 
+class TaskRunner
+{
+  public:
+    static TaskRunner& instance()
+    {
+        static TaskRunner _instance;
         return _instance;
     }
-
 
     void processItem(Task* item);
     void runLoop();
@@ -157,9 +159,8 @@ public:
         cv_.notify_one();
     }
 
-    void start(std::function<bool(Task**)> pollCallback)
+    void start()
     {
-        pollAgentCallback_ = std::move(pollCallback);
         running_ = true;
         workerThread_ = std::thread(&TaskRunner::runLoop, this);
     }
@@ -174,9 +175,9 @@ public:
         }
     }
 
-private:
-    // Private constructor, destructor, copy constructor, and assignment operator
-    // to prevent external instantiation, copying, or assignment
+  private:
+    // Private constructor, destructor, copy constructor, and assignment
+    // operator to prevent external instantiation, copying, or assignment
     TaskRunner() = default;
     ~TaskRunner()
     {
@@ -186,17 +187,12 @@ private:
     TaskRunner& operator=(const TaskRunner&) = delete;
     TaskRunner(TaskRunner&&) = delete;
     TaskRunner& operator=(TaskRunner&&) = delete;
-  
+
     std::queue<Task*> queue_;
     std::mutex mutex_;
     std::condition_variable cv_;
     std::atomic<bool> running_{false};
     std::thread workerThread_;
-
-    // This is the agent callback.  We use this callback
-    // to ask the AI Agency for any new task to perform
-    std::function<bool(Task**)> pollAgentCallback_;
 };
 
 #endif
-

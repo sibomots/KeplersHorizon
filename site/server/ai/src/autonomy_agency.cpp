@@ -122,7 +122,11 @@ void AutonomyAgency::pump()
 void AutonomyAgency::thread_main()
 {
     MySqlThreadGuard mysql_guard;
-    Logger::instance().info("[AA] Thread started");
+
+    // Register this thread with ECL runtime
+    // Required for threads not created by ECL itself
+    ecl_import_current_thread(ECL_NIL, ECL_NIL);
+    Logger::instance().info("[AA] Thread started (ECL thread registered)");
 
     while (!m_stop_requested.load())
     {
@@ -144,7 +148,9 @@ void AutonomyAgency::thread_main()
         run_cycle();
     }
 
-    Logger::instance().info("[AA] Thread exiting");
+    // Release ECL thread before exit
+    ecl_release_current_thread();
+    Logger::instance().info("[AA] Thread exiting (ECL thread released)");
 }
 
 // ----------------------------------------------------------------------------
@@ -244,10 +250,21 @@ void AutonomyAgency::gather()
     std::string game_id_str = std::to_string(m_slate.game_id);
 
     // Own base hexes
-    std::string sql_bases =
-    "SELECT hex_id FROM base_stars WHERE game_id=? AND owner=?";
+    // Query star_systems (module template) since base_stars is per-game dynamic
+    // Use home_side to determine which bases belong to AI player
+    // If home_side not set yet (no deploy), default to opposite of human's
+    // likely choice
+    std::string our_side = m_slate.home_side;
+    if (our_side.empty())
+    {
+        // AI is player B, default to map side B (human player A gets side A)
+        our_side = (m_slate.aa_player == 'B') ? "B" : "A";
+    }
 
-    auto base_rows = db.Query(sql_bases, { m_slate.game_id, m_slate.aa_player });
+    std::string sql_bases = "SELECT hex_id FROM star_systems "
+                            "WHERE module_id=1 AND is_base=1 AND base_side=?";
+
+    auto base_rows = db.Query(sql_bases, {our_side});
 
     for (const std::vector<std::string>& row : base_rows)
     {
@@ -318,7 +335,8 @@ void AutonomyAgency::gather()
         "SELECT ship_code, ship_name, pd, beam, screen, tube, missiles, sr, "
         "ship_type FROM drafts WHERE game_id=? AND owner=?";
 
-    auto draft_rows = db.Query(sql_drafts, {m_slate.game_id, m_slate.aa_player});
+    auto draft_rows =
+        db.Query(sql_drafts, {m_slate.game_id, m_slate.aa_player});
 
     for (const std::vector<std::string>& row : draft_rows)
     {
@@ -342,7 +360,8 @@ void AutonomyAgency::gather()
     // Contested hexes (hexes with ships from both players)
     std::string sql_contested =
         "SELECT at_hex FROM ships WHERE game_id=? AND destroyed_at IS NULL "
-        "AND at_hex IS NOT NULL GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1";
+        "AND at_hex IS NOT NULL GROUP BY at_hex HAVING COUNT(DISTINCT owner) > "
+        "1";
 
     auto contested_rows = db.Query(sql_contested, {m_slate.game_id});
 
@@ -392,14 +411,10 @@ void AutonomyAgency::render(const std::vector<std::string>& commands)
     {
         Logger::instance().info("[AA] Render: " + cmd);
 
-        bool ok = AICommandInjector::inject(m_game_id, m_aa_player, cmd);
-        if (!ok)
-        {
-            Logger::instance().error("[AA] Inject failed: " + cmd);
-            // Stop on first failure
-            break;
-        }
+        // Fire and forget - enqueues Task, does not execute or wait
+        AICommandInjector::inject(m_game_id, m_aa_player, cmd);
     }
+    // All commands enqueued; AI thread now sleeps until pumped again
 }
 
 // ----------------------------------------------------------------------------
@@ -436,13 +451,9 @@ void AutonomyAgency::init_ecl()
     Logger::instance().info("[AA] Loading DSL from: " + dsl_dir);
 
     // Load files in dependency order (util first, core last)
-    static const char* kDslFiles[] = {
-        "aa-util.lisp",
-        "aa-build.lisp",
-        "aa-movement.lisp",
-        "aa-combat.lisp",
-        "aa-core.lisp"
-    };
+    static const char* kDslFiles[] = {"aa-util.lisp", "aa-build.lisp",
+                                      "aa-movement.lisp", "aa-combat.lisp",
+                                      "aa-core.lisp"};
 
     for (const char* fname : kDslFiles)
     {

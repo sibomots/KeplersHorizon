@@ -28,10 +28,10 @@ bool StateMachine::is_ai_player(const std::string& player) const
     return (player[0] == data.ai_player_side);
 }
 
-bool StateMachine::is_singlep(void) const 
+bool StateMachine::is_singlep(void) const
 {
     fprintf(stderr, "[SM] POLLED -- is this single player? %s\n",
-          data.is_singleplayer_mode ? "true" : "false" );
+            data.is_singleplayer_mode ? "true" : "false");
     return data.is_singleplayer_mode;
 }
 
@@ -77,8 +77,8 @@ bool StateMachine::start_game_for_random_player()
 GameState StateMachine::load_game(int game_id)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    auto rows = db.Query("SELECT module_id,state_json FROM games WHERE id=? LIMIT 1",
-                         {game_id});
+    auto rows = db.Query(
+        "SELECT module_id,state_json FROM games WHERE id=? LIMIT 1", {game_id});
     if (rows.empty())
     {
         throw std::runtime_error("game not found");
@@ -347,7 +347,8 @@ void StateMachine::apply_start_of_turn(GameState& s)
     }
 
     // Reset movement points for active player's ships
-    db.Exec("UPDATE ships SET pd_spent=0 WHERE game_id=? AND owner=?", {s.game_id, me});
+    db.Exec("UPDATE ships SET pd_spent=0 WHERE game_id=? AND owner=?",
+            {s.game_id, me});
 }
 
 void StateMachine::advance_next(GameState& s)
@@ -491,8 +492,9 @@ void StateMachine::advance_next(GameState& s)
         {
             Logger::instance().info("[SM] AI continues, phase=" +
                                     std::to_string(s.phase_index));
-            AIAgent::instance().on_phase_advance(s.game_id, s.active_player[0]);
-            AutonomyAgency::instance().pump();
+            // NOTE: AIAgent callbacks removed - AutonomyAgency is sole AI
+            // NOTE: DO NOT pump() here - TaskRunner handles pump decisions
+            // after executing commands. Pumping here causes re-entrancy.
         }
 
         return;
@@ -527,7 +529,7 @@ void StateMachine::advance_next(GameState& s)
         Logger::instance().info("[SM] AI Player " +
                                 std::string(1, previous_active_player) +
                                 " lost control");
-        AIAgent::instance().on_turn_end(s.game_id, previous_active_player);
+        // NOTE: AIAgent::on_turn_end removed - AutonomyAgency is sole AI
     }
 
     // NEW: If AI just GOT control, notify it to start
@@ -537,15 +539,17 @@ void StateMachine::advance_next(GameState& s)
             "[SM] AI Player " + s.active_player +
             " has initiative, turn=" + std::to_string(s.round));
 
-        AIAgent::instance().on_turn_start(s.game_id, s.active_player[0]);
+        // NOTE: AIAgent::on_turn_start removed - AutonomyAgency is sole AI
 
-        // Configure and pump AutonomyAgency
+        // Configure AutonomyAgency for this game/player
         AutonomyAgency::instance().configure(s.game_id, s.active_player[0]);
         if (!AutonomyAgency::instance().is_running())
         {
             AutonomyAgency::instance().start();
         }
-        AutonomyAgency::instance().pump();
+        // NOTE: DO NOT pump() here - TaskRunner handles pump decisions
+        // after executing commands. This code runs inside TaskRunner's
+        // command execution; TaskRunner will pump after this returns.
     }
 }
 
@@ -711,8 +715,8 @@ void StateMachine::advance_next(GameState& s)
 
                         if (ai_has_ships)
                         {
-                            AIAgent::instance().on_combat_detected(s.game_id,
-                                                                   ai_side);
+                            // NOTE: AIAgent::on_combat_detected removed
+                            // AutonomyAgency handles combat via ECL
                             break; // Only notify once
                         }
                     }

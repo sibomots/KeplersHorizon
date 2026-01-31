@@ -114,6 +114,18 @@ bool EclBridge::calculate(const AASlate& slate,
     }
     ECL_HANDLER_CASE_END;
 
+    // Debug: print raw result
+    if (result == ECL_NIL)
+    {
+        Logger::instance().info("[ECL] Raw result: NIL");
+    }
+    else
+    {
+        cl_object str = cl_princ_to_string(result);
+        std::string result_str = extract_string(str);
+        Logger::instance().info("[ECL] Raw result: " + result_str);
+    }
+
     // Unmarshal result to commands
     bool ok = unmarshal_commands(result, commands_out);
 

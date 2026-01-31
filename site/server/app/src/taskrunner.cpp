@@ -1,4 +1,6 @@
 #include "taskrunner.h"
+
+#include "autonomy_agency.h"
 #include "cmd.h"
 
 void TaskRunner::processItem(Task* item)
@@ -67,14 +69,6 @@ void TaskRunner::runLoop()
 
     while (running_)
     {
-        if (pollAgentCallback_)
-        {
-            Task* newItem = nullptr;
-            if (pollAgentCallback_(&newItem) && newItem != nullptr)
-            {
-                push(newItem);
-            }
-        }
         Task* item = nullptr;
         {
             std::unique_lock<std::mutex> lock(mutex_);
@@ -93,9 +87,35 @@ void TaskRunner::runLoop()
             item = queue_.front();
             queue_.pop();
         }
+
         if (item != nullptr)
         {
             processItem(item);
+
+            // After any task: check if AI has initiative and should be pumped
+            // This handles both:
+            //   1. AI tasks where AI continues to next phase
+            //   2. HTTP tasks where user yields turn to AI
+            int game_id = item->is_ai_task
+                              ? item->game_id
+                              : StateMachine::instance().get_game_id();
+            if (game_id > 0)
+            {
+                GameState s = StateMachine::instance().load_game(game_id);
+                if (StateMachine::instance().is_ai_player(s.active_player) &&
+                    !s.game_over)
+                {
+                    // Configure AA if not yet configured for this game
+                    AutonomyAgency::instance().configure(game_id,
+                                                         s.active_player[0]);
+                    if (!AutonomyAgency::instance().is_running())
+                    {
+                        AutonomyAgency::instance().start();
+                    }
+                    AutonomyAgency::instance().pump();
+                }
+            }
+
             SafeDelete(item);
         }
     }
