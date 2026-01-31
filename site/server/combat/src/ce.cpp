@@ -817,6 +817,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     int next_round = cs.round;
     int next_stage = 0; // Back to ORDERS
     int next_stalemate = cs.stalemate_counter;
+    int dmgA_total = 0;
+    int dmgB_total = 0;
 
     if (total_net_damage > 0)
     {
@@ -831,8 +833,6 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         // Build per-player damage summaries
         std::ostringstream dmgA;
         std::ostringstream dmgB;
-        int dmgA_total = 0;
-        int dmgB_total = 0;
 
         for (auto& [key, ship] : ships)
         {
@@ -960,12 +960,17 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
     }
 
-    // Reset damage assignment flags for new damage phase
-    db.Exec(
-        "UPDATE combat_state SET round=?, stage=?, stalemate_counter=?, "
-        "damage_assigned_A=0, damage_assigned_B=0, last_log=? "
-        "WHERE game_id=? AND hex_id=?",
-        {next_round, next_stage, next_stalemate, log.str(), game_id, hex_id});
+    // Set damage assignment flags
+    // If a player took no damage, their flag is already "done" (1)
+    // Only players with pending damage need to assign (flag = 0)
+    int dmgA_flag = (next_stage == 2 && dmgA_total == 0) ? 1 : 0;
+    int dmgB_flag = (next_stage == 2 && dmgB_total == 0) ? 1 : 0;
+
+    db.Exec("UPDATE combat_state SET round=?, stage=?, stalemate_counter=?, "
+            "damage_assigned_A=?, damage_assigned_B=?, last_log=? "
+            "WHERE game_id=? AND hex_id=?",
+            {next_round, next_stage, next_stalemate, dmgA_flag, dmgB_flag,
+             log.str(), game_id, hex_id});
 
     // Append log to game events?
     return log.str();

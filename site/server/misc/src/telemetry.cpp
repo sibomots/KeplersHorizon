@@ -405,10 +405,10 @@ void Telemetry::status(char player, HttpResponse* resp)
     if (!s.combat_summary_json.empty())
     {
 
-        Logger::instance().info(">>>COMBAT TO SEND:");
-        Logger::instance().info(s.combat_summary_json);
+        //Logger::instance().info(">>>COMBAT TO SEND:");
+        //Logger::instance().info(s.combat_summary_json);
         status_json << "\"combat\":" << s.combat_summary_json << ",";
-        Logger::instance().info("<<<COMBAT SUMMARY SENT");
+        // Logger::instance().info("<<<COMBAT SUMMARY SENT");
     }
 
     status_json << "\"notes\":\"" << json_escape(s.notes()) << "\"";

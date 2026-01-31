@@ -1,5 +1,5 @@
+#include <format>
 #include "taskrunner.h"
-
 #include "autonomy_agency.h"
 #include "cmd.h"
 
@@ -12,8 +12,7 @@ void TaskRunner::processItem(Task* item)
         if (item->is_ai_task)
         {
             // AI task - execute command through parser
-            Logger::instance().info("[TASK] Processing AI task: " +
-                                    item->ai_command);
+            Logger::instance().info(std::format("[TASK] {}", item->ai_command));
 
             // Set StateMachine context
             StateMachine::instance().set_game_id(item->game_id);
@@ -28,18 +27,17 @@ void TaskRunner::processItem(Task* item)
             if (result != 0)
             {
                 Logger::instance().error(
-                    "[AI] Command failed: " + item->ai_command +
-                    " | Error: " + errmsg);
+        std::format("[AI] FAILED CMD: {} | Error: {}", item->ai_command, errmsg));
             }
             else
             {
-                Logger::instance().info("[AI] ✓ " + item->ai_command);
+                Logger::instance().info( std::format("[AI] PASSED CMD: {} ",item->ai_command));
             }
         }
         else
         {
             // User HTTP task - existing code
-            Logger::instance().info("[TASK] Processing user HTTP task");
+            //jdw Logger::instance().info("[TASK] Processing user HTTP task");
             done = dispatch_request(item->phtreq, item->phtresp);
             std::string out = http_serialize(item->phtresp);
             ::send(item->sock, out.c_str(), out.size(), 0);
@@ -49,8 +47,7 @@ void TaskRunner::processItem(Task* item)
     {
         if (item->is_ai_task)
         {
-            Logger::instance().error("[AI] Exception: " +
-                                     std::string(ex.what()));
+            Logger::instance().error("[AI] Exception: " + std::string(ex.what()));
         }
         else
         {

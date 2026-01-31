@@ -621,8 +621,9 @@ bool MoveCommand::invoke(void)
           << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
           << "] complete.\nPower expended: " << totalCost << " PD";
         Telemetry::instance().write(o.str());
-
-        Telemetry::instance().write(milieu_report);
+        if (!milieu_report.empty()) {
+            Telemetry::instance().write(milieu_report);
+        }
     }
 
     // Check for combat trigger: enemy ships in THIS destination hex
