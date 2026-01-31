@@ -40,14 +40,14 @@ struct AAShipInfo
     std::string suggested_destination;
 
     // Combat state
-    bool needs_combat_order;  // Stage 0: no committed order yet
-    int pending_damage;       // Stage 2: damage to assign
-    bool escape_pending;      // Successful retreat, needs retreat command
+    bool needs_combat_order; // Stage 0: no committed order yet
+    int pending_damage;      // Stage 2: damage to assign
+    bool escape_pending;     // Successful retreat, needs retreat command
 
     // Revealed enemy order from prior round (public after both commit)
-    char last_tactic;   // 'A', 'D', 'R', or '\0' if unknown
-    int last_drive;     // Power allocated to drive
-    int last_beam;      // Power allocated to beam
+    char last_tactic; // 'A', 'D', 'R', or '\0' if unknown
+    int last_drive;   // Power allocated to drive
+    int last_beam;    // Power allocated to beam
 
     AAShipInfo()
         : pd(0), beam(0), screen(0), tube(0), missile(0), sr(0), tech_level(0),
@@ -61,11 +61,11 @@ struct AAShipInfo
 struct AACombatHex
 {
     std::string hex_id;
-    int stage;  // 0=ORDERS, 1=RESOLVE, 2=DAMAGE, 3=RETREAT
+    int stage; // 0=ORDERS, 1=RESOLVE, 2=DAMAGE, 3=RETREAT
     int round;
-    bool ai_committed;        // Has AI committed orders this round?
-    int stalemate_counter;    // Consecutive no-damage rounds
-    bool ai_is_attacker;      // Did AI move into this hex (initiative)?
+    bool ai_committed;     // Has AI committed orders this round?
+    int stalemate_counter; // Consecutive no-damage rounds
+    bool ai_is_attacker;   // Did AI move into this hex (initiative)?
 
     AACombatHex()
         : stage(0), round(0), ai_committed(false), stalemate_counter(0),
@@ -203,6 +203,7 @@ class AutonomyAgency
     void gather();
     void calculate(std::vector<std::string>& commands_out);
     bool combat_needs_response() const;
+    void log_debug_state();
 
     // ECL initialization
     void init_ecl();

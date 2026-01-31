@@ -6,13 +6,14 @@
 // Copyright (c) 2025, sibomots
 /////////////////////////////////////////////////////////////////////////////////
 
+#include "ce.h"
+
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <sstream>
 
-#include "ce.h"
 #include "combat_apply_actor.h"
 #include "combat_cancel_actor.h"
 #include "combat_commit_actor.h"
@@ -43,17 +44,17 @@ void CombatEngine::check_for_combat_triggers()
     DatabaseManager& db = DatabaseManager::instance();
     bool litmus = CombatEngine::is_real_combat_state(game_id);
 
-    if (litmus == false)
+    if (!litmus)
     {
-        Logger::instance().info("[COMBAT][check_for_combat_trigger] "
-                                "No ships are in combat.");
+        return;
     }
-    else
+
     {
         auto rows = db.Query(
             "SELECT at_hex, owner FROM ships "
             "WHERE game_id=? AND at_hex IS NOT NULL AND racked_in IS NULL "
-            "AND destroyed_at IS NULL", {game_id});
+            "AND destroyed_at IS NULL",
+            {game_id});
 
         std::map<std::string, std::set<char>> hexOccupants;
         for (const auto& r : rows)
@@ -74,32 +75,10 @@ void CombatEngine::check_for_combat_triggers()
                     {game_id, hex});
                 if (exist.empty())
                 {
-                    Logger::instance().info(
-                        "[COMBAT][check_for_combat_trigger] "
-                        "Created combat at " +
-                        hex);
+                    Logger::instance().info("[COMBAT] Creating combat at " +
+                                            hex);
                     create_combat(hex);
                 }
-                else
-                {
-                    Logger::instance().info(
-                        "[COMBAT][check_for_combat_trigger] "
-                        "Combat already exists at " +
-                        hex);
-                }
-            }
-            else
-            {
-                Logger::instance().info("[COMBAT][check_for_combat_trigger] "
-                                        " occupant.count(A) = " +
-                                                (occupants.count('A'))
-                                            ? "True"
-                                            : "False");
-                Logger::instance().info("[COMBAT][check_for_combat_trigger] "
-                                        " occupant.count(B) = " +
-                                                (occupants.count('B'))
-                                            ? "True"
-                                            : "False");
             }
         }
     }
@@ -114,32 +93,27 @@ bool CombatEngine::is_real_combat_state(int gid)
 
     // Find out how many hexes are conflicted.
 
-    auto conflict_rows = db.Query(
-        "SELECT DISTINCT s.at_hex, count(s.owner) "
-        "FROM ships s "
-        "JOIN star_systems ss ON ss.hex_id = s.at_hex "
-        "WHERE s.game_id=? AND s.destroyed_at IS NULL "
-        "AND s.racked_in IS NULL "
-        "AND s.at_hex IS NOT NULL AND s.at_hex <> '' "
-        "AND s.owner IN ('A','B') "
-        "GROUP BY s.at_hex", {gid});
+    auto conflict_rows = db.Query("SELECT at_hex, COUNT(DISTINCT owner) "
+                                  "FROM ships "
+                                  "WHERE game_id=? AND destroyed_at IS NULL "
+                                  "AND racked_in IS NULL "
+                                  "AND at_hex IS NOT NULL AND at_hex <> '' "
+                                  "AND owner IN ('A','B') "
+                                  "GROUP BY at_hex",
+                                  {gid});
 
     // for each hex, look at the number of distinct ship owners at that hex.
     for (const std::vector<std::string>& row : conflict_rows)
     {
         int owner_count = std::stoi(row[1]);
-        Logger::instance().info("[COMBAT][is_real_combat_state] "
-                                "Number of ships at " +
-                                row[0] + " = " + std::to_string(owner_count));
+        Logger::instance().info("[COMBAT] hex=" + row[0] + " distinct_owners=" +
+                                std::to_string(owner_count));
 
         if (owner_count > 1)
         {
             real_combat = true;
         }
     }
-    std::string msg_has_real_combat(real_combat ? "True" : "False");
-    Logger::instance().info("[COMBAT][is_real_combat_state]: " +
-                            msg_has_real_combat);
     return real_combat;
 }
 
@@ -198,9 +172,10 @@ CombatState CombatEngine::get_combat_state(const std::string& hex_id)
 
     auto rows = db.Query(
         "SELECT round, stage, attacker_remains, stalemate_counter, last_log "
-        "FROM combat_state WHERE game_id=? AND hex_id=?", {game_id, hex_id});
+        "FROM combat_state WHERE game_id=? AND hex_id=?",
+        {game_id, hex_id});
 
-    if (rows.empty()) 
+    if (rows.empty())
     {
         return {0, "", 0, 0, false, 0, ""};
     }
@@ -216,9 +191,10 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
     CombatOrder order = order_in;
     // 1. Validate ownership
     {
-        auto r = db.Query(
-            "SELECT owner FROM ships WHERE game_id=? AND ship_code=? "
-            "AND destroyed_at IS NULL", {game_id, order.ship_code});
+        auto r =
+            db.Query("SELECT owner FROM ships WHERE game_id=? AND ship_code=? "
+                     "AND destroyed_at IS NULL",
+                     {game_id, order.ship_code});
         if (r.empty())
             return "Ship not found";
 
@@ -233,7 +209,8 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
     // Find the hex this ship is in and its stats
     auto r = db.Query(
         "SELECT at_hex, pd, beam, screen, tube FROM ships WHERE game_id=? "
-        "AND ship_code=? AND destroyed_at IS NULL", {game_id, order.ship_code});
+        "AND ship_code=? AND destroyed_at IS NULL",
+        {game_id, order.ship_code});
     if (r.empty() || r[0][0].empty())
         return "Ship not in space";
     std::string hex_id = r[0][0];
@@ -273,9 +250,9 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
         "power_s=?, power_t=?, missiles_data=?, committed=0",
         {game_id, owner, order.ship_code, order.round, order.tactic,
          order.target_id, order.power_d, order.power_b, order.power_s,
-         order.power_t, order.missiles_data,
-         order.tactic, order.target_id, order.power_d, order.power_b,
-         order.power_s, order.power_t, order.missiles_data});
+         order.power_t, order.missiles_data, order.tactic, order.target_id,
+         order.power_d, order.power_b, order.power_s, order.power_t,
+         order.missiles_data});
 
     // Resolution triggered by explicit 'combat commit'
     return "Order draft saved. Use 'combat commit' when ready.";
@@ -285,18 +262,19 @@ bool CombatEngine::all_orders_submitted(const std::string& hex_id, int round)
 {
     DatabaseManager& db = DatabaseManager::instance();
     // Count ships in hex
-    auto sr = db.Query(
-        "SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
-        "AND racked_in IS NULL AND destroyed_at IS NULL", {game_id, hex_id});
+    auto sr =
+        db.Query("SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
+                 "AND racked_in IS NULL AND destroyed_at IS NULL",
+                 {game_id, hex_id});
     int shipCount = std::atoi(sr[0][0].c_str());
 
     // Count orders
-    auto or_ = db.Query(
-        "SELECT COUNT(*) FROM combat_orders co "
-        "JOIN ships s ON s.game_id = co.game_id AND "
-        "s.ship_code = co.ship_code AND s.owner = co.owner "
-        "WHERE co.game_id=? AND co.round=? AND s.at_hex=? "
-        "AND s.destroyed_at IS NULL", {game_id, round, hex_id});
+    auto or_ = db.Query("SELECT COUNT(*) FROM combat_orders co "
+                        "JOIN ships s ON s.game_id = co.game_id AND "
+                        "s.ship_code = co.ship_code AND s.owner = co.owner "
+                        "WHERE co.game_id=? AND co.round=? AND s.at_hex=? "
+                        "AND s.destroyed_at IS NULL",
+                        {game_id, round, hex_id});
     int orderCount = std::atoi(or_[0][0].c_str());
 
     Logger::instance().info("[COMBAT][all_orders_submitted] Hex " + hex_id +
@@ -311,18 +289,19 @@ bool CombatEngine::all_orders_committed(const std::string& hex_id, int round)
 {
     DatabaseManager& db = DatabaseManager::instance();
     // Count ships in hex
-    auto sr = db.Query(
-        "SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
-        "AND racked_in IS NULL AND destroyed_at IS NULL", {game_id, hex_id});
+    auto sr =
+        db.Query("SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
+                 "AND racked_in IS NULL AND destroyed_at IS NULL",
+                 {game_id, hex_id});
     int shipCount = std::atoi(sr[0][0].c_str());
 
     // Count COMMITTED orders
-    auto or_ = db.Query(
-        "SELECT COUNT(*) FROM combat_orders co "
-        "JOIN ships s ON s.game_id = co.game_id AND "
-        "s.ship_code = co.ship_code AND s.owner = co.owner "
-        "WHERE co.game_id=? AND co.round=? AND co.committed=1 "
-        "AND s.at_hex=? AND s.destroyed_at IS NULL", {game_id, round, hex_id});
+    auto or_ = db.Query("SELECT COUNT(*) FROM combat_orders co "
+                        "JOIN ships s ON s.game_id = co.game_id AND "
+                        "s.ship_code = co.ship_code AND s.owner = co.owner "
+                        "WHERE co.game_id=? AND co.round=? AND co.committed=1 "
+                        "AND s.at_hex=? AND s.destroyed_at IS NULL",
+                        {game_id, round, hex_id});
     int commitCount = std::atoi(or_[0][0].c_str());
 
     Logger::instance().info("[COMBAT][all_orders_committed] Hex " + hex_id +
@@ -531,8 +510,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (cs.stage == 0 && all_orders_submitted(hex_id, cs.round))
         {
             // Update stage in database for consistency, then proceed
-            db.Exec("UPDATE combat_state SET stage=1 WHERE game_id=? AND hex_id=?",
-                    {game_id, hex_id});
+            db.Exec(
+                "UPDATE combat_state SET stage=1 WHERE game_id=? AND hex_id=?",
+                {game_id, hex_id});
         }
         else
         {
@@ -571,10 +551,11 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     std::map<std::string, ShipCtx> ships;
 
     // Load active ships in hex (exclude ships pending retreat)
-    auto r = db.Query(
-        "SELECT ship_code, ship_name, owner, tech_level FROM ships "
-        "WHERE game_id=? AND at_hex=? AND racked_in IS NULL "
-        "AND destroyed_at IS NULL AND escape_pending=0", {game_id, hex_id});
+    auto r =
+        db.Query("SELECT ship_code, ship_name, owner, tech_level FROM ships "
+                 "WHERE game_id=? AND at_hex=? AND racked_in IS NULL "
+                 "AND destroyed_at IS NULL AND escape_pending=0",
+                 {game_id, hex_id});
     for (const auto& row : r)
     {
         ShipCtx s;
@@ -590,7 +571,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     auto ro = db.Query(
         "SELECT ship_code, owner, tactic, target_id, power_d, power_b, "
         "power_s, power_t, missiles_data FROM combat_orders "
-        "WHERE game_id=? AND round=?", {game_id, cs.round});
+        "WHERE game_id=? AND round=?",
+        {game_id, cs.round});
 
     for (const auto& row : ro)
     {
@@ -819,11 +801,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (net > 0)
         {
             // Insert one row per damaged ship
-            db.Exec(
-                "INSERT INTO pending_damage "
-                "(game_id, hex_id, round, ship_code, owner, damage_amount) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                {game_id, hex_id, cs.round, ship.code, ship.owner, net});
+            db.Exec("INSERT INTO pending_damage "
+                    "(game_id, hex_id, round, ship_code, owner, damage_amount) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    {game_id, hex_id, cs.round, ship.code, ship.owner, net});
 
             total_net_damage += net;
             log << ship.code << " '" << ship.name << "' takes " << net
@@ -891,10 +872,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else
         {
-            Telemetry::instance().add_tell(
-                game_id, 'A',
-                "TACTICAL: ROUND " + std::to_string(cs.round) +
-                    " - YOUR SHIPS TOOK NO DAMAGE.");
+            Telemetry::instance().add_tell(game_id, 'A',
+                                           "TACTICAL: ROUND " +
+                                               std::to_string(cs.round) +
+                                               " - YOUR SHIPS TOOK NO DAMAGE.");
         }
 
         if (dmgB_total > 0)
@@ -909,10 +890,10 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
         else
         {
-            Telemetry::instance().add_tell(
-                game_id, 'B',
-                "TACTICAL: ROUND " + std::to_string(cs.round) +
-                    " - YOUR SHIPS TOOK NO DAMAGE.");
+            Telemetry::instance().add_tell(game_id, 'B',
+                                           "TACTICAL: ROUND " +
+                                               std::to_string(cs.round) +
+                                               " - YOUR SHIPS TOOK NO DAMAGE.");
         }
     }
     else
@@ -951,10 +932,9 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             for (auto& [key, ship] : ships)
             {
                 // BUGBUG
-                db.Exec(
-                    "UPDATE ships SET escape_pending=1 "
-                    "WHERE game_id=? AND ship_code=? AND owner=?",
-                    {game_id, ship.code, active_player});
+                db.Exec("UPDATE ships SET escape_pending=1 "
+                        "WHERE game_id=? AND ship_code=? AND owner=?",
+                        {game_id, ship.code, active_player});
             }
             // Notify initiative player they must retreat
             Telemetry::instance().add_tell(
@@ -990,126 +970,141 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     return log.str();
 }
 
-
-std::string
-CombatEngine::apply_damage(char owner, const std::string& ship_code,
-                           const AttributeMap& assignments)
+std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
+                                       const AttributeMap& assignments)
 {
     DatabaseManager& db = DatabaseManager::instance();
-    
+
     // 1. Get ship current stats and location
-    auto ship_rows = db.Query(
-        "SELECT at_hex, pd, beam, screen, tube, missiles, sr "
-        "FROM ships WHERE game_id=? AND ship_code=? AND owner=? "
-        "AND destroyed_at IS NULL", {game_id, ship_code, owner});
-    
-    if (ship_rows.empty()) {
+    auto ship_rows =
+        db.Query("SELECT at_hex, pd, beam, screen, tube, missiles, sr "
+                 "FROM ships WHERE game_id=? AND ship_code=? AND owner=? "
+                 "AND destroyed_at IS NULL",
+                 {game_id, ship_code, owner});
+
+    if (ship_rows.empty())
+    {
         return "Ship " + ship_code + " not found";
     }
-    
+
     std::string hex = ship_rows[0][0];
     int cur_pd = std::atoi(ship_rows[0][1].c_str());
     int cur_beam = std::atoi(ship_rows[0][2].c_str());
     int cur_screen = std::atoi(ship_rows[0][3].c_str());
     int cur_tube = std::atoi(ship_rows[0][4].c_str());
     int cur_missiles = std::atoi(ship_rows[0][5].c_str());
-    
+
     // 2. Verify combat state
     auto cs = get_combat_state(hex);
-    if (cs.stage != 2) { // 2 = DAMAGE_PENDING
+    if (cs.stage != 2)
+    { // 2 = DAMAGE_PENDING
         return "No pending damage for this hex";
     }
-    
+
     // 3. Get pending damage for this ship - ONE SIMPLE QUERY!
     auto dmg_rows = db.Query(
         "SELECT damage_amount FROM pending_damage "
         "WHERE game_id=? AND hex_id=? AND round=? AND ship_code=? AND owner=?",
         {game_id, hex, cs.round, ship_code, owner});
-    
-    if (dmg_rows.empty()) {
+
+    if (dmg_rows.empty())
+    {
         return "No pending damage for ship " + ship_code;
     }
-    
+
     int damage_needed = std::atoi(dmg_rows[0][0].c_str());
-    
+
     // 4. Validate assignments - iterate through AttributeMap.data
     int current_hp = cur_pd + cur_beam + cur_screen + cur_tube;
     int assigned = 0;
-    
-    for (const auto& [attr_id, dmg] : assignments.data) {
+
+    for (const auto& [attr_id, dmg] : assignments.data)
+    {
         assigned += dmg;
     }
-    
+
     // Check assignment rules
-    if (assigned > damage_needed) {
-        if (assigned < current_hp) {
-            return "Cannot over-assign damage. Ship has " + 
-                   std::to_string(current_hp) + " HP but only took " + 
+    if (assigned > damage_needed)
+    {
+        if (assigned < current_hp)
+        {
+            return "Cannot over-assign damage. Ship has " +
+                   std::to_string(current_hp) + " HP but only took " +
                    std::to_string(damage_needed) + " damage.";
         }
     }
-    else if (assigned < damage_needed) {
-        if (assigned < current_hp) {
-            return "Must assign all " + std::to_string(damage_needed) + 
+    else if (assigned < damage_needed)
+    {
+        if (assigned < current_hp)
+        {
+            return "Must assign all " + std::to_string(damage_needed) +
                    " damage. Currently assigned: " + std::to_string(assigned);
         }
     }
-    
+
     // 5. Apply damage to ship attributes
     std::vector<std::string> updates;
-    
-    auto apply_attr = [&](AttributeID attr_id, int cur_val, 
-                         const std::string& col_name) 
+
+    auto apply_attr =
+        [&](AttributeID attr_id, int cur_val, const std::string& col_name)
     {
         auto it = assignments.data.find(attr_id);
-        if (it != assignments.data.end()) {
+        if (it != assignments.data.end())
+        {
             int dmg = it->second;
             int new_val;
-            
-            if (attr_id == AttributeID::MISSILE) {
+
+            if (attr_id == AttributeID::MISSILE)
+            {
                 // Missiles: each hit destroys 3 missiles
                 int loss = dmg * 3;
-                if (cur_val < 3 && dmg > 0) {
+                if (cur_val < 3 && dmg > 0)
+                {
                     loss = cur_val; // Remaining 1-2 absorbed by 1 hit
                 }
                 new_val = std::max(0, cur_val - loss);
-            } else {
+            }
+            else
+            {
                 new_val = std::max(0, cur_val - dmg);
             }
-            
+
             updates.push_back(col_name + "=" + std::to_string(new_val));
         }
     };
-    
+
     apply_attr(AttributeID::POWER_DRIVE, cur_pd, "pd");
     apply_attr(AttributeID::BEAM, cur_beam, "beam");
     apply_attr(AttributeID::SCREEN, cur_screen, "screen");
     apply_attr(AttributeID::TUBE, cur_tube, "tube");
     apply_attr(AttributeID::MISSILE, cur_missiles, "missiles");
-    
+
     // 6. Execute ship updates
-    if (!updates.empty()) {
+    if (!updates.empty())
+    {
         std::string update_sql = "UPDATE ships SET ";
-        for (size_t i = 0; i < updates.size(); i++) {
-            if (i > 0) update_sql += ", ";
+        for (size_t i = 0; i < updates.size(); i++)
+        {
+            if (i > 0)
+                update_sql += ", ";
             update_sql += updates[i];
         }
         update_sql += " WHERE game_id=? AND ship_code=? AND owner=?";
         db.Exec(update_sql, {game_id, ship_code, owner});
     }
-    
+
     // 7. Check for ship destruction
-    auto check_rows = db.Query(
-        "SELECT pd, beam, screen, tube FROM ships "
-        "WHERE game_id=? AND ship_code=? AND owner=?",
-        {game_id, ship_code, owner});
-    
+    auto check_rows = db.Query("SELECT pd, beam, screen, tube FROM ships "
+                               "WHERE game_id=? AND ship_code=? AND owner=?",
+                               {game_id, ship_code, owner});
+
     int new_pd = std::atoi(check_rows[0][0].c_str());
     int new_beam = std::atoi(check_rows[0][1].c_str());
     int new_screen = std::atoi(check_rows[0][2].c_str());
     int new_tube = std::atoi(check_rows[0][3].c_str());
-    
-    if (new_pd == 0 && new_beam == 0 && new_screen == 0 && new_tube == 0) {
+
+    if (new_pd == 0 && new_beam == 0 && new_screen == 0 && new_tube == 0)
+    {
         // Ship destroyed
         db.Exec("UPDATE ships SET destroyed_at=NOW() "
                 "WHERE game_id=? AND ship_code=? AND owner=?",
@@ -1120,91 +1115,97 @@ CombatEngine::apply_damage(char owner, const std::string& ship_code,
         std::string vp_col = (enemy == 'A') ? "vp_A" : "vp_B";
         db.Exec("UPDATE games SET " + vp_col + "=" + vp_col + "+1 WHERE id=?",
                 {game_id});
-        
+
         Telemetry::instance().add_tell(
-            game_id, enemy, 
+            game_id, enemy,
             "VICTORY: +1 VP for destroying enemy ship " + ship_code);
-        
-        Logger::instance().info(
-            "Destroyed ship " + ship_code + " owned by " + 
-            std::string(1, owner) + " at hex " + hex);
+
+        Logger::instance().info("Destroyed ship " + ship_code + " owned by " +
+                                std::string(1, owner) + " at hex " + hex);
     }
-    
+
     // 8. Delete pending damage entry for this ship
-    db.Exec("DELETE FROM pending_damage "
-            "WHERE game_id=? AND hex_id=? AND round=? AND ship_code=? AND owner=?",
-            {game_id, hex, cs.round, ship_code, owner});
+    db.Exec(
+        "DELETE FROM pending_damage "
+        "WHERE game_id=? AND hex_id=? AND round=? AND ship_code=? AND owner=?",
+        {game_id, hex, cs.round, ship_code, owner});
 
     // 9. Check if player has more pending damage
-    auto remaining_rows = db.Query(
-        "SELECT COUNT(*) FROM pending_damage "
-        "WHERE game_id=? AND hex_id=? AND round=? AND owner=?",
-        {game_id, hex, cs.round, owner});
-    
+    auto remaining_rows =
+        db.Query("SELECT COUNT(*) FROM pending_damage "
+                 "WHERE game_id=? AND hex_id=? AND round=? AND owner=?",
+                 {game_id, hex, cs.round, owner});
+
     int remaining_count = std::atoi(remaining_rows[0][0].c_str());
-    
+
     // 10. Update player's damage_assigned flag if done
-    if (remaining_count == 0) {
-        std::string flag = (owner == 'A') ? "damage_assigned_A" : "damage_assigned_B";
-        db.Exec("UPDATE combat_state SET " + flag + "=1 "
-                "WHERE game_id=? AND hex_id=?", {game_id, hex});
-        
+    if (remaining_count == 0)
+    {
+        std::string flag =
+            (owner == 'A') ? "damage_assigned_A" : "damage_assigned_B";
+        db.Exec("UPDATE combat_state SET " + flag +
+                    "=1 "
+                    "WHERE game_id=? AND hex_id=?",
+                {game_id, hex});
+
         char opponent = (owner == 'A') ? 'B' : 'A';
-        Telemetry::instance().add_tell(
-            game_id, opponent,
-            "Player " + std::string(1, owner) + " has assigned all damage.");
+        Telemetry::instance().add_tell(game_id, opponent,
+                                       "Player " + std::string(1, owner) +
+                                           " has assigned all damage.");
     }
-    
+
     // 11. Check if ALL damage is assigned (both players)
     auto both_done = db.Query(
         "SELECT damage_assigned_A, damage_assigned_B FROM combat_state "
-        "WHERE game_id=? AND hex_id=?", {game_id, hex});
-    
+        "WHERE game_id=? AND hex_id=?",
+        {game_id, hex});
+
     bool a_done = (both_done[0][0] == "1");
     bool b_done = (both_done[0][1] == "1");
-    
-    if (a_done && b_done) {
+
+    if (a_done && b_done)
+    {
         // Check for combat end or next round
-        auto ships_a = db.Query(
-            "SELECT COUNT(*) FROM ships "
-            "WHERE game_id=? AND at_hex=? AND owner='A' AND destroyed_at IS NULL",
-            {game_id, hex});
-        auto ships_b = db.Query(
-            "SELECT COUNT(*) FROM ships "
-            "WHERE game_id=? AND at_hex=? AND owner='B' AND destroyed_at IS NULL",
-            {game_id, hex});
-        
+        auto ships_a = db.Query("SELECT COUNT(*) FROM ships "
+                                "WHERE game_id=? AND at_hex=? AND owner='A' "
+                                "AND destroyed_at IS NULL",
+                                {game_id, hex});
+        auto ships_b = db.Query("SELECT COUNT(*) FROM ships "
+                                "WHERE game_id=? AND at_hex=? AND owner='B' "
+                                "AND destroyed_at IS NULL",
+                                {game_id, hex});
+
         int count_a = std::atoi(ships_a[0][0].c_str());
         int count_b = std::atoi(ships_b[0][0].c_str());
-        
-        if (count_a == 0 || count_b == 0) {
+
+        if (count_a == 0 || count_b == 0)
+        {
             // Combat ends
             db.Exec("DELETE FROM combat_state WHERE game_id=? AND hex_id=?",
                     {game_id, hex});
             db.Exec("UPDATE games SET active_combat_hex=NULL WHERE id=?",
                     {game_id});
-            
+
             std::string winner = (count_a > 0) ? "A" : "B";
             Telemetry::instance().add_broadcast(
-                game_id,
-                "Combat in hex " + hex + " ends. Player " + winner + 
-                " controls the hex.");
-            
+                game_id, "Combat in hex " + hex + " ends. Player " + winner +
+                             " controls the hex.");
+
             return "Damage Applied. Combat ends - " + winner + " victorious!";
         }
-        
+
         // Combat continues - next round
         int next_round = cs.round + 1;
         db.Exec("UPDATE combat_state SET stage=0, round=?, "
                 "damage_assigned_A=0, damage_assigned_B=0 "
-                "WHERE game_id=? AND hex_id=?", {next_round, game_id, hex});
-        
+                "WHERE game_id=? AND hex_id=?",
+                {next_round, game_id, hex});
+
         Telemetry::instance().add_broadcast(
-            game_id,
-            "All damage assigned. Combat Round " + 
-            std::to_string(next_round) + " begins in hex " + hex + 
-            ". Submit orders!");
+            game_id, "All damage assigned. Combat Round " +
+                         std::to_string(next_round) + " begins in hex " + hex +
+                         ". Submit orders!");
     }
-    
+
     return "Damage Applied";
 }

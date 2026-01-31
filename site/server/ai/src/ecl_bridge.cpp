@@ -34,8 +34,6 @@ bool EclBridge::boot()
     cl_boot(1, argv);
 
     s_booted = true;
-    Logger::instance().info("[ECL] Booted");
-
     return true;
 }
 
@@ -45,7 +43,6 @@ void EclBridge::shutdown()
     {
         cl_shutdown();
         s_booted = false;
-        Logger::instance().info("[ECL] Shutdown");
     }
 }
 
@@ -62,21 +59,13 @@ bool EclBridge::load_file(const std::string& path)
 {
     if (!s_booted)
     {
-        Logger::instance().error("[ECL] Cannot load file - not booted");
         return false;
     }
 
     cl_object lisp_path = make_string(path);
     cl_object result = cl_load(1, lisp_path);
 
-    if (result == ECL_NIL)
-    {
-        Logger::instance().error("[ECL] Failed to load: " + path);
-        return false;
-    }
-
-    Logger::instance().info("[ECL] Loaded: " + path);
-    return true;
+    return (result != ECL_NIL);
 }
 
 // ----------------------------------------------------------------------------
@@ -90,7 +79,6 @@ bool EclBridge::calculate(const AASlate& slate,
 
     if (!s_booted)
     {
-        Logger::instance().error("[ECL] Cannot calculate - not booted");
         return false;
     }
 
@@ -108,33 +96,13 @@ bool EclBridge::calculate(const AASlate& slate,
     }
     ECL_HANDLER_CASE(1, condition)
     {
-        // Lisp error occurred
-        cl_object msg = cl_princ_to_string(condition);
-        std::string err = extract_string(msg);
-        Logger::instance().error("[ECL] Error in aa-calculate: " + err);
+        (void)condition; // Lisp error - ECL logs to stdout
         return false;
     }
     ECL_HANDLER_CASE_END;
 
-    // Debug: print raw result
-    if (result == ECL_NIL)
-    {
-        Logger::instance().info("[ECL] Raw result: NIL");
-    }
-    else
-    {
-        cl_object str = cl_princ_to_string(result);
-        std::string result_str = extract_string(str);
-        Logger::instance().info("[ECL] Raw result: " + result_str);
-    }
-
     // Unmarshal result to commands
-    bool ok = unmarshal_commands(result, commands_out);
-
-    Logger::instance().info("[ECL] Calculate returned " +
-                            std::to_string(commands_out.size()) + " commands");
-
-    return ok;
+    return unmarshal_commands(result, commands_out);
 }
 
 // ----------------------------------------------------------------------------

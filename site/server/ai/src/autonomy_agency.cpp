@@ -58,10 +58,6 @@ void AutonomyAgency::configure(int game_id, char aa_player)
     m_aa_player = aa_player;
     m_slate.game_id = game_id;
     m_slate.aa_player = aa_player;
-
-    Logger::instance().info(
-        "[AA] Configured: game_id=" + std::to_string(game_id) +
-        " aa_player=" + aa_player);
 }
 
 // ----------------------------------------------------------------------------
@@ -85,8 +81,6 @@ void AutonomyAgency::start()
     }
 
     m_worker = std::thread(&AutonomyAgency::thread_main, this);
-
-    Logger::instance().info("[AA] Started");
 }
 
 void AutonomyAgency::stop()
@@ -129,7 +123,6 @@ void AutonomyAgency::thread_main()
     // Register this thread with ECL runtime
     // Required for threads not created by ECL itself
     ecl_import_current_thread(ECL_NIL, ECL_NIL);
-    Logger::instance().info("[AA] Thread started (ECL thread registered)");
 
     while (!m_stop_requested.load())
     {
@@ -153,7 +146,6 @@ void AutonomyAgency::thread_main()
 
     // Release ECL thread before exit
     ecl_release_current_thread();
-    Logger::instance().info("[AA] Thread exiting (ECL thread released)");
 }
 
 // ----------------------------------------------------------------------------
@@ -164,7 +156,8 @@ void AutonomyAgency::run_cycle()
 {
     ++m_cycle_counter;
 
-    // Mealy State Machine: GATHER -> CALC -> RENDER -> TELEMETER -> WAIT -> loop
+    // Mealy State Machine: GATHER -> CALC -> RENDER -> TELEMETER -> WAIT ->
+    // loop
     enum MealyState
     {
         MS_GATHER,
@@ -196,19 +189,14 @@ void AutonomyAgency::run_cycle()
             }
             else if (m_slate.is_aa_turn)
             {
-                // AI's turn - proceed normally
-                Logger::instance().info(
-                    "[AA] Cycle " + std::to_string(m_cycle_counter) +
-                    ": phase=" + std::to_string(m_slate.phase_index) +
-                    " credits=" + std::to_string(m_slate.credits));
+                // AI's turn - log ship positions and combat state
+                log_debug_state();
                 state = MS_CALC;
             }
             else if (combat_needs_response())
             {
                 // Not AI's turn, but combat needs AI response
-                Logger::instance().info(
-                    "[AA] Cycle " + std::to_string(m_cycle_counter) +
-                    ": combat response needed (not our turn)");
+                log_debug_state();
                 state = MS_CALC;
             }
             else
@@ -240,7 +228,6 @@ void AutonomyAgency::run_cycle()
         case MS_RENDER:
         {
             // Execute the ONE pending command
-            Logger::instance().info("[AA] Render: " + pending_cmd);
             AICommandInjector::inject(m_game_id, m_aa_player, pending_cmd);
 
             // Check if terminal (hands control to other player or next phase)
@@ -278,13 +265,6 @@ void AutonomyAgency::run_cycle()
             done = true;
             break;
         }
-    }
-
-    if (iterations >= kMaxIterations)
-    {
-        Logger::instance().debug("[AA] Safety limit reached (" +
-                                std::to_string(kMaxIterations) +
-                                " iterations) - forcing exit");
     }
 }
 
@@ -403,9 +383,8 @@ void AutonomyAgency::gather()
             // If at_hex is empty, resolve from at_system
             if (ship.hex_id.empty() && !row[3].empty())
             {
-                ship.hex_id =
-                    MapUtil::instance().resolve_system_hex(m_slate.game_id,
-                                                           row[3]);
+                ship.hex_id = MapUtil::instance().resolve_system_hex(
+                    m_slate.game_id, row[3]);
             }
 
             // Compute remaining PD (base PD minus spent this turn)
@@ -443,9 +422,8 @@ void AutonomyAgency::gather()
             // If at_hex is empty, resolve from at_system
             if (ship.hex_id.empty() && !row[3].empty())
             {
-                ship.hex_id =
-                    MapUtil::instance().resolve_system_hex(m_slate.game_id,
-                                                           row[3]);
+                ship.hex_id = MapUtil::instance().resolve_system_hex(
+                    m_slate.game_id, row[3]);
             }
 
             ship.pd = std::atoi(row[4].c_str());
@@ -525,7 +503,8 @@ void AutonomyAgency::gather()
             ch.round = std::atoi(row[2].c_str());
             ch.stalemate_counter = std::atoi(row[3].c_str());
             // attacker_remains indicates if attacker still has initiative
-            // AI is attacker if they moved into the hex (simplified: check later)
+            // AI is attacker if they moved into the hex (simplified: check
+            // later)
             ch.ai_is_attacker = (row[4] == "1");
 
             // Check if AI has committed orders for this round
@@ -538,13 +517,6 @@ void AutonomyAgency::gather()
                                std::atoi(commit_rows[0][0].c_str()) > 0);
 
             m_slate.active_combats.push_back(ch);
-            Logger::instance().info("[AA] Combat at " + ch.hex_id +
-                                    " stage=" + std::to_string(ch.stage) +
-                                    " round=" + std::to_string(ch.round) +
-                                    " stalemate=" +
-                                    std::to_string(ch.stalemate_counter) +
-                                    " ai_committed=" +
-                                    (ch.ai_committed ? "Y" : "N"));
         }
     }
 
@@ -560,10 +532,11 @@ void AutonomyAgency::gather()
                 {
                     std::string sql_has_order =
                         "SELECT committed FROM combat_orders "
-                        "WHERE game_id=? AND owner=? AND ship_code=? AND round=?";
+                        "WHERE game_id=? AND owner=? AND ship_code=? AND "
+                        "round=?";
                     auto order_rows = db.Query(
-                        sql_has_order,
-                        {m_slate.game_id, m_slate.aa_player, ship.code, ch.round});
+                        sql_has_order, {m_slate.game_id, m_slate.aa_player,
+                                        ship.code, ch.round});
                     if (order_rows.empty() || order_rows[0][0] != "1")
                     {
                         ship.needs_combat_order = true;
@@ -575,10 +548,11 @@ void AutonomyAgency::gather()
                 {
                     std::string sql_pending =
                         "SELECT damage_amount FROM pending_damage "
-                        "WHERE game_id=? AND hex_id=? AND ship_code=? AND owner=?";
-                    auto dmg_rows = db.Query(
-                        sql_pending,
-                        {m_slate.game_id, ch.hex_id, ship.code, m_slate.aa_player});
+                        "WHERE game_id=? AND hex_id=? AND ship_code=? AND "
+                        "owner=?";
+                    auto dmg_rows =
+                        db.Query(sql_pending, {m_slate.game_id, ch.hex_id,
+                                               ship.code, m_slate.aa_player});
                     if (!dmg_rows.empty())
                     {
                         ship.pending_damage = std::atoi(dmg_rows[0][0].c_str());
@@ -588,9 +562,8 @@ void AutonomyAgency::gather()
         }
 
         // Check escape_pending flag
-        std::string sql_escape =
-            "SELECT escape_pending FROM ships "
-            "WHERE game_id=? AND ship_code=? AND owner=?";
+        std::string sql_escape = "SELECT escape_pending FROM ships "
+                                 "WHERE game_id=? AND ship_code=? AND owner=?";
         auto escape_rows = db.Query(
             sql_escape, {m_slate.game_id, ship.code, m_slate.aa_player});
         if (!escape_rows.empty() && escape_rows[0][0] == "1")
@@ -622,10 +595,6 @@ void AutonomyAgency::gather()
     // Compute suggested destinations for movement planning
     // Use MapGraph to find reachable waypoints toward enemy bases
     // STRATEGY: Spread ships across DIFFERENT enemy bases to maximize VP
-    Logger::instance().info("[AA] enemy_bases=" +
-                            std::to_string(m_slate.enemy_base_hexes.size()) +
-                            " own_ships=" +
-                            std::to_string(m_slate.own_ships.size()));
 
     if (!m_slate.enemy_base_hexes.empty())
     {
@@ -649,15 +618,9 @@ void AutonomyAgency::gather()
 
         for (AAShipInfo& ship : m_slate.own_ships)
         {
-            Logger::instance().info("[AA] Ship " + ship.name + " hex=" +
-                                    ship.hex_id + " remaining_pd=" +
-                                    std::to_string(ship.pd) + " warp=" +
-                                    std::to_string(ship.is_warpship));
-
             // Skip ships that can't move
             if (!ship.is_warpship || ship.pd <= 0 || ship.hex_id.empty())
             {
-                Logger::instance().info("[AA] -> skip (can't move)");
                 continue;
             }
 
@@ -673,7 +636,6 @@ void AutonomyAgency::gather()
             }
             if (at_enemy_base)
             {
-                Logger::instance().info("[AA] -> skip (at enemy base)");
                 continue;
             }
 
@@ -696,10 +658,6 @@ void AutonomyAgency::gather()
             std::vector<std::string> full_path =
                 graph.get_path(ship.hex_id, target, 100);
 
-            Logger::instance().info("[AA] -> full path from " + ship.hex_id +
-                                    " to " + target + " len=" +
-                                    std::to_string(full_path.size()));
-
             if (!full_path.empty() && full_path.size() > 1)
             {
                 // Truncate path to what's reachable with remaining PD
@@ -714,18 +672,92 @@ void AutonomyAgency::gather()
                     ship.suggested_destination = full_path[reachable];
                     // Mark this base as targeted so next ship goes elsewhere
                     targeted_bases.insert(target);
-                    Logger::instance().info("[AA] -> suggested (remaining_pd=" +
-                                            std::to_string(ship.pd) + "): " +
-                                            ship.suggested_destination +
-                                            " (target base: " + target + ")");
-                }
-                else
-                {
-                    Logger::instance().info("[AA] -> skip (no PD or at dest)");
                 }
             }
         }
     }
+}
+
+// ----------------------------------------------------------------------------
+// Debug Logging - Ship Positions and Combat State
+// ----------------------------------------------------------------------------
+
+void AutonomyAgency::log_debug_state()
+{
+    static const char* kPhaseNames[] = {"BUILD", "MOVE", "COMBAT", "PICKDROP",
+                                        "END"};
+    const char* phase_name =
+        (m_slate.phase_index >= 0 && m_slate.phase_index <= 4)
+            ? kPhaseNames[m_slate.phase_index]
+            : "???";
+
+    std::string msg = "[AA] Phase=" + std::string(phase_name) +
+                      " Round=" + std::to_string(m_slate.round);
+
+    // AI ships
+    msg += " | AI ships:";
+    if (m_slate.own_ships.empty())
+    {
+        msg += " (none)";
+    }
+    else
+    {
+        for (const AAShipInfo& s : m_slate.own_ships)
+        {
+            msg += " " + s.name + "@" + (s.hex_id.empty() ? "?" : s.hex_id);
+        }
+    }
+
+    // User ships
+    msg += " | User ships:";
+    if (m_slate.enemy_ships.empty())
+    {
+        msg += " (none)";
+    }
+    else
+    {
+        for (const AAShipInfo& s : m_slate.enemy_ships)
+        {
+            msg += " " + s.name + "@" + (s.hex_id.empty() ? "?" : s.hex_id);
+        }
+    }
+
+    // Combat state
+    msg += " | Combat:";
+    if (m_slate.contested_hexes.empty())
+    {
+        msg += " none";
+    }
+    else
+    {
+        msg += " contested=[";
+        for (size_t idx = 0; idx < m_slate.contested_hexes.size(); ++idx)
+        {
+            if (idx > 0)
+            {
+                msg += ",";
+            }
+            msg += m_slate.contested_hexes[idx];
+        }
+        msg += "]";
+    }
+
+    if (!m_slate.active_combats.empty())
+    {
+        msg += " active=[";
+        for (size_t idx = 0; idx < m_slate.active_combats.size(); ++idx)
+        {
+            if (idx > 0)
+            {
+                msg += ",";
+            }
+            msg += m_slate.active_combats[idx].hex_id + "/stg" +
+                   std::to_string(m_slate.active_combats[idx].stage);
+        }
+        msg += "]";
+    }
+
+    Logger::instance().info(msg);
 }
 
 // ----------------------------------------------------------------------------
@@ -738,7 +770,6 @@ void AutonomyAgency::calculate(std::vector<std::string>& commands_out)
 
     if (!m_ecl_initialized)
     {
-        Logger::instance().error("[AA] Calculate: ECL not initialized");
         commands_out.push_back("NEXT");
         return;
     }
@@ -746,8 +777,6 @@ void AutonomyAgency::calculate(std::vector<std::string>& commands_out)
     bool ok = EclBridge::calculate(m_slate, commands_out);
     if (!ok)
     {
-        Logger::instance().error(
-            "[AA] Calculate: ECL call failed, defaulting to NEXT");
         commands_out.clear();
         commands_out.push_back("NEXT");
     }
@@ -809,7 +838,6 @@ void AutonomyAgency::init_ecl()
     // Boot ECL runtime
     if (!EclBridge::boot())
     {
-        Logger::instance().error("[AA] Failed to boot ECL");
         return;
     }
 
@@ -826,8 +854,6 @@ void AutonomyAgency::init_ecl()
         dsl_dir += '/';
     }
 
-    Logger::instance().info("[AA] Loading DSL from: " + dsl_dir);
-
     // Load files in dependency order (util first, core last)
     static const char* kDslFiles[] = {"aa-util.lisp", "aa-build.lisp",
                                       "aa-movement.lisp", "aa-combat.lisp",
@@ -839,14 +865,12 @@ void AutonomyAgency::init_ecl()
         bool loaded = EclBridge::load_file(path);
         if (!loaded)
         {
-            Logger::instance().error("[AA] Failed to load " + path);
             EclBridge::shutdown();
             return;
         }
     }
 
     m_ecl_initialized = true;
-    Logger::instance().info("[AA] ECL initialized");
 }
 
 void AutonomyAgency::shutdown_ecl()
@@ -855,6 +879,5 @@ void AutonomyAgency::shutdown_ecl()
     {
         EclBridge::shutdown();
         m_ecl_initialized = false;
-        Logger::instance().info("[AA] ECL shutdown");
     }
 }
