@@ -39,9 +39,33 @@ struct AAShipInfo
     // AI movement planning: farthest reachable waypoint toward strategic goal
     std::string suggested_destination;
 
+    // Combat state
+    bool needs_combat_order;  // Stage 0: no committed order yet
+    int pending_damage;       // Stage 2: damage to assign
+    bool escape_pending;      // Successful retreat, needs retreat command
+
+    // Revealed enemy order from prior round (public after both commit)
+    char last_tactic;   // 'A', 'D', 'R', or '\0' if unknown
+    int last_drive;     // Power allocated to drive
+    int last_beam;      // Power allocated to beam
+
     AAShipInfo()
         : pd(0), beam(0), screen(0), tube(0), missile(0), sr(0), tech_level(0),
-          is_warpship(true)
+          is_warpship(true), needs_combat_order(false), pending_damage(0),
+          escape_pending(false), last_tactic('\0'), last_drive(0), last_beam(0)
+    {
+    }
+};
+
+// Combat hex info
+struct AACombatHex
+{
+    std::string hex_id;
+    int stage;  // 0=ORDERS, 1=RESOLVE, 2=DAMAGE, 3=RETREAT
+    int round;
+    bool ai_committed;  // Has AI committed orders this round?
+
+    AACombatHex() : stage(0), round(0), ai_committed(false)
     {
     }
 };
@@ -80,6 +104,7 @@ struct AASlate
     // Combat (from DB)
     bool in_combat;
     std::vector<std::string> contested_hexes;
+    std::vector<AACombatHex> active_combats;
 
     // Cycle tracking
     unsigned int cycle_id;
@@ -104,12 +129,14 @@ struct AASlate
         vp = 0;
         enemy_vp = 0;
         own_base_hexes.clear();
+        enemy_base_hexes.clear();
         home_side.clear();
         own_ships.clear();
         enemy_ships.clear();
         draft_ships.clear();
         in_combat = false;
         contested_hexes.clear();
+        active_combats.clear();
     }
 };
 
@@ -171,7 +198,7 @@ class AutonomyAgency
     // MSS steps
     void gather();
     void calculate(std::vector<std::string>& commands_out);
-    void render(const std::vector<std::string>& commands);
+    bool combat_needs_response() const;
 
     // ECL initialization
     void init_ecl();

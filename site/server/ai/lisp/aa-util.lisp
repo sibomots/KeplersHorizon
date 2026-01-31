@@ -42,6 +42,9 @@
 (defun slate-in-combat (slate)
   (slate-get slate :in-combat nil))
 
+(defun slate-active-combats (slate)
+  (slate-get slate :active-combats nil))
+
 ;;; ----------------------------------------------------------------------------
 ;;; Ship Accessors
 ;;; ----------------------------------------------------------------------------
@@ -82,6 +85,48 @@
 (defun ship-suggested-dest (ship)
   "Get C++ computed suggested destination for this ship."
   (getf ship :suggested-dest))
+
+;; Combat state accessors
+(defun ship-needs-order-p (ship)
+  "Check if ship needs a combat order."
+  (getf ship :needs-order))
+
+(defun ship-pending-damage (ship)
+  "Get pending damage to assign (0 if none)."
+  (or (getf ship :pending-damage) 0))
+
+(defun ship-escape-pending-p (ship)
+  "Check if ship has escaped and needs retreat command."
+  (getf ship :escape-pending))
+
+;; Revealed enemy order accessors (public after both players commit)
+(defun ship-last-tactic (ship)
+  "Get enemy's tactic from prior round (A, D, R, or NIL if unknown)."
+  (getf ship :last-tactic))
+
+(defun ship-last-drive (ship)
+  "Get enemy's drive power from prior round."
+  (or (getf ship :last-drive) 0))
+
+(defun ship-last-beam (ship)
+  "Get enemy's beam power from prior round."
+  (or (getf ship :last-beam) 0))
+
+;;; ----------------------------------------------------------------------------
+;;; Combat Hex Accessors
+;;; ----------------------------------------------------------------------------
+
+(defun combat-hex (ch)
+  (getf ch :hex))
+
+(defun combat-stage (ch)
+  (or (getf ch :stage) 0))
+
+(defun combat-round (ch)
+  (or (getf ch :round) 1))
+
+(defun combat-ai-committed-p (ch)
+  (getf ch :ai-committed))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Predicates

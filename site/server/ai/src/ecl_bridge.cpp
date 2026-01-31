@@ -153,6 +153,9 @@ cl_object EclBridge::marshal_slate(const AASlate& slate)
     alist = make_cons(make_cons(make_keyword("contested-hexes"),
                                 marshal_string_list(slate.contested_hexes)),
                       alist);
+    alist = make_cons(make_cons(make_keyword("active-combats"),
+                                marshal_combat_list(slate.active_combats)),
+                      alist);
     alist = make_cons(
         make_cons(make_keyword("drafts"), marshal_ship_list(slate.draft_ships)),
         alist);
@@ -216,9 +219,36 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_bool(s.is_warpship), plist);
         plist = make_cons(make_keyword("warpship"), plist);
 
+        // Revealed enemy order (from prior round, public info)
+        if (s.last_tactic != '\0')
+        {
+            plist = make_cons(ECL_CODE_CHAR(s.last_tactic), plist);
+        }
+        else
+        {
+            plist = make_cons(ECL_NIL, plist);
+        }
+        plist = make_cons(make_keyword("last-tactic"), plist);
+
+        plist = make_cons(make_int(s.last_drive), plist);
+        plist = make_cons(make_keyword("last-drive"), plist);
+
+        plist = make_cons(make_int(s.last_beam), plist);
+        plist = make_cons(make_keyword("last-beam"), plist);
+
         // AI movement suggestion (empty if no valid move)
         plist = make_cons(make_string(s.suggested_destination), plist);
         plist = make_cons(make_keyword("suggested-dest"), plist);
+
+        // Combat state
+        plist = make_cons(make_bool(s.needs_combat_order), plist);
+        plist = make_cons(make_keyword("needs-order"), plist);
+
+        plist = make_cons(make_int(s.pending_damage), plist);
+        plist = make_cons(make_keyword("pending-damage"), plist);
+
+        plist = make_cons(make_bool(s.escape_pending), plist);
+        plist = make_cons(make_keyword("escape-pending"), plist);
 
         plist = make_cons(make_int(s.tech_level), plist);
         plist = make_cons(make_keyword("tech"), plist);
@@ -264,6 +294,36 @@ EclBridge::marshal_string_list(const std::vector<std::string>& strings)
     for (auto it = strings.rbegin(); it != strings.rend(); ++it)
     {
         list = make_cons(make_string(*it), list);
+    }
+
+    return list;
+}
+
+cl_object
+EclBridge::marshal_combat_list(const std::vector<AACombatHex>& combats)
+{
+    cl_object list = ECL_NIL;
+
+    for (auto it = combats.rbegin(); it != combats.rend(); ++it)
+    {
+        const AACombatHex& ch = *it;
+
+        // Combat hex is a plist: (:hex "X" :stage N :round N :ai-committed T/NIL)
+        cl_object plist = ECL_NIL;
+
+        plist = make_cons(make_bool(ch.ai_committed), plist);
+        plist = make_cons(make_keyword("ai-committed"), plist);
+
+        plist = make_cons(make_int(ch.round), plist);
+        plist = make_cons(make_keyword("round"), plist);
+
+        plist = make_cons(make_int(ch.stage), plist);
+        plist = make_cons(make_keyword("stage"), plist);
+
+        plist = make_cons(make_string(ch.hex_id), plist);
+        plist = make_cons(make_keyword("hex"), plist);
+
+        list = make_cons(plist, list);
     }
 
     return list;

@@ -5,6 +5,7 @@ export MY_PORT=12210
 export MY_DBHOST=127.0.0.1
 export MALLOC_TRACE=/home/roff/gh/kh-proto/KeplersHorizon/site/server/malloc.log
 
+rm -f kh.log
 rm -rf ./dsl
 mkdir -p ./dsl
 cp ai/lisp/* dsl

@@ -1,12 +1,11 @@
-;;;; aa-build.lisp - Build Phase Decision Logic
+;;;; aa-build.lisp - Build Phase Decision Logic (One Command at a Time)
 
 ;;; Warpship costs:
 ;;;   WG = 5 BP (required for warpship)
 ;;;   PD, B, S, T, SR = 1 BP each
 ;;;   M = 3 missiles per 1 BP
 ;;;
-;;; Minimum viable warpship: WG(5) + PD(1) = 6 BP (can move, nothing else)
-;;; Basic fighter: WG(5) + PD(5) + B(3) + S(2) + T(1) + M(3) = 17 BP
+;;; Basic fighter: WG(5) + PD(5) + B(3) + S(2) + T=1 + M(3) = 19 BP
 
 (defparameter *ship-name-counter* 0)
 
@@ -26,75 +25,78 @@
   "Cost of a basic warpship (WG=5 + PD=5 + B=3 + S=2 + T=1 + M=3).")
 
 (defun should-build-p (slate)
-  "Heuristic: Should we build another ship?
-   - Keep a credit reserve for repairs/resupply
-   - Build if we have fewer ships than enemy + 1
-   - Don't overbuild in early game"
+  "Heuristic: Should we build another ship?"
   (let ((credits (slate-credits slate))
         (our-ships (length (slate-own-ships slate)))
-        (enemy-ships (length (slate-enemy-ships slate)))
-        (round (slate-round slate)))
-    ;; Must have enough credits beyond reserve
+        (enemy-ships (length (slate-enemy-ships slate))))
     (and (>= credits (+ *ship-cost* *credit-reserve*))
-         ;; Fleet size heuristic: match enemy + small advantage
-         ;; Early game (round 1): build up to 2 ships
-         ;; Later: build to match enemy + 1, max 5
          (< our-ships (min 5 (max 2 (+ enemy-ships 1)))))))
 
 (defun decide-build-phase (slate)
-  "Decide what to do in build phase.
-   Priority:
-   1. If we have drafts, commit them
-   2. If heuristics say build, build one
-   3. Otherwise, advance"
-  (let ((fleet-size (length (slate-own-ships slate)))
-        (enemy-size (length (slate-enemy-ships slate)))
-        (draft-count (length (slate-drafts slate))))
-    (format t "[LISP] decide-build-phase: ships=~A enemy=~A drafts=~A credits=~A~%"
-            fleet-size enemy-size draft-count (slate-credits slate))
+  "Decide ONE action in build phase. Called repeatedly until NEXT.
+   State machine:
+   1. Draft with specs (pd>0) -> commit it (bc)
+   2. Draft without specs -> set specs (bs)
+   3. Ship not deployed -> deploy it (ds)
+   4. Should build? -> create draft (bn)
+   5. Otherwise -> advance (NEXT)"
+  (let ((drafts (slate-drafts slate))
+        (ships (slate-own-ships slate)))
+    (format t "[LISP] decide-build: drafts=~A ships=~A credits=~A~%"
+            (length drafts) (length ships) (slate-credits slate))
     (cond
-      ;; Commit pending drafts first
-      ((has-drafts-p slate)
-       (format t "[LISP] -> commit draft~%")
-       (commit-first-draft slate))
+      ;; Draft with specs ready to commit
+      ((draft-ready-p drafts)
+       (let ((name (ship-name (first drafts))))
+         (format t "[LISP] -> bc ~A~%" name)
+         (list (make-cmd "bc" name))))
 
-      ;; Build if heuristic says so
+      ;; Draft needs specs
+      ((draft-needs-specs-p drafts)
+       (let ((name (ship-name (first drafts))))
+         (format t "[LISP] -> bs ~A~%" name)
+         (list (make-cmd "bs" (format nil "~A PD=5 B=3 S=2 T=1 M=3" name)))))
+
+      ;; Ship needs deployment
+      ((ship-needs-deploy-p ships)
+       (let ((ship (find-undeployed-ship ships)))
+         (format t "[LISP] -> ds ~A~%" (ship-name ship))
+         (list (make-cmd "ds" (format nil "~A ASTREX" (ship-name ship))))))
+
+      ;; Should we start building a new ship?
       ((should-build-p slate)
-       (format t "[LISP] -> build warpship~%")
-       (build-basic-warpship slate))
+       (let ((name (next-ship-name)))
+         (format t "[LISP] -> bn ~A~%" name)
+         (list (make-cmd "bn" (format nil "W ~A" name)))))
 
-      ;; Otherwise advance to movement
+      ;; Done with build phase
       (t
-       (format t "[LISP] -> advance~%")
+       (format t "[LISP] -> NEXT~%")
        (list (cmd-next))))))
 
 ;;; ----------------------------------------------------------------------------
-;;; Build Actions
+;;; State Predicates
 ;;; ----------------------------------------------------------------------------
 
-(defun commit-first-draft (slate)
-  "Commit the first draft ship and deploy it."
-  (let* ((draft (first (slate-drafts slate)))
-         (name (ship-name draft)))
-    ;; BC uses ship name, DS uses ship name + starbase name
-    ;; AI player B's home starbase is ASTREX
-    (list (make-cmd "bc" name)
-          (make-cmd "ds" (format nil "~A ASTREX" name)))))
+(defun draft-ready-p (drafts)
+  "Check if first draft has specs and is ready to commit."
+  (and drafts
+       (let ((d (first drafts)))
+         (> (ship-pd d) 0))))
 
-(defun build-basic-warpship (slate)
-  "Build a basic warpship: PD=5 B=3 S=2 T=1 M=3 (17 BP total)."
-  (declare (ignore slate))
-  (let ((name (next-ship-name)))
-    (list
-     (make-cmd "bn" (format nil "W ~A" name))
-     (make-cmd "bs" (format nil "~A PD=5 B=3 S=2 T=1 M=3" name))
-     (make-cmd "bc" name))))
+(defun draft-needs-specs-p (drafts)
+  "Check if first draft exists but has no specs."
+  (and drafts
+       (let ((d (first drafts)))
+         (<= (ship-pd d) 0))))
 
-(defun build-scout-warpship (slate)
-  "Build a minimal scout: PD=3 only (8 BP total)."
-  (declare (ignore slate))
-  (let ((name (next-ship-name)))
-    (list
-     (make-cmd "bn" (format nil "W ~A" name))
-     (make-cmd "bs" (format nil "~A PD=3" name))
-     (make-cmd "bc" name))))
+(defun ship-needs-deploy-p (ships)
+  "Check if any ship needs deployment."
+  (find-undeployed-ship ships))
+
+(defun find-undeployed-ship (ships)
+  "Find a ship with no hex (not deployed)."
+  (find-if (lambda (s)
+             (let ((hex (ship-hex s)))
+               (or (null hex) (string= hex ""))))
+           ships))

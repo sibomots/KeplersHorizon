@@ -40,6 +40,8 @@ class EclBridge
     marshal_ship_list(const std::vector<struct AAShipInfo>& ships);
     static cl_object
     marshal_string_list(const std::vector<std::string>& strings);
+    static cl_object
+    marshal_combat_list(const std::vector<struct AACombatHex>& combats);
 
     // Unmarshal Lisp -> C++
     static bool unmarshal_commands(cl_object result,
