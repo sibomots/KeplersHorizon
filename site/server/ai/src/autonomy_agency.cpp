@@ -522,12 +522,16 @@ void AutonomyAgency::gather()
             // later)
             ch.ai_is_attacker = (row[4] == "1");
 
-            // Check if AI has committed orders for this round
+            // Check if AI has committed orders for this hex and round
             std::string sql_committed =
-                "SELECT COUNT(*) FROM combat_orders "
-                "WHERE game_id=? AND owner=? AND round=? AND committed=1";
-            auto commit_rows = db.Query(
-                sql_committed, {m_slate.game_id, m_slate.aa_player, ch.round});
+                "SELECT COUNT(*) FROM combat_orders co "
+                "JOIN ships s ON s.game_id = co.game_id "
+                "AND s.ship_code = co.ship_code AND s.owner = co.owner "
+                "WHERE co.game_id=? AND co.owner=? AND co.round=? "
+                "AND co.committed=1 AND s.at_hex=?";
+            auto commit_rows =
+                db.Query(sql_committed, {m_slate.game_id, m_slate.aa_player,
+                                         ch.round, hex_id});
             ch.ai_committed = (!commit_rows.empty() &&
                                std::atoi(commit_rows[0][0].c_str()) > 0);
 
