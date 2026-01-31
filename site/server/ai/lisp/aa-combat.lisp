@@ -27,14 +27,14 @@
    Priority:
    1. Ships with escape_pending need retreat command
    2. Ships with pending_damage need damage assignment
-   3. Ships needing orders in FIRST combat hex get combat orders
+   3. Ships needing orders in actionable combat hex get combat orders
    4. If all orders issued but not committed, commit
-   5. If waiting for enemy to commit, do nothing (wait)
+   5. If all combats waiting for enemy/user, do nothing (wait)
    6. Otherwise advance"
   (let* ((combats (slate-active-combats slate))
          (own-ships (slate-own-ships slate))
-         ;; CRITICAL: Focus on FIRST combat hex only
-         (focus-combat (first combats))
+         ;; Find combat that needs AI action (stage 0 with ships needing orders)
+         (focus-combat (find-actionable-combat combats own-ships))
          (focus-hex (when focus-combat (combat-hex focus-combat)))
          ;; Filter ships to only those in focus hex
          (ships-in-focus (when focus-hex
@@ -80,15 +80,17 @@
        (format t "[LISP] -> cc~%")
        (list (make-cmd "cc")))
 
-      ;; Priority 5: Waiting for enemy to commit - output nothing
-      ((waiting-for-enemy-p combats focus-hex)
-       (format t "[LISP] -> WAIT (enemy has not committed)~%")
-       nil)
-
-      ;; Otherwise advance
+      ;; Otherwise: check if we're waiting or can advance
       (t
-       (format t "[LISP] -> NEXT (no combat action needed)~%")
-       (list (cmd-next))))))
+       (if combats
+           ;; Combats exist but no action for AI - waiting for enemy/user
+           (progn
+             (format t "[LISP] -> WAIT (combat active, awaiting enemy/user)~%")
+             nil)
+           ;; No combats - advance to next phase
+           (progn
+             (format t "[LISP] -> NEXT (no combat)~%")
+             (list (cmd-next))))))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Find Ships Needing Action
@@ -111,26 +113,64 @@
    True if: stage=0, AI has ships with orders, but not committed."
   (and combats
        focus-hex
-       (let ((ch (first combats)))
-         (and (= (combat-stage ch) 0)
+       ships-in-focus
+       (let ((ch (find-combat-at-hex combats focus-hex)))
+         (and ch
+              (= (combat-stage ch) 0)
               (not (combat-ai-committed-p ch))
-              ;; Have ships in focus hex
-              ships-in-focus
               ;; No ships in focus hex still need orders
               (not (find-ship-needing-order ships-in-focus))))))
-
-(defun waiting-for-enemy-p (combats focus-hex)
-  "Check if AI is waiting for enemy to commit orders.
-   True if: we have combat, stage=0, AI has committed, enemy hasn't."
-  (and combats
-       focus-hex
-       (let ((ch (first combats)))
-         (and (= (combat-stage ch) 0)
-              (combat-ai-committed-p ch)))))
 
 (defun find-combat-at-hex (combats hex)
   "Find combat state for a specific hex."
   (find-if (lambda (ch) (string= (combat-hex ch) hex)) combats))
+
+(defun find-actionable-combat (combats own-ships)
+  "Find first combat that needs AI action.
+   Priority: Stage 0 with ships needing orders, then stage 2 with damage.
+   Returns NIL if all combats are waiting for enemy/user."
+  (or
+   ;; First: find combat at stage 0 where AI has ships needing orders
+   (find-if (lambda (ch)
+              (and (= (combat-stage ch) 0)
+                   (not (combat-ai-committed-p ch))
+                   (let ((hex (combat-hex ch)))
+                     (some (lambda (s)
+                             (and (string= (ship-hex s) hex)
+                                  (ship-needs-order-p s)))
+                           own-ships))))
+            combats)
+   ;; Second: find combat at stage 0 where AI needs to commit
+   (find-if (lambda (ch)
+              (and (= (combat-stage ch) 0)
+                   (not (combat-ai-committed-p ch))
+                   (let ((hex (combat-hex ch)))
+                     ;; Has ships in hex but none need orders (ready to commit)
+                     (and (some (lambda (s) (string= (ship-hex s) hex))
+                                own-ships)
+                          (not (some (lambda (s)
+                                       (and (string= (ship-hex s) hex)
+                                            (ship-needs-order-p s)))
+                                     own-ships))))))
+            combats)
+   ;; Third: find combat at stage 2 where AI has damage to assign
+   (find-if (lambda (ch)
+              (and (= (combat-stage ch) 2)
+                   (let ((hex (combat-hex ch)))
+                     (some (lambda (s)
+                             (and (string= (ship-hex s) hex)
+                                  (> (ship-pending-damage s) 0)))
+                           own-ships))))
+            combats)
+   ;; Fourth: find combat at stage 3 where AI has ships to retreat
+   (find-if (lambda (ch)
+              (and (= (combat-stage ch) 3)
+                   (let ((hex (combat-hex ch)))
+                     (some (lambda (s)
+                             (and (string= (ship-hex s) hex)
+                                  (ship-escape-pending-p s)))
+                           own-ships))))
+            combats)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Focus Fire - All AI ships target same enemy
