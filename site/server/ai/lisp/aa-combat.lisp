@@ -18,6 +18,76 @@
 ;;; CRITICAL: +5 or higher differential = MISS. Never over-allocate drive!
 
 ;;; ----------------------------------------------------------------------------
+;;; Multi-Theater Triage
+;;; ----------------------------------------------------------------------------
+;;; Before issuing any combat order, assess ALL active theaters together.
+;;; Decide where to fight vs retreat based on:
+;;;   - Force ratio (can we win?)
+;;;   - Hex VP value (is this an enemy base?)
+;;;   - Ship tech value (are our ships here worth preserving?)
+
+(defun triage-all-theaters (slate)
+  "Assess all combat theaters and return triage decisions.
+   Returns alist of (hex . :fight/:retreat/:hold) for each combat hex.
+   Call this ONCE before issuing any combat orders."
+  (let* ((combats (slate-active-combats slate))
+         (own-ships (slate-own-ships slate))
+         (enemy-ships (slate-enemy-ships slate))
+         (enemy-bases (slate-enemy-bases slate))
+         (results nil))
+    (dolist (combat combats)
+      (let* ((hex (combat-hex combat))
+             (our-ships-here (ships-at-hex own-ships hex))
+             (their-ships-here (ships-at-hex enemy-ships hex))
+             (assessment (assess-theater hex our-ships-here their-ships-here
+                                         enemy-bases)))
+        (push (cons hex assessment) results)))
+    (format t "[LISP] Theater triage: ~A~%" results)
+    (nreverse results)))
+
+(defun assess-theater (hex our-ships their-ships enemy-bases)
+  "Assess a single theater. Returns :fight, :retreat, or :hold.
+   :fight   - Press the attack, we have advantage or hex is critical
+   :retreat - Disengage, preserve ships for better fights
+   :hold    - Dodge defensively, wait for situation to change"
+  (let* ((our-pd (reduce #'+ (mapcar #'ship-pd our-ships) :initial-value 0))
+         (their-pd (reduce #'+ (mapcar #'ship-pd their-ships) :initial-value 0))
+         (our-avg-tech (if our-ships
+                           (/ (reduce #'+ (mapcar #'ship-tech our-ships))
+                              (length our-ships))
+                           0))
+         (is-vp-hex (member hex enemy-bases :test #'string=))
+         (force-ratio (if (> their-pd 0)
+                          (/ (float our-pd) their-pd)
+                          99.0))
+         (have-warpship (some #'ship-warpship-p our-ships)))
+    (format t "[LISP] Theater ~A: our-pd=~A their-pd=~A ratio=~,2F vp=~A tech=~,1F~%"
+            hex our-pd their-pd force-ratio is-vp-hex our-avg-tech)
+    (cond
+      ;; VP hex: fight unless badly outmatched
+      ((and is-vp-hex (>= force-ratio 0.5))
+       :fight)
+      ;; VP hex but badly outmatched: hold (dodge) to buy time
+      ((and is-vp-hex (< force-ratio 0.5))
+       :hold)
+      ;; Non-VP hex with advantage: fight
+      ((>= force-ratio 1.2)
+       :fight)
+      ;; Non-VP hex, matched: hold and evaluate
+      ((>= force-ratio 0.7)
+       :hold)
+      ;; Non-VP hex, outmatched: retreat if possible
+      ((and have-warpship (< force-ratio 0.7))
+       :retreat)
+      ;; Systemship can't retreat: hold
+      (t :hold))))
+
+(defun get-theater-triage (triage-results hex)
+  "Look up triage decision for a hex. Default to :fight if not found."
+  (let ((entry (assoc hex triage-results :test #'string=)))
+    (if entry (cdr entry) :fight)))
+
+;;; ----------------------------------------------------------------------------
 ;;; Combat Phase Entry
 ;;; ----------------------------------------------------------------------------
 
@@ -33,6 +103,8 @@
    6. Otherwise advance"
   (let* ((combats (slate-active-combats slate))
          (own-ships (slate-own-ships slate))
+         ;; THEATER TRIAGE: Assess all combats before acting
+         (triage (when combats (triage-all-theaters slate)))
          ;; Find combat that needs AI action (stage 0 with ships needing orders)
          (focus-combat (find-actionable-combat combats own-ships))
          (focus-hex (when focus-combat (combat-hex focus-combat)))
@@ -40,15 +112,18 @@
          (ships-in-focus (when focus-hex
                            (remove-if-not
                             (lambda (s) (string= (ship-hex s) focus-hex))
-                            own-ships))))
-    (format t "[LISP] decide-combat: combats=~A focus-hex=~A ships-in-focus=~A~%"
-            (length combats) focus-hex (length ships-in-focus))
+                            own-ships)))
+         ;; Get triage decision for focus hex
+         (theater-decision (when focus-hex
+                             (get-theater-triage triage focus-hex))))
+    (format t "[LISP] decide-combat: combats=~A focus-hex=~A ships-in-focus=~A triage=~A~%"
+            (length combats) focus-hex (length ships-in-focus) theater-decision)
     (cond
       ;; Priority 1: Handle escaping ships (any hex)
       ((find-escaping-ship own-ships)
        (let ((ship (find-escaping-ship own-ships)))
          (format t "[LISP] -> retreat ~A~%" (ship-name ship))
-         (issue-retreat ship)))
+         (issue-retreat ship slate)))
 
       ;; Priority 2: Assign pending damage (any hex)
       ((find-ship-with-damage own-ships)
@@ -69,11 +144,11 @@
          (when (and ai-attacker (>= stalemate 2))
            (format t "[LISP] WARNING: Stalemate=~A, must deal damage or retreat!~%"
                    stalemate))
-         (format t "[LISP] -> combat order for ~A in ~A (focus: ~A stalemate: ~A)~%"
+         (format t "[LISP] -> combat order for ~A in ~A (focus: ~A stalemate: ~A triage: ~A)~%"
                  (ship-name ship) hex
-                 (when focus-target (ship-code focus-target)) stalemate)
-         (issue-combat-order-with-stalemate ship focus-target enemies-here
-                                            stalemate ai-attacker)))
+                 (when focus-target (ship-code focus-target)) stalemate theater-decision)
+         (issue-combat-order-with-triage ship focus-target enemies-here
+                                         stalemate ai-attacker theater-decision)))
 
       ;; Priority 4: Commit if orders are ready but not committed
       ((needs-combat-commit-p combats ships-in-focus focus-hex)
@@ -188,11 +263,14 @@
 ;;; Issue Retreat
 ;;; ----------------------------------------------------------------------------
 
-(defun issue-retreat (ship)
+(defun issue-retreat (ship &optional slate)
   "Issue retreat command. Pick adjacent hex toward friendly territory."
   ;; Format: retreat SHIPCODE hXXYY
   (let* ((hex (ship-hex ship))
-         (adj-hex (compute-retreat-hex hex)))
+         (own-bases (when slate (slate-own-bases slate)))
+         (adj-hex (if own-bases
+                      (compute-retreat-toward-base hex own-bases)
+                      (compute-retreat-hex hex))))
     (list (make-cmd "retreat" (format nil "~A h~A" (ship-code ship) adj-hex)))))
 
 (defun compute-retreat-hex (hex)
@@ -318,14 +396,31 @@
   "Issue combat order for ship using CRT-aware tactics.
    Format: co SHIP TACTIC TARGET d=N b=N s=N [m=N ...]
    Note: Beams/Screens cannot be used same round as missiles."
-  (issue-combat-order-with-stalemate ship target enemies 0 nil))
+  (issue-combat-order-with-triage ship target enemies 0 nil :fight))
 
-(defun issue-combat-order-with-stalemate (ship target enemies stalemate ai-attacker)
-  "Issue combat order considering stalemate state.
-   If AI is attacker and stalemate >= 2, must guarantee damage or retreat."
-  (let ((analysis (if (and ai-attacker (>= stalemate 2))
-                      (analyze-must-damage-situation ship target enemies)
-                      (analyze-combat-situation ship target enemies))))
+(defun issue-combat-order-with-triage (ship target enemies stalemate ai-attacker triage-decision)
+  "Issue combat order considering theater triage and stalemate state.
+   TRIAGE-DECISION: :fight, :retreat, or :hold (from theater triage)
+   Stalemate rules still apply: if AI attacker and stalemate>=2, must deal damage."
+  (let ((analysis
+          (cond
+            ;; Stalemate danger overrides triage - must deal damage or retreat
+            ((and ai-attacker (>= stalemate 2))
+             (format t "[LISP] Stalemate override: must damage or retreat~%")
+             (analyze-must-damage-situation ship target enemies))
+            ;; Triage says retreat: escape if warpship
+            ((and (eq triage-decision :retreat) (ship-warpship-p ship))
+             (format t "[LISP] Triage: RETREAT - preserving ship for better fights~%")
+             (list :tactic "e"
+                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
+                   :missiles nil))
+            ;; Triage says hold: dodge defensively
+            ((eq triage-decision :hold)
+             (format t "[LISP] Triage: HOLD - dodging defensively~%")
+             (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
+            ;; Triage says fight: normal combat analysis
+            (t
+             (analyze-combat-situation ship target enemies)))))
     (if target
         (let* ((tactic (getf analysis :tactic))
                (alloc (getf analysis :alloc))
