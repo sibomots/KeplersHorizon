@@ -336,7 +336,6 @@ bool CombatAgent::apply(CombatApplyParam& param)
     // Apply damage via combat engine
     CombatEngine ce(gid);
     std::string result = ce.apply_damage(owner, target_ship , assignments);
-
     Telemetry::instance().write(result);
     return true;
 }
@@ -384,9 +383,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
         {
             if (row[0] != activeHex)
             {
-                Telemetry::instance().write(
-                    "Error: Orders pending for hex " + row[0] +
-                    " but active combat is in hex " + activeHex);
+                Telemetry::instance().write(std::format("Error: Orders pending for hex {} but active combat is in hex {}", row[0], activeHex));
                 return false;
             }
         }
@@ -450,14 +447,10 @@ bool CombatAgent::apply(CombatCommitParam& param)
         {
             // Notify opponent that this player has committed
             char opponent = (owner == 'A') ? 'B' : 'A';
-            Telemetry::instance().add_tell(
-                opponent, "Player " + std::string(1, owner) +
-                              " has committed combat orders for hex " + hex_id +
-                              ". Use 'combat order' then 'combat commit' for "
-                              "your ships.");
+            Telemetry::instance().add_tell( opponent,
+                    std::format("Player {} has committed combat orders for hex {}", owner, hex_id));
 
-            Telemetry::instance().write("TACTICAL: Sector " + hex_id +
-                                           " - Awaiting enemy orders.");
+            Telemetry::instance().write(std::format("TACTICAL: Sector {} - Awaiting enemy orders", hex_id));
         }
     }
     return true;
@@ -487,7 +480,7 @@ bool CombatAgent::apply(CombatCancelParam& param)
             "AND committed=0", {gid, owner});
 
     Telemetry::instance().write(
-        "TACTICAL: Orders rescinded. Issue new commands.");
+        "TACTICAL: Orders rescinded. Issue new orders.");
     return true;
 }
 

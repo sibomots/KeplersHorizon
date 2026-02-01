@@ -64,7 +64,12 @@
     (if hex (string-downcase hex) "")))
 
 (defun ship-pd (ship)
+  "Remaining PD for power allocation (base - spent)."
   (or (getf ship :pd) 0))
+
+(defun ship-base-pd (ship)
+  "Physical PD for damage assignment (from ships table)."
+  (or (getf ship :base-pd) (ship-pd ship)))
 
 (defun ship-beam (ship)
   (or (getf ship :b) 0))

@@ -247,25 +247,37 @@
 (defun issue-damage-assignment (ship)
   "Issue damage assignment command.
    Strategy: Preserve PD last (most valuable for retreat/combat).
-   Secondary: Preserve screens (screen + tech = absorption)."
+   Secondary: Preserve screens (screen + tech = absorption).
+   Uses base-pd (physical HP) not adjusted pd (power budget)."
   (let* ((damage (ship-pending-damage ship))
-         (pd (ship-pd ship))
+         (pd (ship-base-pd ship))
          (beam (ship-beam ship))
          (screen (ship-screen ship))
          (tube (ship-tube ship))
          (total-hp (+ pd beam screen tube)))
     ;; If damage >= total HP, ship is destroyed - assign all
     (if (>= damage total-hp)
-        (list (make-cmd "ca" (format nil "~A pd=~A b=~A s=~A t=~A"
-                                     (ship-code ship) pd beam screen tube)))
+        (list (make-cmd "ca" (build-ca-args (ship-code ship) pd beam screen tube)))
         ;; Otherwise, allocate damage preserving PD and screens
         (let ((alloc (allocate-damage damage tube beam screen pd)))
-          (list (make-cmd "ca" (format nil "~A pd=~A b=~A s=~A t=~A"
-                                       (ship-code ship)
-                                       (getf alloc :pd)
-                                       (getf alloc :b)
-                                       (getf alloc :s)
-                                       (getf alloc :t))))))))
+          (list (make-cmd "ca" (build-ca-args (ship-code ship)
+                                              (getf alloc :pd)
+                                              (getf alloc :b)
+                                              (getf alloc :s)
+                                              (getf alloc :t))))))))
+
+(defun build-ca-args (ship-code pd beam screen tube)
+  "Build CA command args, omitting zero values."
+  (let ((parts (list ship-code)))
+    (when (> pd 0)
+      (push (format nil "pd=~A" pd) parts))
+    (when (> beam 0)
+      (push (format nil "b=~A" beam) parts))
+    (when (> screen 0)
+      (push (format nil "s=~A" screen) parts))
+    (when (> tube 0)
+      (push (format nil "t=~A" tube) parts))
+    (format nil "~{~A~^ ~}" (nreverse parts))))
 
 (defun allocate-damage (damage tube beam screen pd)
   "Allocate damage to attributes.

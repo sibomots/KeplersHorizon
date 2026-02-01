@@ -26,7 +26,8 @@ struct AAShipInfo
     std::string code;
     std::string name;
     std::string hex_id;
-    int pd;
+    int pd;      // Remaining PD for power allocation (base - spent)
+    int base_pd; // Physical PD for damage assignment (from ships table)
     int beam;
     int screen;
     int tube;
@@ -50,9 +51,10 @@ struct AAShipInfo
     int last_beam;    // Power allocated to beam
 
     AAShipInfo()
-        : pd(0), beam(0), screen(0), tube(0), missile(0), sr(0), tech_level(0),
-          is_warpship(true), needs_combat_order(false), pending_damage(0),
-          escape_pending(false), last_tactic('\0'), last_drive(0), last_beam(0)
+        : pd(0), base_pd(0), beam(0), screen(0), tube(0), missile(0), sr(0),
+          tech_level(0), is_warpship(true), needs_combat_order(false),
+          pending_damage(0), escape_pending(false), last_tactic('\0'),
+          last_drive(0), last_beam(0)
     {
     }
 };

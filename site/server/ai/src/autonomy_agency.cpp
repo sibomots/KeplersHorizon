@@ -387,10 +387,12 @@ void AutonomyAgency::gather()
                     m_slate.game_id, row[3]);
             }
 
-            // Compute remaining PD (base PD minus spent this turn)
-            int base_pd = std::atoi(row[4].c_str());
+            // base_pd = physical PD for damage assignment
+            // pd = remaining PD for power allocation (base - spent this turn)
+            int raw_pd = std::atoi(row[4].c_str());
             int pd_spent = std::atoi(row[12].c_str());
-            ship.pd = base_pd - pd_spent;
+            ship.base_pd = raw_pd;
+            ship.pd = raw_pd - pd_spent;
             ship.beam = std::atoi(row[5].c_str());
             ship.screen = std::atoi(row[6].c_str());
             ship.tube = std::atoi(row[7].c_str());
@@ -540,6 +542,7 @@ void AutonomyAgency::gather()
     }
 
     // For AI ships in combat hexes, check if they need orders or damage
+    std::string aa_owner(1, m_slate.aa_player);
     for (AAShipInfo& ship : m_slate.own_ships)
     {
         for (const AACombatHex& ch : m_slate.active_combats)
@@ -551,7 +554,6 @@ void AutonomyAgency::gather()
                 // don't re-issue
                 if (ch.stage == 0)
                 {
-                    std::string aa_owner(1, m_slate.aa_player);
                     std::string sql_has_order =
                         "SELECT COUNT(*) FROM combat_orders "
                         "WHERE game_id=? AND owner=? AND ship_code=? AND "
@@ -584,7 +586,7 @@ void AutonomyAgency::gather()
                         "owner=?";
                     auto dmg_rows =
                         db.Query(sql_pending, {m_slate.game_id, ch.hex_id,
-                                               ship.code, m_slate.aa_player});
+                                               ship.code, aa_owner});
                     if (!dmg_rows.empty())
                     {
                         ship.pending_damage = std::atoi(dmg_rows[0][0].c_str());

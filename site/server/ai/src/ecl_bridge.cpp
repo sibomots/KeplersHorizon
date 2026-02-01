@@ -239,6 +239,9 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_int(s.pd), plist);
         plist = make_cons(make_keyword("pd"), plist);
 
+        plist = make_cons(make_int(s.base_pd), plist);
+        plist = make_cons(make_keyword("base-pd"), plist);
+
         plist = make_cons(make_string(s.hex_id), plist);
         plist = make_cons(make_keyword("hex"), plist);
 
