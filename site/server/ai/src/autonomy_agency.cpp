@@ -542,7 +542,6 @@ void AutonomyAgency::gather()
     }
 
     // For AI ships in combat hexes, check if they need orders or damage
-    std::string aa_owner(1, m_slate.aa_player);
     for (AAShipInfo& ship : m_slate.own_ships)
     {
         for (const AACombatHex& ch : m_slate.active_combats)
@@ -558,9 +557,9 @@ void AutonomyAgency::gather()
                         "SELECT COUNT(*) FROM combat_orders "
                         "WHERE game_id=? AND owner=? AND ship_code=? AND "
                         "round=?";
-                    auto order_rows =
-                        db.Query(sql_has_order, {m_slate.game_id, aa_owner,
-                                                 ship.code, ch.round});
+                    auto order_rows = db.Query(
+                        sql_has_order, {m_slate.game_id, m_slate.aa_player,
+                                        ship.code, ch.round});
 
                     int order_count = order_rows.empty()
                                           ? 0
@@ -586,7 +585,7 @@ void AutonomyAgency::gather()
                         "owner=?";
                     auto dmg_rows =
                         db.Query(sql_pending, {m_slate.game_id, ch.hex_id,
-                                               ship.code, aa_owner});
+                                               ship.code, m_slate.aa_player});
                     if (!dmg_rows.empty())
                     {
                         ship.pending_damage = std::atoi(dmg_rows[0][0].c_str());
