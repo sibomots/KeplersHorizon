@@ -1,0 +1,85 @@
+<!-- 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This file is part of Kepler's Horizon ;;
+;;                                       ;;
+;; Licensed under BSD 3-Clause License   ;;
+;;                                       ;;
+;; Copyright (c) 2025, sibomots          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-->
+
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Kepler's Horizon Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="/bkhZZ/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+  <link href="kh.css" rel="stylesheet">
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Kepler's Horizon</div>
+      <a href="https://github.com/sibomots/KeplersHorizon/wiki/How-to-Play" target="_blank"
+        style="color:var(--accent); font-size:20px; text-decoration:none; margin-left:20px;">HOW TO PLAY</a>
+      <div class="right">
+        <span id="loginBadge" class="pill">loading...</span>
+        <!-- Map button hidden: split view shows map permanently -->
+        <!-- Save button removed: use 'save' console command instead -->
+        <button id="btnLobby">EXIT</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <section class="panel" style="flex:1;">
+        <h2>
+          <span id="consoleTitle">Main Console</span>
+          <span id="turnStatus" style="padding:2px 10px; border-radius:6px; font-size:14px;">--</span>
+        </h2>
+
+        <div class="viewport">
+          <!-- Map FIRST in DOM order so console can render on top -->
+          <div id="mapView">
+            <iframe id="mapFrame" src="map_view.html" title="Kepler's Horizon Map"></iframe>
+          </div>
+
+          <div id="consoleLog"></div>
+        </div>
+
+        <div class="inputRow">
+          <input id="commandInput" style="text-transform: uppercase;" type="text" placeholder="ENTER COMMAND..."
+            autocomplete="off" spellcheck="false">
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Hidden elements for JS state tracking -->
+  <div style="display:none;">
+    <span id="stGameId">-</span>
+    <span id="stRound">-</span>
+    <span id="stPlayer">-</span>
+    <span id="stPhase">-</span>
+    <span id="stVP">-</span>
+    <span id="stBP">-</span>
+    <span id="peerOnlineStatus">-</span>
+    <div id="statusCombat">
+      <span id="stCmbCount">-</span>
+      <span id="stCmbHexes">-</span>
+    </div>
+    <div id="sensorStatus"></div>
+  </div>
+
+  <script src="constraints.js?v=3"></script>
+  <script src="slate.js?v=3"></script>
+  <script src="behavior.js?v=3"></script>
+  <script src="interface.js?v=3"></script>
+</body>
+
+</html>

@@ -1,0 +1,332 @@
+<!-- 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This file is part of Kepler's Horizon ;;
+;;                                       ;;
+;; Licensed under BSD 3-Clause License   ;;
+;;                                       ;;
+;; Copyright (c) 2025, sibomots          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kepler's Horizon - Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050508;
+            --panel: #0a0a12;
+            --text: #3f3;
+            --muted: #2a2;
+            --accent: #4f4;
+            --border: #1a3a1a;
+            --good: #4f8;
+            --bad: #f44;
+            --glow: rgba(50, 255, 50, 0.8);
+            --glow-soft: rgba(50, 255, 50, 0.4);
+            --ai-color: #f80;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Fira Code", monospace;
+            font-weight: 500;
+            font-style: normal;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px var(--glow), 0 0 15px var(--glow-soft);
+        }
+
+        .room-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 400px;
+            width: 100%;
+            padding: 1.5rem;
+            box-shadow: 0 0 30px rgba(50, 255, 50, 0.2);
+        }
+
+        .room-code-display {
+            /* Hidden from UI - kept for internal use */
+            display: none;
+            font-family: "Fira Code", monospace;
+            font-weight: 500;
+            font-style: normal;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-align: center;
+            letter-spacing: 0.3rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            text-shadow: 0 0 15px var(--glow);
+        }
+
+        .room-code-display:hover {
+            color: var(--text);
+            text-shadow: 0 0 25px var(--glow);
+        }
+
+        .room-name {
+            text-align: center;
+            color: var(--muted);
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+        }
+
+        h4 {
+            font-size: 1.6rem;
+        }
+
+        .seat-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .seat-card.filled {
+            border-color: var(--good);
+            box-shadow: 0 0 10px rgba(68, 255, 136, 0.3);
+        }
+
+        .seat-card.empty {
+            border-color: var(--muted);
+        }
+
+        .seat-card.you {
+            border-color: var(--accent);
+            background: rgba(50, 255, 50, 0.1);
+            box-shadow: 0 0 15px var(--glow-soft);
+        }
+
+        .seat-card.ai {
+            border-color: var(--ai-color);
+            box-shadow: 0 0 10px rgba(255, 136, 0, 0.3);
+        }
+
+        .seat-label {
+            font-size: 1rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .seat-name {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .seat-name.waiting {
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        .seat-name.ai {
+            color: var(--ai-color);
+            text-shadow: 0 0 5px rgba(255, 136, 0, 0.6);
+        }
+
+        .btn-primary {
+            background: transparent;
+            border: 1px solid var(--text);
+            color: var(--text);
+            font-family: "Fira Code", monospace;
+            font-weight: 500;
+            font-style: normal;
+            font-size: 1.4rem;
+            text-shadow: 0 0 5px var(--glow);
+        }
+
+        .btn-primary:hover {
+            background: var(--text);
+            color: var(--bg);
+            box-shadow: 0 0 15px var(--glow);
+        }
+
+        .btn-primary:disabled {
+            background: transparent;
+            border-color: var(--muted);
+            color: var(--muted);
+            text-shadow: none;
+        }
+
+        .btn-outline-danger {
+            border-color: var(--bad);
+            color: var(--bad);
+            font-family: "Fira Code", monospace;
+            font-weight: 500;
+            font-style: normal;
+            font-size: 1.3rem;
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--bad);
+            color: var(--bg);
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        .form-select {
+            background-color: var(--bg);
+            border-color: var(--border);
+            color: var(--text);
+            font-family: "Fira Code", monospace;
+            font-weight: 500;
+            font-style: normal;
+            font-size: 1.3rem;
+            text-shadow: 0 0 5px var(--glow);
+        }
+
+        .form-select:focus {
+            background-color: var(--bg);
+            border-color: var(--accent);
+            color: var(--text);
+            box-shadow: 0 0 8px var(--glow-soft);
+        }
+
+        .form-select option {
+            background: var(--panel);
+            color: var(--text);
+        }
+
+        .status-text {
+            text-align: center;
+            margin: 1.5rem 0;
+            font-size: 1.3rem;
+        }
+
+        .status-waiting {
+            color: var(--muted);
+        }
+
+        .status-ready {
+            color: var(--good);
+            text-shadow: 0 0 10px rgba(68, 255, 136, 0.5);
+        }
+
+        .copy-hint {
+            /* Hidden from UI */
+            display: none;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--muted);
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            color: var(--muted);
+            font-size: 1.1rem;
+        }
+
+        /* Module Radio Buttons */
+        .module-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .module-radio {
+            display: none;
+        }
+
+        .module-btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-shadow: 0 0 3px var(--glow-soft);
+        }
+
+        .module-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .module-radio:checked+.module-btn {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(50, 255, 50, 0.15);
+            box-shadow: 0 0 15px var(--glow-soft);
+            text-shadow: 0 0 8px var(--glow);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="room-card">
+        <h4 class="text-center mb-0">Room</h4>
+        <div class="room-code-display" id="roomCode" title="Click to copy">------</div>
+        <div class="copy-hint">Click code to copy</div>
+        <div class="room-name" id="roomName">Loading...</div>
+
+        <div class="row">
+            <div class="col-6">
+                <div class="seat-card" id="seatA">
+                    <div class="seat-label">Player A</div>
+                    <div class="seat-name waiting" id="seatAName">Waiting...</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="seat-card" id="seatB">
+                    <div class="seat-label">Player B</div>
+                    <div class="seat-name waiting" id="seatBName">Waiting...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label text-center d-block">Module</label>
+            <div class="module-group text-center">
+                <select id="moduleSelect" class="form-select form-select-lg"
+                    style="max-width: 300px; margin: 0 auto; background-color: #1a1a2e; color: #00ff88; border-color: #00ff88;">
+                    <option value="1" selected>Kepler's Horizon</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- NEW: Game Mode Selection -->
+        <div class="mb-3">
+            <label class="form-label text-center d-block">Game Mode</label>
+            <div class="module-group text-center">
+                <input type="radio" id="modeTwoPlayer" name="gameMode" value="twoplayer" class="module-radio" checked>
+                <label for="modeTwoPlayer" class="module-btn">Two Player</label>
+
+                <input type="radio" id="modeSinglePlayer" name="gameMode" value="singleplayer" class="module-radio">
+                <label for="modeSinglePlayer" class="module-btn">vs AI</label>
+            </div>
+        </div>
+        <!-- END NEW -->
+
+        <div class="status-text" id="statusText">
+            <span class="status-waiting">Waiting for opponent...</span>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary btn-lg" id="btnStart" disabled>Start Game</button>
+            <button class="btn btn-outline-danger" id="btnLeave">Leave Room</button>
+        </div>
+    </div>
+
+    <script src="room.js"></script>
+</body>
+
+</html>

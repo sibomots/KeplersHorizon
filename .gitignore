@@ -1,0 +1,9 @@
+site/server/run.sh
+site/server/*.pid
+site/server/oldlogs
+site/server/*.log
+site/db/99-fix.sql
+**/makefile
+site/server/build/**
+site/server/run.sh
+site/server/dsl/*

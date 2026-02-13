@@ -1,0 +1,69 @@
+///////////////////////////////////////////
+// This file is part of Kepler's Horizon //
+//                                       //
+// Licensed under BSD 3-Clause License   //
+//                                       //
+// Copyright (c) 2025, sibomots          //
+///////////////////////////////////////////
+#include "score_command.h"
+
+#include <sstream>
+
+#include "db.h"
+#include "logger.h"
+#include "statemachine.h"
+#include "telemetry.h"
+
+bool ScoreCommand::invoke(void)
+{
+    show_overview();
+    return true;
+}
+
+void ScoreCommand::show_overview()
+{
+    GameState s = StateMachine::instance().get_game_state();
+    int game_id = StateMachine::instance().get_game_id();
+    char me = StateMachine::instance().get_current_player();
+    char enemy = me ^ 0x03;
+
+    DatabaseManager& db = DatabaseManager::instance();
+
+    // Get active player's username (whose turn it is)
+    std::string active_username = "Unknown";
+    std::string q = "SELECT u.username FROM users u "
+                    "JOIN game_seats gs ON gs.user_id = u.id "
+                    "WHERE gs.game_id=? AND gs.seat=?";
+
+    auto active_seat = db.Query(q, {game_id, s.active_player});
+
+    if (!active_seat.empty())
+    {
+        active_username = active_seat[0][0];
+    }
+
+    // VP needed to win (advanced mode default)
+    int vp_needed = 3;
+
+    int my_vp = (KH_EQU(me, 'A')) ? s.vpA : s.vpB;
+    int enemy_vp = (KH_EQU(me, 'A')) ? s.vpB : s.vpA;
+    int my_credits = (KH_EQU(me, 'A')) ? s.creditsA : s.creditsB;
+
+    // Get tech level from ships (highest tech_level among player's ships)
+    std::string qq =
+        "SELECT COALESCE(MAX(tech_level), 0) FROM ships WHERE game_id=? "
+        " AND owner=? AND destroyed_at IS NULL";
+
+    auto tech_row = db.Query(qq, {game_id, me});
+
+    int tech_level = tech_row.empty() ? 0 : std::atoi(tech_row[0][0].c_str());
+
+    std::ostringstream out;
+    out << "TURN: " << active_username << "  PHASE: " << s.phase_name()
+        << "  ROUND: " << s.round << "\n"
+        << "CREDITS: " << my_credits << " CR  TECH: L" << tech_level << "\n"
+        << "VICTORY: You " << my_vp << ", Enemy " << enemy_vp << " (need "
+        << vp_needed << " to win)\n";
+
+    Telemetry::instance().write(out.str());
+}

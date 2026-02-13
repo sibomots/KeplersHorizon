@@ -1,0 +1,18 @@
+///////////////////////////////////////////
+// This file is part of Kepler's Horizon //
+//                                       //
+// Licensed under BSD 3-Clause License   //
+//                                       //
+// Copyright (c) 2025, sibomots          //
+///////////////////////////////////////////
+#ifndef __KH_ICMD_H__
+#define __KH_ICMD_H__
+
+class ICmd
+{
+  public:
+    virtual ~ICmd() = default;
+    virtual bool invoke() = 0;
+};
+
+#endif

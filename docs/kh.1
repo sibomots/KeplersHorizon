@@ -1,0 +1,1446 @@
+.TH KEPLERS_HORIZON 1 "2026-02-13" "Version 1.2" "Kepler's Horizon Game Manual"
+.\"
+.\" ===================================================================
+.\" KEPLER'S HORIZON - COMPLETE GAME MANUAL
+.\" In the spirit of the AD&D Dungeon Master's Guide (1st Edition, 1979)
+.\" ===================================================================
+.\"
+.SH NAME
+.B kh
+\- Kepler's Horizon game server: a two-player tactical game of interstellar
+combat, fleet command, and economic conquest
+.SH SYNOPSIS
+.B kh
+[\fIOPTIONS\fR]
+.br
+.B kh \-\^\-help
+.br
+.B kh \-\^\-version
+.br
+.B kh \-\^\-port \fIPORT\fR
+\-\^\-dbusr \fIUSER\fR
+\-\^\-dbpass \fIPASS\fR
+\-\^\-dbname \fIDB\fR
+[\-\^\-dbhost \fIHOST\fR]
+.br
+.B kh \-\^\-ai \fIPATH\fR
+[\-\^\-log \fIFILE\fR]
+[\-\^\-monitor]
+.SH DESCRIPTION
+\fBKepler's Horizon\fR is a deterministic, two-player tactical game of
+interstellar warfare.
+Players build individualized warships, navigate a hex-based star map connected
+by warplines, and resolve combat through strategic power allocation\(emwithout
+dice.
+The objective is to occupy enemy base star hexes and accumulate victory points.
+.PP
+The game supports single-player mode against an autonomous AI opponent
+implemented in Common Lisp via the Embeddable Common Lisp (ECL) runtime.
+The AI plays by the same rules as human players, issuing the same commands
+through the same game engine.
+.PP
+This manual is the authoritative reference for the server, its command language,
+the AI agent architecture, the economic system, and the Milieu Codex of Stars.
+.PP
+\fBA note on design philosophy.\fR
+Kepler's Horizon is intentionally minimal.
+There are no dice, no random events in combat, and no hidden information.
+All game state is public.
+Strategic depth emerges from constrained movement, simultaneous
+decision-making in combat, and irreversible consequences.
+Equal inputs always yield equal outcomes.
+The rules favor clarity over complexity.
+.\" ===================================================================
+.SH OPTIONS
+.SS "Generic Program Information"
+.TP
+.B \-\^\-help
+Print a usage summary and exit.
+.TP
+.BR \-v ", " \-\^\-version
+Print the version number and git SHA, then exit.
+.SS "Database Connection"
+.TP
+.BR \-H ", " \-\^\-dbhost " \fIHOST\fR"
+MySQL server hostname.
+Default is \fB127.0.0.1\fR.
+.TP
+.BR \-u ", " \-\^\-dbusr " \fIUSER\fR"
+MySQL user name.
+.TP
+.BR \-d ", " \-\^\-dbname " \fIDB\fR"
+MySQL database name (typically \fBkhdb\fR).
+.TP
+.BR \-p ", " \-\^\-dbpass " \fIPASS\fR"
+MySQL password.
+.SS "Network"
+.TP
+.BR \-P ", " \-\^\-port " \fIPORT\fR"
+HTTP port for the REST API.
+Default is \fB8080\fR.
+.SS "AI Configuration"
+.TP
+.BR \-\^\-ai " \fIPATH\fR"
+Path to the directory containing AI DSL files (Common Lisp sources).
+Default is \fBdsl\fR relative to the working directory.
+The server loads eight Lisp files from this directory on first
+single-player game start:
+.IR aa-util.lisp ", " aa-strategy.lisp ", " aa-goals.lisp ", "
+.IR aa-economic.lisp ", " aa-build.lisp ", " aa-movement.lisp ", "
+.IR aa-combat.lisp ", " aa-core.lisp .
+.SS "Logging"
+.TP
+.BR \-L ", " \-\^\-log " \fIFILE\fR"
+Write server log output to \fIFILE\fR.
+.SS "Monitor Mode"
+.TP
+.BR \-M ", " \-\^\-monitor
+Enable terminal command input on the server console.
+.\" ===================================================================
+.SH GETTING STARTED
+.SS Web Portal
+Login or create an account at the web portal.
+The portal serves static HTML pages and communicates with the game server
+through a REST API.
+.SS Lobby
+The lobby displays open game rooms.
+A player can create a new room (which selects a universe module) or join
+an existing room by taking seat A or seat B.
+.SS Starting a Game
+When both seats are filled, either player may start the game.
+In single-player mode, an AI user occupies the second seat automatically.
+.SS Module Selection
+The game host selects the universe module at room creation time.
+A \fBModule\fR defines a complete game universe: map topology, star systems,
+planets, species, resources, anomalies, and facilities.
+The game engine is module-agnostic; only content varies between modules.
+.PP
+The default module is \fBKepler's Horizon\fR: 28 star systems across
+Alpha and Beta territories, with a Contested Reach between them.
+.\" ===================================================================
+.SH MAP COMPONENTS
+The game map is a hex grid overlaid with named star systems and warpline
+connections.
+Not every hex contains a star.
+.TP
+.B Star Hex
+A map hex containing a star system (large or small).
+Star hexes are the nodes of the warpline graph.
+Ships must stop at enemy-occupied star hexes.
+.TP
+.B Base Star Hex
+A star hex containing a large star.
+There are six base stars total, three per side (Alpha and Beta).
+Occupying enemy base stars earns victory points.
+.TP
+.B Space Hex
+A hex with no star and no warpline.
+Ships may pass through freely.
+.TP
+.B Warp Line
+A bi-directional edge connecting two star hexes.
+Traversing a warpline costs 1 PD regardless of distance.
+Warplines pass through intermediate hexes but those hexes are treated
+as space hexes for movement purposes.
+.\" ===================================================================
+.SH SHIP TYPES AND ATTRIBUTES
+.SS "Ship Types"
+.TP
+.B WarpShip (W1\-W9)
+Capital ships capable of interstellar travel via warplines.
+WarpShips carry a Warp Generator (5 BP, mandatory) and may equip
+SystemShip Racks to carry escort vessels.
+Hull codes are W followed by a single digit: W1, W2, ... W9.
+A fleet may contain up to 9 WarpShips.
+.TP
+.B SystemShip (S01\-S99)
+Escort vessels that operate within a single star hex.
+SystemShips have no Warp Generator and cannot traverse warplines.
+They must be carried by WarpShips in SystemShip Racks.
+Hull codes are S followed by one or two digits: S1, S11, S25, etc.
+.SS "Ship Attributes"
+Every ship has the following combat-relevant attributes, each costing
+Build Points (BP) at construction time:
+.TS
+tab(|);
+l l l l.
+Attribute|Code|Cost|Description
+_
+Power/Drive|PD|1 BP/unit|Engine strength; powers movement and combat
+Warp Generator|WG|5 BP|WarpShips only (automatic, mandatory)
+Beam|B|1 BP/unit|Energy weapon; damage = allocation + tech level
+Screen|S|1 BP/unit|Energy shield; absorbs = allocation + tech level
+Tube|T|1 BP/tube|Launches 1 missile per combat round
+Missiles|M|1 BP/3|Projectile weapons; damage = 2 + tech level
+SystemShip Racks|SR|1 BP/rack|Carries 1 SystemShip per rack (WarpShips only)
+.TE
+.PP
+Additionally, ships may be equipped with economic hardware:
+.TS
+tab(|);
+l l l l.
+Equipment|Code|Cost|Purpose
+_
+Long Range Scanner|LRS|50 CR|Required for \fBextract scan\fR and \fBsurvey\fR
+Transporter Beam|TB|75 CR|Enables resource extraction
+Mining/Salvage Drones|DR|100 CR|Enables extraction and salvage operations
+.TE
+.PP
+Equipment does not affect combat.
+A ship is destroyed only when all combat attributes (PD, B, S, T, M, SR)
+are reduced to zero.
+The Warp Generator never takes damage.
+.SS "Technology Levels"
+Ships retain their original tech level permanently.
+Tech level is determined by the game round at construction time:
+.TS
+tab(|);
+l l.
+Rounds|Tech Level
+_
+1\-4|Level 0
+5\-8|Level 1
+9\-12|Level 2
+13\-16|Level 3
+17+|+1 per 4 rounds
+.TE
+.PP
+Tech level adds to:
+.IP \(bu 2
+Beam damage (when hitting)
+.IP \(bu 2
+Missile damage (base 2 + tech level)
+.IP \(bu 2
+Screen absorption (when powered)
+.PP
+A Tech Level 2 ship with Beam 3 allocated to beams deals 5 damage on a hit.
+A Tech Level 2 ship with Screen 2 allocated absorbs 4 hits.
+.\" ===================================================================
+.SH GAME SEQUENCE
+Each player-turn consists of the following phases, in order.
+The command \fBnext\fR (alias \fBn\fR) advances to the next phase.
+The command \fBdone\fR (alias \fBZZ\fR) ends the current player's turn
+and passes initiative to the opponent.
+.PP
+.RS
+.IP "1." 4
+\fBCount Victory Points.\fR
+At the start of each player-turn, the system awards 1 VP for each
+enemy base star hex occupied by your ships.
+.IP "2." 4
+\fBBuild Ships.\fR
+Receive Stellar Credits (CR) and spend Build Points (BP) to construct
+new ships, repair damaged ships, resupply missiles, and manage equipment.
+.IP "3." 4
+\fBMovement.\fR
+Move WarpShips along hex paths and warplines.
+Pick up and drop off SystemShips.
+Deploy newly built ships to your base star hexes.
+.IP "4." 4
+\fBResolve Combat.\fR
+At every star hex where opposing ships coexist, combat is triggered.
+Players issue simultaneous orders, resolve fire, assign damage,
+and handle retreats.
+.IP "5." 4
+\fBSystemShip Pick and Drop.\fR
+Free rearrangement of SystemShips at star hexes.
+No PD cost.
+Active player only.
+.IP "6." 4
+\fBEnd of Turn.\fR
+Finalize the turn.
+Market prices update after both players complete a round.
+.RE
+.\" ===================================================================
+.SH COMMANDS
+Commands are case-insensitive.
+Short aliases are shown after commas.
+All commands are entered in the console text field on the game page.
+.SS "Session Commands"
+.TP
+.B save \fIname\fR
+Save the current game state under \fIname\fR.
+The name must match the lexer pattern
+.BR [a\-zA\-Z][\-a\-zA\-Z0\-9]* :
+letters, digits, and dashes only.
+No underscores, dots, or spaces.
+Without arguments, shows usage.
+.TP
+.B load \fIname\fR
+Propose loading a previously saved game.
+This initiates a two-factor confirmation: the other player must
+type \fBaccept \fIname\fR\fR to confirm.
+Without arguments, lists available saves.
+.TP
+.B accept \fIname\fR
+Accept a pending load request from the other player.
+The game state is restored from the saved snapshot.
+.TP
+.B reject \fIname\fR
+Reject a pending load request.
+.TP
+.B delete \fIname\fR
+Delete a saved game permanently.
+.TP
+.B quit
+Exit the current game.
+The game is auto-saved as \fBautosaved-YYYY-MM-DD-HH-MM\fR.
+Combat state is nullified (ships remain in position; combat will
+re-trigger on reload).
+The other player receives a notification and is redirected to the lobby.
+The AI thread's game context is zeroed so it naturally ceases
+operating on this game.
+.TP
+.B clear\fR, \fBcls
+Clear the console display.
+.SS "Turn Management"
+.TP
+.B next\fR, \fBn
+Advance to the next game phase.
+Blocked if there are pending retreats or unresolved damage.
+.TP
+.B done\fR, \fBZZ
+Complete the current player's turn and pass initiative to the opponent.
+Blocked if there are pending retreats.
+.SS "Information Commands"
+.TP
+.B status
+Display current game state: whose turn, phase, round, credits, tech level.
+.TP
+.B score
+Display victory points and credits for both players, plus current
+round and tech level.
+.TP
+.B fleet
+Display a manifest of your entire fleet: every ship with its hull code,
+name, location, and current attribute values (PD, B, S, T, M, SR, equipment).
+.TP
+.B cargo \fIship\fR
+Display the cargo manifest for \fIship\fR: quantities of each resource
+type in the hold, cargo capacity, and missile storage.
+.TP
+.B hex \fIlocation\fR
+Show information about hex \fIlocation\fR: which ships occupy it,
+which star system (if any), active hex events, and warpline connections.
+.TP
+.B system \fIname\fR\fR, \fBsy \fIname\fR
+Show information about star system \fIname\fR.
+Subcommands:
+.RS
+.TP
+.B system \fIname\fR anomalies
+List anomalies at the system.
+.TP
+.B system \fIname\fR facilities
+List facilities at the system.
+.TP
+.B system \fIname\fR resources
+List extractable resources at the system.
+.TP
+.B system \fIname\fR planets
+List planets and moons in the system.
+.RE
+.TP
+.B survey \fIname\fR\fR, \fBsv \fIname\fR
+Survey a star system to increase your knowledge level (see MILIEU CODEX).
+Requires a ship with LRS at the target system.
+Each survey operation upgrades knowledge by one level.
+Without arguments, shows survey status.
+.TP
+.B galaxy\fR, \fBgx
+Complete overview of all systems and all ships in the game.
+.TP
+.B crt
+Display the Combat Results Table.
+.TP
+.B demo
+Show a brief demonstration of game commands.
+.TP
+.B help \fItopic\fR\fR, \fB? \fItopic\fR
+Show help for a command or topic.
+Without arguments, lists all available topics.
+Topics: general, build, move, combat, economy, info, turn, ship, crt, missiles.
+.TP
+.B recap
+Display a summary of recent game events.
+.SS "Build Commands"
+.TP
+.B build\fR, \fBbb
+Show current build state: active drafts and available BP.
+.TP
+.B build new \fIclass\fR \fIname\fR\fR, \fBbn \fIclass\fR \fIname\fR
+Create a new ship draft.
+\fIclass\fR is W (WarpShip) or S (SystemShip), optionally followed by
+1\-2 digits for a specific hull number (e.g., W4, S11).
+If no number is given, the game auto-assigns the next available hull code.
+\fIname\fR is the ship designation (e.g., Falcon, Avenger).
+.RS
+.PP
+\fBExamples:\fR
+.nf
+> bn W Falcon
+> bn S11 Avenger
+> build new W4 Destroyer
+.fi
+.RE
+.TP
+.B build drafts\fR, \fBbd
+List all pending build drafts.
+.TP
+.B build drafts \fIship\fR\fR, \fBbd \fIship\fR
+Show detailed attributes of a specific draft (by code or name).
+.TP
+.B build set \fItarget\fR \fIattributes\fR\fR, \fBbs \fItarget\fR \fIattributes\fR
+Set attributes on a draft ship.
+\fItarget\fR is ship code or name.
+Attribute syntax:
+.RS
+.TP
+.BR pd= N " or " d= N
+Power/Drive (1 BP per unit)
+.TP
+.BR b= N
+Beam weapon (1 BP per unit)
+.TP
+.BR s= N
+Screen defense (1 BP per unit)
+.TP
+.BR t= N
+Missile tubes (1 BP per tube)
+.TP
+.BR m= N
+Missiles (1 BP per 3 missiles)
+.TP
+.BR sr= N
+SystemShip racks (1 BP per rack, WarpShips only)
+.PP
+\fBExample:\fR bs Falcon pd=7 b=3 s=2 t=1 m=6
+.RE
+.TP
+.B build commit \fItarget\fR\fR, \fBbc \fItarget\fR
+Finalize a draft and add the ship to your fleet.
+BP is deducted.
+The ship appears in the fleet but must be deployed before it can act.
+.TP
+.B build cancel \fItarget\fR\fR, \fBbx \fItarget\fR
+Cancel a draft.
+No BP is deducted.
+.SS "Deployment Commands"
+.TP
+.B deploy \fIship\fR \fIsystem\fR\fR, \fBds \fIship\fR \fIsystem\fR
+Deploy a newly built ship to a base star system.
+.RS
+.PP
+The first deployment by either player claims a side of the map.
+The three base stars on that side become your home bases.
+Subsequent deployments must go to one of your claimed base stars.
+.RE
+.SS "Movement Commands"
+.TP
+.B move \fIship\fR \fIdest\fR [\fIvia...\fR]\fR, \fBm \fIship\fR \fIdest\fR [\fIvia...\fR]
+Move a WarpShip to \fIdest\fR, optionally through intermediate waypoints.
+Waypoints may be star system names or hex IDs (e.g., h1310).
+Movement costs 1 PD per hex or per warpline jump.
+.RS
+.PP
+\fBCritical rule:\fR WarpShips are forced to stop at any star hex occupied
+by enemy ships.
+Combat is triggered at the end of the movement phase.
+.PP
+PD expended for movement is \fInot\fR permanently reduced.
+Full PD is available for combat power allocation.
+.PP
+\fBExample:\fR m W6 Tavon Xylen
+.br
+W6 moves to Tavon, then onward to Xylen.
+.RE
+.TP
+.B pick \fIsystemship\fR \fIwarpship\fR\fR, \fBpu \fIsystemship\fR \fIwarpship\fR
+Load a SystemShip onto a WarpShip's rack.
+Costs 1 PD during the movement phase.
+Ships must be at the same hex.
+.TP
+.B drop \fIsystemship\fR \fIwarpship\fR\fR, \fBdo \fIsystemship\fR \fIwarpship\fR
+Unload a SystemShip from a WarpShip.
+Costs 1 PD during the movement phase.
+.SS "Combat Commands"
+.TP
+.B combat\fR, \fBcm
+Show active combat status at all contested hexes.
+.TP
+.B combat order \fIship\fR \fItactic\fR \fItarget\fR \fIallocation\fR\fR, \fBco ...
+Issue a combat order for one of your ships.
+.RS
+.PP
+\fBTactics:\fR
+.TP
+.B a\fR (attack)
+Aggressive offense.
+Best at 0 to +2 drive advantage.
+.TP
+.B d\fR (dodge)
+Defensive maneuver.
+Good at +1/+2 drive, hard to hit at 0/\-1.
+.TP
+.B e\fR (escape/retreat)
+Attempt to flee combat.
+WarpShips only.
+SystemShips may never select escape.
+.PP
+\fBAllocation:\fR pd=N b=N s=N t=N m=N
+.PP
+\fBBeam fire example:\fR
+.nf
+> co W3 a S25 pd=2 b=3 s=2
+.fi
+W3 attacks S25: 2 drive, 3 beam, 2 screen.
+.PP
+\fBMissile fire example:\fR
+.nf
+> co S25 d W3 pd=4 t=1 m=3
+.fi
+S25 dodges while firing 1 missile at W3 with missile drive=3.
+Each \fBm=\fR parameter specifies one missile's drive power.
+.RE
+.TP
+.B combat commit\fR, \fBcc
+Lock in all pending combat orders.
+Once both players commit, the combat round resolves automatically.
+.TP
+.B combat cancel\fR, \fBcx
+Cancel all pending combat orders.
+.TP
+.B combat drafts\fR, \fBcd
+Show your pending (uncommitted) combat orders.
+.TP
+.B combat apply \fIship\fR \fIallocation\fR\fR, \fBca \fIship\fR \fIallocation\fR
+Assign damage to a ship's attributes after combat resolution.
+.RS
+.PP
+\fBExample:\fR ca W3 pd=2 b=1 s=2
+.br
+Distributes 5 total damage: 2 to PD, 1 to Beam, 2 to Screen.
+The total assigned must equal the damage dealt (or consume all
+remaining HP if the ship is destroyed).
+.RE
+.TP
+.B retreat \fIship\fR \fIhex\fR\fR, \fBrt \fIship\fR \fIhex\fR
+Retreat a ship from combat to an adjacent hex.
+Retreat destinations are validated against the hex adjacency graph.
+.SS "Repair and Resupply Commands"
+.TP
+.B repair \fIship\fR \fIattr\fR=\fIN\fR\fR, \fBrp \fIship\fR \fIattr\fR=\fIN\fR
+Repair a damaged ship.
+1 BP per attribute point restored.
+Ship must start the turn at a friendly base star hex (or at a
+REPAIR_DOCK or SHIPYARD facility).
+Cannot repair beyond original built capacity.
+One attribute per command invocation.
+.RS
+.PP
+\fBExample:\fR rp W3 pd=2
+.RE
+.TP
+.B resupply \fIship\fR \fIquantity\fR\fR, \fBrs \fIship\fR \fIquantity\fR
+Resupply missiles at 1 BP per 3 missiles (up to original capacity).
+Ship must be at a friendly base star hex.
+.SS "Economy Commands"
+.TP
+.B extract scan\fR, \fBex scan
+Scan the current system for harvestable resources.
+Requires a ship with LRS (Long Range Scanner) at the system.
+Yield is modified by your knowledge level (see MILIEU CODEX).
+.TP
+.B extract \fIship\fR \fIresource\fR\fR, \fBex \fIship\fR \fIresource\fR
+Extract a resource from the current system into the ship's cargo hold.
+Requires TB (Transporter Beam) or DR (Drones).
+Multi-word resources use spaces: \fBex W1 rare earth\fR.
+.TP
+.B market\fR, \fBmk
+Display current market prices with trend indicators
+(RISING, STABLE, FALLING).
+.TP
+.B market \fIresource\fR\fR, \fBmk \fIresource\fR
+Show price history for a specific resource.
+.TP
+.B trade list\fR, \fBtr list
+Show base trade prices for all resources.
+.TP
+.B trade buy \fIresource\fR \fIquantity\fR\fR, \fBtr buy ...
+Purchase resources at the current market price, deducting credits.
+.TP
+.B trade sell \fIresource\fR \fIquantity\fR\fR, \fBtr sell ...
+Sell resources from cargo at 75% of market price.
+.TP
+.B trade transfer \fIfrom\fR \fIto\fR \fIresource\fR \fIqty\fR\fR, \fBtr ts ...
+Move resources between ships at the same location.
+.TP
+.B fabricate list\fR, \fBfab list
+Show available fabrication recipes and their material costs.
+.TP
+.B fabricate \fIrecipe\fR [\fIquantity\fR]\fR, \fBfab \fIrecipe\fR ...
+Manufacture items from raw materials in cargo.
+.TP
+.B outfit \fIship\fR lrs|tb|drones\fR, \fBout \fIship\fR ...
+Install equipment on a ship.
+.TP
+.B outfit list\fR, \fBout list
+Show available equipment and their credit costs.
+.TP
+.B salvage scan\fR, \fBjk scan
+Scan for salvageable objects at the current hex.
+Requires DR (Drones).
+Discovery chance is modified by knowledge level.
+.TP
+.B salvage \fIship\fR\fR, \fBjk \fIship\fR
+Conduct a salvage operation at the current hex.
+Requires DR.
+Hazard chance is modified by knowledge level.
+.SS "Development Commands"
+.TP
+.B gamedev\fR, \fBgd
+Show current development override status.
+.TP
+.B gamedev \fIsubcmd\fR \fIvalue\fR\fR, \fBgd \fIsubcmd\fR ...
+Set development overrides.
+Subcommands: env, combat, move, crt.
+.TP
+.B gamedev reset\fR, \fBgd reset
+Clear all development overrides.
+.\" ===================================================================
+.SH COMBAT RESOLUTION
+Combat is the heart of Kepler's Horizon.
+It is entirely deterministic: given the same orders, the same results
+will always occur.
+There are no random rolls.
+.SS "Combat Trigger"
+Combat is triggered when opposing ships occupy the same star hex at the
+end of the movement phase.
+The system creates a \fBcombat_state\fR record for that hex and notifies
+both players.
+.SS "Combat Stages"
+Combat at each hex proceeds through four stages in a cycle:
+.TS
+tab(|);
+l l l.
+Stage|Name|Description
+_
+0|ORDERS|Both players issue orders for their ships
+1|RESOLVE_READY|System resolves the round (automatic)
+2|DAMAGE_PENDING|Players assign damage to their ships
+3|RETREAT_PENDING|Stalemate: initiative player must withdraw
+.TE
+.SS "The Combat Results Table (CRT)"
+The CRT is the core lookup table that determines whether a weapon
+strikes its target.
+It is indexed by three values:
+.PP
+.RS
+1. Firing ship's tactic (Attack, Dodge, or Retreat)
+.br
+2. Target ship's tactic
+.br
+3. Drive Difference = Firing Drive \- Target Drive
+.RE
+.PP
+.TS
+tab(|);
+l l l l l.
+Firing|Drive Diff|vs Attack|vs Dodge|vs Retreat
+_
+Attack|\-3 or less|Miss|Miss|Escapes
+Attack|\-1, \-2|Hit|Miss|Escapes
+Attack|0, +1|Hit+2|Miss|Miss
+Attack|+2|Hit+1|Hit+1|Miss
+Attack|+3, +4|Miss|Hit|Hit
+Attack|+5+|Miss|Miss|Miss
+_
+Dodge|\-4 or less|Miss|Miss|Escapes
+Dodge|\-2, \-3|Miss|Hit|Escapes
+Dodge|0, \-1|Hit|Hit|Escapes
+Dodge|+1, +2|Hit|Miss|Escapes
+Dodge|+3+|Miss|Miss|Escapes
+_
+Retreat|\-2 or less|Miss|Miss|Escapes
+Retreat|\-1, 0|Hit|Miss|Escapes
+Retreat|+1+|Miss|Miss|Escapes
+.TE
+.PP
+Observe:
+.IP \(bu 2
+Attack vs Attack at 0/+1 drive difference yields Hit+2\(emthe deadliest
+intersection.
+Aggressive players who match drives annihilate each other.
+.IP \(bu 2
+A drive difference of +5 or greater is always a miss\(emthe attacker
+overshoots.
+This prevents dump-stat strategies.
+.IP \(bu 2
+Dodge is safest at 0/\-1 vs Attack (miss), but vulnerable at
+0/\-1 vs Dodge (hit).
+.IP \(bu 2
+Retreat succeeds ("Escapes") against any tactic at favorable drive
+differentials, but fails if the enemy's drive advantage is too high.
+.SS "Power Allocation"
+Each combat round, a player allocates their ship's PD to subsystems:
+.TP
+.B Drive (D)
+Maneuverability.
+Determines the row/column on the CRT.
+Higher drive = better chance to hit or dodge, but diverts power
+from weapons and shields.
+.TP
+.B Beam (B)
+Weapon power.
+Cannot exceed the ship's built beam rating.
+Damage on hit = beam allocation + tech level.
+.TP
+.B Screen (S)
+Defensive shield.
+Cannot exceed the ship's built screen rating.
+Absorption = screen allocation + tech level.
+.TP
+.B Tubes (T)
+Number of missiles to fire.
+Each tube requires 1 PD.
+.PP
+\fBConstraint:\fR D + B + S + T \[<=] current PD.
+.PP
+\fBCritical rule:\fR Beams/Screens and Missiles cannot be used in the
+same round.
+If you fire missiles, you cannot power beams or screens.
+.SS "Beam Damage"
+When a beam attack hits:
+.IP 1. 3
+Damage = Beam power allocation + Tech level
+.IP 2. 3
+If target powered screens: absorption = Screen allocation + Tech level
+.IP 3. 3
+Net damage = max(0, damage \- absorption)
+.SS "Missile Damage"
+Each missile is individually resolved:
+.IP \(bu 2
+Missiles always use the \fBAttack\fR tactic on the CRT
+.IP \(bu 2
+Each missile has its own drive setting (specified via \fBm=N\fR)
+.IP \(bu 2
+Damage per hitting missile = 2 + Tech level
+.IP \(bu 2
+Missiles are expended on firing (regardless of hit/miss)
+.IP \(bu 2
+Each tube fires at most 1 missile per round
+.SS "Damage Assignment"
+After resolution (Stage 2), each player must assign their ship's
+damage to specific attributes using \fBcombat apply\fR.
+.IP \(bu 2
+Total assigned must equal damage dealt
+.IP \(bu 2
+If damage exceeds remaining HP, the ship is destroyed (overkill accepted)
+.IP \(bu 2
+Ship is destroyed when PD + B + S + T + M + SR = 0
+.IP \(bu 2
+The Warp Generator is never damaged
+.SS "Retreat"
+A ship using the Escape tactic must receive "Escapes" results against
+\fIall\fR enemy ships firing at it.
+If any attacker rolls a Hit, the retreat fails and the ship remains
+in combat.
+.PP
+On successful retreat, the ship is flagged \fBescape_pending\fR.
+The player must issue \fBretreat \fIship\fR \fIhex\fR\fR to move the
+ship to an adjacent hex.
+The turn is blocked until all retreats are completed.
+.PP
+SystemShips may never retreat.
+They must be carried out by a WarpShip using the Pick/Drop mechanism.
+.SS "Stalemate"
+If three consecutive combat rounds produce zero unabsorbed damage
+(stalemate_counter >= 3), the initiative player (who moved into the hex)
+must withdraw all their ships from the hex.
+The defender retains control.
+.SS "Combat End Conditions"
+Combat at a hex ends when:
+.IP \(bu 2
+All ships of one side are destroyed or retreated
+.IP \(bu 2
+Stalemate forces the initiative player to withdraw
+.\" ===================================================================
+.SH MOVEMENT RULES
+.IP 1. 3
+WarpShips \fBmust stop\fR at star hexes occupied by enemy ships.
+.IP 2. 3
+WarpShips may move through space hexes with enemy ships.
+.IP 3. 3
+Warplines are treated as space hexes for movement purposes.
+Entering a warpline at one end and exiting at the other costs 1 PD.
+.IP 4. 3
+Ships with PD=0 cannot move.
+.IP 5. 3
+PD used for movement is \fBnot permanently expended\fR.
+Full PD is available for combat power allocation.
+This is a critical rule: movement does not weaken your ships for battle.
+.IP 6. 3
+Cannot move onto enemy base star hex during turn 1.
+.IP 7. 3
+Hex events (NAVIGATION_HAZARD) may increase movement cost through
+specific hexes.
+.PP
+The server uses BFS pathfinding to calculate minimum PD expenditure.
+Players may specify intermediate waypoints to force a specific route.
+.\" ===================================================================
+.SH VICTORY CONDITIONS
+.TP
+.B Dominance Victory
+Accumulate 3 victory points by occupying enemy base stars at the
+start of your turn.
+Each enemy base star hex with at least one of your ships earns 1 VP.
+.TP
+.B Elimination Victory
+Destroy all enemy ships.
+.TP
+.B Draw
+Neither player has effective ships remaining.
+.\" ===================================================================
+.SH THE ECONOMY
+The economic layer adds resource management, trading, and manufacturing
+to the tactical combat gameplay.
+.SS "Currency: Stellar Credits (CR)"
+All economic transactions use Stellar Credits.
+Players earn credits from trade, controlling TRADE_HUB facilities
+(+5 CR/turn), and selling extracted resources.
+.SS "Resources"
+Eight types of raw materials exist in the universe.
+They are found in planets, moons, and asteroid belts, with varying
+abundance and extraction difficulty.
+.TS
+tab(|);
+l l l l.
+Resource|Abbrev|Base Price|Primary Uses
+_
+FERROUS|Fe|5 CR|Hull construction, fabrication
+RARE_EARTH|Re|20 CR|Electronics, screens, tech
+RADIOACTIVE|Rd|30 CR|Power, weapons, fabrication
+CRYSTALLINE|Cr|25 CR|Beams, warp drives, tech
+VOLATILE|Vo|8 CR|Fuel, missiles, fabrication
+WATER|H2O|3 CR|Life support
+ORGANIC|Or|6 CR|Food, medicine
+EXOTIC|Ex|100 CR|Special technology, advanced fabrication
+.TE
+.SS "Resource Abundance"
+Each deposit has an abundance rating that determines base yield:
+.TS
+tab(|);
+l l.
+Abundance|Base Yield
+_
+Rich|16 units
+High|8 units
+Moderate|4 units
+Low|2 units
+Trace|1 unit
+.TE
+.PP
+Extraction difficulty further modifies yield:
+.TS
+tab(|);
+l l.
+Difficulty|Modifier
+_
+Easy|100%
+Moderate|70%
+Difficult|40%
+Extreme|20%
+.TE
+.PP
+Knowledge level at the system also modifies extraction yield
+(see MILIEU CODEX section).
+.SS "Market Dynamics"
+The commodity market fluctuates based on supply and demand:
+.IP \(bu 2
+Prices update each round after both players complete turns
+.IP \(bu 2
+Buying increases demand, pushing prices up
+.IP \(bu 2
+Selling increases supply, pushing prices down
+.IP \(bu 2
+Prices are clamped to 50%\-200% of base value
+.IP \(bu 2
+Price trends are displayed as RISING, STABLE, or FALLING
+.SS "Fabrication Recipes"
+Raw materials can be converted into ship upgrades and munitions:
+.TS
+tab(|);
+l l l l.
+Recipe|Output|Time|Material Cost
+_
+missiles|4 missiles|1 round|2 Fe, 1 Rd, 1 Vo
+tubes|+1 tube|3 rounds|5 Fe, 3 Re, 2 Cr
+beams|+1 beam|3 rounds|8 Fe, 4 Re, 3 Cr
+screens|+1 screen|3 rounds|6 Fe, 2 Re, 4 Cr
+tech|+1 tech level|5 rounds|10 Re, 5 Cr, 2 Ex
+drone|1 scout drone|2 rounds|3 Fe, 2 Re, 1 Ex
+.TE
+.SS "Salvage"
+Wreckage and debris at hex locations can be salvaged for resources.
+Salvage requires Drones (DR) equipped on the ship.
+.PP
+\fBDiscovery:\fR
+Scanning (\fBsalvage scan\fR) finds salvageable sites.
+Discovery chance is modified by knowledge level at the system.
+Discovered sites are remembered permanently.
+.PP
+\fBHazards:\fR
+Each salvage operation carries a hazard chance (typically 5\-25%).
+Hazard types include unstable reactors, booby traps, structural collapse,
+and hostile salvagers.
+Hazard damage is dealt to PD.
+If PD reaches 0, the ship is destroyed.
+Knowledge level reduces hazard chance.
+.PP
+\fBYields:\fR
+Military wrecks yield missiles and rare electronics.
+Commercial wrecks yield common resources and credits.
+Ancient derelicts yield exotic materials.
+Debris fields yield ferrous and basic materials.
+Sites deplete after multiple operations.
+.SS "Facilities"
+Facilities at star systems provide strategic advantages to the
+controlling player.
+Control is established by occupying a system with no enemy ships
+for 2 consecutive turns.
+.TS
+tab(|);
+l l.
+Facility|Effect
+_
+SHIPYARD|Build new ships, fabrication base
+REPAIR_DOCK|Repair damaged ships away from home base
+REFINERY|Fabrication bonuses
+TRADE_HUB|+5 CR income per turn, trade access
+FORTRESS|Combat defensive bonus
+.TE
+.\" ===================================================================
+.SH THE MILIEU CODEX
+The \fBMilieu Codex of Stars\fR is the compendium of known space.
+It contains detailed information about each star system in the game
+universe: celestial bodies, planetary environments, native species,
+populations, resources, anomalies, and strategic notes.
+.PP
+The Codex is not merely flavor text.
+\fBKnowledge level directly affects gameplay outcomes.\fR
+A commander who surveys a system before exploiting it will extract
+more resources, discover more salvage sites, and suffer fewer
+hazards than one who operates blind.
+.SS "Knowledge Levels"
+Each player tracks knowledge independently per system.
+Knowledge starts at \fBUnknown\fR and is improved by surveying.
+.TS
+tab(|);
+l l l.
+Level|Description|How Gained
+_
+Unknown|Name only; no actionable intelligence|Default
+Charted|Basic characteristics; partial star data|First visit
+Surveyed|Detailed analysis; full resource data|\fBsurvey\fR command
+Intimate|Complete secrets; hidden sites revealed|\fBsurvey\fR (second pass)
+.TE
+.SS "Gameplay Impact of Knowledge"
+.PP
+\fBExtraction Yield Modifiers:\fR
+.TS
+tab(|);
+l l l.
+Level|Yield|Explanation
+_
+Unknown|25%|Prospectors operate blind
+Charted|50%|Basic geological data improves targeting
+Surveyed|100%|Precision extraction with detailed surveys
+Intimate|100%|No additional bonus beyond Surveyed
+.TE
+.PP
+\fBSalvage Discovery Modifiers:\fR
+.TS
+tab(|);
+l l l.
+Level|Discovery Chance|Explanation
+_
+Unknown|50% of base|Searching blind
+Charted|75% of base|General debris fields mapped
+Surveyed|100% of base|Precise wreck catalogs available
+Intimate|125% of base|Insider knowledge of concealed salvage
+.TE
+.PP
+\fBSalvage Hazard Modifiers:\fR
+.TS
+tab(|);
+l l l.
+Level|Hazard Modifier|Explanation
+_
+Unknown|+20%|Operating blind in debris fields
+Charted|+10%|Partial hazard mapping
+Surveyed|+0%|Standard risk assessment
+Intimate|\-10%|Know which wrecks are dangerous
+.TE
+.PP
+Knowledge is \fBfaction-wide\fR: all your ships benefit immediately
+when knowledge is gained at a system.
+.SS "Territories"
+Systems are organized into three territories:
+.PP
+\fBWestern Alliance (Alpha Faction)\fR \(em Home territory of the
+Terran alliance.
+.TS
+tab(|);
+l l l l.
+System|Hex|Star|Key Features
+_
+ARVEN|0307|G2V Yellow|Capital. Garden world Verdance. The Anvil shipyards.
+BELIX|0606|Binary K1V+M4V|Ancient system. Haven cultural center. Whisper Gate anomaly.
+CAYRU|0804|F8V Yellow-White|Young star. The Shatter belt, rich in metals.
+.TE
+.PP
+\fBEastern Powers (Beta Faction)\fR \(em Territory of the Zarekites
+and their allies.
+.TS
+tab(|);
+l l l l.
+System|Hex|Star|Key Features
+_
+ZAREK|2125|A3V White|Zarekite homeworld. Servitor shipworks. The First Library.
+ASTREX|2223|G5V Yellow|Hanging Gardens. Commerce trade zone. Ishtar Gate anomaly.
+BRION|2622|K5V Orange|Ancient depleted star. Dagan's Rest breadbasket.
+.TE
+.PP
+\fBContested Reach\fR \(em Disputed systems between the powers.
+.TS
+tab(|);
+l l l l.
+System|Hex|Star|Key Features
+_
+KORAL|1310|G8V|The Axis. 4 warpline connections. Axis Marker beacon.
+QUELL|1616|M2V Red|Lithoid xenoforms. Keplerite exotic warp-crystals.
+SYDRA|1719|K2V Orange|War-torn. The Graveyard and Scrapyard salvage sites.
+VARYN|1922|G1V Yellow|The Remnant machine civilization.
+WEXAR|2020|F7V|Kethrani aquatic traders. Water worlds.
+XYLEN|2118|F5V|Nexus free port. Mercenary strongholds.
+TAVON|1817|M1V Red|Vesh hive mind. The Song anomaly.
+.TE
+.SS "Xenoform Species"
+.TS
+tab(|);
+l l l.
+Species|Homeworld|Traits
+_
+Terran Human|Multiple|Adaptable, ambitious colonizers
+Zarekite|ZAREK|Light-adapted, hierarchical, ancient tech
+Lithoid|QUELL|Silicon-based, expert miners
+Kethrani|WEXAR|Aquatic, skilled traders
+Vesh|TAVON|Hive mind, subsonic communicators
+The Remnant|VARYN|Ancient AI collective
+Wanderers|Fleet-born|Nomadic traders, expert shiphandlers
+.TE
+.SS "Anomalies"
+Some systems contain unexplained phenomena with potential strategic
+implications:
+.TS
+tab(|);
+l l l.
+Anomaly|System|Description
+_
+Whisper Gate|BELIX|Ancient structure; energy readings persist
+Core Fragment|CAYRU|Exotic matter in The Shatter belt
+First Library|ZAREK|Elder Race data storage
+Ishtar Gate|ASTREX|Metal ring, 20m across, ancient texts mention it
+Axis Marker|KORAL|Navigation beacon, warpline efficiency
+Keplerite Vein|QUELL|Warp-enhancing exotic crystals
+The Graveyard|SYDRA|Powered wreckage field, high salvage value
+The Song|TAVON|Vesh vibrations that penetrate vacuum
+.TE
+.SS "Notable Resource Deposits"
+.TS
+tab(|);
+l l l.
+Resource|Location|Abundance
+_
+FERROUS|The Anvil (ARVEN)|Rich
+FERROUS|The Shatter (CAYRU)|Rich
+FERROUS|Servitor (ZAREK)|Rich
+RARE_EARTH|Jewel (BELIX)|Rich
+RARE_EARTH|The Shatter (CAYRU)|Rich
+VOLATILE|Shepherd (ARVEN)|Rich
+VOLATILE|Cloud Marshal (BELIX)|Rich
+ORGANIC|Verdance (ARVEN)|Rich
+ORGANIC|Hanging Gardens (ASTREX)|Rich
+EXOTIC|Keplerite (QUELL)|Rich
+EXOTIC|Gilded Throne ruins (ZAREK)|Rich
+WATER|Verdance (ARVEN)|Abundant
+WATER|Hanging Gardens (ASTREX)|Abundant
+CRYSTALLINE|Glassine (XYLEN)|Rich
+.TE
+.\" ===================================================================
+.SH AI AGENT
+Kepler's Horizon supports single-player mode through an autonomous AI
+opponent called the \fBAutonomy Agency\fR.
+The AI replaces one human player and executes commands through the same
+game engine, respecting all rules and constraints.
+It issues the same commands a human player would type.
+.PP
+The AI thread runs independently of HTTP request handling.
+When a game ends (via \fBquit\fR, victory, or elimination), the AI's
+game context is zeroed\(emit is \fBnever killed\fR.
+The thread stays alive and naturally ceases operating when it detects
+\fBm_game_id = 0\fR on its next gather cycle.
+.SS "Architecture: Mealy State Machine"
+The AI uses a three-phase decision cycle:
+.IP "1. GATHER (C++)" 4
+Populate an \fBAASlate\fR data structure from the database and
+StateMachine.
+The slate contains the complete observable game: fleet positions,
+combat theaters, economic data, territory control, BFS distance
+matrix, hex adjacency, warpline topology, codex entries, market
+prices, and cross-turn metrics.
+.IP "2. CALCULATE (Lisp)" 4
+Marshal the slate to Common Lisp via ECL (Embeddable Common Lisp),
+call the strategy function \fB(aa-calculate slate)\fR, and unmarshal
+the result: a list of command strings and optional metric updates.
+.IP "3. RENDER (C++)" 4
+Inject the resulting command string into the game engine's command
+queue via \fBAICommandInjector\fR, exactly as if a human typed it.
+Block until the TaskRunner completes the command.
+.PP
+The cycle repeats (gather fresh state, recalculate, render) until the
+AI issues a terminal command (\fBNEXT\fR or \fBDONE\fR) to advance the
+turn.
+This closed-loop design means every decision is based on current game
+state, not stale assumptions.
+.PP
+A safety guard at the top of \fBgather()\fR checks \fBm_game_id <= 0\fR
+and sets \fBgame_over = true\fR, causing the Mealy loop to exit
+gracefully without querying the database.
+.SS "Strategy DSL Modules"
+The AI strategy is implemented across eight Common Lisp modules,
+loaded in dependency order:
+.TP
+.B aa-util.lisp
+Accessor functions for reading the data slate.
+Ship property lookups, list filters, and helper predicates.
+.TP
+.B aa-strategy.lisp
+High-level strategic ontology (A1\-A11).
+Computes posture (aggressive/defensive/balanced), theater coordination,
+and inter-phase directives.
+Uses plist flow: \fBcompute-posture\fR \[->] theater coordination \[->]
+build/movement directives.
+.TP
+.B aa-goals.lisp
+Goal evaluation engine using model-predictive control.
+Evaluates objectives in priority order and finds the highest-priority
+unsatisfied goal.
+.TP
+.B aa-economic.lisp
+Maps economic goals to concrete commands: survey, extract, buy,
+fabricate, sell, outfit, salvage.
+.TP
+.B aa-build.lisp
+Ship design selection, construction, repair, and deployment decisions.
+Selects from predefined ship templates based on game state.
+.TP
+.B aa-movement.lisp
+Movement routing with BFS pathfinding.
+Prioritizes defending threatened bases and pushing ships toward
+undefended enemy bases for VP capture.
+Spreads ships across different enemy bases to maximize VP coverage.
+.TP
+.B aa-combat.lisp
+Multi-theater triage, CRT-aware power allocation, target selection
+(focus fire on lowest-HP enemy), damage assignment
+(sacrifice tubes first, then beams, screens, PD last).
+.TP
+.B aa-core.lisp
+Main entry point and phase dispatcher.
+Routes decisions by turn phase (build, movement, combat, pick/drop,
+end turn).
+.SS "Build Strategy"
+The AI selects from predefined ship templates based on game state:
+.TS
+tab(|);
+l l l.
+Template|Attributes|Role
+_
+Brawler|PD=6 B=4 S=3|Main battle ship; built first
+Interceptor|PD=5 B=2 S=2|Fast pursuit; spreads to bases
+Missile Boat|PD=4 S=1 T=2 M=6|Alpha strike; counters heavy screens
+Fortress|PD=8 B=6 S=5|SystemShip for base defense
+.TE
+.PP
+Template selection considers enemy fleet composition, tech level timing,
+and fleet diversity.
+The AI caps its fleet at 5 WarpShips.
+.SS "Combat Strategy"
+The AI assesses all active combat theaters simultaneously:
+.IP \(bu 2
+Force ratio (our PD / their PD) determines fight/hold/retreat
+.IP \(bu 2
+VP hexes (enemy bases) are defended more aggressively
+.IP \(bu 2
+All ships in one hex focus fire on the same target (lowest total HP)
+.IP \(bu 2
+Drive differential is clamped to avoid +5 automatic miss
+.IP \(bu 2
+Damage assignment: sacrifice tubes first, then beams, screens, PD last
+.SS "Economic Strategy"
+The AI evaluates economic objectives in priority order:
+.IP 1. 3
+Resupply missiles at base (if stock below 50%)
+.IP 2. 3
+Fabricate missiles (if materials available at shipyard)
+.IP 3. 3
+Acquire resources needed for fabrication (extract or buy)
+.IP 4. 3
+Survey unknown systems for resource yields
+.IP 5. 3
+Outfit ships with drones (enables salvage/extraction)
+.IP 6. 3
+Salvage wreckage at anomaly sites
+.IP 7. 3
+Sell excess cargo at trade hubs
+.PP
+Cargo is never sold while it serves an active goal.
+.SS "Cross-Turn Memory"
+The AI persists deduced metrics to the \fBaa_metrics\fR database table
+via \fB(make-metric name value)\fR pseudo-commands emitted by Lisp.
+These metrics survive across decision cycles and are loaded back into
+the slate each gather.
+.\" ===================================================================
+.SH SYSTEMSHIP PICKUP AND DROP
+.SS "During Movement Phase"
+.IP \(bu 2
+Costs 1 PD per SystemShip picked up or dropped
+.IP \(bu 2
+Can be performed at any star hex during movement
+.SS "During Combat"
+.IP \(bu 2
+Requires: Drive=0, Screen=0, Dodge or Escape tactic
+.IP \(bu 2
+Only 1 SystemShip per combat round
+.IP \(bu 2
+May fire Beam (but not Missiles) while picking up/dropping
+.IP \(bu 2
+Dropped SystemShips cannot fire that round
+.IP \(bu 2
+Picked up SystemShips cannot fire but may power Screens
+.SS "After Combat (Phase 5)"
+.IP \(bu 2
+Free rearrangement of SystemShips at star hexes
+.IP \(bu 2
+No PD cost
+.IP \(bu 2
+Active player only
+.\" ===================================================================
+.SH BUILD POINT COSTS
+.TS
+tab(|);
+l l.
+Attribute|Cost
+_
+Power/Drive (PD)|1 BP per unit
+Warp Generator (WG)|5 BP (WarpShips only, automatic)
+Beam (B)|1 BP per unit
+Screen (S)|1 BP per unit
+Tube (T)|1 BP per tube
+Missiles (M)|1 BP per 3 missiles
+SystemShip Rack (SR)|1 BP per rack (WarpShips only)
+.TE
+.\" ===================================================================
+.SH CONSTRAINTS AND INVARIANTS
+These are the fundamental laws of the game engine.
+They are never violated, and no command or sequence of commands can
+circumvent them:
+.IP \(bu 2
+No randomness in combat\(emall outcomes are deterministic.
+.IP \(bu 2
+No hidden information\(emall game state is public.
+.IP \(bu 2
+Rules do not change mid-game.
+.IP \(bu 2
+Equal inputs yield equal outcomes.
+.IP \(bu 2
+Ships retain original tech level permanently.
+.IP \(bu 2
+Warp Generators never take damage.
+A ship is destroyed when all attributes except WG reach 0.
+.IP \(bu 2
+SystemShips cannot have Warp Generators or SystemShip Racks.
+.IP \(bu 2
+WarpShips cannot be carried in SystemShip Racks.
+.IP \(bu 2
+Beams/Screens and Missiles cannot be used in the same combat round.
+.IP \(bu 2
+SystemShips may never select the Escape tactic.
+.IP \(bu 2
+PD used for movement is not permanently expended.
+.IP \(bu 2
+Repairs cannot exceed original built capacity.
+.IP \(bu 2
+Missile resupply cannot exceed original missile capacity.
+.\" ===================================================================
+.SH EXAMPLES
+.SS "Building a WarpShip"
+.nf
+> \fBbn\fR W Falcon
+> \fBbs\fR Falcon pd=5 b=3 s=2 t=1 m=3
+> \fBbc\fR Falcon
+.fi
+.PP
+Total cost: PD(5) + B(3) + S(2) + T(1) + M(1) + WG(5) = 17 BP.
+Tech level determined by current round.
+.SS "Building a SystemShip"
+.nf
+> \fBbn\fR S Avenger
+> \fBbs\fR Avenger pd=1 t=1 m=6
+> \fBbc\fR Avenger
+.fi
+.PP
+Total cost: PD(1) + T(1) + M(2) = 4 BP.
+No Warp Generator required.
+.SS "Movement"
+.nf
+> \fBm\fR W6 Tavon Xylen
+.fi
+.PP
+W6 moves from current hex to Tavon via the nearest warpline path,
+then onward to Xylen.
+Total PD cost depends on path length (BFS-computed).
+.SS "Combat Sequence"
+.nf
+> \fBco\fR W3 a S25 pd=2 b=3 s=2
+> \fBcc\fR
+\fI(Wait for opponent to commit...)\fR
+\fI(Resolution: W3 hits S25 for 3+tech damage)\fR
+> \fBca\fR S25 pd=2 b=1
+.fi
+.SS "Missile Fire"
+.nf
+> \fBco\fR S25 d W3 pd=4 t=1 m=3
+> \fBcc\fR
+.fi
+.PP
+S25 dodges while firing 1 missile at W3.
+The missile uses Attack tactic with drive=3.
+Missile damage on hit = 2 + tech level.
+.SS "Economic Workflow"
+.nf
+> \fBout\fR W1 lrs
+> \fBsurvey\fR ARVEN
+> \fBextract scan\fR
+> \fBex\fR W1 ferrous
+> \fBmarket\fR
+> \fBtrade sell\fR ferrous 5
+> \fBfab\fR missiles W1
+.fi
+.SS "Save and Load"
+.nf
+> \fBsave\fR my-game
+> \fBload\fR my-game
+\fI(Other player must type:)\fR
+> \fBaccept\fR my-game
+.fi
+.SS "Quit"
+.nf
+> \fBquit\fR
+\fIQUIT: Game auto-saved as 'autosaved-2026-02-13-14-30'.\fR
+\fIReturning to lobby.\fR
+.fi
+The game is auto-saved.
+Combat state is cleared.
+The other player is notified and redirected.
+The AI thread ceases operating on this game.
+.\" ===================================================================
+.SH MODULES
+.SS "Creating Custom Modules"
+A Module is a complete universe definition loaded from CSV files.
+All milieu data (star systems, planets, species, populations, resources)
+is keyed by \fBmodule_id\fR.
+.PP
+Required files:
+.TS
+tab(|);
+l l.
+File|Content
+_
+star_systems.csv|Map topology (hex_id, name, base flags)
+hexes.csv|Hex coordinates (q, r)
+warplines.csv|Warpline connections (a_hex, b_hex)
+warpline_hexes.csv|Intermediate warpline path hexes
+planets.csv|Planetary bodies
+species.csv|Xenoform species definitions
+populations.csv|Population centers
+resources.csv|Extractable resource deposits
+facilities.csv|Facilities and stations
+anomalies.csv|System anomalies
+salvageables.csv|Salvage sites and hazards
+codex_rumors.csv|Knowledge and rumors per system
+.TE
+.PP
+See the \fBModuleAuthoring\fR wiki page for complete authoring instructions.
+.\" ===================================================================
+.SH HEX EVENTS
+Dynamic events affect specific hexes, modifying gameplay:
+.TS
+tab(|);
+l l.
+Event Type|Effect
+_
+NAVIGATION_HAZARD|+N PD cost to move through hex
+COMBAT_INTERFERENCE|\-N beam damage in hex
+SALVAGE_OPPORTUNITY|+25% salvage yields
+EXTRACTION_BONUS|+N extraction yield
+.TE
+.PP
+Events spawn and expire based on turn count.
+Use \fBhex \fIlocation\fR\fR to view active events.
+.\" ===================================================================
+.SH MONITOR MODE
+The server may accept commands from the terminal when started with
+\fB\-\^\-monitor\fR.
+Each command must be prefixed with a player indicator.
+This feature is intended for development testing.
+.\" ===================================================================
+.SH DATABASE
+The game uses MySQL/MariaDB.
+The schema is defined in \fBsite/db/Game.sql\fR.
+Module data is loaded from CSV files via \fBLoadModule.sql\fR scripts.
+Core data (help topics) is loaded via \fBsite/db/core/Load.sql\fR.
+.PP
+Key tables: \fBgames\fR, \fBships\fR, \fBdrafts\fR, \fBcombat_state\fR,
+\fBcombat_orders\fR, \fBpending_damage\fR, \fBstar_systems\fR,
+\fBwarplines\fR, \fBsystem_resources\fR, \fBcodex_entries\fR,
+\fBmarket_prices\fR, \fBfacility_control\fR, \fBhex_events\fR,
+\fBaa_metrics\fR, \fBsaved_games\fR.
+.\" ===================================================================
+.SH FILES
+.TP
+.B site/web/
+Static HTML, CSS, JavaScript files served by the HTTP layer.
+.TP
+.B site/db/Game.sql
+Complete database schema.
+.TP
+.B site/db/core/help/
+Help topic CSV files for the in-game help system.
+.TP
+.B site/db/modules/kh/
+Module data CSV files for the default Kepler's Horizon universe.
+.TP
+.B dsl/
+AI strategy DSL files (Common Lisp).
+.\" ===================================================================
+.SH BUGS
+Report bugs to the Kepler's Horizon issue tracker.
+.\" ===================================================================
+.SH AUTHORS
+Game design and implementation by sibomots.
+.\" ===================================================================
+.SH COPYRIGHT
+Copyright (c) 2025 sibomots.
+Licensed under BSD 3-Clause License.

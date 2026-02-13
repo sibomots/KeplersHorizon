@@ -1,0 +1,437 @@
+/*
+ * ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ * ;; This file is part of Kepler's Horizon ;;
+ * ;;                                       ;;
+ * ;; Licensed under BSD 3-Clause License   ;;
+ * ;;                                       ;;
+ * ;; Copyright (c) 2025, sibomots          ;;
+ * ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ *
+*/
+
+/*
+ * Kepler's Horizon - Unified CRT Terminal Stylesheet
+ * Phosphor green theme with enhanced brightness
+ */
+
+:root {
+  --bg: #050508;
+  --panel: #0a0a12;
+  --text: #3f3;
+  /* Bright phosphor green */
+  --muted: #2a2;
+  --accent: #4f4;
+  --border: #1a3a1a;
+  --good: #4f8;
+  --bad: #f44;
+  --warn: #facc15;
+  --glow: rgba(50, 255, 50, 0.8);
+  --glow-soft: rgba(50, 255, 50, 0.4);
+  --warnmsg: #FFb020;
+}
+
+/* Base Reset */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Fira Code", monospace;
+  font-weight: 500;
+  font-style: normal;
+  text-transform: uppercase;
+  text-shadow: 0 0 5px var(--glow), 0 0 15px var(--glow-soft);
+}
+
+/* Layout */
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(122, 92, 255, .12), rgba(0, 0, 0, 0));
+}
+
+header .title {
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+
+header .right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Buttons */
+button {
+  background: rgba(122, 92, 255, .15);
+  color: var(--text);
+  border: 1px solid rgba(122, 92, 255, .35);
+  border-radius: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
+  text-shadow: 0 0 5px var(--glow);
+}
+
+button:hover {
+  background: rgba(122, 92, 255, .22);
+}
+
+/* Main Grid */
+.main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+}
+
+/* Panels */
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  background: rgba(17, 17, 26, .9);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .35);
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: visible;
+}
+
+.panel h2 {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 18px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-shadow: 0 0 5px rgba(34, 170, 34, 0.6);
+}
+
+/* Viewport (console + map split view) - MODIFIED for overlay */
+.viewport {
+  min-height: 0;
+  position: relative;
+  overflow: visible;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* Console Log - MODIFIED to overlay map with full width */
+#consoleLog {
+  height: calc(100% - 70px);
+  overflow-y: auto;
+  overflow-x: visible;
+  padding: 10px 12px;
+  padding-bottom: 2em;
+  /* Extra space to prevent overlap with input */
+  font-family: "Fira Code", monospace;
+  font-weight: 500;
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1.2;
+  /* Tighter line spacing */
+  white-space: pre;
+  color: #5f5;
+  text-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow), 0 0 40px rgba(50, 255, 50, 0.3);
+  position: absolute;
+  direction: rtl;
+  /* Moves scrollbar to left */
+  width: 100%;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  background: transparent;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+/* Restore left-to-right text inside console */
+#consoleLog>* {
+  direction: ltr;
+  display: block;
+  white-space: pre;
+  overflow: visible;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* --- Custom Scrollbar (WebKit/Blink Browsers) --- */
+
+/* Scrollbar width - hidden but scrollable via mousewheel */
+#consoleLog::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Draggable scrollbar thumb */
+#consoleLog::-webkit-scrollbar-thumb {
+  background: var(--text);
+  box-shadow: 0 0 5px var(--glow);
+  border-radius: 0px;
+}
+
+/* Scrollbar track */
+#consoleLog::-webkit-scrollbar-track {
+  background: var(--bg);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Corner between scrollbars */
+#consoleLog::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+
+/* Status Body scrollbar */
+.statusBody::-webkit-scrollbar {
+  width: 10px;
+  background: transparent;
+}
+
+.statusBody::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  box-shadow: 0 0 4px rgba(34, 170, 34, 0.5);
+}
+
+.statusBody::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+/* Scanline Overlay - Console Only - DISABLED */
+#consoleLog::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  background-size: 100% 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Passthrough overlay - allows clicks on right 50% to reach map */
+#consoleLog::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@keyframes crt-flicker {
+  0% {
+    opacity: 0.20;
+  }
+
+  5% {
+    opacity: 0.42;
+  }
+
+  10% {
+    opacity: 0.58;
+  }
+
+  15% {
+    opacity: 0.65;
+  }
+
+  20% {
+    opacity: 0.85;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+
+  100% {
+    opacity: 0.80;
+  }
+}
+
+/* Text Variants */
+.line-muted {
+  color: var(--muted);
+  text-shadow: 0 0 4px rgba(34, 170, 34, 0.5);
+}
+
+.line-good {
+  color: var(--good);
+  text-shadow: 0 0 8px rgba(68, 255, 136, 0.7);
+}
+
+
+.line-bad {
+  color: var(--bad);
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.7);
+}
+
+
+.line-warn {
+  color: var(--warnmsg);
+  text-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 8px rgba(255,176,32,0.7);
+}
+
+/* Map View - MODIFIED to position absolutely on right 50% */
+#mapView {
+  height: 100%;
+  width: 50%;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#mapFrame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--bg);
+  pointer-events: auto;
+}
+
+/* Input Row */
+.inputRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 10px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--accent);
+  background: #0a100a;
+  color: var(--text);
+  outline: none;
+  font-family: "Fira Code", monospace;
+  font-weight: 500;
+  font-style: normal;
+  font-size: 18px;
+  text-shadow: 0 0 5px var(--glow);
+}
+
+input[type="text"]::placeholder {
+  color: var(--muted);
+  text-shadow: none;
+}
+
+input[type="text"]:focus {
+  border-color: var(--good);
+  box-shadow: 0 0 8px rgba(50, 255, 50, 0.4);
+}
+
+/* Status Body */
+.statusBody {
+  padding: 10px 12px;
+  overflow: auto;
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--text);
+  text-shadow: 0 0 5px var(--glow);
+}
+
+/* Key-Value Grid */
+.kv {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 6px 10px;
+}
+
+.k {
+  color: var(--muted);
+}
+
+.v {
+  color: var(--text);
+}
+
+/* Pills */
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(122, 92, 255, .35);
+  background: rgba(122, 92, 255, .12);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 18px;
+  text-shadow: 0 0 5px var(--glow);
+}
+
+/* Links */
+a {
+  color: var(--muted);
+  text-decoration: none;
+  text-shadow: 0 0 4px rgba(34, 170, 34, 0.5);
+}
+
+a:hover {
+  color: var(--text);
+  text-shadow: 0 0 5px var(--glow);
+}
+
+/* Typewriter Effect (#15) */
+@keyframes typewriter {
+  from {
+    max-width: 0;
+  }
+
+  to {
+    max-width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.typewriter {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  animation: typewriter 0.4s steps(40, end) forwards;
+}
+
+/* Tunable speed via CSS custom property */
+.typewriter-slow {
+  animation-duration: 0.8s;
+}
+
+.typewriter-fast {
+  animation-duration: 0.2s;
+}
