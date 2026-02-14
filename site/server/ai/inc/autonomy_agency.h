@@ -366,7 +366,7 @@ class AutonomyAgency
 
     // MSS steps
     void gather();
-    void calculate(std::vector<std::string>& commands_out,
+    bool calculate(std::vector<std::string>& commands_out,
                    std::vector<std::pair<std::string, double>>& metrics_out);
     bool combat_needs_response() const;
     void log_debug_state();

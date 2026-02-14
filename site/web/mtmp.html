@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kepler's Horizon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050508;
+      --text: #33ff33;
+      --muted: #22aa22;
+      --dim: #117711;
+      --glow: 0 0 8px #33ff33, 0 0 20px rgba(51, 255, 51, 0.3);
+      --glow-strong: 0 0 12px #33ff33, 0 0 30px rgba(51, 255, 51, 0.5);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Fira Code', monospace;
+      text-transform: uppercase;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 3rem 1.5rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    .title-block {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-shadow: var(--glow-strong);
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: var(--muted);
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 6px rgba(51, 255, 51, 0.2);
+    }
+
+    .description {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.8;
+      text-shadow: 0 0 4px rgba(51, 255, 51, 0.15);
+    }
+
+    .hero {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--dim);
+      box-shadow: 0 0 12px rgba(51, 255, 51, 0.25), 0 0 30px rgba(51, 255, 51, 0.1);
+    }
+
+    .manual-link {
+      text-align: center;
+    }
+
+    .manual-link a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.95rem;
+      letter-spacing: 0.2em;
+      padding: 0.6rem 1.5rem;
+      border: 1px solid var(--dim);
+      text-shadow: var(--glow);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .manual-link a:hover {
+      border-color: var(--text);
+      box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+    }
+
+    footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      line-height: 1.8;
+      text-transform: none;
+    }
+
+    @media (max-width: 500px) {
+      h1 {
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+      }
+      .subtitle {
+        font-size: 0.8rem;
+        letter-spacing: 0.15em;
+      }
+      body {
+        padding: 2rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title-block">
+      <h1>Kepler's Horizon</h1>
+      <div class="subtitle">Space Fleet Tactics</div>
+    </div>
+
+    <p class="description">
+      Command your fleet across contested star systems in this
+      hex-based multiplayer strategy game. Issue orders from the
+      bridge terminal and outmaneuver rival admirals in deep space.
+    </p>
+
+    <div class="hero">
+      <img src="sample-kh.png" alt="Kepler's Horizon gameplay screenshot">
+    </div>
+
+    <div class="manual-link">
+      <a href="kh.pdf">[ Operator's Manual ]</a>
+    </div>
+  </div>
+
+  <footer>
+    Licensed under BSD 3-Clause License<br>
+    Copyright &copy; 2025, sibomots
+  </footer>
+</body>
+</html>

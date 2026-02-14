@@ -1129,6 +1129,7 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 "WHERE game_id=? AND ship_code=? AND owner=?",
                 {game_id, ship_code, owner});
 
+#if NOT_HOW_VP_ARE_ADDED_BUGBUG
         // Award VP to enemy
         char enemy = owner ^ 0x03;
         std::string vp_col = (KH_EQU(enemy, 'A')) ? "vp_A" : "vp_B";
@@ -1138,7 +1139,7 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
         Telemetry::instance().add_tell(
             game_id, enemy,
             "VICTORY: +1 VP for destroying enemy ship " + ship_code);
-
+#endif
         Logger::instance().info("Destroyed ship " + ship_code + " owned by " +
                                 std::string(1, owner) + " at hex " + hex);
     }

@@ -60,7 +60,7 @@
             container.innerHTML = `
         <div class="empty-state">
           <p>No open rooms</p>
-          <p class="small">Create one or join by code</p>
+          <p class="small">Create a room</p>
         </div>
       `;
             return;

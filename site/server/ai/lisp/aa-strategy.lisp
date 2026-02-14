@@ -1128,10 +1128,10 @@
                  (best-ship nil)
                  (best-dist 999))
             ;; Skip theaters that already have assignments
-            (unless (or (assoc theater-hex attack-assignments
-                               :test #'string-equal :key #'cdr)
-                        (assoc theater-hex defense-assignments
-                               :test #'string-equal :key #'cdr))
+            (unless (or (find theater-hex attack-assignments
+                              :test #'string-equal :key #'cdr)
+                        (find theater-hex defense-assignments
+                              :test #'string-equal :key #'cdr))
               (dolist (ship idle-warps)
                 (let ((dist (slate-distance slate (ship-hex ship) theater-hex)))
                   (when (< dist best-dist)

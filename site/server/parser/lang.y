@@ -18,6 +18,8 @@
 
 #include "attributemap.h"
 
+#include "license_command.h"
+
 // Building ship actors
 #include "build_commit_actor.h"
 #include "build_new_actor.h"
@@ -121,6 +123,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
 %token <ival> TOK_INT
 %token <sval> TOK_STRING
+
 %token TOK_APPLY
 %token TOK_ATTACK
 %token TOK_BEAM
@@ -154,6 +157,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_CARGO
 %token TOK_HELP
 %token TOK_HEX
+%token TOK_LICENSE
 %token TOK_LIST
 %token TOK_LOAD
 %token TOK_MISSILE
@@ -220,6 +224,7 @@ input:
 
 command:
     help_cmd
+  | license_cmd
   | session_cmd
   | info_cmd
   | looking_cmd
@@ -233,6 +238,15 @@ command:
   | gamedev_cmd
   ;
 
+
+license_cmd:
+   TOK_LICENSE
+   {
+      ICmd* pCmd = LicenseCommand::Builder().build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
+   }
+   ;
 session_cmd:
    TOK_SAVE
    {

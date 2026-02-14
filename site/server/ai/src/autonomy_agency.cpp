@@ -1331,7 +1331,7 @@ void AutonomyAgency::log_debug_state()
 // Calculate Step (ECL)
 // ----------------------------------------------------------------------------
 
-void AutonomyAgency::calculate(std::vector<std::string>& commands_out,
+bool AutonomyAgency::calculate(std::vector<std::string>& commands_out,
                                std::vector<std::pair<std::string, double>>& metrics_out)
 {
     commands_out.clear();
@@ -1340,16 +1340,18 @@ void AutonomyAgency::calculate(std::vector<std::string>& commands_out,
     if (!m_ecl_initialized)
     {
         commands_out.push_back("NEXT");
-        return;
+        return true;
     }
 
     bool bres = EclBridge::calculate(m_slate, commands_out, metrics_out);
     if (!bres)
     {
+        Logger::instance().error("[AI] ECL calculate failed - no command issued");
         commands_out.clear();
         metrics_out.clear();
-        commands_out.push_back("NEXT");
+        return false;
     }
+    return true;
 }
 
 // ----------------------------------------------------------------------------

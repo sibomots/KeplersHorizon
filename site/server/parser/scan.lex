@@ -59,8 +59,9 @@ static void advance_col()
 }
 
 "help"     { set_loc_for_token(); advance_col(); BEGIN(HELPARG); return TOK_HELP; }
-"demo"     { set_loc_for_token(); advance_col(); return TOK_DEMO; }
 "?"        { set_loc_for_token(); advance_col(); BEGIN(HELPARG); return TOK_HELP; }
+"license"  { set_loc_for_token(); advance_col(); return TOK_LICENSE; }
+"demo"     { set_loc_for_token(); advance_col(); return TOK_DEMO; }
 
 "save"     { set_loc_for_token(); advance_col(); return TOK_SAVE; }
 "load"     { set_loc_for_token(); advance_col(); return TOK_LOAD; }

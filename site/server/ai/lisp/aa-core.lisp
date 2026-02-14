@@ -33,7 +33,12 @@
   (let* ((phase-pair (assoc :phase slate))
          (phase (if phase-pair (cdr phase-pair) -1))
          ;; Compute strategy once per phase call
-         (strategy (compute-strategic-state slate)))
+         (strategy (handler-bind
+                       ((error (lambda (c)
+                                 (format t "[LISP] ERROR in compute-strategic-state: ~A~%" c)
+                                 (format t "[LISP] BACKTRACE:~%")
+                                 (si::tpl-backtrace))))
+                     (compute-strategic-state slate))))
     (format t "[LISP] Posture: ~A | VDist: ~A | Ships: ~A/~A needed | Reason: ~A~%"
             (getf strategy :posture)
             (getf strategy :victory-distance)
