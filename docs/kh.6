@@ -69,9 +69,9 @@ and architected by a human, but some features were initially implemented
 by AI (Opus 4.6 via Anthropic/Claude).
 
 .PP
-I make no qualms about using AI to develop parts of the software,
+The author makes no apologies about using AI to develop parts of the software,
 as this was helpful in speeding up the process.
-However, all of the software had to be revised anyway.
+Regardless, all of the software had to be revised anyway.
 Further, the core engine of the parser
 .RB ( \fBlex\fR
 and
@@ -81,10 +81,10 @@ was hand-written.
 .PP
 The
 .I LISP
-code used by the AI-Agency was mostly authored
+code used by the AI-Agency was mostly designed
 with AI support, but the ontology was designed
 and implemented by human work.
-Again, I have no qualms about this because it is effectively
+Again, the author has no qualms about this because it is effectively
 the same as spending days researching.
 The reader may disagree.
 
@@ -92,10 +92,11 @@ The reader may disagree.
 After 45 years of writing software, the author can attest
 that fundamental breakthroughs in some kinds of software projects
 are greatly aided by AI-assisted engineering.
-There is no looking back.
+.PP
+\fIThis is the way\fR
 
 .\" ===================================================================
-.ne
+.ne 10
 .SH OPTIONS
 .SS "Generic Program Information"
 .TP
@@ -228,7 +229,6 @@ Equipment|Code|Cost|Purpose
 _
 Long Range Scanner|LRS|50 CR|Required for \fBextract scan\fR and \fBsurvey\fR
 Transporter Beam|TB|75 CR|Enables resource extraction
-Mining/Salvage Drones|DR|100 CR|Enables extraction and salvage operations
 .TE
 .PP
 Equipment does not affect combat.
@@ -589,7 +589,7 @@ Yield is modified by your knowledge level (see MILIEU CODEX).
 .TP
 .B extract \fIship\fR \fIresource\fR\fR, \fBex \fIship\fR \fIresource\fR
 Extract a resource from the current system into the ship's cargo hold.
-Requires TB (Transporter Beam) or DR (Drones).
+Requires TB (Transporter Beam).
 Multi-word resources use spaces: \fBex W1 rare earth\fR.
 .TP
 .B market\fR, \fBmk
@@ -617,7 +617,7 @@ Show available fabrication recipes and their material costs.
 .B fabricate \fIrecipe\fR [\fIquantity\fR]\fR, \fBfab \fIrecipe\fR ...
 Manufacture items from raw materials in cargo.
 .TP
-.B outfit \fIship\fR lrs|tb|drones\fR, \fBout \fIship\fR ...
+.B outfit \fIship\fR lrs|tb\fR, \fBout \fIship\fR ...
 Install equipment on a ship.
 .TP
 .B outfit list\fR, \fBout list
@@ -625,12 +625,10 @@ Show available equipment and their credit costs.
 .TP
 .B salvage scan\fR, \fBjk scan
 Scan for salvageable objects at the current hex.
-Requires DR (Drones).
 Discovery chance is modified by knowledge level.
 .TP
 .B salvage \fIship\fR\fR, \fBjk \fIship\fR
 Conduct a salvage operation at the current hex.
-Requires DR.
 Hazard chance is modified by knowledge level.
 .SS "Development Commands"
 .TP
@@ -914,11 +912,9 @@ tubes|+1 tube|3 rounds|5 Fe, 3 Re, 2 Cr
 beams|+1 beam|3 rounds|8 Fe, 4 Re, 3 Cr
 screens|+1 screen|3 rounds|6 Fe, 2 Re, 4 Cr
 tech|+1 tech level|5 rounds|10 Re, 5 Cr, 2 Ex
-drone|1 scout drone|2 rounds|3 Fe, 2 Re, 1 Ex
 .TE
 .SS "Salvage"
 Wreckage and debris at hex locations can be salvaged for resources.
-Salvage requires Drones (DR) equipped on the ship.
 .PP
 \fBDiscovery:\fR
 Scanning (\fBsalvage scan\fR) finds salvageable sites.
@@ -1247,10 +1243,8 @@ Acquire resources needed for fabrication (extract or buy)
 .IP 4. 3
 Survey unknown systems for resource yields
 .IP 5. 3
-Outfit ships with drones (enables salvage/extraction)
-.IP 6. 3
 Salvage wreckage at anomaly sites
-.IP 7. 3
+.IP 6. 3
 Sell excess cargo at trade hubs
 .PP
 Cargo is never sold while it serves an active goal.
