@@ -229,19 +229,6 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
         target[0][5].empty() ? -1 : std::atoi(target[0][5].c_str());
     int times_salvaged = std::atoi(target[0][6].c_str());
 
-    // Check ship has drones
-    auto dr_check = db.Query(
-        "SELECT dr FROM ships WHERE game_id=? AND owner=? AND ship_code=?",
-        {game_id, me, ship_code});
-
-    int drones = dr_check.empty() ? 0 : std::atoi(dr_check[0][0].c_str());
-    if (drones < 1)
-    {
-        Telemetry::instance().write("SALVAGE: " + ship.name +
-                                    " needs Drones (DR) to salvage.");
-        return false;
-    }
-
     // Perform salvage
     srand(time(NULL) + game_id + s.round + salv_id);
     std::ostringstream result;

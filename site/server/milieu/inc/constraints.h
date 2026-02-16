@@ -57,10 +57,6 @@ class ConstraintEngine
     // Get extraction modifier for a system
     static int get_extraction_modifier(int game_id, const std::string& system);
 
-    // Check if extraction requires drones (hazardous)
-    static bool requires_drones(int game_id, const std::string& system,
-                                const std::string& resource);
-
     // Get all constraints for a system
     static std::vector<SystemConstraint>
     get_constraints(int game_id, const std::string& system);

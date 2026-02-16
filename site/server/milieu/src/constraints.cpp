@@ -146,47 +146,6 @@ int ConstraintEngine::get_extraction_modifier(int game_id,
     return total_modifier;
 }
 
-bool ConstraintEngine::requires_drones(int game_id, const std::string& system,
-                                       const std::string& resource)
-{
-    DatabaseManager& db = DatabaseManager::instance();
-
-    // Check for hazardous extraction conditions
-    std::string q = "SELECT COUNT(*) FROM system_constraints "
-                    " WHERE system_name=? AND constraint_type='HARVEST' AND "
-                    " condition_text LIKE '%hazardous%'";
-    auto rows = db.Query(q, {system});
-
-    if (!rows.empty() && std::atoi(rows[0][0].c_str()) > 0)
-    {
-        return true;
-    }
-
-    // Also check resource-specific difficulty
-    std::string qq =
-        "SELECT extraction_difficulty FROM system_resources sr "
-        " JOIN system_planets sp ON sr.location_type='Planet' AND "
-        " sr.location_id=sp.id "
-        " WHERE sp.system_name=? AND sr.resource_type=? "
-        " UNION "
-        " SELECT extraction_difficulty FROM system_resources sr "
-        " JOIN system_asteroid_belts ab ON sr.location_type='Belt' AND "
-        " sr.location_id=ab.id "
-        " WHERE ab.system_name=? AND sr.resource_type=?";
-
-    auto res_rows = db.Query(qq, {system, resource, system, resource});
-
-    for (const auto& r : res_rows)
-    {
-        if (KH_EQU(r[0], "Extreme") || KH_EQU(r[0], "Difficult"))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 std::vector<SystemConstraint>
 ConstraintEngine::get_constraints(int game_id, const std::string& system)
 {

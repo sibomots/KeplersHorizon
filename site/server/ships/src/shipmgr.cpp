@@ -483,8 +483,6 @@ void ShipManager::append_fleet_header(std::ostringstream& out,
     pstxt(out, "LS", 2);
     out << ' ';
     pstxt(out, "TB", 2);
-    out << ' ';
-    pstxt(out, "DN", 2);
     out << '\n';
 
     pstxt(out, "────", 5);
@@ -493,8 +491,6 @@ void ShipManager::append_fleet_header(std::ostringstream& out,
     pstxt(out, "──────────", 10);
     out << ' ';
     pstxt(out, "────", 4);
-    out << ' ';
-    pstxt(out, "──", 2);
     out << ' ';
     pstxt(out, "──", 2);
     out << ' ';
@@ -552,8 +548,6 @@ void ShipManager::append_fleet_row(std::ostringstream& out, const ShipRow& r)
     psnum(out, r.get_LS(), 2);
     out << ' ';
     psnum(out, r.get_TB(), 2);
-    out << ' ';
-    psnum(out, r.get_DN(), 2);
 
     out << '\n';
 }

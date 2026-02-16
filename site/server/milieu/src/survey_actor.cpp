@@ -7,6 +7,7 @@
 ///////////////////////////////////////////
 #include "survey_actor.h"
 
+#include <format>
 #include <sstream>
 
 #include "db.h"
@@ -21,12 +22,47 @@ bool SurveyActor::invoke(void)
     char owner = StateMachine::instance().get_current_player();
     DatabaseManager& db = DatabaseManager::instance();
 
-    // If no system specified, find where player has ships
-    std::string target_system = m_system_name;
+    // Resolve the hex for this system
+    auto hexRows = db.Query(
+        "SELECT hex_id FROM star_systems WHERE UPPER(name)=UPPER(?)",
+        {m_system_name});
 
-    // BUGBUG
-    // We need a better way or more interesting way to
-    // establish the robustness of the survey capability
+    if (hexRows.empty())
+    {
+        Telemetry::instance().write(
+            std::format("SURVEY: Unknown system '{}'", m_system_name));
+        return false;
+    }
+
+    std::string hexId = hexRows[0][0];
+
+    // Surveying costs 1 PD — find a player ship at this hex
+    // Ships with LRS survey for free
+    auto scanShips = db.Query(
+        "SELECT ship_code, pd, pd_spent, lrs FROM ships "
+        " WHERE game_id=? AND owner=? AND at_hex=? AND destroyed_at IS NULL "
+        " ORDER BY lrs DESC, (pd - pd_spent) DESC LIMIT 1",
+        {s.game_id, owner, hexId});
+
+    if (scanShips.empty())
+    {
+        Telemetry::instance().write(
+            "SURVEY: You have no ships at this system to perform a survey.");
+        return false;
+    }
+
+    std::string scanShipCode = scanShips[0][0];
+    int pdTotal = std::atoi(scanShips[0][1].c_str());
+    int pdSpent = std::atoi(scanShips[0][2].c_str());
+    int lrs = std::atoi(scanShips[0][3].c_str());
+    bool freeScan = (lrs > 0);
+
+    if (!freeScan && (pdTotal - pdSpent) < 1)
+    {
+        Telemetry::instance().write(
+            "SURVEY: Insufficient PD to perform survey. Requires 1 PD.");
+        return false;
+    }
 
     switch (m_mode)
     {
@@ -43,5 +79,14 @@ bool SurveyActor::invoke(void)
         bres = MilieuAgent::instance().apply(mp);
         break;
     }
+
+    // Deduct 1 PD on success (LRS-equipped ships survey for free)
+    if (bres && !freeScan)
+    {
+        db.Exec("UPDATE ships SET pd_spent=pd_spent+1 "
+                "WHERE game_id=? AND owner=? AND ship_code=?",
+                {s.game_id, owner, scanShipCode});
+    }
+
     return bres;
 }

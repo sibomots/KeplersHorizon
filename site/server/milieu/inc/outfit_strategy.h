@@ -23,8 +23,6 @@ class OutfitStrategy
     static bool show_equipment(void);
     static bool outfit_lrs(int game_id, char owner,
                            const std::string& ship_code);
-    static bool outfit_drones(int game_id, char owner,
-                              const std::string& ship_code);
 
   private:
     static bool install_equipment(int game_id, char owner,

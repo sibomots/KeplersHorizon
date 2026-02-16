@@ -8,6 +8,7 @@
 #include "system_strategy.h"
 
 #include <algorithm>
+#include <format>
 #include <sstream>
 
 #include "db.h"
@@ -368,18 +369,22 @@ bool SystemStrategy::show_facilities(const std::string& system_name)
         return false;
     }
 
+    GameState s = StateMachine::instance().get_game_state();
     DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
     out << "=== " << system_name << " FACILITIES ===\n\n";
 
+    // Join static facility data with live controller from facility_control
     std::string q =
         "SELECT p.common_name, p.designation, f.facility_type, f.name, "
-        " f.capacity, f.owner, f.operational "
+        " fc.controller "
         " FROM system_facilities f "
         " JOIN system_planets p ON f.location_type='Planet' AND "
         " f.location_id=p.id "
+        " LEFT JOIN facility_control fc ON fc.game_id=? "
+        " AND fc.system_name=? AND fc.facility_type=f.facility_type "
         " WHERE p.system_name=? ORDER BY f.facility_type";
-    auto rows = db.Query(q, {system_name});
+    auto rows = db.Query(q, {s.game_id, system_name, system_name});
 
     if (rows.empty())
     {
@@ -387,10 +392,13 @@ bool SystemStrategy::show_facilities(const std::string& system_name)
     }
     else
     {
-        out << "Location         Type           Name                  Cap  "
-               "Owner   Op\n";
-        out << "---------------  -------------  --------------------  ---  "
-               "------  --\n";
+        char me = StateMachine::instance().get_current_player();
+
+        out << std::format("{:<17}{:<15}{:<22}{}\n",
+                           "Location", "Type", "Name", "Controller");
+        out << std::format("{:<17}{:<15}{:<22}{}\n",
+                           "---------------", "-------------",
+                           "--------------------", "----------");
         for (const auto& r : rows)
         {
             std::string loc = r[0].empty() ? r[1] : r[0];
@@ -398,20 +406,29 @@ bool SystemStrategy::show_facilities(const std::string& system_name)
             {
                 loc = loc.substr(0, 13) + "..";
             }
-            out << loc << std::string(17 - loc.size(), ' ');
-
-            out << r[2] << std::string(15 - r[2].size(), ' ');
 
             std::string fname = r[3];
-            if (fname.size() > 20) 
+            if (fname.size() > 20)
             {
                 fname = fname.substr(0, 18) + "..";
             }
-            out << fname << std::string(22 - fname.size(), ' ');
 
-            out << r[4] << std::string(5 - r[4].size(), ' ');
-            out << r[5] << std::string(8 - r[5].size(), ' ');
-            out << ((KH_EQU(r[6], "1")) ? "Y" : "N") << "\n";
+            std::string ctrl;
+            if (r[4].empty())
+            {
+                ctrl = "Neutral";
+            }
+            else if (KH_EQU(r[4][0], me))
+            {
+                ctrl = "You";
+            }
+            else
+            {
+                ctrl = "Enemy";
+            }
+
+            out << std::format("{:<17}{:<15}{:<22}{}\n",
+                               loc, r[2], fname, ctrl);
         }
     }
 

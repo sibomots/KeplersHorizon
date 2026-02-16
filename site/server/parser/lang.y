@@ -41,6 +41,7 @@
 #include "done_command.h"
 #include "deploy_command.h"
 #include "move_command.h"
+#include "chart_command.h"
 #include "pick_drop_command.h"
 
 #include "cargo_actor.h"
@@ -63,7 +64,7 @@
 #include "status_command.h"
 #include "hex_command.h"
 #include "delete_command.h"
-#include "gamedev_command.h"
+#include "configure_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "db.h"
@@ -159,6 +160,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_LOAD
 %token TOK_MISSILE
 %token TOK_MOVE
+%token TOK_CHART
 %token TOK_NEW
 %token TOK_NEXT
 %token TOK_NEXT_SHORT
@@ -193,9 +195,12 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_SURVEY
 %token TOK_TUBE
 %token TOK_CLEAR
-%token TOK_GAMEDEV
+%token TOK_CONFIGURE
+%token TOK_RELOAD
+%token TOK_CONF
+%token TOK_AI
 %token TOK_RECAP
-%token TOK_LRS TOK_DRONES
+%token TOK_LRS
 
 /* Attribute assignment tokens - value in yylval.ival */
 %token <ival> TOK_PD_ASSIGN
@@ -229,9 +234,10 @@ command:
   | build_cmd
   | deploy_cmd
   | move_cmd
+  | chart_cmd
   | pickdrop_cmd
   | rep_cmd
-  | gamedev_cmd
+  | configure_cmd
   ;
 
 
@@ -615,17 +621,6 @@ looking_cmd:
       ICmd* pCmd = OutfitActor::Builder()
                                 .set_ship(ship)
                                 .set_lrs()
-                                .build();
-      if (pCmd && pCmd->invoke()) { /* success */ }
-      SafeDelete($2);
-      SafeDelete(pCmd);
-  }
-  | TOK_OUTFIT TOK_STRING TOK_DRONES {
-      // UNTESTED
-      std::string ship(*$2);
-      ICmd* pCmd = OutfitActor::Builder()
-                                .set_ship(ship)
-                                .set_drones()
                                 .build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete($2);
@@ -1543,6 +1538,32 @@ move_cmd:
   }
   ;
 
+chart_cmd:
+  // chart <ship> <destination> [waypoints...]
+  TOK_CHART TOK_STRING TOK_STRING chain_move_location {
+       std::string ship(*$2);
+       std::string first_dest(*$3);
+       std::vector<std::string>* waypoints = $4;
+
+       ICmd* pCmd = ChartCommand::Builder()
+            .ship_code(ship)
+            .add_destination(first_dest)
+            .add_waypoints(waypoints)
+            .build();
+
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+
+       delete $2;
+       delete $3;
+       delete waypoints;
+  }
+  | TOK_CHART error {
+       yyerror(&@1, "chart: usage: chart <ship> <destination> [via ...]");
+       YYABORT;
+  }
+  ;
+
 // Pickup, Drop
 // "pick" { return TOK_PICK; }
 // "drop" { return TOK_DROP; }
@@ -1655,66 +1676,45 @@ repair_attr_spec:
   }
   ; 
  
-gamedev_cmd:
-  TOK_GAMEDEV {
-      // gd - show status
-      ICmd* pCmd = GameDevCommand::Builder().status().build();
+configure_cmd:
+  TOK_CONFIGURE TOK_RELOAD error {
+      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      YYABORT;
+  }
+  | TOK_CONFIGURE TOK_RELOAD TOK_CONF error {
+      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      YYABORT;
+  }
+  | TOK_CONFIGURE TOK_RELOAD TOK_AI error {
+      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      YYABORT;
+  }
+  | TOK_CONFIGURE TOK_RELOAD TOK_CONF {
+      // configure reload conf — reload kh.conf
+      ICmd* pCmd = ConfigureCommand::Builder()
+          .set_reload_conf_mode()
+          .build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
-  | TOK_GAMEDEV TOK_STRING {
-      // gd reset or gd environment/combat/movement/crt (missing value)
-      std::string subcmd(*$2);
-      bool handled = false;
-      if (subcmd == "reset")
-      {
-          ICmd* pCmd = GameDevCommand::Builder().reset().build();
-          pCmd->invoke();
-          SafeDelete(pCmd);
-          handled = true;
-      }
-      if (!handled)
-      {
-          yyerror(&@2, "gamedev: Missing value. Usage: gamedev {env|combat|move|crt|vp} N");
-      }
-      delete $2;
+  | TOK_CONFIGURE TOK_RELOAD TOK_AI {
+      // configure reload ai — reload AI DSL
+      ICmd* pCmd = ConfigureCommand::Builder()
+          .set_reload_ai_mode()
+          .build();
+      pCmd->invoke();
+      SafeDelete(pCmd);
   }
-  | TOK_GAMEDEV TOK_STRING TOK_INT {
-      // gd <subcmd> <value>
-      std::string subcmd(*$2);
-      int val = $3;
-      ICmd* pCmd = nullptr;
-
-      if (subcmd == "env" || subcmd == "environment")
-      {
-          pCmd = GameDevCommand::Builder().environment(val).build();
-      }
-      else if (subcmd == "combat")
-      {
-          pCmd = GameDevCommand::Builder().combat(val).build();
-      }
-      else if (subcmd == "move" || subcmd == "movement")
-      {
-          pCmd = GameDevCommand::Builder().movement(val).build();
-      }
-      else if (subcmd == "crt")
-      {
-          pCmd = GameDevCommand::Builder().crt(val).build();
-      }
-      else if (subcmd == "vp")
-      {
-          pCmd = GameDevCommand::Builder().vp(val).build();
-      }
-      else
-      {
-          yyerror(&@2, "gamedev: Unknown parameter. Valid: env, combat, move, crt, vp, reset");
-      }
-
-      if (pCmd)
-      {
-          pCmd->invoke();
-      }
-      SafeDelete($2);
+  | TOK_CONFIGURE error {
+      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      YYABORT;
+  }
+  | TOK_CONFIGURE {
+      // configure — show current settings
+      ICmd* pCmd = ConfigureCommand::Builder()
+          .set_show_mode()
+          .build();
+      pCmd->invoke();
       SafeDelete(pCmd);
   }
   ;

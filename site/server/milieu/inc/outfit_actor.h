@@ -18,7 +18,6 @@
 // OutfitActor - Purchase equipment for ships using Credits
 // Usage: outfit list
 //        outfit <ship> lrs
-//        outfit <ship> drones
 class OutfitActor : public ICmd
 {
   public:
@@ -36,11 +35,6 @@ class OutfitActor : public ICmd
         Builder& set_lrs(void)
         {
             m_mode = OutfitMode::OUTFIT_LRS;
-            return *this;
-        }
-        Builder& set_drones(void)
-        {
-            m_mode = OutfitMode::OUTFIT_DRONES;
             return *this;
         }
         Builder& set_ship(const std::string& ship)

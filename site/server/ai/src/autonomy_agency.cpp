@@ -6,13 +6,9 @@
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
 
-#include "autonomy_agency.h"
-
-#include <chrono>
-#include <set>
-
 #include "ai_command_injector.h"
 #include "ai_db_mutex.h"
+#include "autonomy_agency.h"
 #include "configr.h"
 #include "db.h"
 #include "ecl_bridge.h"
@@ -20,6 +16,9 @@
 #include "mapgraph.h"
 #include "maputil.h"
 #include "statemachine.h"
+
+#include <chrono>
+#include <set>
 
 // ----------------------------------------------------------------------------
 // Singleton
@@ -209,14 +208,12 @@ void AutonomyAgency::run_cycle()
                 {
                     Logger::instance().ai(
                         "[COMBAT-DETECT] hex=" + ch.hex_id +
-                        " stage=" + std::to_string(ch.stage) +
-                        " round=" + std::to_string(ch.round) +
-                        " ai_committed=" +
+                        " stage=" + std::to_string(ch.stage) + " round=" +
+                        std::to_string(ch.round) + " ai_committed=" +
                         std::to_string(ch.ai_committed ? 1 : 0) +
                         " ai_attacker=" +
                         std::to_string(ch.ai_is_attacker ? 1 : 0) +
-                        " stalemate=" +
-                        std::to_string(ch.stalemate_counter));
+                        " stalemate=" + std::to_string(ch.stalemate_counter));
                 }
             }
 
@@ -259,11 +256,11 @@ void AutonomyAgency::run_cycle()
             // Discrete 2: log what ECL decided for combat
             if (!m_slate.active_combats.empty())
             {
-                std::string decision = commands.empty() ? "(EMPTY)" : commands[0];
+                std::string decision =
+                    commands.empty() ? "(EMPTY)" : commands[0];
                 Logger::instance().ai(
                     "[COMBAT-DECISION] phase=" +
-                    std::to_string(m_slate.phase_index) +
-                    " combats=" +
+                    std::to_string(m_slate.phase_index) + " combats=" +
                     std::to_string(m_slate.active_combats.size()) +
                     " ecl_cmd=" + decision);
             }
@@ -291,10 +288,9 @@ void AutonomyAgency::run_cycle()
 
             // Check if terminal (hands control to other player or next phase)
             bool is_terminal =
-                   (KH_EQU(pending_cmd, "NEXT")
-                 || KH_EQU(pending_cmd, "DONE")
-                 || KH_EQU(pending_cmd.rfind("NEXT", 0), 0)
-                 || KH_EQU(pending_cmd.rfind("DONE", 0), 0));
+                (KH_EQU(pending_cmd, "NEXT") || KH_EQU(pending_cmd, "DONE") ||
+                 KH_EQU(pending_cmd.rfind("NEXT", 0), 0) ||
+                 KH_EQU(pending_cmd.rfind("DONE", 0), 0));
 
             if (is_terminal)
             {
@@ -319,7 +315,7 @@ void AutonomyAgency::run_cycle()
 
     if (iterations >= kMaxIterations)
     {
-       std::cerr << "hit max iterations in AI-Autonomy Loop" << std::endl;
+        std::cerr << "hit max iterations in AI-Autonomy Loop" << std::endl;
     }
 }
 
@@ -389,13 +385,14 @@ void AutonomyAgency::gather()
 
     // Own base hexes
     // Prefer base_stars (per-game claimed bases, matches VP scoring system).
-    // Fall back to star_systems (module template) if base_stars not yet populated.
+    // Fall back to star_systems (module template) if base_stars not yet
+    // populated.
     std::string our_player(1, m_slate.aa_player);
     std::string enemy_player = (KH_EQU(m_slate.aa_player, 'A')) ? "B" : "A";
 
-    auto own_base_rows = db.Query(
-        "SELECT hex_id FROM base_stars WHERE game_id=? AND owner=?",
-        {m_slate.game_id, our_player});
+    auto own_base_rows =
+        db.Query("SELECT hex_id FROM base_stars WHERE game_id=? AND owner=?",
+                 {m_slate.game_id, our_player});
 
     if (!own_base_rows.empty())
     {
@@ -426,8 +423,9 @@ void AutonomyAgency::gather()
         {
             our_side = (KH_EQU(m_slate.aa_player, 'B')) ? "B" : "A";
         }
-        std::string sql_bases = "SELECT hex_id FROM star_systems "
-                                "WHERE module_id=1 AND is_base=1 AND base_side=?";
+        std::string sql_bases =
+            "SELECT hex_id FROM star_systems "
+            "WHERE module_id=1 AND is_base=1 AND base_side=?";
         auto base_rows = db.Query(sql_bases, {our_side});
         for (const std::vector<std::string>& row : base_rows)
         {
@@ -460,14 +458,14 @@ void AutonomyAgency::gather()
         "cargo_volatile, cargo_water, cargo_organic, cargo_exotic, "
         "cargo_missiles, cargo_capacity, missiles_max, "
         "pd_max, beam_max, screen_max, tube_max, "
-        "COALESCE(lrs,0), COALESCE(tb,0), COALESCE(dr,0) "
+        "COALESCE(lrs,0), COALESCE(tb,0) "
         "FROM ships WHERE game_id=? AND owner=? AND destroyed_at IS NULL";
 
     auto own_rows = db.Query(sql_own, {m_slate.game_id, m_slate.aa_player});
 
     for (const std::vector<std::string>& row : own_rows)
     {
-        if (row.size() >= 32)
+        if (!row.empty())
         {
             AAShipInfo ship;
             ship.code = row[0];
@@ -519,7 +517,6 @@ void AutonomyAgency::gather()
             // Equipment
             ship.lrs = std::atoi(row[29].c_str());
             ship.tb = std::atoi(row[30].c_str());
-            ship.dr = std::atoi(row[31].c_str());
 
             // Query systemships racked in this warpship
             if (ship.is_warpship && ship.sr > 0)
@@ -553,30 +550,27 @@ void AutonomyAgency::gather()
 
     for (const std::vector<std::string>& row : enemy_rows)
     {
-        if (row.size() >= 12)
+        AAShipInfo ship;
+        ship.code = row[0];
+        ship.name = row[1];
+        ship.hex_id = row[2];
+
+        // If at_hex is empty, resolve from at_system
+        if (ship.hex_id.empty() && !row[3].empty())
         {
-            AAShipInfo ship;
-            ship.code = row[0];
-            ship.name = row[1];
-            ship.hex_id = row[2];
-
-            // If at_hex is empty, resolve from at_system
-            if (ship.hex_id.empty() && !row[3].empty())
-            {
-                ship.hex_id = MapUtil::instance().resolve_system_hex(
-                    m_slate.game_id, row[3]);
-            }
-
-            ship.pd = std::atoi(row[4].c_str());
-            ship.beam = std::atoi(row[5].c_str());
-            ship.screen = std::atoi(row[6].c_str());
-            ship.tube = std::atoi(row[7].c_str());
-            ship.missile = std::atoi(row[8].c_str());
-            ship.sr = std::atoi(row[9].c_str());
-            ship.tech_level = std::atoi(row[10].c_str());
-            ship.is_warpship = KH_EQU(row[11], "W");
-            m_slate.enemy_ships.push_back(ship);
+            ship.hex_id =
+                MapUtil::instance().resolve_system_hex(m_slate.game_id, row[3]);
         }
+
+        ship.pd = std::atoi(row[4].c_str());
+        ship.beam = std::atoi(row[5].c_str());
+        ship.screen = std::atoi(row[6].c_str());
+        ship.tube = std::atoi(row[7].c_str());
+        ship.missile = std::atoi(row[8].c_str());
+        ship.sr = std::atoi(row[9].c_str());
+        ship.tech_level = std::atoi(row[10].c_str());
+        ship.is_warpship = KH_EQU(row[11], "W");
+        m_slate.enemy_ships.push_back(ship);
     }
 
     // Draft ships (from drafts table)
@@ -589,21 +583,18 @@ void AutonomyAgency::gather()
 
     for (const std::vector<std::string>& row : draft_rows)
     {
-        if (row.size() >= 9)
-        {
-            AAShipInfo ship;
-            ship.code = row[0];
-            ship.name = row[1];
-            ship.pd = std::atoi(row[2].c_str());
-            ship.beam = std::atoi(row[3].c_str());
-            ship.screen = std::atoi(row[4].c_str());
-            ship.tube = std::atoi(row[5].c_str());
-            ship.missile = std::atoi(row[6].c_str());
-            ship.sr = std::atoi(row[7].c_str());
-            ship.tech_level = m_slate.tech_level;
-            ship.is_warpship = KH_EQU(row[8], "W");
-            m_slate.draft_ships.push_back(ship);
-        }
+        AAShipInfo ship;
+        ship.code = row[0];
+        ship.name = row[1];
+        ship.pd = std::atoi(row[2].c_str());
+        ship.beam = std::atoi(row[3].c_str());
+        ship.screen = std::atoi(row[4].c_str());
+        ship.tube = std::atoi(row[5].c_str());
+        ship.missile = std::atoi(row[6].c_str());
+        ship.sr = std::atoi(row[7].c_str());
+        ship.tech_level = m_slate.tech_level;
+        ship.is_warpship = KH_EQU(row[8], "W");
+        m_slate.draft_ships.push_back(ship);
     }
 
     // Contested hexes (hexes with ships from both players)
@@ -643,44 +634,41 @@ void AutonomyAgency::gather()
 
     for (const std::vector<std::string>& row : combat_rows)
     {
-        if (row.size() >= 5)
+        std::string hex_id = row[0];
+
+        // Skip combat_state entries for hexes that are no longer contested
+        if (KH_EQU(contested_set.find(hex_id), contested_set.end()))
         {
-            std::string hex_id = row[0];
-
-            // Skip combat_state entries for hexes that are no longer contested
-            if (KH_EQU(contested_set.find(hex_id), contested_set.end()))
-            {
-                continue;
-            }
-
-            AACombatHex ch;
-            ch.hex_id = hex_id;
-            ch.stage = std::atoi(row[1].c_str());
-            ch.round = std::atoi(row[2].c_str());
-            ch.stalemate_counter = std::atoi(row[3].c_str());
-            // attacker_remains indicates if attacker still has initiative
-            // AI is attacker if they moved into the hex (simplified: check
-            // later)
-            ch.ai_is_attacker = (KH_EQU(row[4], "1"));
-
-            // Check if AI has committed orders for this hex and round
-            // Must filter destroyed ships to avoid stale orders from
-            // prior combats at the same hex
-            std::string sql_committed =
-                "SELECT COUNT(*) FROM combat_orders co "
-                "JOIN ships s ON s.game_id = co.game_id "
-                "AND s.ship_code = co.ship_code AND s.owner = co.owner "
-                "WHERE co.game_id=? AND co.owner=? AND co.round=? "
-                "AND co.committed=1 AND s.at_hex=? "
-                "AND s.destroyed_at IS NULL";
-            auto commit_rows =
-                db.Query(sql_committed, {m_slate.game_id, m_slate.aa_player,
-                                         ch.round, hex_id});
-            ch.ai_committed = (!commit_rows.empty() &&
-                               std::atoi(commit_rows[0][0].c_str()) > 0);
-
-            m_slate.active_combats.push_back(ch);
+            continue;
         }
+
+        AACombatHex ch;
+        ch.hex_id = hex_id;
+        ch.stage = std::atoi(row[1].c_str());
+        ch.round = std::atoi(row[2].c_str());
+        ch.stalemate_counter = std::atoi(row[3].c_str());
+        // attacker_remains indicates if attacker still has initiative
+        // AI is attacker if they moved into the hex (simplified: check
+        // later)
+        ch.ai_is_attacker = (KH_EQU(row[4], "1"));
+
+        // Check if AI has committed orders for this hex and round
+        // Must filter destroyed ships to avoid stale orders from
+        // prior combats at the same hex
+        std::string sql_committed =
+            "SELECT COUNT(*) FROM combat_orders co "
+            "JOIN ships s ON s.game_id = co.game_id "
+            "AND s.ship_code = co.ship_code AND s.owner = co.owner "
+            "WHERE co.game_id=? AND co.owner=? AND co.round=? "
+            "AND co.committed=1 AND s.at_hex=? "
+            "AND s.destroyed_at IS NULL";
+        auto commit_rows =
+            db.Query(sql_committed,
+                     {m_slate.game_id, m_slate.aa_player, ch.round, hex_id});
+        ch.ai_committed =
+            (!commit_rows.empty() && std::atoi(commit_rows[0][0].c_str()) > 0);
+
+        m_slate.active_combats.push_back(ch);
     }
 
     // For AI ships in combat hexes, check if they need orders or damage
@@ -708,8 +696,8 @@ void AutonomyAgency::gather()
                                           : std::atoi(order_rows[0][0].c_str());
 
                     Logger::instance().ai(
-                        "Order check: ship=" + ship.code + " hex=" +
-                        ch.hex_id + " round=" + std::to_string(ch.round) +
+                        "Order check: ship=" + ship.code + " hex=" + ch.hex_id +
+                        " round=" + std::to_string(ch.round) +
                         " found=" + std::to_string(order_count));
 
                     if (KH_EQU(order_count, 0))
@@ -866,13 +854,10 @@ void AutonomyAgency::gather()
 
     for (const std::vector<std::string>& row : codex_rows)
     {
-        if (row.size() >= 2)
-        {
-            AACodexEntry entry;
-            entry.system_name = row[0];
-            entry.level = row[1];
-            m_slate.codex.push_back(entry);
-        }
+        AACodexEntry entry;
+        entry.system_name = row[0];
+        entry.level = row[1];
+        m_slate.codex.push_back(entry);
     }
 
     // Resources at systems where AI has ships
@@ -906,53 +891,50 @@ void AutonomyAgency::gather()
 
         for (const std::vector<std::string>& row : res_rows)
         {
-            if (row.size() >= 3)
+            AAResourceInfo res;
+            res.system = sys;
+            res.type = row[0];
+            res.abundance = row[1];
+
+            // Pre-compute expected yield
+            int base_yield = 1;
+            if (KH_EQU(res.abundance, "Rich"))
             {
-                AAResourceInfo res;
-                res.system = sys;
-                res.type = row[0];
-                res.abundance = row[1];
-
-                // Pre-compute expected yield
-                int base_yield = 1;
-                if (KH_EQU(res.abundance, "Rich"))
-                {
-                    base_yield = 16;
-                }
-                else if (KH_EQU(res.abundance, "High"))
-                {
-                    base_yield = 8;
-                }
-                else if (KH_EQU(res.abundance, "Moderate"))
-                {
-                    base_yield = 4;
-                }
-                else if (KH_EQU(res.abundance, "Low"))
-                {
-                    base_yield = 2;
-                }
-
-                double modifier = 1.0;
-                std::string diff = row[2];
-                if (KH_EQU(diff, "Difficult"))
-                {
-                    modifier = 0.4;
-                }
-                else if (KH_EQU(diff, "Moderate"))
-                {
-                    modifier = 0.7;
-                }
-                else if (KH_EQU(diff, "Extreme"))
-                {
-                    modifier = 0.2;
-                }
-                res.yield = static_cast<int>(base_yield * modifier);
-                if (res.yield < 1)
-                {
-                    res.yield = 1;
-                }
-                m_slate.resources.push_back(res);
+                base_yield = 16;
             }
+            else if (KH_EQU(res.abundance, "High"))
+            {
+                base_yield = 8;
+            }
+            else if (KH_EQU(res.abundance, "Moderate"))
+            {
+                base_yield = 4;
+            }
+            else if (KH_EQU(res.abundance, "Low"))
+            {
+                base_yield = 2;
+            }
+
+            double modifier = 1.0;
+            std::string diff = row[2];
+            if (KH_EQU(diff, "Difficult"))
+            {
+                modifier = 0.4;
+            }
+            else if (KH_EQU(diff, "Moderate"))
+            {
+                modifier = 0.7;
+            }
+            else if (KH_EQU(diff, "Extreme"))
+            {
+                modifier = 0.2;
+            }
+            res.yield = static_cast<int>(base_yield * modifier);
+            if (res.yield < 1)
+            {
+                res.yield = 1;
+            }
+            m_slate.resources.push_back(res);
         }
     }
 
@@ -964,14 +946,11 @@ void AutonomyAgency::gather()
 
     for (const std::vector<std::string>& row : fac_rows)
     {
-        if (row.size() >= 3)
-        {
-            AAFacilityInfo fac;
-            fac.system = row[0];
-            fac.type = row[1];
-            fac.controller = row[2].empty() ? '\0' : row[2][0];
-            m_slate.facilities.push_back(fac);
-        }
+        AAFacilityInfo fac;
+        fac.system = row[0];
+        fac.type = row[1];
+        fac.controller = row[2].empty() ? '\0' : row[2][0];
+        m_slate.facilities.push_back(fac);
     }
 
     // Market prices (per-game dynamic prices, fall back to base prices)
@@ -990,14 +969,11 @@ void AutonomyAgency::gather()
 
     for (const std::vector<std::string>& row : market_rows)
     {
-        if (row.size() >= 3)
-        {
-            AAMarketPrice mp;
-            mp.resource_type = row[0];
-            mp.current_price = std::atoi(row[1].c_str());
-            mp.base_price = std::atoi(row[2].c_str());
-            m_slate.market_prices.push_back(mp);
-        }
+        AAMarketPrice mp;
+        mp.resource_type = row[0];
+        mp.current_price = std::atoi(row[1].c_str());
+        mp.base_price = std::atoi(row[2].c_str());
+        m_slate.market_prices.push_back(mp);
     }
 
     // Salvageable objects at AI ship hex locations
@@ -1021,37 +997,30 @@ void AutonomyAgency::gather()
 
         for (const std::vector<std::string>& row : salvage_rows)
         {
-            if (row.size() >= 4)
-            {
-                AASalvageableInfo si;
-                si.hex_id = row[0];
-                si.object_type = row[1];
-                si.state = row[2];
-                si.salvage_value = std::atoi(row[3].c_str());
-                m_slate.salvageables.push_back(si);
-            }
+            AASalvageableInfo si;
+            si.hex_id = row[0];
+            si.object_type = row[1];
+            si.state = row[2];
+            si.salvage_value = std::atoi(row[3].c_str());
+            m_slate.salvageables.push_back(si);
         }
     }
 
     // ----------------------------------
     // Cross-Turn Memory: Persisted Metrics
     // ----------------------------------
-    std::string sql_metrics =
-        "SELECT metric_name, metric_value, updated_round "
-        "FROM aa_metrics WHERE game_id=? AND player=?";
+    std::string sql_metrics = "SELECT metric_name, metric_value, updated_round "
+                              "FROM aa_metrics WHERE game_id=? AND player=?";
     auto metric_rows =
         db.Query(sql_metrics, {m_slate.game_id, m_slate.aa_player});
 
     for (const std::vector<std::string>& row : metric_rows)
     {
-        if (row.size() >= 3)
-        {
-            AAMetric met;
-            met.name = row[0];
-            met.value = std::atof(row[1].c_str());
-            met.updatedRound = std::atoi(row[2].c_str());
-            m_slate.persisted_metrics.push_back(met);
-        }
+        AAMetric met;
+        met.name = row[0];
+        met.value = std::atof(row[1].c_str());
+        met.updatedRound = std::atoi(row[2].c_str());
+        m_slate.persisted_metrics.push_back(met);
     }
 
     // ----------------------------------
@@ -1065,11 +1034,9 @@ void AutonomyAgency::gather()
 
         // Collect all base hexes for base-to-base distances
         std::vector<std::string> all_bases;
-        all_bases.insert(all_bases.end(),
-                         m_slate.own_base_hexes.begin(),
+        all_bases.insert(all_bases.end(), m_slate.own_base_hexes.begin(),
                          m_slate.own_base_hexes.end());
-        all_bases.insert(all_bases.end(),
-                         m_slate.enemy_base_hexes.begin(),
+        all_bases.insert(all_bases.end(), m_slate.enemy_base_hexes.begin(),
                          m_slate.enemy_base_hexes.end());
 
         // (a) Own ship -> own base (reinforcement: P1)
@@ -1086,8 +1053,7 @@ void AutonomyAgency::gather()
                 {
                     continue;
                 }
-                int cost = dist_graph.get_path_cost(
-                    ship.hex_id, baseHex, 50);
+                int cost = dist_graph.get_path_cost(ship.hex_id, baseHex, 50);
                 AAHexDistance entry;
                 entry.fromHex = ship.hex_id;
                 entry.toHex = baseHex;
@@ -1105,8 +1071,7 @@ void AutonomyAgency::gather()
             }
             for (const std::string& baseHex : m_slate.own_base_hexes)
             {
-                int cost = dist_graph.get_path_cost(
-                    enemy.hex_id, baseHex, 50);
+                int cost = dist_graph.get_path_cost(enemy.hex_id, baseHex, 50);
                 AAHexDistance entry;
                 entry.fromHex = enemy.hex_id;
                 entry.toHex = baseHex;
@@ -1120,8 +1085,8 @@ void AutonomyAgency::gather()
         {
             for (size_t j = i + 1; j < all_bases.size(); ++j)
             {
-                int cost = dist_graph.get_path_cost(
-                    all_bases[i], all_bases[j], 50);
+                int cost =
+                    dist_graph.get_path_cost(all_bases[i], all_bases[j], 50);
                 AAHexDistance entry;
                 entry.fromHex = all_bases[i];
                 entry.toHex = all_bases[j];
@@ -1139,13 +1104,11 @@ void AutonomyAgency::gather()
             }
             for (const AAShipInfo& foe : m_slate.enemy_ships)
             {
-                if (foe.hex_id.empty()
-                     || KH_EQU(own.hex_id, foe.hex_id))
+                if (foe.hex_id.empty() || KH_EQU(own.hex_id, foe.hex_id))
                 {
                     continue;
                 }
-                int cost = dist_graph.get_path_cost(
-                    own.hex_id, foe.hex_id, 50);
+                int cost = dist_graph.get_path_cost(own.hex_id, foe.hex_id, 50);
                 AAHexDistance entry;
                 entry.fromHex = own.hex_id;
                 entry.toHex = foe.hex_id;
@@ -1153,7 +1116,6 @@ void AutonomyAgency::gather()
                 m_slate.hex_distances.push_back(entry);
             }
         }
-
     }
 
     // ----------------------------------
@@ -1228,19 +1190,17 @@ void AutonomyAgency::gather()
 
 #ifdef WANT_MORE_DEBUGGING_TELEMETRY
     // Instrumentation: distance matrix + warpline hex + adjacency summary
-    Logger::instance().ai(
-        std::format("[AA-GATHER] hex_distances={} warpline_hexes={} adjacency={}",
-                    m_slate.hex_distances.size(),
-                    m_slate.warpline_hexes.size(),
-                    m_slate.hex_adjacency.size()));
+    Logger::instance().ai(std::format(
+        "[AA-GATHER] hex_distances={} warpline_hexes={} adjacency={}",
+        m_slate.hex_distances.size(), m_slate.warpline_hexes.size(),
+        m_slate.hex_adjacency.size()));
 
     // Sample up to 3 distance entries to verify BFS costs
     for (size_t idx = 0; idx < m_slate.hex_distances.size() && idx < 3; ++idx)
     {
         const AAHexDistance& hd = m_slate.hex_distances[idx];
-        Logger::instance().ai(
-            std::format("[AA-GATHER] dist {}->{} cost={}",
-                        hd.fromHex, hd.toHex, hd.cost));
+        Logger::instance().ai(std::format("[AA-GATHER] dist {}->{} cost={}",
+                                          hd.fromHex, hd.toHex, hd.cost));
     }
 #endif // WANT_MORE_DEBUGGING_TELEMETRY
 }
@@ -1331,8 +1291,9 @@ void AutonomyAgency::log_debug_state()
 // Calculate Step (ECL)
 // ----------------------------------------------------------------------------
 
-bool AutonomyAgency::calculate(std::vector<std::string>& commands_out,
-                               std::vector<std::pair<std::string, double>>& metrics_out)
+bool AutonomyAgency::calculate(
+    std::vector<std::string>& commands_out,
+    std::vector<std::pair<std::string, double>>& metrics_out)
 {
     commands_out.clear();
     metrics_out.clear();
@@ -1346,7 +1307,8 @@ bool AutonomyAgency::calculate(std::vector<std::string>& commands_out,
     bool bres = EclBridge::calculate(m_slate, commands_out, metrics_out);
     if (!bres)
     {
-        Logger::instance().error("[AI] ECL calculate failed - no command issued");
+        Logger::instance().error(
+            "[AI] ECL calculate failed - no command issued");
         commands_out.clear();
         metrics_out.clear();
         return false;
@@ -1401,7 +1363,7 @@ bool AutonomyAgency::combat_needs_response() const
 // ----------------------------------------------------------------------------
 
 bool AutonomyAgency::persist_metric(const std::string& name, double value,
-                                     int round)
+                                    int round)
 {
     std::lock_guard<std::mutex> db_lock(AIDBMutex::ai_mutex);
     DatabaseManager& db = DatabaseManager::instance();

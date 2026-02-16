@@ -5,13 +5,16 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#ifndef __KH_OUTFIT_MODES_H__
-#define __KH_OUTFIT_MODES_H__
-typedef enum : int
+#ifndef __KH_CONFIGURE_MODES_H__
+#define __KH_CONFIGURE_MODES_H__
+
+enum ConfigureMode
 {
-    FIRST_OUTFIT_MODE = 0,
-    OUTFIT_LIST,
-    OUTFIT_LRS,
-    LAST_OUTFIT_MODE
-} OutfitMode;
+    FIRST_CFG_MODE = 0,
+    CFG_SHOW,
+    CFG_RELOAD_CONF,
+    CFG_RELOAD_AI,
+    LAST_CFG_MODE
+};
+
 #endif

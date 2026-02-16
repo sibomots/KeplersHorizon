@@ -25,7 +25,6 @@ class FabricateStrategy
     static bool fabricate_beam(int game_id, char owner, int qty);
     static bool fabricate_screen(int game_id, char owner, int qty);
     static bool fabricate_tech(int game_id, char owner, int qty);
-    static bool fabricate_drone(int game_id, char owner, int qty);
 
   private:
     static bool check_cargo_cost(int game_id, char owner, int cost[8], int qty);

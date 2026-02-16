@@ -474,9 +474,12 @@ bool BuildAgent::apply(BuildFleetListParam& param)
     DatabaseManager& db = DatabaseManager::instance();
 
     // Join with star_systems table to get star names for at_hex
+    // Select both current and max values for combat attributes
     std::string q =
-        "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, s.pd, s.beam, "
-        " s.screen, s.tube, s.missiles, s.tech_level, s.lrs, s.tb, s.dr, "
+        "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, "
+        " s.pd, s.pd_max, s.beam, s.beam_max, "
+        " s.screen, s.screen_max, s.tube, s.tube_max, "
+        " s.missiles, s.missiles_max, s.tech_level, s.lrs, s.sr, s.sr_max, "
         " ss.name "
         " FROM ships s "
         " LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = "
@@ -492,50 +495,66 @@ bool BuildAgent::apply(BuildFleetListParam& param)
     }
     else
     {
+        // Column indices:
+        //  0=ship_code  1=ship_name  2=at_hex  3=racked_in
+        //  4=pd  5=pd_max  6=beam  7=beam_max
+        //  8=screen  9=screen_max  10=tube  11=tube_max
+        //  12=missiles  13=missiles_max  14=tech_level  15=lrs
+        //  16=sr  17=sr_max  18=ss.name
+        // Column order: HULL, DESIGNATION, SECTOR, TECH LV, PD, B, S, T, M, SR, LRS
         std::ostringstream out;
         out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
-        out << "HULL  DESIGNATION      SECTOR                PD   B  S  T  M  "
-               "LRS TB DR  TECH\n";
-        out << "────  ──────────────  ───────────────────    ──  ── ── ── ──  "
-               "─── ── ──  ────\n";
+        out << std::format("{:<6}{:<16}{:<16} {:>4} {:>5} {:>5} {:>5} "
+                           "{:>5} {:>5} {:>5} {:>3}\n",
+                           "HULL", "DESIGNATION", "SECTOR", "TECH",
+                           "PD", "B", "S", "T",
+                           "M", "SR", "LRS");
+        out << std::format("{:<6}{:<16}{:<16} {:>4} {:>5} {:>5} {:>5} "
+                           "{:>5} {:>5} {:>5} {:>3}\n",
+                           "----", "--------------", "--------------",
+                           "----", "-----", "-----", "-----",
+                           "-----", "-----", "-----", "---");
         for (const auto& r : rows)
         {
-            // Uppercase the hull designator (ship_code)
             std::string hull = r[0];
             std::transform(hull.begin(), hull.end(), hull.begin(), ::toupper);
 
-            // Format location: show star name with hex ID if available
             std::string loc;
             if (!r[3].empty())
             {
-                // Racked in another ship
                 loc = "in " + r[3];
             }
-            else if (!r[13].empty())
+            else if (!r[18].empty())
             {
-                // Have system name from join (index shifted due to lrs/tb/dr)
-                loc = r[13] + " (" + r[2] + ")";
+                loc = r[18] + " (" + r[2] + ")";
             }
             else
             {
-                // Just hex ID
                 loc = r[2];
             }
 
-            // Use iomanip for proper formatting with right-justified numbers
-            out << std::left << std::setw(6) << hull;
-            out << std::left << std::setw(16) << r[1].substr(0, 14);
-            out << std::left << std::setw(23) << loc.substr(0, 21);
-            out << std::right << std::setw(2) << r[4];  // pd
-            out << std::right << std::setw(4) << r[5];  // beam
-            out << std::right << std::setw(3) << r[6];  // screen
-            out << std::right << std::setw(3) << r[7];  // tube
-            out << std::right << std::setw(3) << r[8];  // missiles
-            out << std::right << std::setw(4) << r[10]; // lrs
-            out << std::right << std::setw(3) << r[11]; // tb
-            out << std::right << std::setw(3) << r[12]; // dr
-            out << std::right << std::setw(6) << r[9];  // tech_level
-            out << "\n";
+            // Format attribute as "cur/max" when damaged, or just "cur" when full
+            auto fmtAttr = [](const std::string& cur, const std::string& max)
+            {
+                if (cur == max || max == "0")
+                {
+                    return cur;
+                }
+                return cur + "/" + max;
+            };
+
+            std::string sPD = fmtAttr(r[4], r[5]);
+            std::string sB  = fmtAttr(r[6], r[7]);
+            std::string sS  = fmtAttr(r[8], r[9]);
+            std::string sT  = fmtAttr(r[10], r[11]);
+            std::string sM  = fmtAttr(r[12], r[13]);
+            std::string sSR = fmtAttr(r[16], r[17]);
+
+            out << std::format("{:<6}{:<16}{:<16} {:>4} {:>5} {:>5} {:>5} "
+                               "{:>5} {:>5} {:>5} {:>3}\n",
+                               hull, r[1].substr(0, 14), loc.substr(0, 18),
+                               r[14], sPD, sB, sS, sT,
+                               sM, sSR, r[15]);
         }
 
         Telemetry::instance().write(out.str());

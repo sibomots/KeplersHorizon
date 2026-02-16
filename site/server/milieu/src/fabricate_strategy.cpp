@@ -412,35 +412,3 @@ bool FabricateStrategy::fabricate_tech(int game_id, char owner, int qty)
     return bres;
 }
 
-bool FabricateStrategy::fabricate_drone(int game_id, char owner, int qty)
-{
-    bool bres = false;
-    int cost[8] = {0};
-    int build_time = 0;
-    int output_qty = 0;
-    std::string ship_code;
-    std::string at_system;
-
-    if (load_plan_costs("DRONE", cost, build_time, output_qty) &&
-        find_fabrication_ship(game_id, owner, ship_code, at_system) &&
-        check_cargo_cost(game_id, owner, cost, qty))
-    {
-        deduct_cargo(game_id, owner, cost, qty);
-        DatabaseManager& db = DatabaseManager::instance();
-        GameState s = StateMachine::instance().get_game_state();
-        int completion = s.round + build_time;
-
-        db.Exec("INSERT INTO fabrication_queue"
-                "(game_id,player,ship_code,recipe,"
-                "quantity,started_turn,completion_turn,status) VALUES("
-                "?,?,?,?,?,?,?,'IN_PROGRESS')",
-                {game_id, owner, ship_code, "drone", qty, s.round, completion});
-
-        std::string msg = "Queued drone build x" + std::to_string(qty) +
-                          ". Completes round " + std::to_string(completion);
-        Telemetry::instance().write("FABRICATE: " + msg);
-        bres = true;
-    }
-
-    return bres;
-}

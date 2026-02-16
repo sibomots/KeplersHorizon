@@ -20,7 +20,6 @@ typedef enum : int
     FABRICATE_BEAM,
     FABRICATE_SCREEN,
     FABRICATE_TECH,
-    FABRICATE_DRONE,
     LAST_FABRICATE_MODE
 } FabricateMode;
 

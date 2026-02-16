@@ -173,6 +173,46 @@ bool DeployCommand::invoke(void)
                                 " A={} bases, B={} bases",
                                 m_game_id, basesA.size(), basesB.size()));
             }
+
+            // Auto-grant "Charted" knowledge for each player's home-side systems
+            // Claiming a side means you know your own territory
+            auto grantKnowledge = [&](char player, const std::string& side)
+            {
+                auto systems = db.Query(
+                    "SELECT name FROM star_systems "
+                    "WHERE module_id=? AND is_base=1 AND base_side=?",
+                    {mod_id, side});
+                for (const auto& row : systems)
+                {
+                    if (row.empty())
+                    {
+                        continue;
+                    }
+                    auto existing = db.Query(
+                        "SELECT knowledge_level FROM codex_entries "
+                        "WHERE game_id=? AND player=? AND system_name=?",
+                        {m_game_id, player, row[0]});
+                    if (existing.empty())
+                    {
+                        db.Exec(
+                            "INSERT INTO codex_entries(game_id, player, "
+                            "system_name, knowledge_level, "
+                            "last_updated_turn) VALUES(?,?,?,?,?)",
+                            {m_game_id, player, row[0], "Charted", s.round});
+                    }
+                    else if (KH_EQU(existing[0][0], "Unknown") ||
+                             KH_EQU(existing[0][0], "Rumored"))
+                    {
+                        db.Exec(
+                            "UPDATE codex_entries SET knowledge_level=?, "
+                            "last_updated_turn=? WHERE game_id=? "
+                            "AND player=? AND system_name=?",
+                            {"Charted", s.round, m_game_id, player, row[0]});
+                    }
+                }
+            };
+            grantKnowledge('A', sideA);
+            grantKnowledge('B', sideB);
         }
     }
     else if (player_side != base_side)

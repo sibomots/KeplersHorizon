@@ -71,9 +71,6 @@
     (:sell-excess-cargo
      (issue-sell-action slate goals))
 
-    (:outfit-ship
-     (issue-outfit-action slate))
-
     (:salvage-opportunity
      (issue-salvage-action slate))
 
@@ -149,15 +146,6 @@
                 (ship-code ship) qty)
         (list (make-cmd "rs" (format nil "~A ~A"
                                       (ship-code ship) qty)))))))
-
-(defun issue-outfit-action (slate)
-  "Outfit ship with drones at shipyard.
-   Only fires when :outfit-ship goal is active."
-  (let ((ship (find-outfittable-ship slate)))
-    (when ship
-      (format t "[LISP] -> out ~A drones (goal: outfit-ship)~%"
-              (ship-code ship))
-      (list (make-cmd "out" (format nil "~A drones" (ship-code ship)))))))
 
 (defun issue-salvage-action (slate)
   "Salvage objects at current hex.

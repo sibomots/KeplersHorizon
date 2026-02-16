@@ -54,8 +54,7 @@ fleet,6
 score,6
 system,6
 survey,6
-galaxy,6
-gx,6
+chart,6
 online,6
 stats,6
 hex,6
@@ -87,3 +86,13 @@ missile,10
 missiles,10
 tube,10
 tubes,10
+attributes,11
+attr,11
+attribute,11
+b,11
+t,11
+m,11
+sr,11
+lrs,11
+drive,11
+power,11

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kepler's Horizon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050508;
+      --text: #33ff33;
+      --muted: #22aa22;
+      --dim: #117711;
+      --glow: 0 0 8px #33ff33, 0 0 20px rgba(51, 255, 51, 0.3);
+      --glow-strong: 0 0 12px #33ff33, 0 0 30px rgba(51, 255, 51, 0.5);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Fira Code', monospace;
+      text-transform: uppercase;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 3rem 1.5rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    .title-block {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-shadow: var(--glow-strong);
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: var(--muted);
+      letter-spacing: 0.3em;
+      text-shadow: 0 0 6px rgba(51, 255, 51, 0.2);
+    }
+
+    .description {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.8;
+      text-shadow: 0 0 4px rgba(51, 255, 51, 0.15);
+    }
+
+    .hero {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--dim);
+      box-shadow: 0 0 12px rgba(51, 255, 51, 0.25), 0 0 30px rgba(51, 255, 51, 0.1);
+    }
+
+/* --- Slideshow --- */
+/* --- Slideshow --- */
+.slideshow {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.slideshow img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--dim);
+  box-shadow: 0 0 12px rgba(51, 255, 51, 0.25), 
+              0 0 30px rgba(51, 255, 51, 0.1);
+  display: block;
+}
+
+/* Fade layer still overlays image only */
+.fade-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 700ms ease;
+}
+
+.fade-overlay.is-black {
+  opacity: 1;
+}
+
+/* Wrap image + overlay so overlay doesn't cover buttons */
+.slideshow {
+  position: relative;
+}
+
+.slideshow img,
+.fade-overlay {
+  max-width: 100%;
+}
+
+/* Controls BELOW image */
+.slideshow-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctrl-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--dim);
+  padding: 0.45rem 1.0rem;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-shadow: var(--glow);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.05s;
+}
+
+.ctrl-btn:hover {
+  border-color: var(--text);
+  box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+}
+
+.ctrl-btn:active {
+  transform: translateY(1px);
+}
+
+/* Status below buttons */
+.slideshow-status {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 6px rgba(51, 255, 51, 0.2);
+}
+
+
+    .manual-link {
+      text-align: center;
+    }
+
+    .manual-link a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.95rem;
+      letter-spacing: 0.2em;
+      padding: 0.6rem 1.5rem;
+      border: 1px solid var(--dim);
+      text-shadow: var(--glow);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .manual-link a:hover {
+      border-color: var(--text);
+      box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+    }
+
+    footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      line-height: 1.8;
+      text-transform: none;
+    }
+
+    @media (max-width: 500px) {
+      h1 {
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+      }
+      .subtitle {
+        font-size: 0.8rem;
+        letter-spacing: 0.15em;
+      }
+      body {
+        padding: 2rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title-block">
+      <h1>Kepler's Horizon</h1>
+      <div class="subtitle">Space Fleet Tactics</div>
+    </div>
+
+    <p class="description">
+      Command your fleet across contested star systems in this
+      hex-based multiplayer strategy game. Issue orders from the
+      bridge terminal and outmaneuver rival admirals in deep space.
+    </p>
+
+<div class="hero">
+ <div class="slideshow">
+
+  <div style="position:relative; width:100%; display:flex; justify-content:center;">
+    <img id="slideImg" src="ikons/taste15-combat-retreated.png" alt="Kepler's Horizon screenshot">
+    <div id="fadeOverlay" class="fade-overlay"></div>
+  </div>
+
+  <div class="slideshow-controls">
+    <button id="btnPrev" class="ctrl-btn" type="button">[ BACK ]</button>
+    <button id="btnPause" class="ctrl-btn" type="button">[ PAUSE ]</button>
+    <button id="btnNext" class="ctrl-btn" type="button">[ FWD ]</button>
+  </div>
+
+  <div class="slideshow-status">
+    <span id="slideIndexText">1 / 9</span>
+  </div>
+
+</div>
+ 
+</div>
+
+
+    <div class="manual-link">
+      <a href="kh.pdf">[ Operator's Manual ]</a>
+    </div>
+  </div>
+
+  <footer>
+    Licensed under BSD 3-Clause License<br>
+    Copyright &copy; 2025, sibomots
+  </footer>
+
+<script>
+(() => {
+  // --- Configuration ---
+  const IMAGES = [
+    "ikons/choosing-single-player.png",
+    "ikons/game_interface.png",
+    "ikons/taste2-kh.png",
+    "ikons/taste3-combat-kh.png",
+    "ikons/taste4-combat-kh.png",
+    "ikons/taste6-build-ships.png",
+    "ikons/taste12-ships-move.png",
+    "ikons/taste14-combat.png",
+    "ikons/taste15-combat-retreated.png"
+  ];
+
+  const DISPLAY_MS = 2000;     // time an image stays visible
+  const FADE_MS = 400;         // must match CSS transition for .fade-overlay
+  const BLACK_HOLD_MS = 150;   // small hold at full black (looks intentional)
+
+  // --- Elements ---
+  const imgEl = document.getElementById("slideImg");
+  const overlayEl = document.getElementById("fadeOverlay");
+  const idxTextEl = document.getElementById("slideIndexText");
+
+  const btnPrev = document.getElementById("btnPrev");
+  const btnNext = document.getElementById("btnNext");
+  const btnPause = document.getElementById("btnPause");
+
+  // --- State ---
+  let index = 0;
+  let paused = false;
+  let timer = null;
+  let inTransition = false;
+
+  // Preload to reduce flashes
+  const preloaded = IMAGES.map(src => {
+    const im = new Image();
+    im.src = src;
+    return im;
+  });
+
+  function updateStatus() {
+    idxTextEl.textContent = `${index + 1} / ${IMAGES.length}`;
+  }
+
+  function setImage(i) {
+    index = (i + IMAGES.length) % IMAGES.length;
+    imgEl.src = IMAGES[index];
+    updateStatus();
+  }
+
+  function clearTimer() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+
+  function scheduleNext() {
+    clearTimer();
+    if (paused) return;
+    timer = setTimeout(() => transitionTo(index + 1), DISPLAY_MS);
+  }
+
+  async function transitionTo(nextIndex) {
+    if (paused || inTransition) return;
+    inTransition = true;
+    clearTimer();
+
+    // Fade to black
+    overlayEl.classList.add("is-black");
+    await wait(FADE_MS);
+
+    // Optional brief hold at full black
+    if (BLACK_HOLD_MS > 0) await wait(BLACK_HOLD_MS);
+
+    // Swap image while black
+    setImage(nextIndex);
+
+    // Fade back in
+    overlayEl.classList.remove("is-black");
+    await wait(FADE_MS);
+
+    inTransition = false;
+    scheduleNext();
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function togglePause() {
+    paused = !paused;
+    btnPause.textContent = paused ? "[ PLAY ]" : "[ PAUSE ]";
+    if (paused) {
+      clearTimer();
+    } else {
+      scheduleNext();
+    }
+  }
+
+  // --- Controls ---
+  btnPrev.addEventListener("click", () => {
+    if (inTransition) return;
+    clearTimer();
+    transitionTo(index - 1);
+  });
+
+  btnNext.addEventListener("click", () => {
+    if (inTransition) return;
+    clearTimer();
+    transitionTo(index + 1);
+  });
+
+  btnPause.addEventListener("click", () => togglePause());
+
+  // Keyboard: left/right/p
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") { btnPrev.click(); }
+    else if (e.key === "ArrowRight") { btnNext.click(); }
+    else if (e.key.toLowerCase() === "p") { btnPause.click(); }
+  });
+
+  // --- Init ---
+  setImage(0);
+  updateStatus();
+  scheduleNext();
+})();
+</script>
+
+</body>
+</html>

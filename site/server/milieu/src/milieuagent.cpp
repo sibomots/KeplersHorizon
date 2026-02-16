@@ -287,9 +287,6 @@ bool MilieuAgent::apply(FabricateParam& param)
     case FabricateMode::FABRICATE_TECH:
         bres = FabricateStrategy::fabricate_tech(game_id, owner, qty);
         break;
-    case FabricateMode::FABRICATE_DRONE:
-        bres = FabricateStrategy::fabricate_drone(game_id, owner, qty);
-        break;
     default:
         Telemetry::instance().write("FABRICATE: Unknown fabrication mode.");
         break;
@@ -414,9 +411,6 @@ bool MilieuAgent::apply(OutfitParam& param)
         break;
     case OutfitMode::OUTFIT_LRS:
         bres = OutfitStrategy::outfit_lrs(game_id, owner, ship_code);
-        break;
-    case OutfitMode::OUTFIT_DRONES:
-        bres = OutfitStrategy::outfit_drones(game_id, owner, ship_code);
         break;
     }
 

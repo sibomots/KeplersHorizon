@@ -37,6 +37,7 @@ SEE ALSO: fleet, deploy, ship"
 3,"TOPIC: MOVE
 SYNOPSIS:
   M <ship> <dest...>      Move ship through waypoints
+  CHART <ship> <dest...>  Preview route and cost without moving
   PICK <ship> <dest>      Rack systemship <ship> into warpship <dest>
   DROP <ship>             Unrack systemship from warpship
   DEPLOY <ship> <system>  Deploy ship to star system
@@ -116,16 +117,17 @@ SYNOPSIS:
   SCORE            Show victory points and credits
   SYSTEM <name>    Show details for a star system
   SURVEY <system>  Survey a system for intel
+  HEX <hex>        Show hex details and ships present
   CRT              Display Combat Results Table
-  GALAXY           Show galaxy map
 DESCRIPTION:
   Information commands for situational awareness.
   Survey to increase knowledge levels.
+  Scan commands (hex, survey, system) cost 1 PD per use.
 EXAMPLES:
   > fleet
   > system BELIX planets
   > survey ARVEN
-SEE ALSO: score, fleet, crt"
+SEE ALSO: score, fleet, crt, attributes"
 7,"TOPIC: TURN
 SYNOPSIS:
   N / NEXT   Advance to next game phase
@@ -197,3 +199,44 @@ EXAMPLES:
   > fab missiles W1
   > rs W1
 SEE ALSO: combat, fabricate, ship"
+11,"TOPIC: ATTRIBUTES
+SYNOPSIS:
+  Ship attributes define a vessel's combat and operational capabilities.
+  Use BS <ship> <specs> during Build phase to set attributes.
+DESCRIPTION:
+  PD (Power/Drive)
+    Engine and weapon power source. Each PD costs 1 BP.
+    In combat, PD is allocated among Drive, Beams, Screens, and Tubes.
+    Drive determines movement range (1 hex per PD) and CRT column.
+    Scanning commands (hex, survey, system) each cost 1 PD.
+  B (Beams)
+    Destructive energy weapons. Each Beam costs 1 BP.
+    In combat, Beams fire at the designated target.
+    Damage equals power allocated to Beams plus Tech Level.
+    Cannot fire Beams while launching Missiles.
+  S (Screens)
+    Protective energy shields. Each Screen costs 1 BP.
+    In combat, Screens absorb incoming hits.
+    Absorption equals power allocated to Screens plus Tech Level.
+    Cannot use Screens while launching Missiles.
+  T (Tubes)
+    Missile launchers. Each Tube costs 1 BP.
+    Each Tube fires one Missile per combat round.
+    Powering a Tube requires 1 PD allocation.
+    Tubes cannot be used simultaneously with Beams or Screens.
+  M (Missiles)
+    Ordnance carried aboard ship. 3 Missiles cost 1 BP.
+    Each Missile does 2 hits damage plus Tech Level when it hits.
+    Missiles have their own Drive setting on the CRT.
+    Once fired, Missiles are expended. Resupply at base or fabricate.
+  SR (System Racks)
+    Warpship-only. Each Rack costs 1 BP and carries one Systemship.
+    Pick up and drop off Systemships during Movement phase.
+    Racking or unracking costs 1 PD each.
+  LRS (Long Range Scanner)
+    Enhances sensor capability for scanning operations.
+EXAMPLES:
+  > bs Falcon pd=9 b=3 s=2 t=1 m=3
+  > help pd
+  > help beams
+SEE ALSO: build, ship, combat, crt"

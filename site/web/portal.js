@@ -28,6 +28,10 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
+        const ct = resp.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            throw new Error('Server unavailable');
+        }
         return resp.json();
     }
 
@@ -73,11 +77,7 @@
                 showAlert(data.error || 'Login failed', 'danger');
             }
         } catch (err) {
-            if (err.message.includes('fetch') || err.message.includes('Failed')) {
-                showAlert('⚠️ Server not reachable. Please ensure the game server is running.', 'warning');
-            } else {
-                showAlert('Connection error: ' + err.message, 'danger');
-            }
+            showAlert('Server not reachable. Please ensure the game server is running.', 'warning');
         }
     });
 

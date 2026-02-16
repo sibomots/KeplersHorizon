@@ -62,10 +62,6 @@ FabricateMode FabricateActor::plan_name_to_mode(const std::string& name)
     {
         result = FabricateMode::FABRICATE_TECH;
     }
-    else if (KH_EQU(name, "drone"))
-    {
-        result = FabricateMode::FABRICATE_DRONE;
-    }
     else if (KH_EQU(name, "list"))
     {
         result = FabricateMode::LIST_PLANS;

@@ -394,9 +394,6 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_int(s.tb), plist);
         plist = make_cons(make_keyword("tb"), plist);
 
-        plist = make_cons(make_int(s.dr), plist);
-        plist = make_cons(make_keyword("dr"), plist);
-
         list = make_cons(plist, list);
     }
 

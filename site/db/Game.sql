@@ -10,6 +10,7 @@ username VARCHAR(64) NOT NULL UNIQUE,
 email VARCHAR(255) UNIQUE,
 password_plain VARCHAR(128),
 password_hash VARCHAR(255),
+is_admin TINYINT NOT NULL DEFAULT 0,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -133,7 +134,6 @@ sr INT NOT NULL DEFAULT 0,
 -- Extraction equipment (don't affect destruction)
 lrs INT NOT NULL DEFAULT 0,   -- Long Range Scanner
 tb INT NOT NULL DEFAULT 0,    -- Transporter Beam
-dr INT NOT NULL DEFAULT 0,    -- Drones
 pd_spent INT NOT NULL DEFAULT 0,
 at_system VARCHAR(16) DEFAULT NULL,
 at_hex VARCHAR(8) DEFAULT NULL,
@@ -374,6 +374,15 @@ FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
 INDEX idx_game_player (game_id, player)
 );
 
+-- Per-game configuration (loaded from kh.conf via configure command)
+CREATE TABLE IF NOT EXISTS game_config (
+game_id INT NOT NULL,
+config_key VARCHAR(64) NOT NULL,
+config_value VARCHAR(128) NOT NULL DEFAULT '',
+PRIMARY KEY (game_id, config_key),
+FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS market_base_prices (
 module_id INT NOT NULL DEFAULT 1,
 resource_type VARCHAR(32) NOT NULL,
@@ -404,8 +413,7 @@ FOREIGN KEY (module_id) REFERENCES modules(module_id)
 
 INSERT INTO equipment_catalog (module_id, equipment_type, description, price, ship_column) VALUES
 (1, 'LRS', 'Long Range Scanner', 50, 'lrs'),
-(1, 'TB', 'Transporter Beam', 75, 'tb'),
-(1, 'DRONES', 'Mining/Salvage Drones', 100, 'dr');
+(1, 'TB', 'Transporter Beam', 75, 'tb');
 
 CREATE TABLE IF NOT EXISTS system_asteroid_belts (
 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -509,7 +517,7 @@ cost_water INT DEFAULT 0,
 cost_organic INT DEFAULT 0,
 cost_exotic INT DEFAULT 0,
 output_qty INT DEFAULT 1,
-output_type ENUM('MISSILE','TUBE','BEAM','SCREEN','TECH','DRONE') NOT NULL,
+output_type ENUM('MISSILE','TUBE','BEAM','SCREEN','TECH') NOT NULL,
 FOREIGN KEY (module_id) REFERENCES modules(module_id),
 INDEX (module_id, name),
 INDEX (output_type)
@@ -539,11 +547,6 @@ INSERT INTO fabrication_plan
 (name, description, build_time, cost_rare_earth, cost_crystalline, cost_exotic, output_qty, output_type)
 VALUES
 ('tech', 'Tech Research (+1 level)', 5, 10, 5, 2, 1, 'TECH');
-
-INSERT INTO fabrication_plan
-(name, description, build_time, cost_ferrous, cost_rare_earth, cost_exotic, output_qty, output_type)
-VALUES
-('drone', 'Scout Drone', 2, 3, 2, 1, 1, 'DRONE');
 
 CREATE TABLE IF NOT EXISTS fabrication_queue (
 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -805,7 +808,7 @@ CREATE TABLE IF NOT EXISTS hex_objects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     game_id INT NOT NULL,
     hex_id VARCHAR(8) NOT NULL,
-    object_type ENUM('debris','wreckage','alien_ship','ghost_ship','anomaly','drone') NOT NULL,
+    object_type ENUM('debris','wreckage','alien_ship','ghost_ship','anomaly') NOT NULL,
     state ENUM('hidden','detected','identified','salvaged','destroyed') NOT NULL DEFAULT 'hidden',
     owner CHAR(1) DEFAULT NULL,
     discovered_by CHAR(1) DEFAULT NULL,

@@ -105,12 +105,8 @@
      ;; satisfied when no ship at base needs missile resupply
      (null (find-resupplyable-ship-for-goal slate)))
 
-    (:outfit-ship
-     ;; satisfied when no ship at shipyard lacks drones
-     (null (find-outfittable-ship slate)))
-
     (:salvage-opportunity
-     ;; satisfied when no ship with drones is at salvageable hex
+     ;; satisfied when ship is at salvageable hex
      (null (find-salvage-opportunity slate)))
 
     (otherwise t)))
@@ -159,12 +155,8 @@
      (and (not (objective-satisfied-p :maintain-missile-stock slate))
           (find-resupplyable-ship-for-goal slate)))
 
-    (:outfit-ship
-     ;; relevant when ship at shipyard lacks drones and can afford
-     (find-outfittable-ship slate))
-
     (:salvage-opportunity
-     ;; relevant when ship with drones is at salvageable hex
+     ;; relevant when ship is at salvageable hex
      (find-salvage-opportunity slate))
 
     (otherwise nil)))
@@ -211,14 +203,8 @@
                    :relevant (objective-relevant-p :survey-for-yield slate)
                    :needed-resources nil)
 
-             (list :objective :outfit-ship
-                   :priority 6
-                   :satisfied (objective-satisfied-p :outfit-ship slate)
-                   :relevant (objective-relevant-p :outfit-ship slate)
-                   :needed-resources nil)
-
              (list :objective :salvage-opportunity
-                   :priority 7
+                   :priority 6
                    :satisfied (objective-satisfied-p :salvage-opportunity slate)
                    :relevant (objective-relevant-p :salvage-opportunity slate)
                    :needed-resources nil)
@@ -384,29 +370,11 @@
           (return-from find-resupplyable-ship-for-goal ship)))))
   nil)
 
-(defun find-outfittable-ship (slate)
-  "Find ship at shipyard that lacks drones and we can afford to outfit."
-  (let ((player (slate-get slate :aa-player))
-        (credits (slate-credits slate)))
-    (when (>= credits 150)
-      (dolist (ship (slate-own-ships slate))
-        (let ((sys (ship-at-system ship)))
-          (when (and (not (string= sys ""))
-                     (can-fabricate-at-p slate sys player)
-                     (not (ship-has-drones-p ship)))
-            (return-from find-outfittable-ship ship))))))
-  nil)
-
 (defun find-salvage-opportunity (slate)
-  "Find ship with drones at hex with salvageable objects."
+  "Find ship at hex with salvageable objects."
   (dolist (ship (slate-own-ships slate))
     (let ((hex (ship-hex ship)))
       (when (and (not (string= hex ""))
-                 (ship-has-drones-p ship)
                  (salvageables-at-hex slate hex))
         (return-from find-salvage-opportunity ship))))
   nil)
-
-(defun ship-has-drones-p (ship)
-  "Check if ship has drones equipment."
-  (> (or (getf ship :dr) 0) 0))
