@@ -195,8 +195,12 @@ bool MilieuAgent::apply(CargoParam& param)
             cargo[i] = std::atoi(rows[0][3 + i].c_str());
         }
 
-        // Capacity formula: 2*PD + SR
+        // Capacity formula: 2*PD + SR (minimum 1)
         int capacity = 2 * pd + sr;
+        if (capacity < 1)
+        {
+            capacity = 1;
+        }
         int total_cargo = 0;
         for (int i = 0; i < 8; i++)
         {
@@ -213,12 +217,10 @@ bool MilieuAgent::apply(CargoParam& param)
         }
         out << "\n";
 
-        // BIGBUG why are these hard-coded?
-        const char* names[] = {"FERROUS",     "RARE_EARTH", "RADIOACTIVE",
-                               "CRYSTALLINE", "VOLATILE",   "WATER",
-                               "ORGANIC",     "EXOTIC",     "MISSILES"};
+        const char* names[] = {"Ferrous",     "Rare Earth", "Radioactive",
+                               "Crystalline", "Volatile",   "Water",
+                               "Organic",     "Exotic",     "Missiles"};
 
-        // BIGBUG why is the size of the array hard-coded.
         for (int i = 0; i < 9; i++)
         {
             if (cargo[i] > 0)
@@ -413,9 +415,6 @@ bool MilieuAgent::apply(OutfitParam& param)
     case OutfitMode::OUTFIT_LRS:
         bres = OutfitStrategy::outfit_lrs(game_id, owner, ship_code);
         break;
-    case OutfitMode::OUTFIT_TB:
-        bres = OutfitStrategy::outfit_tb(game_id, owner, ship_code);
-        break;
     case OutfitMode::OUTFIT_DRONES:
         bres = OutfitStrategy::outfit_drones(game_id, owner, ship_code);
         break;
@@ -538,9 +537,8 @@ bool MilieuAgent::apply(SurveyParam& param)
         }
         else if (KH_EQU(new_level, "Surveyed"))
         {
-            out << "Detailed resource and population data now available.\n";
+            out << "Detailed resource data now available.\n";
             out << "Use 'system " << target_system << " resources' to view.\n";
-            out << "Use 'system " << target_system << " population' to view.\n";
         }
         else if (KH_EQU(new_level, "Intimate"))
         {

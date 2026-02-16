@@ -62,9 +62,7 @@
 #include "crt_command.h"
 #include "status_command.h"
 #include "hex_command.h"
-#include "galaxy_actor.h"
 #include "delete_command.h"
-#include "quit_command.h"
 #include "gamedev_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -153,7 +151,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_DROP
 %token TOK_ESCAPE
 %token TOK_FLEET
-%token TOK_GALAXY
 %token TOK_CARGO
 %token TOK_HELP
 %token TOK_HEX
@@ -168,7 +165,6 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_ORDER
 %token TOK_PICK
 %token TOK_POWER_DRIVE
-%token TOK_QUIT
 %token TOK_REPAIR
 %token TOK_RESUPPLY
 %token TOK_RETREAT
@@ -199,7 +195,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_CLEAR
 %token TOK_GAMEDEV
 %token TOK_RECAP
-%token TOK_LRS TOK_TB TOK_DRONES
+%token TOK_LRS TOK_DRONES
 
 /* Attribute assignment tokens - value in yylval.ival */
 %token <ival> TOK_PD_ASSIGN
@@ -242,30 +238,34 @@ command:
 license_cmd:
    TOK_LICENSE
    {
-      ICmd* pCmd = LicenseCommand::Builder().build();
-      pCmd->invoke();
-      SafeDelete(pCmd);
+       // JDW OK
+       ICmd* pCmd = LicenseCommand::Builder().build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
    }
    ;
 session_cmd:
    TOK_SAVE
    {
-        ICmd *pCmd = SaveCommand::Builder().set_show_usage().build();
-        pCmd->invoke();
-        SafeDelete(pCmd);
+       // JDW OK
+       ICmd *pCmd = SaveCommand::Builder().set_show_usage().build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
    }
    |
    TOK_SAVE TOK_STRING
    {
-        std::string save_name(*$2);
-        ICmd *pCmd = SaveCommand::Builder().set_name(save_name).build();
-        pCmd->invoke();
-        SafeDelete(pCmd);
-        SafeDelete($2);
+       // JDW OK
+       std::string save_name(*$2);
+       ICmd *pCmd = SaveCommand::Builder().set_name(save_name).build();
+       pCmd->invoke();
+       SafeDelete(pCmd);
+       SafeDelete($2);
    }
    |
    TOK_LOAD
    {
+        // JDW OK
         ICmd *pCmd = LoadCommand::Builder().set_list_saves().build();
         pCmd->invoke();
         SafeDelete(pCmd);
@@ -273,6 +273,7 @@ session_cmd:
    |
    TOK_LOAD TOK_STRING
    {
+        // JDW OK
         std::string load_name(*$2);
         ICmd *pCmd = LoadCommand::Builder().set_name(load_name).build();
         pCmd->invoke();
@@ -282,6 +283,7 @@ session_cmd:
    |
    TOK_ACCEPT TOK_STRING
    {
+        // JDW OK
         std::string accept_name(*$2);
         ICmd *pCmd = AcceptCommand::Builder().set_name(accept_name).build();
         pCmd->invoke();
@@ -291,6 +293,7 @@ session_cmd:
    |
    TOK_REJECT TOK_STRING
    {
+        // JDW OK
         std::string reject_name(*$2);
         ICmd *pCmd = RejectCommand::Builder().set_name(reject_name).build();
         pCmd->invoke();
@@ -298,6 +301,7 @@ session_cmd:
         SafeDelete(pCmd);
    }
    | TOK_DELETE TOK_STRING {
+        // JDW OK
         std::string target_game(*$2);
         ICmd* pCmd = DeleteCommand::Builder().setSaveName(target_game).build();
         if (pCmd && pCmd->invoke()) { /* success */ }
@@ -305,16 +309,9 @@ session_cmd:
         SafeDelete(pCmd);
    }
    |
-   TOK_QUIT
-   {
-        ICmd* pCmd = QuitCommand::Builder().build();
-        if (pCmd && pCmd->invoke()) { /* success */ }
-        SafeDelete(pCmd);
-   }
-   |
    TOK_CLEAR
    {
-        // Bug #6: Clear command sends special marker that client will detect
+        // JDW OK
         // Using ANSI escape sequence ESC[2J which means "clear entire screen"
         Telemetry::instance().write("\033[2J");
    }
@@ -332,16 +329,19 @@ session_cmd:
 
 info_cmd:
    TOK_STATUS {
-      ICmd* pCmd = StatusCommand::Builder().build();
+      // Status is now an alias for score
+      ICmd* pCmd = ScoreCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
    }
    | TOK_CRT {
+      // JDW OK
       ICmd* pCmd = CrtCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
    }
    | TOK_RECAP {
+      // JDW BUGBUG should be cleaned up
       ICmd* pCmd = RecapCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
@@ -350,9 +350,13 @@ info_cmd:
 
 looking_cmd:
   TOK_FLEET TOK_STRING error {
-      // ERROR: Too many arguments
       yyerror(&@3, "Too many arguments. Usage: fleet > HELP FLEET");
       SafeDelete($2);
+  }
+  | TOK_FLEET TOK_STRING {
+      yyerror(&@2, "fleet takes no arguments. Usage: fleet > HELP FLEET");
+      SafeDelete($2);
+      YYERROR;
   }
   | TOK_FLEET {
       ICmd* pCmd = BuildFleetListActor::Builder().build();
@@ -362,6 +366,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_HEX TOK_STRING {
+      // JDW OK
       std::string identifier(*$2);
       ICmd* pCmd = HexCommand::Builder().setLocation(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -370,6 +375,8 @@ looking_cmd:
   }
 
   | TOK_SYSTEM TOK_STRING TOK_ANOMALIES {
+      // BUGBUG - depends on the star-hex involved
+      // if it's a base star-hex, we should already have full knowledge
       std::string identifier(*$2);
       ICmd* pCmd = SystemActor::Builder()
                       .set_system_name(identifier)
@@ -381,6 +388,8 @@ looking_cmd:
   }
 
   | TOK_SYSTEM TOK_STRING TOK_FACILITIES {
+      // BUGBUG - depends on the star-hex involved
+      // if it's a base star-hex, we should already have full knowledge
       std::string identifier(*$2);
       ICmd* pCmd = SystemActor::Builder()
                       .set_system_name(identifier)
@@ -391,6 +400,8 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SYSTEM TOK_STRING TOK_RESOURCES {
+      // BUGBUG - depends on the star-hex involved
+      // if it's a base star-hex, we should already have full knowledge
       std::string identifier(*$2);
       ICmd* pCmd = SystemActor::Builder()
                       .set_system_name(identifier)
@@ -401,6 +412,8 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SYSTEM TOK_STRING TOK_PLANETS {
+      // BUGBUG - depends on the star-hex involved
+      // if it's a base star-hex, we should already have full knowledge
       std::string identifier(*$2);
       ICmd* pCmd = SystemActor::Builder()
                       .set_system_name(identifier)
@@ -411,6 +424,9 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SYSTEM TOK_STRING {
+      // BUGBUG -- once a base-star hex is claimed
+      // the rumors should include (for this game) that the player has
+      // control over it.
       std::string identifier(*$2);
       ICmd* pCmd = SystemActor::Builder()
                      .set_system_name(identifier)
@@ -422,6 +438,7 @@ looking_cmd:
   }
 
   | TOK_SURVEY {
+      // BUGBUG but there is some cumbersome ways to ladder-up knowledge
       ICmd* pCmd = SurveyActor::Builder()
                       .set_mode(SurveyMode::SURV_NONE)
                       .build();
@@ -429,6 +446,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SURVEY TOK_STRING {
+      // BUGBUG but there is some cumbersome ways to ladder-up knowledge
       std::string identifier(*$2);
       ICmd* pCmd = SurveyActor::Builder()
                      .set_system_name(identifier)
@@ -439,11 +457,14 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SCORE {
+      // BUGBUG - should be part of STATUS
       ICmd* pCmd = ScoreCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_EXTRACT TOK_STRING TOK_STRING chain_resource_words {
+
+      // JDW OK, it works.
       std::string ship(*$2);
 
       // Join words with underscore: "rare" + "earth" -> "RARE_EARTH"
@@ -457,9 +478,13 @@ looking_cmd:
       for (const auto& word : *$4)
       {
           std::string upper = word;
-          for (auto& c : upper) c = std::toupper(c);
+          for (auto& c : upper)
+          {
+              c = std::toupper(c);
+          }
           res += "_" + upper;
       }
+
       ICmd* pCmd = ExtractActor::Builder()
                                    .set_ship_code(ship)
                                    .set_extract_mode()
@@ -472,6 +497,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_EXTRACT TOK_SCAN {
+      // BUGBUG - but it doesn't cost anything??
       ICmd* pCmd = ExtractActor::Builder()
                                    .set_scan_mode()
                                    .build();
@@ -479,6 +505,9 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_MARKET TOK_STRING {
+      // BADBUG:
+      //   typed in "market rare earth" 
+      // and got "too many arguments. Usage Fleet > help fleet"
       std::string res(*$2);
       ICmd* pCmd = MarketActor::Builder()
                                 .set_history_mode()
@@ -488,16 +517,16 @@ looking_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
-
   | TOK_MARKET {
+      // BUGBUG - no primed data.
       ICmd* pCmd = MarketActor::Builder()
                                 .set_list_mode()
                                 .build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-
   | TOK_TRADE TOK_BUY TOK_STRING TOK_INT {
+      // UNTESTED
       std::string res(*$3);
       int qty = $4;
       ICmd* pCmd = TradeActor::Builder()
@@ -509,8 +538,8 @@ looking_cmd:
       SafeDelete($3);
       SafeDelete(pCmd);
   }
-
   | TOK_TRADE TOK_SELL TOK_STRING TOK_INT {
+      // UNTESTED
       std::string res(*$3);
       int qty = $4;
       ICmd* pCmd = TradeActor::Builder()
@@ -524,6 +553,7 @@ looking_cmd:
   }
 
   | TOK_TRADE TOK_TRANSFER TOK_STRING TOK_STRING TOK_STRING TOK_INT {
+      // UNTESTED
       std::string ship1(*$3);
       std::string ship2(*$4);
       std::string res(*$5);
@@ -542,12 +572,16 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_TRADE TOK_LIST {
+      // BADBUG:  the trade list gives list of prices
+      // on the exchange, but the market command yielded nothing.
+      // That is inconsistent.
       ICmd* pCmd = TradeActor::Builder().set_list_mode().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
 
   | TOK_FABRICATE TOK_STRING {
+      // UNTESTED
       std::string fabricate_plan_requested(*$2);
       ICmd* pCmd = FabricateActor::Builder()
                      .set_plan(fabricate_plan_requested)
@@ -556,17 +590,19 @@ looking_cmd:
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
-  | TOK_FABRICATE TOK_STRING TOK_INT {
-      std::string fabricate_plan_requested(*$2);
-      int qty = $3;
+  | TOK_FABRICATE TOK_INT TOK_STRING {
+      std::string fabricate_plan_requested(*$3);
+      int qty = $2;
       ICmd* pCmd = FabricateActor::Builder()
                      .set_plan(fabricate_plan_requested)
                      .set_qty(qty)
                      .build();
       if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete($3);
       SafeDelete(pCmd);
   }
   | TOK_FABRICATE TOK_LIST {
+      // BUGBUG the list is too tall.  Make it wider.
       ICmd* pCmd = FabricateActor::Builder()
                                    .show_plans()
                                    .build();
@@ -574,6 +610,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_OUTFIT TOK_STRING TOK_LRS {
+      // UNTESTED
       std::string ship(*$2);
       ICmd* pCmd = OutfitActor::Builder()
                                 .set_ship(ship)
@@ -583,17 +620,8 @@ looking_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
-  | TOK_OUTFIT TOK_STRING TOK_TB {
-      std::string ship(*$2);
-      ICmd* pCmd = OutfitActor::Builder()
-                                .set_ship(ship)
-                                .set_tb()
-                                .build();
-      if (pCmd && pCmd->invoke()) { /* success */ }
-      SafeDelete($2);
-      SafeDelete(pCmd);
-  }
   | TOK_OUTFIT TOK_STRING TOK_DRONES {
+      // UNTESTED
       std::string ship(*$2);
       ICmd* pCmd = OutfitActor::Builder()
                                 .set_ship(ship)
@@ -604,6 +632,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_OUTFIT TOK_LIST {
+      // UNTESTED
       ICmd* pCmd = OutfitActor::Builder()
                                .set_list()
                                .build();
@@ -611,6 +640,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_OUTFIT {
+      // UNTESTED
       ICmd* pCmd = OutfitActor::Builder()
                                 .set_list()
                                 .build();
@@ -618,11 +648,13 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SALVAGE TOK_SCAN {
+      // BADBUG: "salvage w1 <system_name>" gave me "command executed"
       ICmd* pCmd = SalvageActor::Builder().set_scan_mode().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_SALVAGE TOK_STRING {
+      // BADBUG: "salvage w1" gave me "command executed"
       std::string ship(*$2);
       ICmd* pCmd = SalvageActor::Builder()
                                 .set_ship_code(ship)
@@ -633,6 +665,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_SALVAGE TOK_STRING TOK_STRING {
+      // UNTESTED
       std::string ship(*$2);
       std::string resource(*$3);
       ICmd* pCmd = SalvageActor::Builder()
@@ -645,16 +678,12 @@ looking_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
-  | TOK_GALAXY {
-      ICmd* pCmd = GalaxyActor::Builder().build();
-      if (pCmd && pCmd->invoke()) { /* success */ }
-      SafeDelete(pCmd);
-  }
   | TOK_CARGO {
-      // Show cargo help
+      // JDW OK
       Telemetry::instance().write("Usage: cargo <ship_code>");
   }
   | TOK_CARGO TOK_STRING {
+      // JDW OK
       std::string ship(*$2);
       ICmd* pCmd = CargoActor::Builder()
                       .ship(ship)
@@ -673,7 +702,6 @@ looking_cmd:
 | TOK_FABRICATE error { yyerror(&@1, "fabricate: usage: fabricate <ship> <item>"); YYABORT; }
 | TOK_OUTFIT error { yyerror(&@1, "outfit: usage: outfit <ship> <spec>"); YYABORT; }
 | TOK_SALVAGE error { yyerror(&@1, "salvage: usage: salvage <ship> <target>"); YYABORT; }
-| TOK_GALAXY error { yyerror(&@1, "galaxy: usage: galaxy"); YYABORT; }
 | TOK_CARGO error { yyerror(&@1, "cargo: usage: cargo <ship> [resource_words...]"); YYABORT; }
 | TOK_SCAN error { yyerror(&@1, "scan: usage depends on command (e.g., extract scan)"); YYABORT; }
 | TOK_LIST error { yyerror(&@1, "list: usage depends on context"); YYABORT; }
@@ -681,11 +709,13 @@ looking_cmd:
 
 turn_cmd:
   TOK_NEXT {
+      // JDW OK
       ICmd* pCmd = NextCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_DONE {
+      // JDW OK
       ICmd* pCmd = DoneCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
@@ -696,42 +726,8 @@ turn_cmd:
 ;
 
 combat_cmd:
-   // combat
-   // c
-   TOK_COMBAT {
-      // [LANG] Status of combat situation
-   }
-   //  cd
-   | TOK_COMBAT_DRAFTS {
-       ICmd* pCmd = CombatDraftsActor::Builder().build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-   }
-   // combat commit
-   | TOK_COMBAT TOK_COMMIT {
-       ICmd* pCmd = CombatCommitActor::Builder().build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-   }
-   // cc
-   | TOK_COMBAT_COMMIT {
-       ICmd* pCmd = CombatCommitActor::Builder().build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-   }
-   // combat cancel
-   | TOK_COMBAT TOK_CANCEL {
-       ICmd* pCmd = CombatCancelActor::Builder().build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-   }
-   // cx
-   | TOK_COMBAT_CANCEL {
-       ICmd* pCmd = CombatCancelActor::Builder().build();
-       if (pCmd && pCmd->invoke()) { /* success */ }
-       SafeDelete(pCmd);
-   }
-   | TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
+   TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
+       // JDW OK
        // Build and invoke combat order command
        std::string* attacker_ship = $3;
        std::string* attackee_ship = $5;
@@ -747,7 +743,9 @@ combat_cmd:
                                 .set_missiles(*pmisset)
                                 .set_attributes(*patmap)
                                 .build(); 
-       if (pCmd && pCmd->invoke()) {
+       if (pCmd)
+       { 
+          pCmd->invoke();
        }
        SafeDelete(patmap);
        SafeDelete(pmisset);
@@ -757,6 +755,7 @@ combat_cmd:
        SafeDelete(pCmd);
    }
    | TOK_COMBAT_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
+       // JDW OK
        // Build and invoke combat order command
        std::string* attacker_ship = $2;
        std::string* attackee_ship = $4;
@@ -772,7 +771,9 @@ combat_cmd:
                                 .set_missiles(*pmisset)
                                 .set_attributes(*patmap)
                                 .build(); 
-       if (pCmd && pCmd->invoke()) {
+       if (pCmd)
+       {
+          pCmd->invoke();
        }
        SafeDelete(patmap);
        SafeDelete(pmisset);
@@ -783,6 +784,7 @@ combat_cmd:
    }
    // combat apply ...
    | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_apply_spec {
+       // JDW OK
        // $3 is target ship to apply on
        // $4 is AttributeMap to use.  We do allow repairing "M"
        std::string* target_ship = $3;
@@ -800,6 +802,7 @@ combat_cmd:
    }
    // ca ...
    | TOK_COMBAT_APPLY combat_damaged_ship combat_apply_spec {
+       // JDW OK
        // $2 is target ship to apply on
        // $3 is AttributeMap to use.  We do allow repairing "M"
        std::string* target_ship = $2;
@@ -815,17 +818,63 @@ combat_cmd:
        SafeDelete(patmap);
        SafeDelete(pCmd);
    }
-   | TOK_COMBAT error { yyerror(&@1, "combat: usage: combat (see help combat)"); YYABORT; }
-   | TOK_COMBAT_DRAFTS error { yyerror(&@1, "cd: usage: cd"); YYABORT; }
-   | TOK_COMBAT_ORDER error { yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n B=n S=n T=n M=n SR=n]"); YYABORT; }
-   | TOK_COMBAT_APPLY error { yyerror(&@1, "ca: usage: ca <draft_id> <damage_spec...>"); YYABORT; }
-   | TOK_COMBAT_COMMIT error { yyerror(&@1, "cc: usage: cc <draft_id>"); YYABORT; }
-   | TOK_COMBAT_CANCEL error { yyerror(&@1, "cx: usage: cx <draft_id>"); YYABORT; }
+   | TOK_COMBAT_DRAFTS error {
+          yyerror(&@1, "cd: usage: cd"); YYABORT;
+   }
+   | TOK_COMBAT_ORDER error {
+          yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n B=n S=n T=n M=n SR=n]");
+          YYABORT;
+   }
+   | TOK_COMBAT_APPLY error {
+          yyerror(&@1, "ca: usage: ca <draft_id> <damage_spec...>");
+          YYABORT;
+   }
+   | TOK_COMBAT_COMMIT error {
+          yyerror(&@1, "cc: usage: cc <draft_id>"); YYABORT;
+   }
+   | TOK_COMBAT_CANCEL error { 
+          yyerror(&@1, "cx: usage: cx <draft_id>"); YYABORT;
+   }
+   //  cd
+   | TOK_COMBAT_DRAFTS {
+       // JDW OK
+       ICmd* pCmd = CombatDraftsActor::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+   // combat commit
+   | TOK_COMBAT TOK_COMMIT {
+       // JDW OK
+       ICmd* pCmd = CombatCommitActor::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+   // cc
+   | TOK_COMBAT_COMMIT {
+       // JDW OK
+       ICmd* pCmd = CombatCommitActor::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+   // combat cancel
+   | TOK_COMBAT TOK_CANCEL {
+       // JDW OK
+       ICmd* pCmd = CombatCancelActor::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
+   // cx
+   | TOK_COMBAT_CANCEL {
+       // JDW OK
+       ICmd* pCmd = CombatCancelActor::Builder().build();
+       if (pCmd && pCmd->invoke()) { /* success */ }
+       SafeDelete(pCmd);
+   }
    ;
 
 building_draft_ship:
   TOK_STRING {
-      $$ = $1;  // Pass the string up
+      $$ = $1;
   }
   ;
 
@@ -836,6 +885,12 @@ combat_initiator_ship:
   ;
 
 combat_damaged_ship:
+  TOK_STRING {
+      $$ = $1;
+  }
+  ;
+
+combat_target_ship:
   TOK_STRING {
       $$ = $1;
   }
@@ -853,11 +908,6 @@ combat_tactic:
   }
   ;
 
-combat_target_ship:
-  TOK_STRING {
-      $$ = $1;
-  }
-  ;
 
 new_combat_order_attr_spec: {  
      $$ = new std::pair<AttributeMap*,  MissileSet*>;
@@ -973,21 +1023,20 @@ ship_class: TOK_STRING {
     
     std::string rest = $1->substr(1);
     if (!rest.empty()
-         && (rest.length() > 2
-             || !std::all_of(rest.begin(), rest.end(), ::isdigit))) {
-        std::string err = "Invalid ship class: "
-                    + *$1
-                    + ". Number must be 1-2 digits.";
+        && (rest.length() > 3
+        || !std::all_of(rest.begin(), rest.end(), ::isdigit))) {
+        std::string err = "Invalid custom ship class ID format: '"
+                        + *$1
+                        + "'. Number must be 1-3 digits.";
         yyerror(&@1, err.c_str());
         SafeDelete($1);
         YYERROR;
     }
-    $$ = $1;  // All validation passed
+    $$ = $1;
 }
 ;
 
 build_attr_spec_nonempty:
-  /* Valid assignments - EXISTING RULES */
   TOK_PD_ASSIGN {
       $$ = new AttributeMap;
       $$->insert({AttributeID::POWER_DRIVE, $1});
@@ -1013,45 +1062,43 @@ build_attr_spec_nonempty:
       $$->insert({AttributeID::SYSTEM_RACK, $1});
   }
   
-  /* ADD: Invalid assignments - first attribute */
   | TOK_PD_ASSIGN_INVALID {
-      std::string err = "Invalid value for PD: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for PD: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_B_ASSIGN_INVALID {
-      std::string err = "Invalid value for B: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for B: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_S_ASSIGN_INVALID {
-      std::string err = "Invalid value for S: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for S: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_T_ASSIGN_INVALID {
-      std::string err = "Invalid value for T: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for T: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_M_ASSIGN_INVALID {
-      std::string err = "Invalid value for M: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for M: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_SR_ASSIGN_INVALID {
-      std::string err = "Invalid value for SR: '" + *$1 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for SR: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   
-  /* Continuation rules - valid */
   | build_attr_spec_nonempty TOK_PD_ASSIGN {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
@@ -1095,44 +1142,44 @@ build_attr_spec_nonempty:
       }
   }
   
-  /* ADD: Continuation rules - invalid (catch errors in middle/end of list) */
+  // ADD: Continuation rules - invalid (catch errors in middle/end of list)
   | build_attr_spec_nonempty TOK_PD_ASSIGN_INVALID {
-      std::string err = "Invalid value for PD: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for PD: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_B_ASSIGN_INVALID {
-      std::string err = "Invalid value for B: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for B: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_S_ASSIGN_INVALID {
-      std::string err = "Invalid value for S: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for S: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_T_ASSIGN_INVALID {
-      std::string err = "Invalid value for T: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for T: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_M_ASSIGN_INVALID {
-      std::string err = "Invalid value for M: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for M: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_SR_ASSIGN_INVALID {
-      std::string err = "Invalid value for SR: '" + *$2 + "'. Must be a positive integer. > HELP BS";
+      std::string err = "Invalid value for SR: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
@@ -1142,6 +1189,7 @@ build_attr_spec_nonempty:
 
 build_cmd:
   TOK_BUILD_NEW ship_class TOK_STRING {
+      // JDW OK
       // build new W|S NAME
       // Example:  BN W FooShip
       // Example:  BN S BarShip
@@ -1163,19 +1211,21 @@ build_cmd:
       }
   }
   | TOK_BUILD_NEW ship_class TOK_STRING error {
-      // ERROR: Too many arguments
+      // JDW OK
       yyerror(&@4, "Too many arguments. Usage: bn {W|S} name > HELP BN");
       SafeDelete($2);
       SafeDelete($3);
       YYABORT;
   }
   | TOK_BUILD_NEW ship_class error {
+      // JDW OK
       // ERROR: BN W (missing ship name)
       yyerror(&@3, "Missing ship name. Usage: bn {W|S} name > HELP BN");
       SafeDelete($2);
       YYABORT;
   }
   | TOK_BUILD_NEW error {
+      // JDW OK
       // ERROR: BN (no arguments at all)
       yyerror(&@2, "Missing arguments. Usage: bn {W|S} name > HELP BN");
       YYABORT;
@@ -1184,6 +1234,7 @@ build_cmd:
   // build new ...
   // build new W|S NAME
   | TOK_BUILD TOK_NEW ship_class TOK_STRING {
+      // JDW OK
       if ($3 == nullptr) {
             // ship_class validation failed. already reported error
             SafeDelete($4);
@@ -1200,13 +1251,14 @@ build_cmd:
       }
   }
   | TOK_BUILD TOK_NEW ship_class TOK_STRING error {
-      // ERROR: BUILD NEW W A B C
+      // JDW OK
       yyerror(&@5, "Too many arguments. Usage: build new {W|S} name > HELP BUILD");
       SafeDelete($3);
       SafeDelete($4);
       YYABORT;
   }
   | TOK_BUILD TOK_NEW ship_class error {
+      // JDW OK
       // ERROR: BUILD NEW W (missing name)
       yyerror(&@4, "Missing ship name. Usage: build new {W|S} name > HELP BUILD");
       SafeDelete($3);
@@ -1214,6 +1266,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_NEW error {
+      // JDW OK
       // ERROR: BUILD NEW (missing ship class and name)
       yyerror(&@3, "Missing arguments. Usage: build new {W|S} name > HELP BUILD");
       YYABORT;
@@ -1221,6 +1274,7 @@ build_cmd:
   // bd SHIP_ID
   // bd SHIP_NAME
   | TOK_BUILD_DRAFTS building_draft_ship {
+      // JDW OK
       // can also be a name, but we will take it as it comes.
       ICmd *pCmd = BuildShowDraftActor::Builder()
                   .set_target(*$2)
@@ -1231,12 +1285,14 @@ build_cmd:
   }
   // bd
   | TOK_BUILD_DRAFTS {
+      // JDW OK
       ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty {
+      // JDW OK
       // SUCCESS: BUILD SET target attr=# [attr=# ...]
       ICmd *pCmd = BuildSetActor::Builder()
                     .set_target(*$3)
@@ -1249,6 +1305,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target {
+      // JDW OK
       // ERROR: BUILD SET target (missing attributes)
       yyerror(&@3, "Missing attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
       SafeDelete($3);
@@ -1256,9 +1313,10 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target TOK_STRING {
+      // JDW OK
       // ERROR: BUILD SET target X=1 (invalid attribute key)
       std::string err = "Invalid attribute: " + *$4;
-      err += ". Valid attributes: PD, B, S, T, M, SR > HELP BS";
+      err += ". Valid attributes: PD, B, S, T, M, SR > HELP ATTR";
       yyerror(&@4, err.c_str());
       SafeDelete($3);
       SafeDelete($4);
@@ -1266,6 +1324,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty error {
+      // JDW OK
       // ERROR: BUILD SET target attr=# ... extra junk
       yyerror(&@5, "Unexpected tokens after attributes. > HELP BS");
       SafeDelete($3);
@@ -1274,6 +1333,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR error {
+      // JDW OK
       // ERROR: BUILD SET (missing target and attributes)
       yyerror(&@3, "Missing ship name/hull and attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
       YYABORT;
@@ -1284,6 +1344,7 @@ build_cmd:
   // =========================================================================
 
   | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty {
+      // JDW OK
       // SUCCESS: BS target attr=# [attr=# ...]
       ICmd *pCmd = BuildSetActor::Builder()
                     .set_target(*$2)
@@ -1296,6 +1357,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR build_target {
+      // JDW OK
       // ERROR: BS target (missing attributes)
       yyerror(&@2, "Missing attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
       SafeDelete($2);
@@ -1303,6 +1365,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR build_target TOK_STRING {
+      // JDW OK
       // ERROR: BS target X=1 (invalid attribute - caught as TOK_STRING)
       std::string err = "Invalid attribute: " + *$3;
       err += ". Valid attributes: PD, B, S, T, M, SR > HELP BS";
@@ -1313,6 +1376,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty error {
+      // JDW OK
       // ERROR: BS target attr=# ... extra junk
       yyerror(&@4, "Unexpected tokens after attributes. > HELP BS");
       SafeDelete($2);
@@ -1321,6 +1385,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR error {
+      // JDW OK
       // ERROR: BS (missing everything)
       yyerror(&@2, "Missing ship name/hull and attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
       YYABORT;
@@ -1329,7 +1394,7 @@ build_cmd:
   // build commit
   // build commit CODE|NAME
   | TOK_BUILD TOK_COMMIT build_target {
-      // $3 is the pointer to the string holding the code or name of a ship,
+      // JDW OK
       ICmd *pCmd = BuildCommitActor::Builder()
                   .set_target(*$3)
                   .build();
@@ -1340,7 +1405,7 @@ build_cmd:
 
   // bc
   | TOK_BUILD_COMMIT build_target {
-      // $2 is the code or name of a ship, or null
+      // JDW OK
       ICmd *pCmd = BuildCommitActor::Builder()
                    .set_target(*$2)
                    .build();
@@ -1350,7 +1415,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_CANCEL build_target {
-      // $3 is the code or name of a ship, or null
+      // JDW OK
       ICmd *pCmd = BuildCancelActor::Builder()
                   .set_target(*$3)
                   .build();
@@ -1361,7 +1426,7 @@ build_cmd:
 
   // bx
   | TOK_BUILD_CANCEL build_target {
-      // $2 is the code or name of a ship, or null
+      // JDW OK
       ICmd *pCmd = BuildCancelActor::Builder()
                   .set_target(*$2)
                   .build();
@@ -1374,6 +1439,7 @@ build_cmd:
   // build
   // b
   TOK_BUILD {
+      // JDW OK
       ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
@@ -1401,36 +1467,8 @@ deployable_ship:
   ;
 
 deploy_cmd:
-   // deploy - list undeployed ships
-//     TOK_DEPLOY {
-//         GameState s = StateMachine::instance().get_game_state();
-//         char owner = StateMachine::instance().get_current_player();
-//         DatabaseManager& db = DatabaseManager::instance();
-//  
-//         auto rows = db.query(
-//             "SELECT ship_code, ship_name FROM ships WHERE game_id=" +
-//             std::to_string(s.game_id) + " AND owner='" + std::string(1, owner) +
-//             "' AND destroyed_at IS NULL AND (at_hex IS NULL OR at_hex = '') "
-//             "AND (at_system IS NULL OR at_system = '') ORDER BY ship_code");
-//  
-//         if (rows.empty())
-//         {
-//             Telemetry::instance().write(
-//                 "DEPLOY: All vessels are deployed. None in spacedock.");
-//         }
-//         else
-//         {
-//             std::ostringstream out;
-//             out << "DEPLOY: Ships in spacedock awaiting deployment:\n";
-//             for (const auto& r : rows)
-//             {
-//                 out << "  " << r[0] << " - " << r[1] << "\n";
-//             }
-//             out << "Use: deploy <SHIP> <BASE_SYSTEM>";
-//             Telemetry::instance().write(out.str());
-//         }
-//     }
     TOK_DEPLOY deployable_ship TOK_STRING {
+       // JDW OK
        std::string ship(*$2);
        std::string dest(*$3);
        ICmd* pCmd = DeployCommand::Builder()
@@ -1443,9 +1481,11 @@ deploy_cmd:
        delete $2;
        delete $3;
    }
-  
-| TOK_DEPLOY error { yyerror(&@1, "deploy: usage: deploy <ship> <location>"); YYABORT; }
-;
+   | TOK_DEPLOY error {
+       yyerror(&@1, "deploy: usage: deploy <ship> <location>");
+       YYABORT;
+   }
+   ;
 
 // Movement
 chain_move_location:
@@ -1478,6 +1518,7 @@ move_cmd:
   // move
   // m
   TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
+       // JDW OK
        std::string ship(*$2);
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
@@ -1496,16 +1537,19 @@ move_cmd:
        delete $3;
        delete waypoints;
   }
-  
-| TOK_MOVE error { yyerror(&@1, "move: usage: move <ship> <destination> [via ...]"); YYABORT; }
-;
+  | TOK_MOVE error {
+       yyerror(&@1, "move: usage: move <ship> <destination> [via ...]");
+       YYABORT;
+  }
+  ;
 
 // Pickup, Drop
 // "pick" { return TOK_PICK; }
 // "drop" { return TOK_DROP; }
 pickdrop_cmd:
-  // pick <systemship> <warpship>
   TOK_PICK TOK_STRING TOK_STRING {
+     // JDW OK
+     // pick <systemship> <warpship>
      std::string sysship(*$2);
      std::string warpship(*$3);
      ICmd* pCmd = PickCommand::Builder()
@@ -1515,8 +1559,9 @@ pickdrop_cmd:
      pCmd->invoke();
      delete pCmd;
   }
-  // drop <systemship> <warpship>
   | TOK_DROP TOK_STRING TOK_STRING {
+     // UNTESTED
+     // drop <systemship> <warpship>
      std::string sysship(*$2);
      std::string warpship(*$3);
      ICmd* pCmd = DropCommand::Builder()
@@ -1526,15 +1571,22 @@ pickdrop_cmd:
      pCmd->invoke();
      delete pCmd;
   }
-| TOK_PICK error { yyerror(&@1, "pick: usage: pick <systemship> <warpship>"); YYABORT; }
-| TOK_DROP error { yyerror(&@1, "drop: usage: drop <systemship> <warpship>"); YYABORT; }
-;
+  | TOK_PICK error {
+      yyerror(&@1, "pick: usage: pick <systemship> <warpship>");
+      YYABORT;
+  }
+  | TOK_DROP error {
+      yyerror(&@1, "drop: usage: drop <systemship> <warpship>");
+      YYABORT;
+  }
+  ;
 
 
 rep_cmd:
   // repair
   // rp
   TOK_REPAIR {
+     // UNTESTED
      ICmd* pCmd = RepairCommand::Builder().build();
      if (pCmd && pCmd->invoke()) { /* success */ }
      SafeDelete(pCmd);
@@ -1542,6 +1594,7 @@ rep_cmd:
   // repair ...
   // rp ...
   | TOK_REPAIR TOK_STRING repair_attr_spec {
+     // UNTESTED
      // g_repair_builder populated by repair_attr_spec
      g_repair_builder->set_ship_code(*$2);
      ICmd* pCmd = g_repair_builder->build();
@@ -1737,11 +1790,10 @@ bool get_parser_error(std::string& err)
        }
     }
    
-    if (!result) 
+    if (!result)
     {
-       // how did we get here?
-       Logger::instance().error("[PARSER] Indeterminite error cause");
-       err = std::string("Cannot detect error cause");
+       Logger::instance().error("[PARSER] Indeterminate error cause");
+       err = std::string("Unrecognized command. Type 'help' for a list of commands.");
     }
 
     // bump the counter

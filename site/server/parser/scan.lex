@@ -70,7 +70,6 @@ static void advance_col()
 "delete"   { set_loc_for_token(); advance_col(); return TOK_DELETE; }
 "clear"    { set_loc_for_token(); advance_col(); return TOK_CLEAR; }
 "cls"      { set_loc_for_token(); advance_col(); return TOK_CLEAR; }
-"quit"     { set_loc_for_token(); advance_col(); return TOK_QUIT; }
 
 "crt"      { set_loc_for_token(); advance_col(); return TOK_CRT; }
 "status"   { set_loc_for_token(); advance_col(); return TOK_STATUS; }
@@ -107,8 +106,6 @@ static void advance_col()
 "ts"       { set_loc_for_token(); advance_col(); return TOK_TRANSFER; }
 "salvage"  { set_loc_for_token(); advance_col(); return TOK_SALVAGE; }
 "jk"       { set_loc_for_token(); advance_col(); return TOK_SALVAGE; }
-"galaxy"   { set_loc_for_token(); advance_col(); return TOK_GALAXY; }
-"gx"       { set_loc_for_token(); advance_col(); return TOK_GALAXY; }
 "cargo"    { set_loc_for_token(); advance_col(); return TOK_CARGO; }
 
 "next"     { set_loc_for_token(); advance_col(); return TOK_NEXT; }
@@ -166,7 +163,6 @@ static void advance_col()
 "gd"       { set_loc_for_token(); advance_col(); return TOK_GAMEDEV; }
 
 "lrs"      { set_loc_for_token(); advance_col(); return TOK_LRS; }
-"tb"       { set_loc_for_token(); advance_col(); return TOK_TB; }
 "drones"   { set_loc_for_token(); advance_col(); return TOK_DRONES; }
 
 "pd"[ \t]*"="[ \t]*[0-9]+   {

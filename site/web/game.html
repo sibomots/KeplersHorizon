@@ -30,8 +30,7 @@
         style="color:var(--accent); font-size:20px; text-decoration:none; margin-left:20px;">HOW TO PLAY</a>
       <div class="right">
         <span id="loginBadge" class="pill">loading...</span>
-        <!-- Map button hidden: split view shows map permanently -->
-        <!-- Save button removed: use 'save' console command instead -->
+        <span id="serverStatusHeader" style="padding:2px 10px; border-radius:6px; font-size:12px; color:var(--good); background:rgba(110,231,183,0.25);">Server Online</span>
         <button id="btnLobby">EXIT</button>
       </div>
     </header>
@@ -69,6 +68,7 @@
     <span id="stVP">-</span>
     <span id="stBP">-</span>
     <span id="peerOnlineStatus">-</span>
+    <span id="serverStatus">Server Online</span>
     <div id="statusCombat">
       <span id="stCmbCount">-</span>
       <span id="stCmbHexes">-</span>

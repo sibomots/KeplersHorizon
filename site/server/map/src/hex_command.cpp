@@ -7,6 +7,7 @@
 ///////////////////////////////////////////
 #include "hex_command.h"
 
+#include <format>
 #include <sstream>
 
 #include "db.h"
@@ -35,64 +36,45 @@ bool HexCommand::invoke(void)
         std::string sysName = sys[0][0];
         std::string hexId = sys[0][1];
         bool isBase = KH_EQU(sys[0][2], "1");
-
         std::string baseOwner = sys[0][3];
-        std::string baseOwnerMsg("BASE STAR SYSTEM - ");
-        if (baseOwner.empty())
-        {
-            baseOwnerMsg = std::string("Uncontrolled");
-        }
-        else
-        {
-            baseOwnerMsg = std::string("Controlled by ");
-            baseOwnerMsg.append(baseOwner);
-        }
-        out << "                 REPORT\n"
-            << "───────────────────────────────────────────\n"
-            << "System: " << sysName << " [" << hexId << "]\n";
+
+        out << std::format("─── {} [{}]", sysName, hexId);
         if (isBase)
         {
-            out << baseOwnerMsg << "\n";
+            if (baseOwner.empty())
+            {
+                out << " (Base, Uncontrolled)";
+            }
+            else
+            {
+                out << std::format(" (Base, {})", baseOwner);
+            }
         }
-        out << "───────────────────────────────────────────\n";
+        out << " ───\n";
 
         // Get ships at this hex
-        std::string q =
+        std::string sq =
             "SELECT ship_code, ship_name, owner, ship_type FROM ships "
             " WHERE game_id=? AND at_hex=? AND destroyed_at IS NULL "
             " ORDER BY owner, ship_code";
-        auto ships = db.Query(q, {game_id, hexId});
+        auto ships = db.Query(sq, {game_id, hexId});
 
         if (ships.empty())
         {
-            // BUGBUG We want to use Long Range Scanner capabilities here..
-            // BUGBUG FIX THIS
             out << "No ships present.\n";
         }
         else
         {
-            // BUGBUG Must be modulated based on Long Range Scan
-            // BUGBUG But the map shows it anyway..
-            out << "Ships present:\n";
             for (const auto& ship : ships)
             {
                 std::string shipType =
-                    (KH_EQU(ship[3], "W")) ? "WarpShip" : "SystemShip";
-                if (KH_EQU(ship[2][0], me))
-                {
-                    out << "  [FRIENDLY] " << ship[0] << " '" << ship[1]
-                        << "' (" << shipType << ")\n";
-                }
-                else
-                {
-                    out << "  [HOSTILE]  " << ship[0] << " '" << ship[1]
-                        << "' (" << shipType << ")\n";
-                }
-
-                // BUGBUG what about alien ships?
+                    (KH_EQU(ship[3], "W")) ? "W" : "S";
+                std::string side =
+                    (KH_EQU(ship[2][0], me)) ? "+" : "-";
+                out << std::format("  [{}] {} {} ({})\n", side, ship[0],
+                                   ship[1], shipType);
             }
         }
-        out << "===========================================\n";
     }
 
     Telemetry::instance().write(out.str());

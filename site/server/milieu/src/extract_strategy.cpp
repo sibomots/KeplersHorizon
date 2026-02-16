@@ -11,6 +11,31 @@
 #include "shipmgr.h"
 #include "statemachine.h"
 
+// Display-friendly resource name (RARE_EARTH -> Rare Earth)
+static std::string display_resource(const std::string& raw)
+{
+    std::string result;
+    bool cap_next = true;
+    for (size_t i = 0; i < raw.size(); i++)
+    {
+        if (raw[i] == '_')
+        {
+            result += ' ';
+            cap_next = true;
+        }
+        else if (cap_next)
+        {
+            result += (char)toupper(raw[i]);
+            cap_next = false;
+        }
+        else
+        {
+            result += (char)tolower(raw[i]);
+        }
+    }
+    return result;
+}
+
 bool ExtractStrategy::do_scan(void)
 {
     GameState s = StateMachine::instance().get_game_state();
@@ -71,8 +96,8 @@ bool ExtractStrategy::do_scan(void)
             out << code << " at " << sys << ":\n";
             for (const auto& r : resources)
             {
-                out << "  " << r[0] << " (" << r[1] << "/" << r[2] << ") - "
-                    << r[3] << "\n";
+                out << "  " << display_resource(r[0]) << " (" << r[1] << "/"
+                    << r[2] << ") - " << r[3] << "\n";
             }
         }
     }
@@ -279,7 +304,7 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
         "?,?,?,'Planet',0,?,?,1,?)",
         {game_id, ship_code, me, res_upper, s.round, yield});
 
-    std::string msg = std::format("HARVEST: {} extracted {} units of {} from {} ({})", ship.name, yield, res_upper, location, ship.at_system);
+    std::string msg = std::format("HARVEST: {} extracted {} units of {} from {} ({})", ship.name, yield, display_resource(res_upper), location, ship.at_system);
 
     Telemetry::instance().write(msg);
 

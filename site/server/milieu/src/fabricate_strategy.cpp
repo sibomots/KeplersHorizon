@@ -42,33 +42,37 @@ bool FabricateStrategy::show_plans(int game_id, int module_id)
     auto plans = db.Query(sql, {module_id});
 
     std::ostringstream out;
-    out << "         FABRICATION PLANS\n";
-    out << "-------------------------------------------\n";
+    out << "                    FABRICATION PLANS\n";
+    out << "───────────────────────────────────────────────────────────\n";
+    out << std::format("{:<10} {:<8} {:<5} {}\n", "Plan", "Output", "Rnd",
+                       "Cost");
+    out << std::format("{:<10} {:<8} {:<5} {}\n", "────────", "──────", "───",
+                       "──────────────────────");
 
     for (const auto& row : plans)
     {
-        out << row[0] << " - " << row[1] << "\n";
-        out << "  Type: " << row[3] << " x" << row[4] << " [" << row[2]
-            << " rounds]\n";
-        out << "  Cost: ";
-        bool first = true;
+        std::string output =
+            row[3] + " x" + row[4];
+
+        std::string cost_str;
         for (int i = 0; i < 8; i++)
         {
             int cost = std::atoi(row[5 + i].c_str());
             if (cost > 0)
             {
-                if (!first)
+                if (!cost_str.empty())
                 {
-                    out << ", ";
+                    cost_str += ", ";
                 }
-                out << cost << " " << RES_NAMES[i];
-                first = false;
+                cost_str += std::to_string(cost) + " " + RES_NAMES[i];
             }
         }
-        out << "\n";
+
+        out << std::format("{:<10} {:<8} {:<5} {}\n", row[0], output, row[2],
+                           cost_str);
     }
-    out << "-------------------------------------------\n";
-    out << "Use: fabricate <plan> [qty]\n";
+    out << "───────────────────────────────────────────────────────────\n";
+    out << "Use: fabricate <plan> [qty]";
 
     Telemetry::instance().write(out.str());
     bres = true;

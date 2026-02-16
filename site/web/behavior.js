@@ -35,11 +35,39 @@
     return h;
   }
 
+  let serverOnline = true;
+
+  function updateServerStatus(online) {
+    if (serverOnline === online) return;
+    serverOnline = online;
+    const ids = ["serverStatus", "serverStatusHeader"];
+    for (let i = 0; i < ids.length; i++) {
+      const el = $(ids[i]);
+      if (!el) continue;
+      if (online) {
+        el.textContent = "Server Online";
+        el.style.color = "var(--good)";
+        el.style.backgroundColor = "rgba(110, 231, 183, 0.25)";
+      } else {
+        el.textContent = "Server Offline";
+        el.style.color = "var(--bad)";
+        el.style.backgroundColor = "rgba(251, 113, 133, 0.25)";
+      }
+    }
+  }
+
   async function apiJson(path, method, bodyObj, needsAuth) {
     const opts = { method: method, headers: needsAuth ? authHeaders() : { "Content-Type": "application/json" } };
     if (bodyObj !== undefined && bodyObj !== null) opts.body = JSON.stringify(bodyObj);
 
-    const r = await fetch(apiUrl(path), opts);
+    let r;
+    try {
+      r = await fetch(apiUrl(path), opts);
+    } catch (e) {
+      updateServerStatus(false);
+      throw new Error("Server is not responding");
+    }
+    updateServerStatus(true);
     const j = await r.json().catch(() => ({}));
     if (!j || j.ok !== true) {
       const msg = (j && j.error) ? j.error : ("server error (" + r.status + ")");

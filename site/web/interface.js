@@ -28,12 +28,7 @@ window.KEPLERHORIZON = window.KEPLERHORIZON || {};
     return true;
   }
 
-  async function exitToLobby() {
-    try {
-      await B.apiCommand("quit");
-    } catch (e) {
-      // proceed even if server call fails
-    }
+  function exitToLobby() {
     window.location.href = 'lobby.html';
   }
 

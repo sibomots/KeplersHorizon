@@ -60,12 +60,6 @@ bool OutfitStrategy::outfit_lrs(int game_id, char owner,
     return install_equipment(game_id, owner, ship_code, "LRS");
 }
 
-bool OutfitStrategy::outfit_tb(int game_id, char owner,
-                               const std::string& ship_code)
-{
-    return install_equipment(game_id, owner, ship_code, "TB");
-}
-
 bool OutfitStrategy::outfit_drones(int game_id, char owner,
                                    const std::string& ship_code)
 {

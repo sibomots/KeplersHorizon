@@ -107,6 +107,31 @@ std::string TradeStrategy::get_cargo_column(const std::string& res)
     }
 }
 
+// Display-friendly resource name (RARE_EARTH -> Rare Earth)
+static std::string display_resource(const std::string& raw)
+{
+    std::string result;
+    bool cap_next = true;
+    for (size_t i = 0; i < raw.size(); i++)
+    {
+        if (raw[i] == '_')
+        {
+            result += ' ';
+            cap_next = true;
+        }
+        else if (cap_next)
+        {
+            result += (char)toupper(raw[i]);
+            cap_next = false;
+        }
+        else
+        {
+            result += (char)tolower(raw[i]);
+        }
+    }
+    return result;
+}
+
 bool TradeStrategy::show_prices(void)
 {
     std::ostringstream out;
@@ -117,7 +142,7 @@ bool TradeStrategy::show_prices(void)
 
     for (int i = 0; i < NUM_PRICES; i++)
     {
-        std::string name = PRICES[i].type;
+        std::string name = display_resource(PRICES[i].type);
         if (name.length() < 12)
             name += std::string(12 - name.length(), ' ');
         out << name << "  " << PRICES[i].buy_price << " CR   "

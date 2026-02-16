@@ -12,7 +12,6 @@ typedef enum : int
     FIRST_OUTFIT_MODE = 0,
     OUTFIT_LIST,
     OUTFIT_LRS,
-    OUTFIT_TB,
     OUTFIT_DRONES,
     LAST_OUTFIT_MODE
 } OutfitMode;

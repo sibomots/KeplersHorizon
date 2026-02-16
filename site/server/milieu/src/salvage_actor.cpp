@@ -14,19 +14,16 @@
 #include "db.h"
 #include "hex_events.h"
 #include "logger.h"
-#include "salvage_actor.h"
+#include "salvage_strategy.h"
 #include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
 
 bool SalvageActor::invoke(void)
 {
-    bool bres = false;
-#ifdef NEEDS_REFACTOR
-    if (m_scan_mode)
+    if (m_mode == SalvageMode::SALVAGE_SCAN)
     {
-        do_scan();
-        return true;
+        return SalvageStrategy::do_scan();
     }
 
     if (m_ship_code.empty())
@@ -34,10 +31,8 @@ bool SalvageActor::invoke(void)
         Telemetry::instance().write("Usage: salvage scan\n"
                                     "       salvage <ship>\n"
                                     "       salvage <ship> <target_name>");
-        return true;
+        return false;
     }
 
-    return do_salvage();
-#endif
-    return bres;
+    return SalvageStrategy::do_salvage(m_ship_code, m_resource);
 }
