@@ -1,4 +1,4 @@
-.TH KEPLERS_HORIZON 6 "2026-02-13" "Version 1.2" "Kepler's Horizon Game Manual"
+.TH KEPLERS_HORIZON 6 "2026-02-16" "Version 1.4" "Kepler's Horizon Game Manual"
 .\"
 .\" ===================================================================
 .\" KEPLER'S HORIZON - COMPLETE GAME MANUAL
@@ -43,13 +43,59 @@ the AI agent architecture, the economic system, and the Milieu Codex of Stars.
 .PP
 \fBA note on design philosophy.\fR
 Kepler's Horizon is intentionally minimal.
-There are no dice, no random events in combat, and no hidden information.
-All game state is public.
 Strategic depth emerges from constrained movement, simultaneous
 decision-making in combat, and irreversible consequences.
 Equal inputs always yield equal outcomes.
 The rules favor clarity over complexity.
+
+.SH "Syntax of the Manual"
+
+.PP
+The game accepts text input from the user.
+The game is designed to treat text case-insensitive.
+The UI enforces this by making everything look upper case.
+Throughout this manual page where lower or mixed case appears,
+it is assured that the game itself is case-insensitive.
+The grammar is more important for command invocations.
+Case is irrelevant.
+
+.SH "A Note About the Origin and Development"
+
+.PP
+The game idea was a mixture of my own game developed back in 1984
+and influenced heavily by other space-war games, such as WarpWar (1977).
+The implementation of the software of this game was designed
+and architected by a human, but some features were initially implemented
+by AI (Opus 4.6 via Anthropic/Claude).
+
+.PP
+I make no qualms about using AI to develop parts of the software,
+as this was helpful in speeding up the process.
+However, all of the software had to be revised anyway.
+Further, the core engine of the parser
+.RB ( \fBlex\fR
+and
+.BR yacc )
+was hand-written.
+
+.PP
+The
+.I LISP
+code used by the AI-Agency was mostly authored
+with AI support, but the ontology was designed
+and implemented by human work.
+Again, I have no qualms about this because it is effectively
+the same as spending days researching.
+The reader may disagree.
+
+.PP
+After 45 years of writing software, the author can attest
+that fundamental breakthroughs in some kinds of software projects
+are greatly aided by AI-assisted engineering.
+There is no looking back.
+
 .\" ===================================================================
+.ne
 .SH OPTIONS
 .SS "Generic Program Information"
 .TP
@@ -303,12 +349,9 @@ Complete the current player's turn and pass initiative to the opponent.
 Blocked if there are pending retreats.
 .SS "Information Commands"
 .TP
-.B status
-Display current game state: whose turn, phase, round, credits, tech level.
-.TP
 .B score
 Display victory points and credits for both players, plus current
-round and tech level.
+round and tech level and display current game state: whose turn, phase, round, credits, tech level.
 .TP
 .B fleet
 Display a manifest of your entire fleet: every ship with its hull code,
@@ -346,14 +389,8 @@ Requires a ship with LRS at the target system.
 Each survey operation upgrades knowledge by one level.
 Without arguments, shows survey status.
 .TP
-.B galaxy\fR, \fBgx
-Complete overview of all systems and all ships in the game.
-.TP
 .B crt
 Display the Combat Results Table.
-.TP
-.B demo
-Show a brief demonstration of game commands.
 .TP
 .B help \fItopic\fR\fR, \fB? \fItopic\fR
 Show help for a command or topic.
@@ -377,9 +414,9 @@ If no number is given, the game auto-assigns the next available hull code.
 .PP
 \fBExamples:\fR
 .nf
-> bn W Falcon
-> bn S11 Avenger
-> build new W4 Destroyer
+> BN W FALCON
+> BN S11 AVENGER
+> BUILD NEW W4 DESTROYER
 .fi
 .RE
 .TP
@@ -395,28 +432,28 @@ Set attributes on a draft ship.
 Attribute syntax:
 .RS
 .TP
-.BR pd= N " or " d= N
+.BR PD= N " or " D= N
 Power/Drive (1 BP per unit)
 .TP
-.BR b= N
+.BR B= N
 Beam weapon (1 BP per unit)
 .TP
-.BR s= N
+.BR S= N
 Screen defense (1 BP per unit)
 .TP
-.BR t= N
+.BR T= N
 Missile tubes (1 BP per tube)
 .TP
-.BR m= N
+.BR M= N
 Missiles (1 BP per 3 missiles)
 .TP
-.BR sr= N
+.BR SR= N
 SystemShip racks (1 BP per rack, WarpShips only)
 .PP
-\fBExample:\fR bs Falcon pd=7 b=3 s=2 t=1 m=6
+\fBExample:\fR BS FALCON PD=7 B=3 S=2 T=1 M=6
 .RE
 .TP
-.B build commit \fItarget\fR\fR, \fBbc \fItarget\fR
+.B build commit \fItarget\fR\fR, \fBBC \fItarget\fR
 Finalize a draft and add the ship to your fleet.
 BP is deducted.
 The ship appears in the fleet but must be deployed before it can act.
@@ -449,7 +486,7 @@ Combat is triggered at the end of the movement phase.
 PD expended for movement is \fInot\fR permanently reduced.
 Full PD is available for combat power allocation.
 .PP
-\fBExample:\fR m W6 Tavon Xylen
+\fBExample:\fR M W6 TAVON XYLEN
 .br
 W6 moves to Tavon, then onward to Xylen.
 .RE
@@ -923,7 +960,7 @@ FORTRESS|Combat defensive bonus
 The \fBMilieu Codex of Stars\fR is the compendium of known space.
 It contains detailed information about each star system in the game
 universe: celestial bodies, planetary environments, native species,
-populations, resources, anomalies, and strategic notes.
+resources, anomalies, and strategic notes.
 .PP
 The Codex is not merely flavor text.
 \fBKnowledge level directly affects gameplay outcomes.\fR
@@ -1093,7 +1130,9 @@ The thread stays alive and naturally ceases operating when it detects
 The AI uses a three-phase decision cycle:
 .IP "1. GATHER (C++)" 4
 Populate an \fBAASlate\fR data structure from the database and
-StateMachine.
+StateMachine.  The \fBSlate\fR is the \fISlate of State\fR which means
+a scratch board of \fImetrics\fR that are gleaned from sources within
+the game, during steps conducted by the State Machine of the AI-Agency.
 The slate contains the complete observable game: fleet positions,
 combat theaters, economic data, territory control, BFS distance
 matrix, hex adjacency, warpline topology, codex entries, market
@@ -1105,7 +1144,17 @@ the result: a list of command strings and optional metric updates.
 .IP "3. RENDER (C++)" 4
 Inject the resulting command string into the game engine's command
 queue via \fBAICommandInjector\fR, exactly as if a human typed it.
-Block until the TaskRunner completes the command.
+Block until the TaskRunner completes the command.  The game engine is
+designed to handle two-player or single-player modes.  ALL commands
+are funneled through \f(CWyyparse()\fR -- even the AI-Agency commands --
+this is mostly to avoid duplicative work in the server-side and also
+make use of the return-codes (success or failure) that may be obtained
+by the commands themselves. \f(CWTaskRunner\fR as a thread simply
+invokes commands regardless of their initator.  User-player or AI-Agency.
+But, the AI-Agency, when enabled in single-player mode pays attention
+to the results of the Task Runner and always modifies the Slate
+and therefore may modulate the \fInext command\fR based on outcomes
+from the prior AI-Agency invoked commands.   The AI-Agency is adaptive.
 .PP
 The cycle repeats (gather fresh state, recalculate, render) until the
 AI issues a terminal command (\fBNEXT\fR or \fBDONE\fR) to advance the
@@ -1358,7 +1407,7 @@ The AI thread ceases operating on this game.
 .SH MODULES
 .SS "Creating Custom Modules"
 A Module is a complete universe definition loaded from CSV files.
-All milieu data (star systems, planets, species, populations, resources)
+All milieu data (star systems, planets, species, resources)
 is keyed by \fBmodule_id\fR.
 .PP
 Required files:
@@ -1373,7 +1422,6 @@ warplines.csv|Warpline connections (a_hex, b_hex)
 warpline_hexes.csv|Intermediate warpline path hexes
 planets.csv|Planetary bodies
 species.csv|Xenoform species definitions
-populations.csv|Population centers
 resources.csv|Extractable resource deposits
 facilities.csv|Facilities and stations
 anomalies.csv|System anomalies
@@ -1417,25 +1465,232 @@ Key tables: \fBgames\fR, \fBships\fR, \fBdrafts\fR, \fBcombat_state\fR,
 \fBmarket_prices\fR, \fBfacility_control\fR, \fBhex_events\fR,
 \fBaa_metrics\fR, \fBsaved_games\fR.
 .\" ===================================================================
+
+
+.SH "Machine Learning: AI Agent Feedback Loop & Latent Learning"
+
+.PP
+Design issues about closing the feedback loop between command execution and AI agent decision-making,
+and a longer-term vision for build-time machine learning driven by game diaries.
+
+.SH "1. The Problem: Open-Loop Command Execution"
+
+.PP
+The AI agent's MPC (model-predictive control) loop is currently open-loop at the RENDER step.
+The cycle is:
+
+.PP
+.nf
+\f(CWGATHER -> CALCULATE -> RENDER -> (assume success) -> GATHER\fR
+.fi
+
+.PP
+A human player closes this loop naturally -- they see "Invalid move" on screen and adjust.
+The AI agent has no equivalent feedback channel.
+
+.PP
+When \f(CWinvoke()\fR returns false on a command, the TaskRunner knows the command failed and logs the error.
+But \f(CWnotify_task_complete()\fR is a bare signal -- it carries no payload.
+The agent wakes up from \f(CWwait_for_task_completion()\fR knowing only "the task finished," not whether it
+succeeded or failed, or why.
+
+.PP
+This causes blind retry loops: the agent re-issues the same failing command because it never learns it failed.
+The game state hasn't changed, so \f(CWCALCULATE\fR derives the same command from the same inputs.
+
+.SH "2. The Gap Is Narrow"
+
+.PP
+The information already exists at the right place. In \f(CWtaskrunner.cpp\fR, after executing an AI task:
+
+.PP
+.RS
+.nf
+.ft CW
+int result = internal_command_handler_body(item->ai_command, errmsg);
+.ft R
+.fi
+.RE
+
+.PP
+The TaskRunner has both \f(CWresult\fR (success/failure) and \f(CWerrmsg\fR (the reason).
+It logs them, then calls \f(CWnotify_task_complete()\fR which discards both.
+The plumbing for the blocking handshake between TaskRunner and AI agent thread already exists via condition
+variable -- it just signals a bool when it could signal a result structure.
+
+.SH "3. Proposed Feedback Mechanism"
+
+.SS "Task Meta-Data"
+
+.PP
+Each Task carries meta-data that is populated by the grammar rule involved in the \f(CWinvoke()\fR call.
+This is not just a bool -- it includes contextual information about \fIwhy\fR the command failed:
+
+.IP "\(bu" 2
+The command that was attempted
+.IP "\(bu" 2
+Success or failure
+.IP "\(bu" 2
+Structured failure reason (not a human-readable string)
+
+.SS "Notification With Payload"
+
+.PP
+When \f(CWnotify_task_complete()\fR fires, the meta-data blob is conveyed to the AI agent.
+The agent only cares about failures -- successful commands need no special handling since the world state
+changes and the next \f(CWGATHER\fR reflects reality.
+
+.SS "Persistence in the Slate"
+
+.PP
+Failed-command meta-data persists in the agent's awareness and becomes part of the slate during the next
+\f(CWGATHER\fR step. The Lisp code can then see: "my last MOVE w6 2223 failed because X" and choose differently.
+
+.SH "4. Failure Reasons as Ontology Facts"
+
+.PP
+Rather than carrying free-form error strings that Lisp would have to parse, failure reasons should be closed
+under the ontology dictionary. Every failure cause maps 1:1 to an ontology fact:
+
+.IP "\(bu" 2
+"insufficient credits" -> \f(CW:precondition-violated :credits-below-threshold\fR
+.IP "\(bu" 2
+"hex contested" -> \f(CW:precondition-violated :hex-in-combat\fR
+.IP "\(bu" 2
+"not your turn" -> \f(CW:precondition-violated :phase-mismatch\fR
+
+.PP
+This means the Lisp code reasons about failures the same way it reasons about everything else -- through the
+strategy plist, using the same subsystem functions. Failures become just another structured input to
+\f(CWCALCULATE\fR, not a special side channel.
+
+.PP
+The closed-set property guarantees the Lisp code can handle every failure because the ontology is finite and
+known at compile time.
+
+.SH "5. Failure Lifetime: When to Forget"
+
+.SS "Time-Based Expiry Is Wrong"
+
+.PP
+A fixed TTL (e.g., "forget after 3 rounds") is either too long -- the agent avoids a now-valid command for rounds
+after the blocker cleared -- or too short -- the agent retries a still-invalid command because the timer expired.
+
+.SS "State-Change Invalidation Is Ideal But Hard"
+
+.PP
+The theoretically correct approach: a failure stays relevant until the slate shows the precondition that caused it
+has changed. But this requires mapping each failure reason to the specific state that caused it, which is a complex,
+fragile mapping.
+
+.SS "Phase-Scoped Lifetime Is Pragmatic"
+
+.PP
+Clear the failure list at each phase transition. Within a single phase, game state only changes through the agent's
+own actions (and the other player's during combat). A command that fails in BUILD phase round 5 won't succeed later in
+BUILD phase round 5 -- the preconditions are stable within a phase.
+
+.PP
+Exception: combat, where state changes within a phase as orders resolve, damage is assigned, and ships escape.
+Combat may need round-scoped or stage-scoped clearing.
+
+.SH "6. Latent Machine Learning: The Diary Concept"
+
+.SS "Two Timescales"
+
+.PP
+Separate the learning feedback loop into two timescales:
+
+.IP "\(bu" 2
+\fBRuntime (within a game):\fR Static Lisp, fixed ontology, metrics memory. No self-modification.
+Deterministic and debuggable.
+.IP "\(bu" 2
+\fBBuild-time (between releases):\fR Ingest accumulated game diaries, produce updated Lisp parameters.
+The agent evolves, but only through a controlled, auditable build step.
+
+.SS "The Diary"
+
+.PP
+Extend the existing \f(CWaa_metrics\fR persistence to capture richer game-over summaries: what round the game ended,
+who won, fleet composition at key moments, which strategies were attempted and when. Structured data, not prose.
+
+.SS "Translation Approaches (Build-Time Ingestion)"
+
+.PP
+Three approaches, ordered by complexity:
+
+.PP
+\fBApproach 1: Parameter Tables (Recommended Starting Point)\fR
+
+.PP
+The diary feeds a statistical pass that produces a config file -- thresholds, weights, timing windows.
+Example: "average earliest viable missile build = round 5.2 across 47 games" becomes a \f(CWdefparameter\fR value.
+No new Lisp code is generated. The build step is data aggregation. Lisp code has \f(CWdefparameter\fR declarations
+that get values from a generated config.
+
+.PP
+Simplest, safest, and likely captures 80% of the benefit.
+
+.PP
+\fBApproach 2: Rule Selection\fR
+
+.PP
+Write multiple strategy variants by hand -- aggressive early-build, conservative turtle, missile-rush, etc.
+Diary analysis determines which variants performed best against different opponent profiles.
+The build step produces a selection table. No generated Lisp, just generated configuration selecting among
+pre-written variants.
+
+.PP
+\fBApproach 3: Lisp Code Generation\fR
+
+.PP
+An external tool reads the diary, identifies patterns, and emits new Lisp functions or modifies existing ones.
+Requires a validation step -- generated Lisp must type-check against the ontology, return well-formed plists,
+and not introduce infinite loops. This is a research project more than an engineering task.
+
+.SS "Build System Integration"
+
+.PP
+For approaches 1 and 2: a pre-build script reads the diary database, runs the analysis, writes a \f(CW.lisp\fR file of
+\f(CWdefparameter\fR declarations or a strategy-selection table, and the normal build includes that file.
+No special tooling beyond a script that queries the metrics database and emits s-expressions.
+
+.SS "On Self-Modifying Lisp"
+
+.PP
+The power of the current architecture is that Lisp functions are pure: slate in, decisions out.
+They carry no hidden state, don't mutate themselves, don't evolve at runtime.
+That makes them debuggable, predictable, and auditable.
+Self-modifying code at runtime sacrifices all three properties.
+The diary/build-time approach preserves them by restricting evolution to a controlled, versioned build step.
+
+.ne 15
+.SH BUGS
+Report bugs to the Kepler's Horizon issue tracker.
+.\" ===================================================================
 .SH FILES
+Files that are deployed when installing the system:
 .TP
 .B site/web/
-Static HTML, CSS, JavaScript files served by the HTTP layer.
+Static HTML, CSS, JavaScript files served by the HTTP layer.    These
+are deposited in the directory where your web server is accessing 
+content.
 .TP
 .B site/db/Game.sql
 Complete database schema.
+Stored securely, used to initiate the database back-end. 
 .TP
 .B site/db/core/help/
 Help topic CSV files for the in-game help system.
+Stored securely, used by the database initaliation setup.
 .TP
 .B site/db/modules/kh/
 Module data CSV files for the default Kepler's Horizon universe.
+Stored securely, used by the database initaliation setup.
 .TP
 .B dsl/
 AI strategy DSL files (Common Lisp).
-.\" ===================================================================
-.SH BUGS
-Report bugs to the Kepler's Horizon issue tracker.
+A directory containing the run-time \fILISP\fR code.
 .\" ===================================================================
 .SH AUTHORS
 Game design and implementation by sibomots.
@@ -1447,6 +1702,27 @@ Kepler's Horizon has extended the game much further, adding milieu concepts
 for market (trading, selling resources), resource extraction, exploration,
 fabrication, random space hazards, and an AI-Agent for single player mode.
 .\" ===================================================================
+
+.SH "FORMAT"
+
+.PP
+This document is set in the style of traditional
+.I UNIX
+manual pages.
+It was prepared using
+.I troff (equivalent)
+with the
+.BR man (7)
+macro package.
+.PP
+\f(CWgroff -t -man -Tpdf kh.6 > kh.pdf\fR
+
+
+.PP
+Sectioning, typography, and layout follow established
+UNIX documentation conventions.
+No additional formatting mechanisms are employed.
+
 .SH COPYRIGHT
 Copyright (c) 2025 sibomots.
 Licensed under BSD 3-Clause License.
