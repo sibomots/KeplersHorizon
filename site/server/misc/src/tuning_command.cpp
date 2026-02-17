@@ -6,9 +6,9 @@
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
 #include "autonomy_agency.h"
-#include "configure_command.h"
+#include "tuning_command.h"
 #include "db.h"
-#include "gamedev_state.h"
+#include "tuning_state.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
@@ -18,7 +18,7 @@
 #include <sstream>
 #include <string>
 
-bool ConfigureCommand::invoke(void)
+bool TuningCommand::invoke(void)
 {
     bool bres = false;
     if (!check_privilege())
@@ -31,13 +31,13 @@ bool ConfigureCommand::invoke(void)
     {
         switch (m_mode)
         {
-        case ConfigureMode::CFG_SHOW:
+        case TuningMode::TN_SHOW:
             bres = do_show();
             break;
-        case ConfigureMode::CFG_RELOAD_CONF:
+        case TuningMode::TN_RELOAD_CONF:
             bres = do_reload_conf();
             break;
-        case ConfigureMode::CFG_RELOAD_AI:
+        case TuningMode::TN_RELOAD_AI:
             bres = do_reload_ai();
             break;
         }
@@ -45,7 +45,7 @@ bool ConfigureCommand::invoke(void)
     return bres;
 }
 
-bool ConfigureCommand::check_privilege()
+bool TuningCommand::check_privilege()
 {
     bool bres = false;
     int userId = StateMachine::instance().get_current_user_id();
@@ -61,10 +61,10 @@ bool ConfigureCommand::check_privilege()
     return bres;
 }
 
-bool ConfigureCommand::do_show()
+bool TuningCommand::do_show()
 {
     bool bres = true;
-    GameDevState& gds = GameDevState::instance();
+    TuningState& gds = TuningState::instance();
     std::ostringstream out;
 
     out << "CONFIGURE: Current Settings\n";
@@ -83,22 +83,18 @@ bool ConfigureCommand::do_show()
     return bres;
 }
 
-bool ConfigureCommand::do_reload_conf()
+int TuningCommand::load_conf_file()
 {
-    bool bres = false;
-    GameDevState& gds = GameDevState::instance();
+    TuningState& gds = TuningState::instance();
 
-    // Look for kh.conf relative to server working directory
     std::ifstream confFile("kh.conf");
     if (!confFile.is_open())
     {
-        Telemetry::instance().write("CONFIGURE: Cannot open kh.conf. "
-                                    "File not found in server directory.");
-        return false;
+        Logger::instance().info("[TUNING] kh.conf not found in server directory");
+        return -1;
     }
 
-    std::ostringstream out;
-    out << "CONFIGURE: Loading kh.conf\n";
+    gds.clear_settings();
 
     std::string line;
     int loaded = 0;
@@ -143,40 +139,16 @@ bool ConfigureCommand::do_reload_conf()
         if (key == "override.combat_modifier")
         {
             gds.set_combat_modifier(intVal);
-            out << std::format("  combat_modifier = {}\n", intVal);
             ++loaded;
         }
         else if (key == "override.movement_modifier")
         {
             gds.set_movement_modifier(intVal);
-            out << std::format("  movement_modifier = {}\n", intVal);
             ++loaded;
         }
-        else if (key == "override.environment_chance")
+        else
         {
-            gds.set_environment_chance(intVal);
-            out << std::format("  environment_chance = {}%\n", intVal);
-            ++loaded;
-        }
-        else if (key == "override.force_crt")
-        {
-            gds.set_force_crt(intVal);
-            out << std::format("  force_crt = {}\n", intVal);
-            ++loaded;
-        }
-        else if (key.rfind("event.", 0) == 0)
-        {
-            // Store event probabilities in the database for runtime use
-            DatabaseManager& db = DatabaseManager::instance();
-            int gameId = StateMachine::instance().get_game_id();
-            std::string eventKey = key.substr(6); // strip "event."
-
-            db.Exec(
-                "INSERT INTO game_config(game_id, config_key, config_value) "
-                "VALUES(?,?,?) ON DUPLICATE KEY UPDATE config_value=?",
-                {gameId, eventKey, val, val});
-
-            out << std::format("  {} = {}\n", key, val);
+            gds.set_setting(key, val);
             ++loaded;
         }
     }
@@ -186,16 +158,35 @@ bool ConfigureCommand::do_reload_conf()
         gds.enable(true);
     }
 
-    out << std::format("CONFIGURE: Loaded {} settings.\n", loaded);
-    Telemetry::instance().write(out.str());
     Logger::instance().info(
-        std::format("[CONFIGURE] Reloaded kh.conf ({} settings)", loaded));
+        std::format("[TUNING] Loaded kh.conf ({} settings)", loaded));
+
+    return loaded;
+}
+
+bool TuningCommand::do_reload_conf()
+{
+    bool bres = false;
+    std::ostringstream out;
+    out << "CONFIGURE: Loading kh.conf\n";
+
+    int nLoaded = load_conf_file();
+
+    if (nLoaded < 0)
+    {
+        Telemetry::instance().write("CONFIGURE: Cannot open kh.conf. "
+                                    "File not found in server directory.");
+        return false;
+    }
+
+    out << std::format("CONFIGURE: Loaded {} settings.\n", nLoaded);
+    Telemetry::instance().write(out.str());
 
     bres = true;
     return bres;
 }
 
-bool ConfigureCommand::do_reload_ai()
+bool TuningCommand::do_reload_ai()
 {
     bool bres = false;
     std::ostringstream out;
@@ -209,7 +200,7 @@ bool ConfigureCommand::do_reload_ai()
     out << "CONFIGURE: AI DSL reloaded.\n";
 
     Telemetry::instance().write(out.str());
-    Logger::instance().info("[CONFIGURE] AI DSL reloaded by admin");
+    Logger::instance().info("[TUNING] AI DSL reloaded by admin");
 
     bres = true;
     return bres;

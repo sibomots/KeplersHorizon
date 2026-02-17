@@ -14,6 +14,7 @@
 #include "configr.h"
 #include "db.h"
 #include "srvmgr.h"
+#include "tuning_command.h"
 #include "util.h"
 
 static const char* License = 
@@ -87,6 +88,7 @@ void apply_arguments(int argc, char** argv)
         DatabaseManager::instance().init();
         ServerManager::instance().configure();
         Configr::instance().summary();
+        TuningCommand::load_conf_file();
     }
 }
 

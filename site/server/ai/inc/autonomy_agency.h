@@ -8,7 +8,7 @@
 #ifndef __KH_AUTONOMY_AGENCY_H__
 #define __KH_AUTONOMY_AGENCY_H__
 
-#include "configure_command.h"
+#include "tuning_command.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -318,7 +318,7 @@ class AutonomyAgency
 {
   public:
 
-    friend class ConfigureCommand;
+    friend class TuningCommand;
 
     static AutonomyAgency& instance();
 

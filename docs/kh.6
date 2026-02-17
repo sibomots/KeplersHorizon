@@ -1,4 +1,4 @@
-.TH KEPLERS_HORIZON 6 "2026-02-16" "Version 1.4" "Kepler's Horizon Game Manual"
+.TH KEPLERS_HORIZON 6 "2026-02-17" "Version 1.5" "Kepler's Horizon Game Manual"
 .\"
 .\" ===================================================================
 .\" KEPLER'S HORIZON - COMPLETE GAME MANUAL
@@ -129,11 +129,12 @@ Default is \fB8080\fR.
 .BR \-\^\-ai " \fIPATH\fR"
 Path to the directory containing AI DSL files (Common Lisp sources).
 Default is \fBdsl\fR relative to the working directory.
-The server loads eight Lisp files from this directory on first
+The server loads twelve Lisp files from this directory on first
 single-player game start:
+.IR aa-macros.lisp ", " aa-theta.lisp ", " aa-entities.lisp ", "
 .IR aa-util.lisp ", " aa-strategy.lisp ", " aa-goals.lisp ", "
-.IR aa-economic.lisp ", " aa-build.lisp ", " aa-movement.lisp ", "
-.IR aa-combat.lisp ", " aa-core.lisp .
+.IR aa-rules.lisp ", " aa-economic.lisp ", " aa-build.lisp ", "
+.IR aa-movement.lisp ", " aa-combat.lisp ", " aa-core.lisp .
 .SS "Logging"
 .TP
 .BR \-L ", " \-\^\-log " \fIFILE\fR"
@@ -1110,10 +1111,11 @@ CRYSTALLINE|Glassine (XYLEN)|Rich
 .\" ===================================================================
 .SH AI AGENT
 Kepler's Horizon supports single-player mode through an autonomous AI
-opponent called the \fBAutonomy Agency\fR.
+opponent called the \fBAutonomy Agency\fR (Generation 4).
 The AI replaces one human player and executes commands through the same
 game engine, respecting all rules and constraints.
-It issues the same commands a human player would type.
+It issues the same textual commands a human player would type,
+funneled through the same \f(CWyyparse()\fR grammar.
 .PP
 The AI thread runs independently of HTTP request handling.
 When a game ends (via \fBquit\fR, victory, or elimination), the AI's
@@ -1121,136 +1123,302 @@ game context is zeroed\(emit is \fBnever killed\fR.
 The thread stays alive and naturally ceases operating when it detects
 \fBm_game_id = 0\fR on its next gather cycle.
 .SS "Architecture: Mealy State Machine"
-The AI uses a three-phase decision cycle:
+The AI operates as a closed-loop Mealy state machine with three phases
+per decision cycle:
 .IP "1. GATHER (C++)" 4
-Populate an \fBAASlate\fR data structure from the database and
-StateMachine.  The \fBSlate\fR is the \fISlate of State\fR which means
-a scratch board of \fImetrics\fR that are gleaned from sources within
-the game, during steps conducted by the State Machine of the AI-Agency.
-The slate contains the complete observable game: fleet positions,
-combat theaters, economic data, territory control, BFS distance
-matrix, hex adjacency, warpline topology, codex entries, market
-prices, and cross-turn metrics.
+Populate the \fBAASlate\fR from the database and StateMachine.
+The Slate is a complete snapshot of observable game state: fleet
+positions and attributes, combat theaters, economic data, territory
+control, BFS distance matrix, hex adjacency, warpline topology,
+codex knowledge levels, market prices, facility control, salvage
+sites, and persisted cross-turn metrics.
+Nothing is hidden from the AI that a human player could see.
 .IP "2. CALCULATE (Lisp)" 4
-Marshal the slate to Common Lisp via ECL (Embeddable Common Lisp),
-call the strategy function \fB(aa-calculate slate)\fR, and unmarshal
-the result: a list of command strings and optional metric updates.
+Marshal the slate to Common Lisp via ECL (Embeddable Common Lisp)
+and call \fB(aa-calculate slate)\fR.
+The Lisp layer computes a strategic state once, then dispatches to
+a phase-specific decision pipeline that fires named rules, evaluates
+a goal graph, and returns a list of command strings plus optional
+metric write-backs.
 .IP "3. RENDER (C++)" 4
-Inject the resulting command string into the game engine's command
-queue via \fBAICommandInjector\fR, exactly as if a human typed it.
-Block until the TaskRunner completes the command.  The game engine is
-designed to handle two-player or single-player modes.  ALL commands
-are funneled through \f(CWyyparse()\fR -- even the AI-Agency commands --
-this is mostly to avoid duplicative work in the server-side and also
-make use of the return-codes (success or failure) that may be obtained
-by the commands themselves. \f(CWTaskRunner\fR as a thread simply
-invokes commands regardless of their initator.  User-player or AI-Agency.
-But, the AI-Agency, when enabled in single-player mode pays attention
-to the results of the Task Runner and always modifies the Slate
-and therefore may modulate the \fInext command\fR based on outcomes
-from the prior AI-Agency invoked commands.   The AI-Agency is adaptive.
+Inject each resulting command into the game engine via
+\fBAICommandInjector\fR, exactly as if a human typed it.
+The \f(CWTaskRunner\fR thread executes the command through
+\f(CWyyparse()\fR and blocks until completion.
+The AI observes the result and feeds it back into the next
+GATHER cycle, making the loop adaptive: failed commands change
+the slate, and CALCULATE derives a different action on the next
+iteration.
 .PP
-The cycle repeats (gather fresh state, recalculate, render) until the
-AI issues a terminal command (\fBNEXT\fR or \fBDONE\fR) to advance the
-turn.
-This closed-loop design means every decision is based on current game
-state, not stale assumptions.
+The cycle repeats (gather, recalculate, render) until the AI issues
+a terminal command (\fBNEXT\fR or \fBDONE\fR) to advance the phase
+or end the turn.
+Every decision is based on current game state, never stale assumptions.
 .PP
 A safety guard at the top of \fBgather()\fR checks \fBm_game_id <= 0\fR
 and sets \fBgame_over = true\fR, causing the Mealy loop to exit
 gracefully without querying the database.
+.SS "Generation 4 DSL Architecture"
+The Generation 4 AI is a declarative, rule-driven system built on
+three macro primitives defined in \fBaa-macros.lisp\fR:
+.IP "\fBdefentity\fR" 12
+Declares an entity type (ship, combat, resource, facility, etc.)
+and auto-generates typed accessor functions.
+Entity fields support aliases, defaults, transforms, and derived
+computations.
+.IP "\fBdefine-strategy-rule\fR" 12
+Registers a named decision rule with a phase tag, priority, guard
+predicate (\fB:when\fR), and action body (\fB:action\fR).
+Rules are dispatched by a rule engine that evaluates guards in
+priority order and fires the first match.
+.IP "\fBdefgoal\fR" 12
+Declares a goal node in a dependency graph rooted at
+\fB:win-game\fR.
+Each goal carries a priority, a parent link (\fB:supported-by\fR),
+satisfaction and precondition predicates, an action function,
+and a resource-needs declaration.
+The goal graph is validated at load time to ensure all goals
+trace back to the root with no cycles.
+.PP
+All Lisp functions are pure: slate in, decisions out.
+No function mutates itself or carries hidden state.
+This makes every decision deterministic, debuggable, and auditable.
 .SS "Strategy DSL Modules"
-The AI strategy is implemented across eight Common Lisp modules,
-loaded in dependency order:
+The AI strategy is implemented across twelve Common Lisp modules,
+loaded in strict dependency order by the C++ runtime:
+.TS
+tab(|);
+l l l.
+Order|Module|Purpose
+_
+1|aa-macros.lisp|DSL infrastructure: defentity, define-strategy-rule, defgoal
+2|aa-theta.lisp|Parameter vector: all tunable constants (defparameter)
+3|aa-entities.lisp|Entity ontology: ship, combat, resource, facility, etc.
+4|aa-util.lisp|Slate accessors, ship finders, predicates, command helpers
+5|aa-strategy.lisp|Strategic state computation: posture, theaters, force projection
+6|aa-goals.lisp|Goal dependency graph and MPC evaluation engine
+7|aa-rules.lisp|Named decision rules across all phases (build, move, combat, etc.)
+8|aa-economic.lisp|Economic action generators: survey, extract, trade, fabricate
+9|aa-build.lisp|Ship design, construction, repair, deployment
+10|aa-movement.lisp|Movement routing, threat detection, target assignment
+11|aa-combat.lisp|Combat triage, CRT-aware tactics, damage assignment
+12|aa-core.lisp|Entry point and phase dispatcher
+.TE
+.SS "The Strategic State"
+At the start of each CALCULATE cycle, \fBcompute-strategic-state\fR
+runs once and produces a strategy plist consumed by all downstream
+decisions.
+The strategic state comprises:
+.IP "\fBVictory State\fR" 4
+Bases held, bases needed, score comparison, VP race projection,
+endgame detection (either side within one base of winning).
+.IP "\fBFleet State\fR" 4
+Ship counts by role, total combat attributes, weighted combat power
+(PD + 1.5B + 1.2S + 0.5T + 0.3M scaled by health ratio), and fleet
+composition analysis.
+.IP "\fBEnemy Profile\fR" 4
+Enemy ship count, positions, maximum observed tech, missile capability,
+screen density, and estimated total BP investment.
+Cross-turn metrics track historical enemy positions and watermarks
+from combat observations.
+.IP "\fBHex Valuation\fR" 4
+Each hex receives a strategic score: enemy base (100), own base (80),
+facility bonuses (shipyard 30, refinery 20, repair 15, trade 10),
+proximity to bases, warpline chokepoints (25), and VP-occupied
+bonus (40).
+.IP "\fBForce Projection\fR" 4
+Undefended enemy bases, bases under threat, reinforcement availability,
+convergence points (hexes reachable by 2+ friendly ships), and
+coverage gaps (own bases outside friendly reach).
+.IP "\fBEnemy Intent\fR" 4
+Estimated convergence target, threat velocity per base, inferred
+spending rate, and strategy classification (aggressive, defensive,
+tech-investing, balanced).
+.IP "\fBTemporal State\fR" 4
+Turns until next tech level, game phase (early/mid/late), credit
+trend, power trend, fleet attrition rate, and 3-turn economic
+trajectory.
+.IP "\fBPosture\fR" 4
+Result of firing posture rules (last-match-wins semantics).
+One of: aggressive, defensive, or balanced.
+Determines acceptable loss thresholds and build/movement directives.
+.SS "Phase Dispatch"
+The entry point \fB(aa-calculate slate)\fR computes the strategic
+state, then dispatches to the current phase:
 .TP
-.B aa-util.lisp
-Accessor functions for reading the data slate.
-Ship property lookups, list filters, and helper predicates.
+.B Build (Phase 0)
+The rule engine fires build rules in priority order: commit pending
+drafts, set ship specifications from design templates, deploy
+completed ships, repair damaged ships at bases, evaluate economic
+goals, build defenders for unguarded bases, build new WarpShips.
+Falls through to \fBNEXT\fR when no rule produces an action.
 .TP
-.B aa-strategy.lisp
-High-level strategic ontology (A1\-A11).
-Computes posture (aggressive/defensive/balanced), theater coordination,
-and inter-phase directives.
-Uses plist flow: \fBcompute-posture\fR \[->] theater coordination \[->]
-build/movement directives.
+.B Movement (Phase 1)
+Checks threatened bases first (enemy within 3 hops) and dispatches
+defenders.
+Then moves idle ships toward enemy bases, spreading across targets
+to maximize VP coverage.
+Uses precomputed BFS distances from the slate.
 .TP
-.B aa-goals.lisp
-Goal evaluation engine using model-predictive control.
-Evaluates objectives in priority order and finds the highest-priority
-unsatisfied goal.
+.B Combat (Phase 2)
+Triages all active theaters simultaneously.
+Each theater is assessed as fight, hold, or retreat based on force
+ratio and hex value.
+Ships needing retreat are handled first, then pending damage
+assignment, then combat orders, then commit.
 .TP
-.B aa-economic.lisp
-Maps economic goals to concrete commands: survey, extract, buy,
-fabricate, sell, outfit, salvage.
+.B Pick/Drop (Phase 3)
+Rearranges SystemShips at contested or strategic hexes.
 .TP
-.B aa-build.lisp
-Ship design selection, construction, repair, and deployment decisions.
-Selects from predefined ship templates based on game state.
-.TP
-.B aa-movement.lisp
-Movement routing with BFS pathfinding.
-Prioritizes defending threatened bases and pushing ships toward
-undefended enemy bases for VP capture.
-Spreads ships across different enemy bases to maximize VP coverage.
-.TP
-.B aa-combat.lisp
-Multi-theater triage, CRT-aware power allocation, target selection
-(focus fire on lowest-HP enemy), damage assignment
-(sacrifice tubes first, then beams, screens, PD last).
-.TP
-.B aa-core.lisp
-Main entry point and phase dispatcher.
-Routes decisions by turn phase (build, movement, combat, pick/drop,
-end turn).
+.B End Turn (Phase 4)
+Issues \fBDONE\fR to pass initiative.
+.SS "The Goal Graph"
+Economic decisions are driven by a directed acyclic graph of goals
+rooted at \fB:win-game\fR.
+Each goal declares a priority, a satisfaction predicate, a
+precondition predicate, and an action function.
+The MPC evaluator walks goals in priority order, finds the
+highest-priority goal that is both unsatisfied and actionable
+(precondition met), and executes its action.
+.PP
+Goals compose through dependency: a goal's action may require
+sub-goals to be satisfied first.
+The \fB:needed-resources\fR declaration prevents the sell-excess
+logic from liquidating cargo that serves an active goal.
+.PP
+The current goal graph:
+.TS
+tab(|);
+l l l l.
+Goal|Pri|Parent|Trigger
+_
+:maintain-missile-stock|1|:win-game|Fleet missiles below 50%
+:resupply-missiles|2|:maintain-missile-stock|Ship at own base with depleted missiles
+:fabricate-materiel|3|:maintain-missile-stock|Ship at shipyard with ingredients
+:acquire-resource|4|:fabricate-materiel|Missing fabrication ingredient
+:survey-for-yield|5|:acquire-resource|System knowledge below Surveyed
+:salvage-opportunity|6|:win-game|Ship at hex with salvageable wreckage
+:sell-excess-cargo|8|:win-game|Cargo serving no active goal, above price floor
+.TE
+.SS "The Rule Engine"
+Strategy rules are registered via \fBdefine-strategy-rule\fR with a
+phase tag (\fB:build\fR, \fB:move\fR, \fB:combat\fR, \fB:triage\fR,
+\fB:tactics\fR, \fB:design\fR, \fB:posture\fR, \fB:pickdrop\fR),
+a priority (lower fires first), a guard predicate, and an action body.
+.PP
+Three dispatch modes:
+.IP "\fBfire-first-matching-rule\fR" 4
+Evaluates guards in priority order; fires the first that returns true.
+Used for combat orders and pick/drop.
+.IP "\fBfire-first-producing-rule\fR" 4
+Same, but the action must return a non-nil result.
+Used for build and movement where a rule may match but produce no
+command (e.g., build rule matches but player cannot afford the ship).
+.IP "\fBfire-posture-rules\fR" 4
+Evaluates all rules; last match wins.
+Used exclusively for posture computation where later rules
+override earlier ones.
 .SS "Build Strategy"
-The AI selects from predefined ship templates based on game state:
+The AI selects from predefined ship templates defined in
+\fBaa-theta.lisp\fR:
 .TS
 tab(|);
 l l l.
 Template|Attributes|Role
 _
-Brawler|PD=6 B=4 S=3|Main battle ship; built first
-Interceptor|PD=5 B=2 S=2|Fast pursuit; spreads to bases
+Brawler|PD=6 B=4 S=3|Main battle ship; default first build
+Interceptor|PD=5 B=2 S=2|Fast pursuit; spreads across enemy bases
 Missile Boat|PD=4 S=1 T=2 M=6|Alpha strike; counters heavy screens
 Fortress|PD=8 B=6 S=5|SystemShip for base defense
+Defender|PD=6 B=4 S=3|SystemShip garrison
 .TE
 .PP
-Template selection considers enemy fleet composition, tech level timing,
-and fleet diversity.
-The AI caps its fleet at 5 WarpShips.
-.SS "Combat Strategy"
-The AI assesses all active combat theaters simultaneously:
-.IP \(bu 2
-Force ratio (our PD / their PD) determines fight/hold/retreat
-.IP \(bu 2
-VP hexes (enemy bases) are defended more aggressively
-.IP \(bu 2
-All ships in one hex focus fire on the same target (lowest total HP)
-.IP \(bu 2
-Drive differential is clamped to avoid +5 automatic miss
-.IP \(bu 2
-Damage assignment: sacrifice tubes first, then beams, screens, PD last
-.SS "Economic Strategy"
-The AI evaluates economic objectives in priority order:
-.IP 1. 3
-Resupply missiles at base (if stock below 50%)
-.IP 2. 3
-Fabricate missiles (if materials available at shipyard)
-.IP 3. 3
-Acquire resources needed for fabrication (extract or buy)
-.IP 4. 3
-Survey unknown systems for resource yields
-.IP 5. 3
-Salvage wreckage at anomaly sites
-.IP 6. 3
-Sell excess cargo at trade hubs
+Design selection is driven by design rules: the first build is always
+a Brawler; missile boats are chosen when the enemy fields heavy
+screens; interceptors fill the fleet for base coverage; defenders
+garrison unguarded home bases.
 .PP
-Cargo is never sold while it serves an active goal.
+Build heuristics gate construction on BP availability, tech-level
+timing (the AI may delay a build if tech upgrades within 1\-2 turns),
+and fleet size relative to the enemy.
+.SS "Combat Strategy"
+Combat operates at two levels: theater triage and per-ship tactics.
+.PP
+\fBTheater Triage.\fR
+All active combats are assessed simultaneously before any orders
+are issued.
+Each theater receives a verdict (fight, hold, or retreat) based on
+force ratio, hex strategic value, and stalemate count.
+VP hexes are fought more aggressively; non-VP hexes with
+unfavorable force ratios are abandoned.
+.PP
+\fBTactics.\fR
+Per-ship orders are generated by tactics rules:
+.IP \(bu 2
+Focus fire: all ships in a theater target the same enemy
+(lowest total HP).
+.IP \(bu 2
+CRT-aware power allocation caps drive differential at +4 to avoid
+the +5 automatic miss.
+Three allocation modes: standard attack (target diff +2), pursuit
+(+4), and counter-dodge (+3).
+.IP \(bu 2
+Missile boats fire when they have stock; retreat when empty.
+.IP \(bu 2
+Stalemate breaker: if the AI is the attacker and stalemate count
+reaches 2, it forces maximum damage output or retreats.
+.IP \(bu 2
+Damage assignment sacrifices attributes in order:
+tubes, beams, screens, PD (preserved last for retreat capability).
+.SS "Economic Strategy"
+Economic actions are driven by the goal graph.
+The MPC evaluator selects the highest-priority unsatisfied goal
+and dispatches its action generator.
+Action generators map goals to concrete commands:
+.IP \(bu 2
+\fBResupply:\fR reload missiles at own base.
+.IP \(bu 2
+\fBFabricate:\fR convert raw materials to missiles at a shipyard
+(recipe: 2 Fe + 1 Rd + 1 Vo).
+.IP \(bu 2
+\fBAcquire:\fR extract resources from a deposit or buy them at
+a trade hub.
+.IP \(bu 2
+\fBSurvey:\fR improve system knowledge to boost extraction yield.
+.IP \(bu 2
+\fBSalvage:\fR recover materials from wreckage.
+.IP \(bu 2
+\fBSell:\fR liquidate excess cargo that serves no active goal,
+only if the market price exceeds 80% of base value.
+.SS "The Theta Parameter Vector"
+All tunable numeric constants (thresholds, weights, fleet caps,
+template attributes) are declared as \fBdefparameter\fR values in
+\fBaa-theta.lisp\fR and accessed via \fB(theta 'theta-xxx)\fR.
+An unknown key raises an error at load time, preventing silent
+misconfiguration.
+This design enables build-time parameter tuning from game telemetry
+without modifying strategy code.
 .SS "Cross-Turn Memory"
 The AI persists deduced metrics to the \fBaa_metrics\fR database table
-via \fB(make-metric name value)\fR pseudo-commands emitted by Lisp.
+via \fB(make-metric name value)\fR pseudo-commands emitted from Lisp.
 These metrics survive across decision cycles and are loaded back into
-the slate each gather.
+the slate each GATHER.
+.PP
+Metric categories:
+.IP \(bu 2
+Trend snapshots (credits, fleet power, economic trajectory)
+.IP \(bu 2
+Enemy position history (per-ship hex snapshots)
+.IP \(bu 2
+Enemy distance-to-base (closing rate inference)
+.IP \(bu 2
+Combat watermarks (maximum observed PD, beam, screen, tubes per enemy)
+.IP \(bu 2
+Rack inference (enemy ship carried SystemShips)
+.IP \(bu 2
+Per-theater engagement history (rounds fought, power committed)
+.IP \(bu 2
+Enemy economic estimate (inferred total BP investment)
 .\" ===================================================================
 .SH SYSTEMSHIP PICKUP AND DROP
 .SS "During Movement Phase"
@@ -1459,202 +1627,329 @@ Key tables: \fBgames\fR, \fBships\fR, \fBdrafts\fR, \fBcombat_state\fR,
 .\" ===================================================================
 
 
-.SH "Machine Learning: AI Agent Feedback Loop & Latent Learning"
-
+.SH "ADDING A GOAL TO THE AI AGENT"
+This section documents the procedure for adding a new goal to the
+Generation 4 AI Agent's goal graph.
+A goal is a declarative objective that the MPC evaluator can select,
+prioritize, and execute during the build phase of the AI's turn.
 .PP
-Design issues about closing the feedback loop between command execution and AI agent decision-making,
-and a longer-term vision for build-time machine learning driven by game diaries.
-
-.SH "1. The Problem: Open-Loop Command Execution"
-
-.PP
-The AI agent's MPC (model-predictive control) loop is currently open-loop at the RENDER step.
-The cycle is:
-
-.PP
-.nf
-\f(CWGATHER -> CALCULATE -> RENDER -> (assume success) -> GATHER\fR
-.fi
-
-.PP
-A human player closes this loop naturally -- they see "Invalid move" on screen and adjust.
-The AI agent has no equivalent feedback channel.
-
-.PP
-When \f(CWinvoke()\fR returns false on a command, the TaskRunner knows the command failed and logs the error.
-But \f(CWnotify_task_complete()\fR is a bare signal -- it carries no payload.
-The agent wakes up from \f(CWwait_for_task_completion()\fR knowing only "the task finished," not whether it
-succeeded or failed, or why.
-
-.PP
-This causes blind retry loops: the agent re-issues the same failing command because it never learns it failed.
-The game state hasn't changed, so \f(CWCALCULATE\fR derives the same command from the same inputs.
-
-.SH "2. The Gap Is Narrow"
-
-.PP
-The information already exists at the right place. In \f(CWtaskrunner.cpp\fR, after executing an AI task:
-
+The example used throughout is a hypothetical goal called
+\fB:fortify-chokepoint\fR, whose purpose is to deploy a SystemShip
+defender at a warpline chokepoint hex when the AI controls that hex
+and it is ungarrisoned.
+.SS "Step 1: Define the Goal (aa-goals.lisp)"
+Every goal is declared via the \fBdefgoal\fR macro.
+The declaration establishes the goal's identity, its position in
+the dependency graph, and the predicates and action that govern it.
 .PP
 .RS
 .nf
 .ft CW
-int result = internal_command_handler_body(item->ai_command, errmsg);
+(defgoal :fortify-chokepoint
+  :priority 7
+  :supported-by :win-game
+  :satisfied
+    (null (find-unfortified-chokepoints slate))
+  :precondition
+    (and (>= (slate-credits slate) 200)
+         (not (null (find-unfortified-chokepoints slate))))
+  :action
+    (issue-fortify-chokepoint slate goals)
+  :needed-resources nil
+  :doc "Build and deploy a defender at an ungarrisoned chokepoint.")
 .ft R
 .fi
 .RE
-
 .PP
-The TaskRunner has both \f(CWresult\fR (success/failure) and \f(CWerrmsg\fR (the reason).
-It logs them, then calls \f(CWnotify_task_complete()\fR which discards both.
-The plumbing for the blocking handshake between TaskRunner and AI agent thread already exists via condition
-variable -- it just signals a bool when it could signal a result structure.
-
-.SH "3. Proposed Feedback Mechanism"
-
-.SS "Task Meta-Data"
-
+The fields:
+.TP
+.B :priority
+Integer.
+Lower numbers are higher priority.
+The evaluator walks goals in ascending priority order and selects
+the first that is unsatisfied and actionable.
+Choose a value that places the goal correctly relative to existing
+goals (see the goal table in the AI AGENT section).
+.TP
+.B :supported-by
+Keyword naming the parent goal.
+Every goal must trace to \fB:win-game\fR through its parent chain.
+The graph is validated at load time; a dangling parent is a fatal
+error.
+.TP
+.B :satisfied
+A form evaluated with the current slate bound.
+Returns true when the goal is already met and needs no action.
+The evaluator skips satisfied goals.
+.TP
+.B :precondition
+A form evaluated with the current slate bound.
+Returns true when the goal is actionable (i.e., the game state
+permits the goal's action to succeed).
+An unsatisfied goal with a false precondition is skipped; the
+evaluator moves to the next priority.
+.TP
+.B :action
+A form evaluated with both \fBslate\fR and \fBgoals\fR bound.
+Must return a list of command plists (via \fBmake-cmd\fR) or
+\fBnil\fR.
+Returning nil means the goal matched but could not produce a
+concrete command this cycle; the evaluator falls through.
+.TP
+.B :needed-resources
+A form returning a list of resource-type strings (e.g.,
+\fB'("FERROUS" "VOLATILE")\fR) that this goal's fulfillment
+consumes.
+The sell-excess logic checks this list before liquidating cargo.
+Use \fBnil\fR if the goal consumes no cargo.
+.SS "Step 2: Implement the Finder (aa-util.lisp or aa-goals.lisp)"
+The satisfaction and precondition predicates typically call a finder
+function that locates the game-state entity the goal acts upon.
 .PP
-Each Task carries meta-data that is populated by the grammar rule involved in the \f(CWinvoke()\fR call.
-This is not just a bool -- it includes contextual information about \fIwhy\fR the command failed:
-
-.IP "\(bu" 2
-The command that was attempted
-.IP "\(bu" 2
-Success or failure
-.IP "\(bu" 2
-Structured failure reason (not a human-readable string)
-
-.SS "Notification With Payload"
-
+.RS
+.nf
+.ft CW
+(defun find-unfortified-chokepoints (slate)
+  "Return list of chokepoint hexes we control but have not garrisoned.
+   A chokepoint is a hex with 3+ warpline connections bridging
+   own-territory and enemy-territory."
+  (let ((result nil))
+    (dolist (hex (slate-chokepoint-hexes slate))
+      (let ((garrison (count-if
+                        (lambda (s)
+                          (and (not (ship-warpship s))
+                               (string= (ship-hex s) hex)))
+                        (slate-own-ships slate))))
+        (when (zerop garrison)
+          (push hex result))))
+    result))
+.ft R
+.fi
+.RE
 .PP
-When \f(CWnotify_task_complete()\fR fires, the meta-data blob is conveyed to the AI agent.
-The agent only cares about failures -- successful commands need no special handling since the world state
-changes and the next \f(CWGATHER\fR reflects reality.
-
-.SS "Persistence in the Slate"
-
+Conventions for finder functions:
+.IP \(bu 2
+Return the entity (ship, hex, system) or \fBnil\fR.
+For set-valued queries, return a list (empty list counts as nil
+for satisfaction tests).
+.IP \(bu 2
+Accept only the slate as argument.
+Side-effect-free.
+.IP \(bu 2
+Name the function \fBfind-\fIwhat\fB-for-\fIgoal\fR or similar.
+.SS "Step 3: Implement the Action Generator"
+The action function maps the goal to one or more concrete game
+commands.
+It returns a list of command plists or nil.
 .PP
-Failed-command meta-data persists in the agent's awareness and becomes part of the slate during the next
-\f(CWGATHER\fR step. The Lisp code can then see: "my last MOVE w6 2223 failed because X" and choose differently.
-
-.SH "4. Failure Reasons as Ontology Facts"
-
+.RS
+.nf
+.ft CW
+(defun issue-fortify-chokepoint (slate goals)
+  "Build a defender SystemShip and deploy to the highest-value
+   unfortified chokepoint.  Returns command list or nil."
+  (declare (ignore goals))
+  (let ((targets (find-unfortified-chokepoints slate)))
+    (when targets
+      (let ((best (first (sort targets #'>
+                          :key (lambda (h)
+                                 (compute-hex-value slate h))))))
+        (format t "[LISP] fortify-chokepoint -> ~A~%" best)
+        (list (make-cmd "BN" "S SENTINEL")
+              (make-cmd "BS" "SENTINEL PD=6 B=4 S=3")
+              (make-cmd "BC" "SENTINEL")
+              (make-cmd "DS"
+                (format nil "SENTINEL ~A" best)))))))
+.ft R
+.fi
+.RE
 .PP
-Rather than carrying free-form error strings that Lisp would have to parse, failure reasons should be closed
-under the ontology dictionary. Every failure cause maps 1:1 to an ontology fact:
-
-.IP "\(bu" 2
-"insufficient credits" -> \f(CW:precondition-violated :credits-below-threshold\fR
-.IP "\(bu" 2
-"hex contested" -> \f(CW:precondition-violated :hex-in-combat\fR
-.IP "\(bu" 2
-"not your turn" -> \f(CW:precondition-violated :phase-mismatch\fR
-
+Conventions for action generators:
+.IP \(bu 2
+Return \fB(list (make-cmd ...))\fR for success,
+\fBnil\fR for "cannot act this cycle."
+.IP \(bu 2
+Use \fB(make-cmd "CMD" "ARGS")\fR to construct command plists.
+The C++ RENDER phase injects these as textual commands through
+\f(CWyyparse()\fR.
+.IP \(bu 2
+Log the action via \fBformat\fR to \fBt\fR for diagnostics.
+.IP \(bu 2
+Multi-command sequences (build + set + commit + deploy) are
+legal; the RENDER phase executes them in order.
+.SS "Step 4: Add Theta Parameters (aa-theta.lisp)"
+If the goal uses any tunable constants, declare them in the theta
+parameter vector rather than hardcoding them in the action function.
 .PP
-This means the Lisp code reasons about failures the same way it reasons about everything else -- through the
-strategy plist, using the same subsystem functions. Failures become just another structured input to
-\f(CWCALCULATE\fR, not a special side channel.
+.RS
+.nf
+.ft CW
+(defparameter *theta-fortify-min-warplines* 3
+  "Minimum warpline connections for a hex to qualify as chokepoint.")
 
+(defparameter *theta-fortify-max-defenders* 1
+  "Maximum defender SystemShips to deploy per chokepoint.")
+.ft R
+.fi
+.RE
 .PP
-The closed-set property guarantees the Lisp code can handle every failure because the ontology is finite and
-known at compile time.
-
-.SH "5. Failure Lifetime: When to Forget"
-
-.SS "Time-Based Expiry Is Wrong"
-
+Reference them via \fB(theta 'theta-fortify-min-warplines)\fR in
+finder and action functions.
+.SS "Step 5: Integrate with the Rule Engine (Optional)"
+Goals that operate during the build phase are automatically invoked
+by the existing economic-dispatch rule in \fBaa-rules.lisp\fR.
+No additional rule is needed unless the goal requires action during
+a different phase (movement, combat, pick/drop).
 .PP
-A fixed TTL (e.g., "forget after 3 rounds") is either too long -- the agent avoids a now-valid command for rounds
-after the blocker cleared -- or too short -- the agent retries a still-invalid command because the timer expired.
-
-.SS "State-Change Invalidation Is Ideal But Hard"
-
+For non-build-phase goals, register a strategy rule:
 .PP
-The theoretically correct approach: a failure stays relevant until the slate shows the precondition that caused it
-has changed. But this requires mapping each failure reason to the specific state that caused it, which is a complex,
-fragile mapping.
-
-.SS "Phase-Scoped Lifetime Is Pragmatic"
-
+.RS
+.nf
+.ft CW
+(define-strategy-rule fortify-move-defender
+  :phase :move
+  :priority 250
+  :when (and (find-unfortified-chokepoints slate)
+             (find-idle-defender slate))
+  :action (issue-move-defender-to-chokepoint slate strategy)
+  :doc "Move idle defender toward unfortified chokepoint.")
+.ft R
+.fi
+.RE
+.SS "Step 6: Validate the Goal Graph"
+The graph validator runs at load time.
+It verifies:
+.IP \(bu 2
+Every goal traces to \fB:win-game\fR via \fB:supported-by\fR links.
+.IP \(bu 2
+No cycles exist in the dependency chain.
+.IP \(bu 2
+No duplicate \fB:objective\fR keywords.
 .PP
-Clear the failure list at each phase transition. Within a single phase, game state only changes through the agent's
-own actions (and the other player's during combat). A command that fails in BUILD phase round 5 won't succeed later in
-BUILD phase round 5 -- the preconditions are stable within a phase.
-
+A goal with a dangling parent (\fB:supported-by\fR naming a
+nonexistent goal) is a fatal load error.
+Test by restarting the server with the AI DSL path and checking
+the log for validation output.
+.SS "Step 7: Metric Persistence (Optional)"
+If the goal benefits from cross-turn memory, emit metrics via
+\fBmake-metric\fR in \fBcompute-metrics-to-persist\fR
+(\fBaa-core.lisp\fR).
 .PP
-Exception: combat, where state changes within a phase as orders resolve, damage is assigned, and ships escape.
-Combat may need round-scoped or stage-scoped clearing.
-
-.SH "6. Latent Machine Learning: The Diary Concept"
-
-.SS "Two Timescales"
-
+.RS
+.nf
+.ft CW
+(make-metric "fortify-last-target" best-hex)
+(make-metric "fortify-deployed-count" n)
+.ft R
+.fi
+.RE
 .PP
-Separate the learning feedback loop into two timescales:
-
-.IP "\(bu" 2
-\fBRuntime (within a game):\fR Static Lisp, fixed ontology, metrics memory. No self-modification.
+These are intercepted by the C++ layer as pseudo-commands,
+written to the \fBaa_metrics\fR table, and reappear in the
+slate's \fB:metrics\fR alist on the next GATHER.
+.SS "Summary: Files Modified"
+.TS
+tab(|);
+l l.
+File|Change
+_
+aa-goals.lisp|defgoal declaration
+aa-util.lisp or aa-goals.lisp|Finder function
+aa-economic.lisp or new module|Action generator
+aa-theta.lisp|Tunable parameters (if any)
+aa-rules.lisp|Strategy rule (if non-build phase)
+aa-core.lisp|Metric persistence (if cross-turn memory needed)
+.TE
+.PP
+No C++ changes are required.
+The C++ GATHER/RENDER loop and the \fBdefgoal\fR macro handle
+registration and dispatch automatically.
+.\" ===================================================================
+.SH "AI AGENT DESIGN NOTES"
+.PP
+This section documents design considerations and future directions
+for the Autonomy Agency.
+.SS "Closed-Loop Command Execution"
+The Mealy state machine is a closed loop: GATHER reads the world
+state after every RENDER, so a failed command changes the slate
+(or leaves it unchanged, which itself is information) and CALCULATE
+derives a different action on the next cycle.
+.PP
+For the loop to close tightly, the agent must distinguish between
+"the command succeeded and the world changed" and "the command
+failed and the world did not change."
+The TaskRunner carries both the result code and the error message
+from \f(CWinvoke()\fR.
+When this information is conveyed back through the slate,
+the Lisp code can reason about failures as structured ontology
+facts rather than opaque strings:
+.IP \(bu 2
+\f(CW:precondition-violated :credits-below-threshold\fR
+.IP \(bu 2
+\f(CW:precondition-violated :hex-in-combat\fR
+.IP \(bu 2
+\f(CW:precondition-violated :phase-mismatch\fR
+.PP
+Failure reasons scoped to the ontology dictionary guarantee that
+the Lisp code can handle every failure cause, because the set is
+finite and known at compile time.
+Failures become structured inputs to CALCULATE, not a special
+side channel.
+.PP
+Failure lifetime is phase-scoped: the failure list clears at each
+phase transition.
+Within a single phase, preconditions are stable (the world changes
+only through the agent's own actions).
+Combat is the exception, where state changes within a phase as
+orders resolve; combat failures may need round-scoped or
+stage-scoped clearing.
+.SS "Latent Learning: The Diary Concept"
+The learning feedback loop separates into two timescales:
+.IP "\fBRuntime\fR" 4
+Static Lisp, fixed ontology, metrics memory.
+No self-modification.
 Deterministic and debuggable.
-.IP "\(bu" 2
-\fBBuild-time (between releases):\fR Ingest accumulated game diaries, produce updated Lisp parameters.
-The agent evolves, but only through a controlled, auditable build step.
-
-.SS "The Diary"
-
+.IP "\fBBuild-time\fR" 4
+Ingest accumulated game diaries, produce updated Lisp parameters.
+The agent evolves through a controlled, auditable build step.
 .PP
-Extend the existing \f(CWaa_metrics\fR persistence to capture richer game-over summaries: what round the game ended,
-who won, fleet composition at key moments, which strategies were attempted and when. Structured data, not prose.
-
-.SS "Translation Approaches (Build-Time Ingestion)"
-
+The diary extends the \fBaa_metrics\fR table to capture game-over
+summaries: ending round, winner, fleet composition at key moments,
+strategies attempted and when.
+Three translation approaches, ordered by complexity:
+.IP "1." 4
+\fBParameter Tables.\fR
+The diary feeds a statistical pass that emits a
+\f(CWdefparameter\fR config file.
+Example: "average earliest viable missile build = round 5.2
+across 47 games" becomes a theta value.
+No generated Lisp code.
+Simplest and likely captures 80% of the benefit.
+.IP "2." 4
+\fBRule Selection.\fR
+Multiple strategy variants are written by hand (aggressive,
+turtle, missile-rush).
+Diary analysis determines which variants performed best per
+opponent profile.
+The build step emits a selection table.
+.IP "3." 4
+\fBLisp Code Generation.\fR
+An external tool reads the diary, identifies patterns, and emits
+new Lisp functions.
+Requires validation against the ontology.
+This is a research direction more than an engineering task.
 .PP
-Three approaches, ordered by complexity:
-
+For approaches 1 and 2: a pre-build script queries the metrics
+database, runs the analysis, and writes a \fB.lisp\fR file of
+\f(CWdefparameter\fR declarations.
+The normal build includes that file.
 .PP
-\fBApproach 1: Parameter Tables (Recommended Starting Point)\fR
-
-.PP
-The diary feeds a statistical pass that produces a config file -- thresholds, weights, timing windows.
-Example: "average earliest viable missile build = round 5.2 across 47 games" becomes a \f(CWdefparameter\fR value.
-No new Lisp code is generated. The build step is data aggregation. Lisp code has \f(CWdefparameter\fR declarations
-that get values from a generated config.
-
-.PP
-Simplest, safest, and likely captures 80% of the benefit.
-
-.PP
-\fBApproach 2: Rule Selection\fR
-
-.PP
-Write multiple strategy variants by hand -- aggressive early-build, conservative turtle, missile-rush, etc.
-Diary analysis determines which variants performed best against different opponent profiles.
-The build step produces a selection table. No generated Lisp, just generated configuration selecting among
-pre-written variants.
-
-.PP
-\fBApproach 3: Lisp Code Generation\fR
-
-.PP
-An external tool reads the diary, identifies patterns, and emits new Lisp functions or modifies existing ones.
-Requires a validation step -- generated Lisp must type-check against the ontology, return well-formed plists,
-and not introduce infinite loops. This is a research project more than an engineering task.
-
-.SS "Build System Integration"
-
-.PP
-For approaches 1 and 2: a pre-build script reads the diary database, runs the analysis, writes a \f(CW.lisp\fR file of
-\f(CWdefparameter\fR declarations or a strategy-selection table, and the normal build includes that file.
-No special tooling beyond a script that queries the metrics database and emits s-expressions.
-
-.SS "On Self-Modifying Lisp"
-
-.PP
-The power of the current architecture is that Lisp functions are pure: slate in, decisions out.
-They carry no hidden state, don't mutate themselves, don't evolve at runtime.
-That makes them debuggable, predictable, and auditable.
-Self-modifying code at runtime sacrifices all three properties.
-The diary/build-time approach preserves them by restricting evolution to a controlled, versioned build step.
+The power of the current architecture is that all Lisp functions
+are pure: slate in, decisions out.
+They carry no hidden state and do not mutate themselves.
+This makes them debuggable, predictable, and auditable.
+The diary/build-time approach preserves these properties by
+restricting evolution to a versioned build step.
 
 .ne 15
 .SH BUGS

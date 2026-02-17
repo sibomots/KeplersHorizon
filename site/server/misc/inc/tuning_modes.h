@@ -5,16 +5,16 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#ifndef __KH_CONFIGURE_MODES_H__
-#define __KH_CONFIGURE_MODES_H__
+#ifndef __KH_TUNING_MODES_H__
+#define __KH_TUNING_MODES_H__
 
-enum ConfigureMode
+enum TuningMode
 {
-    FIRST_CFG_MODE = 0,
-    CFG_SHOW,
-    CFG_RELOAD_CONF,
-    CFG_RELOAD_AI,
-    LAST_CFG_MODE
+    FIRST_TN_MODE = 0,
+    TN_SHOW,
+    TN_RELOAD_CONF,
+    TN_RELOAD_AI,
+    LAST_TN_MODE
 };
 
 #endif

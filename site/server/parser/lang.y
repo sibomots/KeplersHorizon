@@ -64,7 +64,7 @@
 #include "status_command.h"
 #include "hex_command.h"
 #include "delete_command.h"
-#include "configure_command.h"
+#include "tuning_command.h"
 #include "statemachine.h"
 #include "telemetry.h"
 #include "db.h"
@@ -1691,7 +1691,7 @@ configure_cmd:
   }
   | TOK_CONFIGURE TOK_RELOAD TOK_CONF {
       // configure reload conf — reload kh.conf
-      ICmd* pCmd = ConfigureCommand::Builder()
+      ICmd* pCmd = TuningCommand::Builder()
           .set_reload_conf_mode()
           .build();
       pCmd->invoke();
@@ -1699,7 +1699,7 @@ configure_cmd:
   }
   | TOK_CONFIGURE TOK_RELOAD TOK_AI {
       // configure reload ai — reload AI DSL
-      ICmd* pCmd = ConfigureCommand::Builder()
+      ICmd* pCmd = TuningCommand::Builder()
           .set_reload_ai_mode()
           .build();
       pCmd->invoke();
@@ -1711,7 +1711,7 @@ configure_cmd:
   }
   | TOK_CONFIGURE {
       // configure — show current settings
-      ICmd* pCmd = ConfigureCommand::Builder()
+      ICmd* pCmd = TuningCommand::Builder()
           .set_show_mode()
           .build();
       pCmd->invoke();

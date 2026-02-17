@@ -7,6 +7,7 @@
 ///////////////////////////////////////////
 
 #include <cctype>
+#include <format>
 #include <iomanip>
 #include <sstream>
 
@@ -14,7 +15,7 @@
 #include "constraints.h"
 #include "db.h"
 #include "deploy_command.h"
-#include "gamedev_state.h"
+#include "tuning_state.h"
 #include "hex_events.h"
 #include "logger.h"
 #include "mapgraph.h"
@@ -517,13 +518,21 @@ bool MoveCommand::invoke(void)
                 StarSystemConstraints::getMovementModifier(m_game_id, stepHex);
 
             // Add dynamic hex event modifier (NAVIGATION_HAZARD)
-            modifier += HexEventEngine::get_movement_modifier(m_game_id,
-                                                              s.round, stepHex);
+            int hexEventMod = HexEventEngine::get_movement_modifier(
+                m_game_id, s.round, stepHex);
+            modifier += hexEventMod;
 
-            // Apply gamedev debug override if enabled
-            if (GameDevState::instance().is_enabled())
+            if (hexEventMod > 0)
             {
-                modifier += GameDevState::instance().get_movement_modifier();
+                Telemetry::instance().write(
+                    std::format("HAZARD: Navigation hazard in hex {}! "
+                                "+{} PD cost.", stepHex, hexEventMod));
+            }
+
+            // Apply tuning override if enabled
+            if (TuningState::instance().is_enabled())
+            {
+                modifier += TuningState::instance().get_movement_modifier();
             }
 
             stepCost += modifier;

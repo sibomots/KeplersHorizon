@@ -5,59 +5,63 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#ifndef __KH_CONFIGURE_COMMAND_H__
-#define __KH_CONFIGURE_COMMAND_H__
+#ifndef __KH_TUNING_COMMAND_H__
+#define __KH_TUNING_COMMAND_H__
 
-#include "configure_modes.h"
+#include "tuning_modes.h"
 #include "icmd.h"
 
 #include <string>
 
-class ConfigureCommand : public ICmd
+class TuningCommand : public ICmd
 {
   public:
     class Builder
     {
       public:
-        ConfigureMode _mode;
+        TuningMode _mode;
 
-        Builder() : _mode(CFG_SHOW)
+        Builder() : _mode(TN_SHOW)
         {
         }
 
         Builder& set_show_mode(void)
         {
-            _mode = ConfigureMode::CFG_SHOW;
+            _mode = TuningMode::TN_SHOW;
             return *this;
         }
         Builder& set_reload_conf_mode(void)
         {
-            _mode = ConfigureMode::CFG_RELOAD_CONF;
+            _mode = TuningMode::TN_RELOAD_CONF;
             return *this;
         }
 
         Builder& set_reload_ai_mode(void)
         {
-            _mode = ConfigureMode::CFG_RELOAD_AI;
+            _mode = TuningMode::TN_RELOAD_AI;
             return *this;
         }
 
         ICmd* build()
         {
-            return new ConfigureCommand(*this);
+            return new TuningCommand(*this);
         }
     };
 
     bool invoke(void) override;
-    ConfigureMode get_mode(void) const
+    TuningMode get_mode(void) const
     {
         return m_mode;
     }
 
-  private:
-    ConfigureMode m_mode;
+    // Load kh.conf at startup (no Telemetry, Logger only).
+    // Returns count of settings loaded, or -1 on file-not-found.
+    static int load_conf_file();
 
-    ConfigureCommand(Builder& builder) : m_mode(builder._mode)
+  private:
+    TuningMode m_mode;
+
+    TuningCommand(Builder& builder) : m_mode(builder._mode)
     {
     }
 

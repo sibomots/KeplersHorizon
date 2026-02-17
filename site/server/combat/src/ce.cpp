@@ -23,7 +23,7 @@
 #include "combatagent.h"
 #include "constraints.h"
 #include "db.h"
-#include "gamedev_state.h"
+#include "tuning_state.h"
 #include "hex_events.h"
 #include "logger.h"
 #include "mapgraph.h"
@@ -673,13 +673,14 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         StarSystemConstraints::getBeamModifier(game_id, hex_id);
 
                     // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
-                    dmg += HexEventEngine::get_combat_modifier(
+                    int hexCombatMod = HexEventEngine::get_combat_modifier(
                         game_id, cs.round, hex_id);
+                    dmg += hexCombatMod;
 
-                    // Apply gamedev debug override if enabled
-                    if (GameDevState::instance().is_enabled())
+                    // Apply tuning override if enabled
+                    if (TuningState::instance().is_enabled())
                     {
-                        dmg += GameDevState::instance().get_combat_modifier();
+                        dmg += TuningState::instance().get_combat_modifier();
                     }
 
                     if (dmg > 0)
@@ -687,7 +688,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                         target->damage_received += dmg;
                         log << ship.code << " '" << ship.name << "' beams "
                             << target->code << " '" << target->name << "' for "
-                            << dmg << " dmg!\n";
+                            << dmg << " dmg!";
+                        if (hexCombatMod != 0)
+                        {
+                            log << " [interference: " << hexCombatMod << "]";
+                        }
+                        log << "\n";
                     }
                 }
                 else
@@ -769,10 +775,15 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             dmg += StarSystemConstraints::getMissileModifier(
                                 game_id, hex_id);
 
-                            // Apply gamedev debug override if enabled
-                            if (GameDevState::instance().is_enabled())
+                            // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
+                            int hexMslMod = HexEventEngine::get_combat_modifier(
+                                game_id, cs.round, hex_id);
+                            dmg += hexMslMod;
+
+                            // Apply tuning override if enabled
+                            if (TuningState::instance().is_enabled())
                             {
-                                dmg += GameDevState::instance()
+                                dmg += TuningState::instance()
                                            .get_combat_modifier();
                             }
 
@@ -782,7 +793,13 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                                 log << ship.code << " '" << ship.name
                                     << "' missile hits " << target->code << " '"
                                     << target->name << "' for " << dmg
-                                    << " dmg!\n";
+                                    << " dmg!";
+                                if (hexMslMod != 0)
+                                {
+                                    log << " [interference: " << hexMslMod
+                                        << "]";
+                                }
+                                log << "\n";
                             }
                         }
                         else
