@@ -247,7 +247,7 @@ static bool find_fabrication_ship(int game_id, char owner,
     return bres;
 }
 
-bool FabricateStrategy::fabricate_missile(int game_id, char owner, int qty)
+bool FabricateStrategy::fabricate_torpedo(int game_id, char owner, int qty)
 {
     bool bres = false;
     int cost[8] = {0};
@@ -256,21 +256,21 @@ bool FabricateStrategy::fabricate_missile(int game_id, char owner, int qty)
     std::string ship_code;
     std::string at_system;
 
-    if (load_plan_costs("MISSILE", cost, build_time, output_qty) &&
+    if (load_plan_costs("TORPEDO", cost, build_time, output_qty) &&
         find_fabrication_ship(game_id, owner, ship_code, at_system) &&
         check_cargo_cost(game_id, owner, cost, qty))
     {
         deduct_cargo(game_id, owner, cost, qty);
         DatabaseManager& db = DatabaseManager::instance();
 
-        // Missiles are immediate output
-        int total_missiles = output_qty * qty;
-        db.Exec("UPDATE ships SET cargo_missiles=cargo_missiles+? "
+        // Torpedoes are immediate output
+        int total_torpedoes = output_qty * qty;
+        db.Exec("UPDATE ships SET cargo_torpedoes=cargo_torpedoes+? "
                 "WHERE game_id=? AND owner=? AND ship_code=?",
-                {total_missiles, game_id, owner, ship_code});
+                {total_torpedoes, game_id, owner, ship_code});
 
-        std::string msg = "Fabricated " + std::to_string(total_missiles) +
-                          " missiles, loaded to " + ship_code;
+        std::string msg = "Fabricated " + std::to_string(total_torpedoes) +
+                          " torpedoes, loaded to " + ship_code;
         Telemetry::instance().write("FABRICATE: " + msg);
         bres = true;
     }
@@ -278,7 +278,7 @@ bool FabricateStrategy::fabricate_missile(int game_id, char owner, int qty)
     return bres;
 }
 
-bool FabricateStrategy::fabricate_tube(int game_id, char owner, int qty)
+bool FabricateStrategy::fabricate_launcher(int game_id, char owner, int qty)
 {
     bool bres = false;
     int cost[8] = {0};
@@ -287,7 +287,7 @@ bool FabricateStrategy::fabricate_tube(int game_id, char owner, int qty)
     std::string ship_code;
     std::string at_system;
 
-    if (load_plan_costs("TUBE", cost, build_time, output_qty) &&
+    if (load_plan_costs("LAUNCHER", cost, build_time, output_qty) &&
         find_fabrication_ship(game_id, owner, ship_code, at_system) &&
         check_cargo_cost(game_id, owner, cost, qty))
     {
@@ -300,9 +300,9 @@ bool FabricateStrategy::fabricate_tube(int game_id, char owner, int qty)
                 "(game_id,player,ship_code,recipe,"
                 "quantity,started_turn,completion_turn,status) VALUES("
                 "?,?,?,?,?,?,?,'IN_PROGRESS')",
-                {game_id, owner, ship_code, "tubes", qty, s.round, completion});
+                {game_id, owner, ship_code, "launchers", qty, s.round, completion});
 
-        std::string msg = "Queued tube upgrade x" + std::to_string(qty) +
+        std::string msg = "Queued launcher upgrade x" + std::to_string(qty) +
                           ". Completes round " + std::to_string(completion);
         Telemetry::instance().write("FABRICATE: " + msg);
         bres = true;
@@ -311,7 +311,7 @@ bool FabricateStrategy::fabricate_tube(int game_id, char owner, int qty)
     return bres;
 }
 
-bool FabricateStrategy::fabricate_beam(int game_id, char owner, int qty)
+bool FabricateStrategy::fabricate_phasic(int game_id, char owner, int qty)
 {
     bool bres = false;
     int cost[8] = {0};
@@ -320,7 +320,7 @@ bool FabricateStrategy::fabricate_beam(int game_id, char owner, int qty)
     std::string ship_code;
     std::string at_system;
 
-    if (load_plan_costs("BEAM", cost, build_time, output_qty) &&
+    if (load_plan_costs("PHASIC", cost, build_time, output_qty) &&
         find_fabrication_ship(game_id, owner, ship_code, at_system) &&
         check_cargo_cost(game_id, owner, cost, qty))
     {
@@ -333,9 +333,9 @@ bool FabricateStrategy::fabricate_beam(int game_id, char owner, int qty)
                 "(game_id,player,ship_code,recipe,"
                 "quantity,started_turn,completion_turn,status) VALUES("
                 "?,?,?,?,?,?,?,'IN_PROGRESS')",
-                {game_id, owner, ship_code, "beams", qty, s.round, completion});
+                {game_id, owner, ship_code, "phasics", qty, s.round, completion});
 
-        std::string msg = "Queued beam upgrade x" + std::to_string(qty) +
+        std::string msg = "Queued phasic upgrade x" + std::to_string(qty) +
                           ". Completes round " + std::to_string(completion);
         Telemetry::instance().write("FABRICATE: " + msg);
         bres = true;
@@ -344,7 +344,7 @@ bool FabricateStrategy::fabricate_beam(int game_id, char owner, int qty)
     return bres;
 }
 
-bool FabricateStrategy::fabricate_screen(int game_id, char owner, int qty)
+bool FabricateStrategy::fabricate_shield(int game_id, char owner, int qty)
 {
     bool bres = false;
     int cost[8] = {0};
@@ -353,7 +353,7 @@ bool FabricateStrategy::fabricate_screen(int game_id, char owner, int qty)
     std::string ship_code;
     std::string at_system;
 
-    if (load_plan_costs("SCREEN", cost, build_time, output_qty) &&
+    if (load_plan_costs("SHIELD", cost, build_time, output_qty) &&
         find_fabrication_ship(game_id, owner, ship_code, at_system) &&
         check_cargo_cost(game_id, owner, cost, qty))
     {
@@ -367,9 +367,9 @@ bool FabricateStrategy::fabricate_screen(int game_id, char owner, int qty)
             "(game_id,player,ship_code,recipe,"
             "quantity,started_turn,completion_turn,status) VALUES("
             "?,?,?,?,?,?,?,'IN_PROGRESS')",
-            {game_id, owner, ship_code, "screens", qty, s.round, completion});
+            {game_id, owner, ship_code, "shields", qty, s.round, completion});
 
-        std::string msg = "Queued screen upgrade x" + std::to_string(qty) +
+        std::string msg = "Queued shield upgrade x" + std::to_string(qty) +
                           ". Completes round " + std::to_string(completion);
         Telemetry::instance().write("FABRICATE: " + msg);
         bres = true;

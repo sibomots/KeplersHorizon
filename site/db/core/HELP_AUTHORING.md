@@ -41,11 +41,11 @@ SYNOPSIS:
   BD    Show pending drafts
 DESCRIPTION:
   Create and configure new ships during the Build Ships phase.
-  Specifications: PD=# B=# S=# T=# M=# SR=#
+  Specifications: PD=# P=# S=# L=# T=# H=#
   Cost is determined by total attribute points assigned.
 EXAMPLES:
   > bn w Falcon
-  > bs W1 pd=9 b=1
+  > bs W1 pd=9 p=1
   > bc
 SEE ALSO: fleet, deploy, specs"
 ```

@@ -35,7 +35,7 @@ bool CrtCommand::invoke(void)
         "│RETREAT │ -1,0    │ Hit    │ Miss     │ Escapes│\n"
         "│RETREAT │ >=+1    │ Miss   │ Miss     │ Escapes│\n"
         "└────────┴─────────┴────────┴──────────┴────────┘\n"
-        "      Damage = Beam Power + Tech Level\n"
+        "      Damage = Phasic Power + Tech Level\n"
         "     >> may be modified by hex events << \n";
 
     Telemetry::instance().write(crt_table);

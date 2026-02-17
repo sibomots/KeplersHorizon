@@ -9,8 +9,8 @@
 
 ;;; Build Point Costs:
 ;;;   WG = 5 BP (required for warpship)
-;;;   PD, B, S, T, SR = 1 BP each
-;;;   M = 3 missiles per 1 BP
+;;;   PD, P, S, L, H = 1 BP each
+;;;   T = 3 torpedoes per 1 BP
 ;;;
 ;;; Tech Level Timing (Advanced Scenario):
 ;;;   Turns 1-4:  Tech 0
@@ -18,7 +18,7 @@
 ;;;   Turns 9-12: Tech 2
 ;;;   etc.
 ;;;
-;;; Tech adds to: Beam damage, Missile damage, Screen absorption
+;;; Tech adds to: Phasic damage, Torpedo damage, Shield absorption
 
 (defparameter *ship-name-counter* 0)
 
@@ -58,9 +58,9 @@
    Gen4: dispatches to design rules via fire-first-matching-rule."
   (fire-first-matching-rule :design slate strategy))
 
-(defun enemy-heavy-screens-p (enemy-ships)
-  "Check if any enemy ship has heavy screens (S >= 4)."
-  (some (lambda (s) (>= (ship-screen s) (theta 'theta-heavy-screen-threshold)))
+(defun enemy-heavy-shields-p (enemy-ships)
+  "Check if any enemy ship has heavy shields (S >= 4)."
+  (some (lambda (s) (>= (ship-shield s) (theta 'theta-heavy-shield-threshold)))
         enemy-ships))
 
 (defun is-draft-systemship-p (draft)
@@ -72,12 +72,12 @@
   (count-if
    (lambda (s)
      (let ((pd (ship-pd s))
-           (beam (ship-beam s))
-           (tube (ship-tube s)))
+           (phasic (ship-phasic s))
+           (launcher (ship-launcher s)))
        (case type
-         (:brawler (and (>= pd 5) (>= beam 3)))
-         (:interceptor (and (>= pd 4) (< beam 3) (= tube 0)))
-         (:missile-boat (> tube 0))
+         (:brawler (and (>= pd 5) (>= phasic 3)))
+         (:interceptor (and (>= pd 4) (< phasic 3) (= launcher 0)))
+         (:torpedo-boat (> launcher 0))
          (t nil))))
    ships))
 
@@ -180,9 +180,9 @@
 (defun ship-damaged-p (ship)
   "Check if any attribute is below max."
   (or (< (ship-pd ship) (ship-pd-max ship))
-      (< (ship-beam ship) (ship-beam-max ship))
-      (< (ship-screen ship) (ship-screen-max ship))
-      (< (ship-tube ship) (ship-tube-max ship))))
+      (< (ship-phasic ship) (ship-phasic-max ship))
+      (< (ship-shield ship) (ship-shield-max ship))
+      (< (ship-launcher ship) (ship-launcher-max ship))))
 
 (defun find-most-damaged-attr (ship)
   "Find the most damaged attribute and how much to repair.
@@ -193,16 +193,16 @@
     (let ((diff (- (ship-pd-max ship) (ship-pd ship))))
       (when (> diff best-diff)
         (setf best-attr "pd" best-diff diff)))
-    ;; Check beam
-    (let ((diff (- (ship-beam-max ship) (ship-beam ship))))
+    ;; Check phasic
+    (let ((diff (- (ship-phasic-max ship) (ship-phasic ship))))
       (when (> diff best-diff)
         (setf best-attr "b" best-diff diff)))
-    ;; Check screen
-    (let ((diff (- (ship-screen-max ship) (ship-screen ship))))
+    ;; Check shield
+    (let ((diff (- (ship-shield-max ship) (ship-shield ship))))
       (when (> diff best-diff)
         (setf best-attr "s" best-diff diff)))
-    ;; Check tube
-    (let ((diff (- (ship-tube-max ship) (ship-tube ship))))
+    ;; Check launcher
+    (let ((diff (- (ship-launcher-max ship) (ship-launcher ship))))
       (when (> diff best-diff)
         (setf best-attr "t" best-diff diff)))
     (when best-attr

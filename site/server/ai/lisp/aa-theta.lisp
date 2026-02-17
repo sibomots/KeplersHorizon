@@ -24,11 +24,11 @@
     ;; Combat Power Weights (aa-strategy.lisp ship-combat-power)
     ;; -----------------------------------------------------------------------
     (theta-pd-weight . 1.0)
-    (theta-beam-weight . 1.5)
-    (theta-screen-weight . 1.2)
+    (theta-phasic-weight . 1.5)
+    (theta-shield-weight . 1.2)
     (theta-tech-weight . 2.5)
-    (theta-tube-weight . 0.5)
-    (theta-missile-weight . 0.3)
+    (theta-launcher-weight . 0.5)
+    (theta-torpedo-weight . 0.3)
 
     ;; -----------------------------------------------------------------------
     ;; Hex Valuation Bonuses (aa-strategy.lisp compute-hex-value)
@@ -117,7 +117,7 @@
     ;; Dodge Allocation (aa-combat.lisp crt-dodge-alloc)
     ;; -----------------------------------------------------------------------
     (theta-dodge-drive-fraction . 0.4)
-    (theta-dodge-screen-fraction . 0.5)
+    (theta-dodge-shield-fraction . 0.5)
 
     ;; -----------------------------------------------------------------------
     ;; Auto-Retreat Thresholds (aa-combat.lisp should-auto-retreat-p)
@@ -132,13 +132,13 @@
     (theta-combat-outmatched-ratio . 0.5)
     (theta-combat-advantage-ratio . 1.5)
     (theta-enemy-pd-default . 3)
-    (theta-alpha-strike-screen-threshold . 3)
+    (theta-alpha-strike-shield-threshold . 3)
 
     ;; -----------------------------------------------------------------------
-    ;; Screen Penetration (aa-combat.lisp minimum-ships-to-penetrate)
+    ;; Shield Penetration (aa-combat.lisp minimum-ships-to-penetrate)
     ;; -----------------------------------------------------------------------
     (theta-brawler-damage-estimate . 5)
-    (theta-heavy-screen-threshold . 4)
+    (theta-heavy-shield-threshold . 4)
 
     ;; -----------------------------------------------------------------------
     ;; Build Phase (aa-build.lisp)
@@ -156,7 +156,7 @@
     ;; Ship Design (aa-build.lisp choose-ship-design)
     ;; -----------------------------------------------------------------------
     (theta-design-tech-threshold . 1)
-    (theta-missile-boats-cap . 1)
+    (theta-torpedo-boats-cap . 1)
     (theta-brawler-tech-cap . 3)
     (theta-interceptor-cap . 2)
     (theta-fleet-variety-size . 3)
@@ -166,17 +166,17 @@
     ;; -----------------------------------------------------------------------
     (theta-classify-fortress-pd . 7)
     (theta-classify-brawler-pd . 5)
-    (theta-classify-brawler-beam . 3)
+    (theta-classify-brawler-phasic . 3)
 
     ;; -----------------------------------------------------------------------
-    ;; Goals / Missiles (aa-goals.lisp)
+    ;; Goals / Torpedoes (aa-goals.lisp)
     ;; -----------------------------------------------------------------------
-    (theta-missile-ratio-target . 0.5)
+    (theta-torpedo-ratio-target . 0.5)
     (theta-resupply-threshold . 0.5)
     (theta-resupply-max . 6)
-    (theta-missile-recipe-ferrous . 2)
-    (theta-missile-recipe-radioactive . 1)
-    (theta-missile-recipe-volatile . 1)
+    (theta-torpedo-recipe-ferrous . 2)
+    (theta-torpedo-recipe-radioactive . 1)
+    (theta-torpedo-recipe-volatile . 1)
 
     ;; -----------------------------------------------------------------------
     ;; Economic (aa-economic.lisp)
@@ -208,11 +208,11 @@
 ;;; Replaces *brawler-spec*, *interceptor-spec*, etc. in aa-build.lisp
 
 (defparameter *ship-templates*
-  '((:brawler      . "PD=6 B=4 S=3 T=0 M=0")
-    (:interceptor  . "PD=5 B=2 S=2 T=0 M=0")
-    (:missile-boat . "PD=4 B=0 S=1 T=2 M=6")
-    (:fortress     . "PD=8 B=6 S=5 T=0 M=0")
-    (:defender     . "PD=6 B=4 S=3 T=0 M=0")))
+  '((:brawler      . "PD=6 P=4 S=3 L=0 T=0")
+    (:interceptor  . "PD=5 P=2 S=2 L=0 T=0")
+    (:torpedo-boat . "PD=4 P=0 S=1 L=2 T=6")
+    (:fortress     . "PD=8 P=6 S=5 L=0 T=0")
+    (:defender     . "PD=6 P=4 S=3 L=0 T=0")))
 
 (defun get-ship-template (role)
   "Get ship design spec string for a role keyword."

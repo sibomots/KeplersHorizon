@@ -148,11 +148,11 @@ bool CombatAgent::apply(CombatOrderParam& param)
     AttributeMap combat_attr = param.get_attr();
     char tactic = param.get_tactic();
 
-    // BIGBUG MISSILE SET needs to conform to the database schema.
-    MissileSet missiles_fired = param.get_missiles();
+    // BIGBUG TORPEDO SET needs to conform to the database schema.
+    TorpedoSet torpedoes_fired = param.get_torpedoes();
 
-    std::string packed_missile_data =
-        join_vector(missiles_fired, std::string(","));
+    std::string packed_torpedo_data =
+        join_vector(torpedoes_fired, std::string(","));
 
     /////////////////////////////////////////////////////////
     // 1.
@@ -216,7 +216,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
     // Validate combat state and stats
     ////////////////////////////////////////////////////////
     std::string query_stats_attacker =
-        "SELECT at_hex, pd, beam, screen, tube, missiles, sr "
+        "SELECT at_hex, pd, phasic, shield, launcher, torpedoes, hangar "
         "FROM ships WHERE game_id=? AND destroyed_at IS NULL "
         "AND (ship_code=? OR ship_name=?)";
     auto attacker_stats =
@@ -233,15 +233,15 @@ bool CombatAgent::apply(CombatOrderParam& param)
     AttributeMap max_attack_attr;
     max_attack_attr[AttributeID::POWER_DRIVE] =
         std::atoi(attacker_stats[0][1].c_str());
-    max_attack_attr[AttributeID::BEAM] =
+    max_attack_attr[AttributeID::PHASIC] =
         std::atoi(attacker_stats[0][2].c_str());
-    max_attack_attr[AttributeID::SCREEN] =
+    max_attack_attr[AttributeID::SHIELD] =
         std::atoi(attacker_stats[0][3].c_str());
-    max_attack_attr[AttributeID::TUBE] =
+    max_attack_attr[AttributeID::LAUNCHER] =
         std::atoi(attacker_stats[0][4].c_str());
-    max_attack_attr[AttributeID::MISSILE] =
+    max_attack_attr[AttributeID::TORPEDO] =
         std::atoi(attacker_stats[0][5].c_str());
-    max_attack_attr[AttributeID::SYSTEM_RACK] =
+    max_attack_attr[AttributeID::HANGAR] =
         std::atoi(attacker_stats[0][6].c_str());
 
     ////////////////////////////////////////////
@@ -268,47 +268,47 @@ bool CombatAgent::apply(CombatOrderParam& param)
     // Validate Power Limits
     ////////////////////////////////////////////
     //  2.3.1
-    //   Check if the ordered BEAM
-    //   power is exceeding ship's BEAM power
+    //   Check if the ordered PHASIC
+    //   power is exceeding ship's PHASIC power
     ////////////////////////////////////////////
     std::string limit_errors;
     bool cls = true;
-    if (combat_attr[AttributeID::BEAM] > max_attack_attr[AttributeID::BEAM])
+    if (combat_attr[AttributeID::PHASIC] > max_attack_attr[AttributeID::PHASIC])
     {
-        limit_errors.append("Beam power orderd (B=");
-        limit_errors.append(std::to_string(combat_attr[AttributeID::BEAM]));
-        limit_errors.append(") exceeds ship rating (B=");
-        limit_errors.append(std::to_string(max_attack_attr[AttributeID::BEAM]));
+        limit_errors.append("Phasic power orderd (P=");
+        limit_errors.append(std::to_string(combat_attr[AttributeID::PHASIC]));
+        limit_errors.append(") exceeds ship rating (P=");
+        limit_errors.append(std::to_string(max_attack_attr[AttributeID::PHASIC]));
         limit_errors.append(")\n");
         cls = false;
     }
-    if (combat_attr[AttributeID::SCREEN] > max_attack_attr[AttributeID::SCREEN])
+    if (combat_attr[AttributeID::SHIELD] > max_attack_attr[AttributeID::SHIELD])
     {
-        limit_errors.append("Screen power orderd (S=");
-        limit_errors.append(std::to_string(combat_attr[AttributeID::SCREEN]));
+        limit_errors.append("Shield power orderd (S=");
+        limit_errors.append(std::to_string(combat_attr[AttributeID::SHIELD]));
         limit_errors.append(") exceeds ship rating (S=");
         limit_errors.append(
-            std::to_string(max_attack_attr[AttributeID::SCREEN]));
+            std::to_string(max_attack_attr[AttributeID::SHIELD]));
         limit_errors.append(")\n");
         cls = false;
     }
-    if (combat_attr[AttributeID::TUBE] > max_attack_attr[AttributeID::TUBE])
+    if (combat_attr[AttributeID::LAUNCHER] > max_attack_attr[AttributeID::LAUNCHER])
     {
-        limit_errors.append("Screen power orderd (T=");
-        limit_errors.append(std::to_string(combat_attr[AttributeID::TUBE]));
-        limit_errors.append(") exceeds ship rating (T=");
-        limit_errors.append(std::to_string(max_attack_attr[AttributeID::TUBE]));
+        limit_errors.append("Shield power orderd (L=");
+        limit_errors.append(std::to_string(combat_attr[AttributeID::LAUNCHER]));
+        limit_errors.append(") exceeds ship rating (L=");
+        limit_errors.append(std::to_string(max_attack_attr[AttributeID::LAUNCHER]));
         limit_errors.append(")\n");
         cls = false;
     }
 
-    int total_power_ordered = combat_attr[AttributeID::TUBE] +
-                              combat_attr[AttributeID::SCREEN] +
-                              combat_attr[AttributeID::BEAM];
+    int total_power_ordered = combat_attr[AttributeID::LAUNCHER] +
+                              combat_attr[AttributeID::SHIELD] +
+                              combat_attr[AttributeID::PHASIC];
 
     if (total_power_ordered > max_attack_attr[AttributeID::POWER_DRIVE])
     {
-        limit_errors.append("Total power ordered (B+S+T = ");
+        limit_errors.append("Total power ordered (P+S+L = ");
         limit_errors.append(std::to_string(total_power_ordered));
         limit_errors.append(") exceeds ship rating (PD=");
         limit_errors.append(
@@ -331,20 +331,20 @@ bool CombatAgent::apply(CombatOrderParam& param)
     std::string combat_order =
         "INSERT INTO combat_orders "
         "(game_id, owner, ship_code, round, tactic, target_id, "
-        "power_d, power_b, power_s, power_t, missiles_data, committed) "
+        "power_d, power_b, power_s, power_t, torpedoes_data, committed) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) "
         "ON DUPLICATE KEY UPDATE "
         "tactic=?, target_id=?, power_d=?, power_b=?, power_s=?, power_t=?, "
-        "missiles_data=?, committed=0";
+        "torpedoes_data=?, committed=0";
 
     db.Exec(combat_order,
             {gid, combatting_players.first, attacker, combat_state.round,
              tactic, attackee, combat_attr[AttributeID::POWER_DRIVE],
-             combat_attr[AttributeID::BEAM], combat_attr[AttributeID::SCREEN],
-             combat_attr[AttributeID::TUBE], packed_missile_data, tactic,
+             combat_attr[AttributeID::PHASIC], combat_attr[AttributeID::SHIELD],
+             combat_attr[AttributeID::LAUNCHER], packed_torpedo_data, tactic,
              attackee, combat_attr[AttributeID::POWER_DRIVE],
-             combat_attr[AttributeID::BEAM], combat_attr[AttributeID::SCREEN],
-             combat_attr[AttributeID::TUBE], packed_missile_data});
+             combat_attr[AttributeID::PHASIC], combat_attr[AttributeID::SHIELD],
+             combat_attr[AttributeID::LAUNCHER], packed_torpedo_data});
 
     // Resolution triggered by explicit 'combat commit'
     return true;
@@ -467,8 +467,8 @@ bool CombatAgent::apply(CombatCommitParam& param)
                     break;
                 }
                 reveal << "  " << ord[0] << ":" << ord[1] << " " << tactic
-                       << " " << ord[3] << " [D=" << ord[4] << " B=" << ord[5]
-                       << " S=" << ord[6] << " T=" << ord[7] << "]\n";
+                       << " " << ord[3] << " [D=" << ord[4] << " P=" << ord[5]
+                       << " S=" << ord[6] << " L=" << ord[7] << "]\n";
             }
             reveal << "==============================";
             Telemetry::instance().add_broadcast(gid, reveal.str());
@@ -481,19 +481,11 @@ bool CombatAgent::apply(CombatCommitParam& param)
             // Notify opponent that this player has committed
             char opponent = owner ^ 0x03;
 
-            std::string this_player_real_name =
-                 StateMachine::instance().get_player_name(gid, owner);
-
-            std::string other_player_real_name =
-                 StateMachine::instance().get_player_name(gid, opponent);
-
             Telemetry::instance().add_tell(opponent,
-                std::format("{} has committed combat orders for hex {}",
-                            this_player_real_name, hex_id));
+                std::format("Enemy has committed combat orders for hex {}", hex_id));
 
             Telemetry::instance().write(std::format(
-                "TACTICAL: Sector {} - Awaiting enemy orders from {}",
-             hex_id, other_player_real_name));
+                "TACTICAL: Sector {} - Awaiting enemy orders from enemy", hex_id));
         }
     }
     return true;
@@ -539,7 +531,7 @@ bool CombatAgent::apply(CombatDraftsParam& param)
     // Query uncommitted orders for this player, grouped by hex
     std::string drafts_q =
         "SELECT s.at_hex, co.ship_code, co.tactic, co.target_id, "
-        "co.power_d, co.power_b, co.power_s, co.power_t, co.missiles_data "
+        "co.power_d, co.power_b, co.power_s, co.power_t, co.torpedoes_data "
         "FROM combat_orders co "
         "JOIN ships s ON s.game_id=co.game_id AND s.owner=co.owner AND "
         "s.ship_code=co.ship_code "
@@ -569,7 +561,7 @@ bool CombatAgent::apply(CombatDraftsParam& param)
                                                    : "Escape";
         out << "    " << r[1] << ": " << tacticName << " -> "
             << (r[3].empty() ? "(none)" : r[3]) << " [D=" << r[4]
-            << " B=" << r[5] << " S=" << r[6] << " T=" << r[7];
+            << " P=" << r[5] << " S=" << r[6] << " L=" << r[7];
         if (!r[8].empty())
         {
             out << " M=" << r[8];

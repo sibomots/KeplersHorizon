@@ -270,28 +270,28 @@
             (get-ship-template :brawler))
   :doc "First ship -> brawler.")
 
-(define-strategy-rule design-strategy-missile-boat
+(define-strategy-rule design-strategy-torpedo-boat
   :phase :design :priority 300
   :when (and strategy
-             (eq (getf strategy :design-preference) :missile-boat)
-             (< (count-ship-type (slate-own-ships slate) :missile-boat)
-                (theta 'theta-missile-boats-cap)))
+             (eq (getf strategy :design-preference) :torpedo-boat)
+             (< (count-ship-type (slate-own-ships slate) :torpedo-boat)
+                (theta 'theta-torpedo-boats-cap)))
   :action (progn
-            (format t "[LISP] Strategy: building missile boat (enemy high screen)~%")
-            (get-ship-template :missile-boat))
-  :doc "Strategy requests missile-boat.")
+            (format t "[LISP] Strategy: building torpedo boat (enemy high shield)~%")
+            (get-ship-template :torpedo-boat))
+  :doc "Strategy requests torpedo-boat.")
 
-(define-strategy-rule design-enemy-high-screen
+(define-strategy-rule design-enemy-high-shield
   :phase :design :priority 400
   :when (and (if strategy
-                 (getf strategy :enemy-high-screen-p)
-                 (enemy-heavy-screens-p (slate-enemy-ships slate)))
-             (< (count-ship-type (slate-own-ships slate) :missile-boat)
-                (theta 'theta-missile-boats-cap)))
+                 (getf strategy :enemy-high-shield-p)
+                 (enemy-heavy-shields-p (slate-enemy-ships slate)))
+             (< (count-ship-type (slate-own-ships slate) :torpedo-boat)
+                (theta 'theta-torpedo-boats-cap)))
   :action (progn
-            (format t "[LISP] Enemy has heavy screens - building missile boat~%")
-            (get-ship-template :missile-boat))
-  :doc "Enemy heavy screens -> missile-boat.")
+            (format t "[LISP] Enemy has heavy shields - building torpedo boat~%")
+            (get-ship-template :torpedo-boat))
+  :doc "Enemy heavy shields -> torpedo-boat.")
 
 (define-strategy-rule design-high-tech-brawler
   :phase :design :priority 500
@@ -315,12 +315,12 @@
 (define-strategy-rule design-fleet-variety
   :phase :design :priority 700
   :when (and (>= (length (slate-own-ships slate)) (theta 'theta-fleet-variety-size))
-             (< (count-ship-type (slate-own-ships slate) :missile-boat)
-                (theta 'theta-missile-boats-cap)))
+             (< (count-ship-type (slate-own-ships slate) :torpedo-boat)
+                (theta 'theta-torpedo-boats-cap)))
   :action (progn
-            (format t "[LISP] Adding missile boat to fleet mix~%")
-            (get-ship-template :missile-boat))
-  :doc "Fleet variety -> missile-boat.")
+            (format t "[LISP] Adding torpedo boat to fleet mix~%")
+            (get-ship-template :torpedo-boat))
+  :doc "Fleet variety -> torpedo-boat.")
 
 (define-strategy-rule design-default-brawler
   :phase :design :priority 800
@@ -538,7 +538,7 @@
                   (theta 'theta-triage-advantage-ratio))
              (not (getf strategy :triage-can-penetrate)))
   :action (progn
-            (format t "[LISP] Can't penetrate screens despite advantage - holding~%")
+            (format t "[LISP] Can't penetrate shields despite advantage - holding~%")
             :hold)
   :doc "Advantage but can't penetrate -> hold.")
 
@@ -583,7 +583,7 @@
                (member hex bases-held :test #'string-equal)))
   :action (let ((ship (getf strategy :tactics-ship)))
             (format t "[LISP] Endgame: winning VP race, defending held base~%")
-            (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
+            (crt-dodge-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)))
   :doc "Endgame: winning VP, dodge-defend held base.")
 
 (define-strategy-rule tactics-endgame-attack
@@ -593,7 +593,7 @@
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
             (format t "[LISP] Endgame: enemy winning VP race, maximum aggression~%")
-            (crt-attack-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)
+            (crt-attack-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)
                               (if target (or (ship-last-drive target) 0) 0)
                               :standard))
   :doc "Endgame: enemy winning VP, max aggression.")
@@ -608,7 +608,7 @@
                     (ship-name ship))
             (list :tactic "e"
                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
-                  :missiles nil))
+                  :torpedoes nil))
   :doc "Damaged ship below retreat threshold -> escape.")
 
 (define-strategy-rule tactics-stalemate-must-damage
@@ -630,7 +630,7 @@
             (format t "[LISP] Triage: RETREAT - preserving ship for better fights~%")
             (list :tactic "e"
                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
-                  :missiles nil))
+                  :torpedoes nil))
   :doc "Triage says retreat -> escape.")
 
 (define-strategy-rule tactics-triage-hold
@@ -638,36 +638,36 @@
   :when (eq (getf strategy :tactics-triage-decision) :hold)
   :action (let ((ship (getf strategy :tactics-ship)))
             (format t "[LISP] Triage: HOLD - dodging defensively~%")
-            (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
+            (crt-dodge-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)))
   :doc "Triage says hold -> dodge.")
 
-(define-strategy-rule tactics-missile-boat-fire
+(define-strategy-rule tactics-torpedo-boat-fire
   :phase :tactics :priority 700
   :when (let ((ship (getf strategy :tactics-ship)))
-          (and (eq (classify-ship-role ship) :missile-boat)
-               (> (ship-tube ship) 0)
-               (> (ship-missile ship) 0)))
+          (and (eq (classify-ship-role ship) :torpedo-boat)
+               (> (ship-launcher ship) 0)
+               (> (ship-torpedo ship) 0)))
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
-            (format t "[LISP] Missile-boat ~A: firing missiles~%" (ship-name ship))
-            (crt-missile-alloc (ship-pd ship) (ship-tube ship) (ship-missile ship)
+            (format t "[LISP] Torpedo-boat ~A: firing torpedoes~%" (ship-name ship))
+            (crt-torpedo-alloc (ship-pd ship) (ship-launcher ship) (ship-torpedo ship)
                                (ship-tech ship)
                                (if target (or (ship-last-drive target) 0) 0)))
-  :doc "Missile-boat with ammo -> fire missiles.")
+  :doc "Torpedo-boat with ammo -> fire torpedoes.")
 
-(define-strategy-rule tactics-missile-boat-retreat
+(define-strategy-rule tactics-torpedo-boat-retreat
   :phase :tactics :priority 800
   :when (let ((ship (getf strategy :tactics-ship)))
-          (and (eq (classify-ship-role ship) :missile-boat)
-               (or (= (ship-tube ship) 0) (= (ship-missile ship) 0))
+          (and (eq (classify-ship-role ship) :torpedo-boat)
+               (or (= (ship-launcher ship) 0) (= (ship-torpedo ship) 0))
                (ship-warpship-p ship)))
   :action (let ((ship (getf strategy :tactics-ship)))
-            (format t "[LISP] Missile-boat ~A: out of missiles, retreating~%"
+            (format t "[LISP] Torpedo-boat ~A: out of torpedoes, retreating~%"
                     (ship-name ship))
             (list :tactic "e"
                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
-                  :missiles nil))
-  :doc "Missile-boat empty -> retreat.")
+                  :torpedoes nil))
+  :doc "Torpedo-boat empty -> retreat.")
 
 (define-strategy-rule tactics-fortress-attack
   :phase :tactics :priority 900
@@ -675,7 +675,7 @@
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
             (format t "[LISP] Fortress ~A: all-in attack~%" (ship-name ship))
-            (crt-attack-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)
+            (crt-attack-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)
                               (if target (or (ship-last-drive target) 0) 0)
                               :standard))
   :doc "Fortress -> all-in attack.")
@@ -685,19 +685,19 @@
   :when (let* ((ship (getf strategy :tactics-ship))
                (target (getf strategy :tactics-target)))
           (and target
-               (> (ship-tube ship) 0)
-               (> (ship-missile ship) 0)
+               (> (ship-launcher ship) 0)
+               (> (ship-torpedo ship) 0)
                (null (ship-last-tactic target))
-               (> (+ (or (ship-screen target) 0) (or (ship-tech target) 0))
-                  (theta 'theta-alpha-strike-screen-threshold))))
+               (> (+ (or (ship-shield target) 0) (or (ship-tech target) 0))
+                  (theta 'theta-alpha-strike-shield-threshold))))
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
-            (format t "[LISP] Missile alpha strike (enemy screens ~A+~A)~%"
-                    (or (ship-screen target) 0) (or (ship-tech target) 0))
-            (crt-missile-alloc (ship-pd ship) (ship-tube ship) (ship-missile ship)
+            (format t "[LISP] Torpedo alpha strike (enemy shields ~A+~A)~%"
+                    (or (ship-shield target) 0) (or (ship-tech target) 0))
+            (crt-torpedo-alloc (ship-pd ship) (ship-launcher ship) (ship-torpedo ship)
                                (ship-tech ship)
                                (or (ship-last-drive target) 0)))
-  :doc "Alpha strike against heavy screens.")
+  :doc "Alpha strike against heavy shields.")
 
 (define-strategy-rule tactics-outmatched-retreat
   :phase :tactics :priority 1100
@@ -716,7 +716,7 @@
                     (ship-pd ship) total-enemy-pd)
             (list :tactic "e"
                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
-                  :missiles nil))
+                  :torpedoes nil))
   :doc "Badly outmatched -> retreat.")
 
 (define-strategy-rule tactics-enemy-retreating
@@ -726,7 +726,7 @@
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
             (format t "[LISP] Enemy retreating - attacking to pursue~%")
-            (crt-attack-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)
+            (crt-attack-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)
                               (or (ship-last-drive target) 0) :pursue))
   :doc "Enemy retreating -> pursue attack.")
 
@@ -737,7 +737,7 @@
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
             (format t "[LISP] Enemy dodging - attacking with +3/+4 drive~%")
-            (crt-attack-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)
+            (crt-attack-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)
                               (or (ship-last-drive target) 0) :counter-dodge))
   :doc "Enemy dodging -> counter-dodge attack.")
 
@@ -747,7 +747,7 @@
           (and target (eql (ship-last-tactic target) #\A)))
   :action (let ((ship (getf strategy :tactics-ship)))
             (format t "[LISP] Enemy attacking - dodging to counter~%")
-            (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
+            (crt-dodge-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)))
   :doc "Enemy attacking -> dodge to counter.")
 
 (define-strategy-rule tactics-pd-advantage
@@ -762,7 +762,7 @@
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target)))
             (format t "[LISP] PD advantage - attacking~%")
-            (crt-attack-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)
+            (crt-attack-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)
                               (or (ship-pd target)
                                   (theta 'theta-enemy-pd-default))
                               :standard))
@@ -773,7 +773,7 @@
   :when t
   :action (let ((ship (getf strategy :tactics-ship)))
             (format t "[LISP] Matched strength - dodging~%")
-            (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
+            (crt-dodge-alloc (ship-pd ship) (ship-phasic ship) (ship-shield ship)))
   :doc "Default: dodge.")
 
 ;;; ============================================================================

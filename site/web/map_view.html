@@ -467,7 +467,7 @@
 
         // Line 3+: Stats (only for friendly ships)
         if (category === 'friendly' && ship.pd !== undefined) {
-          tooltipLines.push(`PD=${ship.pd} B=${ship.b} S=${ship.s} T=${ship.t} M=${ship.m} SR=${ship.sr}`);
+          tooltipLines.push(`PD=${ship.pd} P=${ship.phasic} S=${ship.shield} L=${ship.launcher} T=${ship.torpedo} H=${ship.hangar}`);
         }
 
         title.textContent = tooltipLines.join('\n');

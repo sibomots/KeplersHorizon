@@ -20,10 +20,10 @@ class FabricateStrategy
 {
   public:
     static bool show_plans(int game_id, int module_id);
-    static bool fabricate_missile(int game_id, char owner, int qty);
-    static bool fabricate_tube(int game_id, char owner, int qty);
-    static bool fabricate_beam(int game_id, char owner, int qty);
-    static bool fabricate_screen(int game_id, char owner, int qty);
+    static bool fabricate_torpedo(int game_id, char owner, int qty);
+    static bool fabricate_launcher(int game_id, char owner, int qty);
+    static bool fabricate_phasic(int game_id, char owner, int qty);
+    static bool fabricate_shield(int game_id, char owner, int qty);
     static bool fabricate_tech(int game_id, char owner, int qty);
 
   private:

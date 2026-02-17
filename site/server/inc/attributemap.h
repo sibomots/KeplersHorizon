@@ -13,11 +13,11 @@
 enum class AttributeID : int
 {
     POWER_DRIVE,
-    BEAM,
-    SCREEN,
-    TUBE,
-    MISSILE,
-    SYSTEM_RACK,
+    PHASIC,
+    SHIELD,
+    LAUNCHER,
+    TORPEDO,
+    HANGAR,
     UNKNOWN,
 };
 
@@ -31,19 +31,19 @@ typedef struct AttributeMap
     {
     }
 
-    AttributeMap(int pd, int b, int s, int t, int sr = 0, int m = 0)
+    AttributeMap(int pd, int b, int s, int t, int hangar = 0, int m = 0)
     {
         data[AttributeID::POWER_DRIVE] = pd;
-        data[AttributeID::BEAM] = b;
-        data[AttributeID::SCREEN] = s;
-        data[AttributeID::TUBE] = t;
+        data[AttributeID::PHASIC] = b;
+        data[AttributeID::SHIELD] = s;
+        data[AttributeID::LAUNCHER] = t;
         if (m > 0)
         {
-            data[AttributeID::MISSILE] = m;
+            data[AttributeID::TORPEDO] = m;
         }
-        if (sr > 0)
+        if (hangar > 0)
         {
-            data[AttributeID::SYSTEM_RACK] = sr;
+            data[AttributeID::HANGAR] = hangar;
         }
     }
 

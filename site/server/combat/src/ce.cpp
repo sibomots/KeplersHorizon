@@ -210,7 +210,7 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
     // 2. Validate Combat State & Stats
     // Find the hex this ship is in and its stats
     auto r = db.Query(
-        "SELECT at_hex, pd, beam, screen, tube FROM ships WHERE game_id=? "
+        "SELECT at_hex, pd, phasic, shield, launcher FROM ships WHERE game_id=? "
         "AND ship_code=? AND destroyed_at IS NULL",
         {game_id, order.ship_code});
     if (r.empty() || r[0][0].empty())
@@ -224,15 +224,15 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
     // Validate Power Limits
     if (order.power_b > max_b)
     {
-        return std::format("Beam power exceeds rating ({})", max_b);
+        return std::format("Phasic power exceeds rating ({})", max_b);
     }
     if (order.power_s > max_s)
     {
-        return std::format("Screen power exceeds rating ({})", max_s);
+        return std::format("Shield power exceeds rating ({})", max_s);
     }
     if (order.power_t > max_t)
     {
-        return std::format("Tube power exceeds rating ({})", max_t);
+        return std::format("Launcher power exceeds rating ({})", max_t);
     }
 
     int total = order.power_d + order.power_b + order.power_s + order.power_t;
@@ -259,14 +259,14 @@ std::string CombatEngine::submit_order(char owner, const CombatOrder& order_in)
     db.Exec(
         "INSERT INTO combat_orders (game_id, owner, ship_code, round, "
         "tactic, target_id, power_d, power_b, power_s, power_t, "
-        "missiles_data, committed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) "
+        "torpedoes_data, committed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0) "
         "ON DUPLICATE KEY UPDATE tactic=?, target_id=?, power_d=?, power_b=?, "
-        "power_s=?, power_t=?, missiles_data=?, committed=0",
+        "power_s=?, power_t=?, torpedoes_data=?, committed=0",
         {game_id, owner, order.ship_code, order.round, order.tactic,
          order.target_id, order.power_d, order.power_b, order.power_s,
-         order.power_t, order.missiles_data, order.tactic, order.target_id,
+         order.power_t, order.torpedoes_data, order.tactic, order.target_id,
          order.power_d, order.power_b, order.power_s, order.power_t,
-         order.missiles_data});
+         order.torpedoes_data});
 
     // Resolution triggered by explicit 'combat commit'
     return "Order draft saved. Use 'combat commit' when ready.";
@@ -587,7 +587,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     // Load orders
     auto ro = db.Query(
         "SELECT ship_code, owner, tactic, target_id, power_d, power_b, "
-        "power_s, power_t, missiles_data FROM combat_orders "
+        "power_s, power_t, torpedoes_data FROM combat_orders "
         "WHERE game_id=? AND round=?",
         {game_id, cs.round});
 
@@ -604,7 +604,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             ships[key].ord.power_b = std::atoi(row[5].c_str());
             ships[key].ord.power_s = std::atoi(row[6].c_str());
             ships[key].ord.power_t = std::atoi(row[7].c_str());
-            ships[key].ord.missiles_data = row[8];
+            ships[key].ord.torpedoes_data = row[8];
         }
     }
 
@@ -623,7 +623,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
     log << "COMBAT ROUND " << cs.round << " RESOLUTION\n";
 
     // 3. Resolve Fire
-    // Beams
+    // Phasics
     for (auto& [key, ship] : ships)
     {
         if (ship.ord.power_b > 0 && !ship.ord.target_id.empty())
@@ -670,7 +670,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
                     // Apply star system environmental constraints
                     dmg +=
-                        StarSystemConstraints::getBeamModifier(game_id, hex_id);
+                        StarSystemConstraints::getPhasicModifier(game_id, hex_id);
 
                     // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
                     int hexCombatMod = HexEventEngine::get_combat_modifier(
@@ -686,7 +686,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     if (dmg > 0)
                     {
                         target->damage_received += dmg;
-                        log << ship.code << " '" << ship.name << "' beams "
+                        log << ship.code << " '" << ship.name << "' phasics "
                             << target->code << " '" << target->name << "' for "
                             << dmg << " dmg!";
                         if (hexCombatMod != 0)
@@ -702,7 +702,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                     {
                         log << target->code << " '" << target->name
                             << "' outruns " << ship.code << " '" << ship.name
-                            << "' beams.\n";
+                            << "' phasics.\n";
                     }
                     else
                     {
@@ -724,12 +724,12 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         }
     }
 
-    // Missiles
+    // Torpedoes
     for (auto& [key, ship] : ships)
     {
-        if (!ship.ord.missiles_data.empty() && ship.ord.missiles_data != "[]")
+        if (!ship.ord.torpedoes_data.empty() && ship.ord.torpedoes_data != "[]")
         {
-            int count = std::atoi(ship.ord.missiles_data.c_str());
+            int count = std::atoi(ship.ord.torpedoes_data.c_str());
             if (count > 0 && ship.ord.power_t >= count)
             {
                 // Determine target
@@ -772,7 +772,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             }
 
                             // Apply star system environmental constraints
-                            dmg += StarSystemConstraints::getMissileModifier(
+                            dmg += StarSystemConstraints::getTorpedoModifier(
                                 game_id, hex_id);
 
                             // Apply dynamic hex event modifier (COMBAT_INTERFERENCE)
@@ -791,7 +791,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             {
                                 target->damage_received += dmg;
                                 log << ship.code << " '" << ship.name
-                                    << "' missile hits " << target->code << " '"
+                                    << "' torpedo hits " << target->code << " '"
                                     << target->name << "' for " << dmg
                                     << " dmg!";
                                 if (hexMslMod != 0)
@@ -808,19 +808,19 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
                             {
                                 log << target->code << " '" << target->name
                                     << "' outruns " << ship.code << " '"
-                                    << ship.name << "' missile.\n";
+                                    << ship.name << "' torpedo.\n";
                             }
                             else
                             {
                                 log << ship.code << " '" << ship.name
-                                    << "' missile misses " << target->code
+                                    << "' torpedo misses " << target->code
                                     << " '" << target->name << "'.\n";
                             }
                         }
                     }
-                    // Deduct fired missiles from inventory
+                    // Deduct fired torpedoes from inventory
                     db.Exec(
-                        "UPDATE ships SET missiles = GREATEST(0, missiles - ?) "
+                        "UPDATE ships SET torpedoes = GREATEST(0, torpedoes - ?) "
                         "WHERE game_id=? AND ship_code=?",
                         {count, game_id, ship.code});
                 }
@@ -839,7 +839,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         if (ship.ord.power_s > 0)
         {
             absorb = ship.ord.power_s +
-                     ship.tech; // Tech adds to shields? Rules: "Screen Power +
+                     ship.tech; // Tech adds to shields? Rules: "Shield Power +
                                 // Tech Level (if powered)"
         }
 
@@ -1010,7 +1010,7 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
 
     // 1. Get ship current stats and location
     auto ship_rows =
-        db.Query("SELECT at_hex, pd, beam, screen, tube, missiles, sr "
+        db.Query("SELECT at_hex, pd, phasic, shield, launcher, torpedoes, hangar "
                  "FROM ships WHERE game_id=? AND ship_code=? AND owner=? "
                  "AND destroyed_at IS NULL",
                  {game_id, ship_code, owner});
@@ -1022,10 +1022,10 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
 
     std::string hex = ship_rows[0][0];
     int cur_pd = std::atoi(ship_rows[0][1].c_str());
-    int cur_beam = std::atoi(ship_rows[0][2].c_str());
-    int cur_screen = std::atoi(ship_rows[0][3].c_str());
-    int cur_tube = std::atoi(ship_rows[0][4].c_str());
-    int cur_missiles = std::atoi(ship_rows[0][5].c_str());
+    int cur_phasic = std::atoi(ship_rows[0][2].c_str());
+    int cur_shield = std::atoi(ship_rows[0][3].c_str());
+    int cur_launcher = std::atoi(ship_rows[0][4].c_str());
+    int cur_torpedoes = std::atoi(ship_rows[0][5].c_str());
 
     // 2. Verify combat state
     auto cs = get_combat_state(hex);
@@ -1048,7 +1048,7 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
     int damage_needed = std::atoi(dmg_rows[0][0].c_str());
 
     // 4. Validate assignments - iterate through AttributeMap.data
-    int current_hp = cur_pd + cur_beam + cur_screen + cur_tube;
+    int current_hp = cur_pd + cur_phasic + cur_shield + cur_launcher;
     int assigned = 0;
 
     for (const auto& [attr_id, dmg] : assignments.data)
@@ -1087,9 +1087,9 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
             int dmg = it->second;
             int new_val;
 
-            if (KH_EQU(attr_id, AttributeID::MISSILE))
+            if (KH_EQU(attr_id, AttributeID::TORPEDO))
             {
-                // Missiles: each hit destroys 3 missiles
+                // Torpedoes: each hit destroys 3 torpedoes
                 int loss = dmg * 3;
                 if (cur_val < 3 && dmg > 0)
                 {
@@ -1107,10 +1107,10 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
     };
 
     apply_attr(AttributeID::POWER_DRIVE, cur_pd, "pd");
-    apply_attr(AttributeID::BEAM, cur_beam, "beam");
-    apply_attr(AttributeID::SCREEN, cur_screen, "screen");
-    apply_attr(AttributeID::TUBE, cur_tube, "tube");
-    apply_attr(AttributeID::MISSILE, cur_missiles, "missiles");
+    apply_attr(AttributeID::PHASIC, cur_phasic, "phasic");
+    apply_attr(AttributeID::SHIELD, cur_shield, "shield");
+    apply_attr(AttributeID::LAUNCHER, cur_launcher, "launcher");
+    apply_attr(AttributeID::TORPEDO, cur_torpedoes, "torpedoes");
 
     // 6. Execute ship updates
     if (!updates.empty())
@@ -1127,19 +1127,19 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
     }
 
     // 7. Check for ship destruction
-    auto check_rows = db.Query("SELECT pd, beam, screen, tube FROM ships "
+    auto check_rows = db.Query("SELECT pd, phasic, shield, launcher FROM ships "
                                "WHERE game_id=? AND ship_code=? AND owner=?",
                                {game_id, ship_code, owner});
 
     int new_pd = std::atoi(check_rows[0][0].c_str());
-    int new_beam = std::atoi(check_rows[0][1].c_str());
-    int new_screen = std::atoi(check_rows[0][2].c_str());
-    int new_tube = std::atoi(check_rows[0][3].c_str());
+    int new_phasic = std::atoi(check_rows[0][1].c_str());
+    int new_shield = std::atoi(check_rows[0][2].c_str());
+    int new_launcher = std::atoi(check_rows[0][3].c_str());
 
     if (KH_EQU(new_pd, 0)
-        && KH_EQU(new_beam, 0)
-        && KH_EQU(new_screen, 0)
-        && KH_EQU(new_tube,0))
+        && KH_EQU(new_phasic, 0)
+        && KH_EQU(new_shield, 0)
+        && KH_EQU(new_launcher,0))
     {
         // Ship destroyed
         db.Exec("UPDATE ships SET destroyed_at=NOW() "

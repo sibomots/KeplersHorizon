@@ -129,7 +129,7 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
     bool has_ship = ShipManager::instance().load_ship_by_code_or_name(
         ship, game_id, me, ship_code);
 
-    if (!has_ship) // JDW  ship.at_system.empty())
+    if (!has_ship) 
     {
         Telemetry::instance().write(
             "HARVEST: Ship must be deployed to a system to extract.");
@@ -241,7 +241,7 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
     auto cargo =
         db.Query("SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
                  "cargo_crystalline+cargo_volatile+cargo_water+cargo_organic+"
-                 "cargo_exotic+cargo_missiles, cargo_capacity FROM ships WHERE "
+                 "cargo_exotic+cargo_torpedoes, cargo_capacity FROM ships WHERE "
                  "game_id=? AND owner=? AND ship_code=?",
                  {game_id, me, ship_code});
 

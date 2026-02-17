@@ -16,7 +16,7 @@ namespace AIShipNames
 {
 static const std::vector<std::string> names = {
     "ANCHORIS",   "ANDERSON",   "ASTERIX",   "AXIALIS",   "AXIALLINK",
-    "AXIOMARK",   "AXIOMETA",   "AXISNODE",  "BEAMLINE",  "BELTERIS",
+    "AXIOMARK",   "AXIOMETA",   "AXISNODE",  "PHASICLINE",  "BELTERIS",
     "BULKLINE",   "CARGOFORM",  "CERESYS",   "COREARRAY", "COREHOLD",
     "CORELINE",   "CORESTACK",  "COREWARD",  "DECKHAND",  "DEEPCORE",
     "DEEPSPAN",   "DOCKARRAY",  "DOCKWARD",  "EXTRUSION", "FRAMELOCK",

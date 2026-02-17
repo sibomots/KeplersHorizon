@@ -48,31 +48,31 @@ class BuildSetActor : public ICmd
 
         Builder& set_b(int val)
         {
-            _attributes[AttributeID::BEAM] = val;
+            _attributes[AttributeID::PHASIC] = val;
             return *this;
         }
 
         Builder& set_s(int val)
         {
-            _attributes[AttributeID::SCREEN] = val;
+            _attributes[AttributeID::SHIELD] = val;
             return *this;
         }
 
         Builder& set_t(int val)
         {
-            _attributes[AttributeID::TUBE] = val;
+            _attributes[AttributeID::LAUNCHER] = val;
             return *this;
         }
 
         Builder& set_m(int val)
         {
-            _attributes[AttributeID::MISSILE] = val;
+            _attributes[AttributeID::TORPEDO] = val;
             return *this;
         }
 
-        Builder& set_sr(int val)
+        Builder& set_hangar(int val)
         {
-            _attributes[AttributeID::SYSTEM_RACK] = val;
+            _attributes[AttributeID::HANGAR] = val;
             return *this;
         }
 

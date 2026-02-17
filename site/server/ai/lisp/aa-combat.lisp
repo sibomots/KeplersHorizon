@@ -220,10 +220,10 @@
       nil
       (first (sort (copy-list enemies)
                    (lambda (a b)
-                     (let ((hp-a (+ (ship-pd a) (ship-beam a)
-                                    (ship-screen a) (ship-tube a)))
-                           (hp-b (+ (ship-pd b) (ship-beam b)
-                                    (ship-screen b) (ship-tube b))))
+                     (let ((hp-a (+ (ship-pd a) (ship-phasic a)
+                                    (ship-shield a) (ship-launcher a)))
+                           (hp-b (+ (ship-pd b) (ship-phasic b)
+                                    (ship-shield b) (ship-launcher b))))
                        (< hp-a hp-b)))))))
 
 ;;; ----------------------------------------------------------------------------
@@ -338,68 +338,68 @@
 (defun issue-damage-assignment (ship)
   "Issue damage assignment command.
    Strategy: Preserve PD last (most valuable for retreat/combat).
-   Secondary: Preserve screens (screen + tech = absorption).
+   Secondary: Preserve shields (shield + tech = absorption).
    Uses base-pd (physical HP) not adjusted pd (power budget)."
   (let* ((damage (ship-pending-damage ship))
          (pd (ship-base-pd ship))
-         (beam (ship-beam ship))
-         (screen (ship-screen ship))
-         (tube (ship-tube ship))
-         (total-hp (+ pd beam screen tube)))
+         (phasic (ship-phasic ship))
+         (shield (ship-shield ship))
+         (launcher (ship-launcher ship))
+         (total-hp (+ pd phasic shield launcher)))
     ;; If damage >= total HP, ship is destroyed - assign all
     (if (>= damage total-hp)
-        (list (make-cmd "ca" (build-ca-args (ship-code ship) pd beam screen tube)))
-        ;; Otherwise, allocate damage preserving PD and screens
-        (let ((alloc (allocate-damage damage tube beam screen pd)))
+        (list (make-cmd "ca" (build-ca-args (ship-code ship) pd phasic shield launcher)))
+        ;; Otherwise, allocate damage preserving PD and shields
+        (let ((alloc (allocate-damage damage launcher phasic shield pd)))
           (list (make-cmd "ca" (build-ca-args (ship-code ship)
                                               (getf alloc :pd)
                                               (getf alloc :b)
                                               (getf alloc :s)
                                               (getf alloc :t))))))))
 
-(defun build-ca-args (ship-code pd beam screen tube)
+(defun build-ca-args (ship-code pd phasic shield launcher)
   "Build CA command args, omitting zero values."
   (let ((parts (list ship-code)))
     (when (> pd 0)
       (push (format nil "pd=~A" pd) parts))
-    (when (> beam 0)
-      (push (format nil "b=~A" beam) parts))
-    (when (> screen 0)
-      (push (format nil "s=~A" screen) parts))
-    (when (> tube 0)
-      (push (format nil "t=~A" tube) parts))
+    (when (> phasic 0)
+      (push (format nil "p=~A" phasic) parts))
+    (when (> shield 0)
+      (push (format nil "s=~A" shield) parts))
+    (when (> launcher 0)
+      (push (format nil "l=~A" launcher) parts))
     (format nil "~{~A~^ ~}" (nreverse parts))))
 
-(defun allocate-damage (damage tube beam screen pd)
+(defun allocate-damage (damage launcher phasic shield pd)
   "Allocate damage to attributes.
-   Priority (sacrifice first): Tubes > Beams > Screens > PD
-   Rationale: PD enables retreat, screens absorb (screen + tech)."
+   Priority (sacrifice first): Launchers > Phasics > Shields > PD
+   Rationale: PD enables retreat, shields absorb (shield + tech)."
   (let ((remaining damage)
-        (d-tube 0)
-        (d-beam 0)
-        (d-screen 0)
+        (d-launcher 0)
+        (d-phasic 0)
+        (d-shield 0)
         (d-pd 0))
-    ;; First, take from tubes (least useful)
+    ;; First, take from launchers (least useful)
     (when (> remaining 0)
-      (let ((take (min remaining tube)))
-        (incf d-tube take)
+      (let ((take (min remaining launcher)))
+        (incf d-launcher take)
         (decf remaining take)))
-    ;; Then beams (offensive)
+    ;; Then phasics (offensive)
     (when (> remaining 0)
-      (let ((take (min remaining beam)))
-        (incf d-beam take)
+      (let ((take (min remaining phasic)))
+        (incf d-phasic take)
         (decf remaining take)))
-    ;; Then screens (screen + tech = defensive value)
+    ;; Then shields (shield + tech = defensive value)
     (when (> remaining 0)
-      (let ((take (min remaining screen)))
-        (incf d-screen take)
+      (let ((take (min remaining shield)))
+        (incf d-shield take)
         (decf remaining take)))
     ;; Finally PD (most critical - enables retreat)
     (when (> remaining 0)
       (let ((take (min remaining pd)))
         (incf d-pd take)
         (decf remaining take)))
-    (list :pd d-pd :b d-beam :s d-screen :t d-tube)))
+    (list :pd d-pd :b d-phasic :s d-shield :t d-launcher)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Issue Combat Order (CRT-Aware)
@@ -420,15 +420,15 @@
     (if target
         (let* ((tactic (getf analysis :tactic))
                (alloc (getf analysis :alloc))
-               (missiles (getf analysis :missiles))
-               (cmd-str (build-combat-command ship target tactic alloc missiles)))
-          (format t "[LISP] Combat: ~A vs ~A, tactic=~A, d=~A b=~A s=~A missiles=~A~%"
+               (torpedoes (getf analysis :torpedoes))
+               (cmd-str (build-combat-command ship target tactic alloc torpedoes)))
+          (format t "[LISP] Combat: ~A vs ~A, tactic=~A, d=~A p=~A s=~A torpedoes=~A~%"
                   (ship-name ship) (ship-code target) tactic
                   (getf alloc :d) (getf alloc :b) (getf alloc :s)
-                  (length missiles))
+                  (length torpedoes))
           (list (make-cmd "co" cmd-str)))
         ;; No target visible - dodge defensively
-        (list (make-cmd "co" (format nil "~A d w1 pd=~A b=0 s=0"
+        (list (make-cmd "co" (format nil "~A d w1 pd=~A p=0 s=0"
                                      (ship-code ship)
                                      (ship-pd ship)))))))
 
@@ -438,52 +438,54 @@
    Check if we can actually penetrate before committing to attack."
   (format t "[LISP] STALEMATE DANGER: Must deal damage!~%")
   (let* ((my-pd (ship-pd ship))
-         (my-beam (ship-beam ship))
-         (my-tube (ship-tube ship))
-         (my-missile (ship-missile ship))
+         (my-phasic (ship-phasic ship))
+         (my-launcher (ship-launcher ship))
+         (my-torpedo (ship-torpedo ship))
          (my-tech (ship-tech ship))
          (enemy-drive (when target (or (ship-last-drive target) 0)))
          (can-pen (can-guarantee-damage-p (list ship) enemies)))
-    ;; If we can't penetrate screens, retreat instead of wasting the round
+    ;; If we can't penetrate shields, retreat instead of wasting the round
     (when (and (not can-pen) (ship-warpship-p ship)
-               (not (and (> my-tube 0) (> my-missile 0))))
-      (format t "[LISP] Cannot penetrate screens, retreating instead~%")
+               (not (and (> my-launcher 0) (> my-torpedo 0))))
+      (format t "[LISP] Cannot penetrate shields, retreating instead~%")
       (return-from analyze-must-damage-situation
         (list :tactic "e"
               :alloc (list :d my-pd :b 0 :s 0)
-              :missiles nil)))
-    ;; If we have missiles, use them for guaranteed damage potential
-    (if (and (> my-tube 0) (> my-missile 0))
-        (crt-missile-alloc my-pd my-tube my-missile my-tech (or enemy-drive 0))
-        ;; Otherwise, attack aggressively with max beam
-        (let* ((beam-alloc my-beam)
-               (drive-alloc (- my-pd beam-alloc)))
+              :torpedoes nil)))
+    ;; If we have torpedoes, use them for guaranteed damage potential
+    (if (and (> my-launcher 0) (> my-torpedo 0))
+        (crt-torpedo-alloc my-pd my-launcher my-torpedo my-tech (or enemy-drive 0))
+        ;; Otherwise, attack aggressively with max phasic
+        (let* ((phasic-alloc my-phasic)
+               (drive-alloc (- my-pd phasic-alloc)))
           (list :tactic "a"
-                :alloc (list :d (max 1 drive-alloc) :b beam-alloc :s 0)
-                :missiles nil)))))
+                :alloc (list :d (max 1 drive-alloc) :b phasic-alloc :s 0)
+                :torpedoes nil)))))
 
-(defun build-combat-command (ship target tactic alloc missiles)
-  "Build the full combat order string including missiles.
-   When firing missiles: T=<tube-count> followed by M=<drive> for each missile.
-   The number of M= entries must equal the T= value."
-  (let* ((tube-count (length missiles))
-         (base (format nil "~A ~A ~A pd=~A b=~A s=~A"
+
+;; BUGBUG JDW Naming b
+(defun build-combat-command (ship target tactic alloc torpedoes)
+  "Build the full combat order string including torpedoes.
+   When firing torpedoes: L=<launcher-count> followed by T=<drive> for each torpedo.
+   The number of T= entries must equal the L= value."
+  (let* ((launcher-count (length torpedoes))
+         (base (format nil "~A ~A ~A pd=~A p=~A s=~A"
                        (ship-code ship)
                        tactic
                        (ship-code target)
                        (getf alloc :d)
                        (getf alloc :b)
                        (getf alloc :s))))
-    ;; Add tube count and missile drives if firing
-    (if (> tube-count 0)
-        (format nil "~A t=~A~{ m=~A~}" base tube-count missiles)
+    ;; Add launcher count and torpedo drives if firing
+    (if (> launcher-count 0)
+        (format nil "~A l=~A~{ t=~A~}" base launcher-count torpedoes)
         base)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; CRT-Based Power Allocation
 ;;; ----------------------------------------------------------------------------
 
-(defun crt-attack-alloc (pd max-beam max-screen enemy-drive mode)
+(defun crt-attack-alloc (pd max-phasic max-shield enemy-drive mode)
   "Allocate power for ATTACK tactic based on CRT.
    CRITICAL: Cap drive differential at +4 (never +5 = miss)
    MODE: :standard (aim for +2), :pursue (aim for +4), :counter-dodge (+3/+4)"
@@ -498,73 +500,73 @@
          (drive-alloc (min pd drive-needed max-safe-drive))
          ;; Remaining for offense
          (remaining (- pd drive-alloc))
-         ;; Put rest into beam for damage
-         (beam-alloc (min max-beam remaining)))
+         ;; Put rest into phasic for damage
+         (phasic-alloc (min max-phasic remaining)))
     (list :tactic "a"
-          :alloc (list :d drive-alloc :b beam-alloc :s 0)
-          :missiles nil)))
+          :alloc (list :d drive-alloc :b phasic-alloc :s 0)
+          :torpedoes nil)))
 
-(defun crt-dodge-alloc (pd max-beam max-screen)
+(defun crt-dodge-alloc (pd max-phasic max-shield)
   "Allocate power for DODGE tactic based on CRT.
    DODGE hits at close range (-2 to +2 vs attack, -2 to 0 vs dodge).
-   Balance drive for defense, some beam for opportunistic hits, screen for absorb."
+   Balance drive for defense, some phasic for opportunistic hits, shield for absorb."
   (let* (;; Drive: fraction for maneuver
          (drive-alloc (floor (* pd (theta 'theta-dodge-drive-fraction))))
          (remaining (- pd drive-alloc))
-         ;; Screen: prioritize absorption (screen + tech level)
-         (screen-alloc (min max-screen (floor (* remaining (theta 'theta-dodge-screen-fraction)))))
-         (remaining2 (- remaining screen-alloc))
-         ;; Beam: rest for opportunistic fire
-         (beam-alloc (min max-beam remaining2)))
+         ;; Shield: prioritize absorption (shield + tech level)
+         (shield-alloc (min max-shield (floor (* remaining (theta 'theta-dodge-shield-fraction)))))
+         (remaining2 (- remaining shield-alloc))
+         ;; Phasic: rest for opportunistic fire
+         (phasic-alloc (min max-phasic remaining2)))
     (list :tactic "d"
-          :alloc (list :d drive-alloc :b beam-alloc :s screen-alloc)
-          :missiles nil)))
+          :alloc (list :d drive-alloc :b phasic-alloc :s shield-alloc)
+          :torpedoes nil)))
 
-(defun crt-missile-alloc (pd tubes missiles tech enemy-drive)
-  "Allocate for missile alpha strike.
-   Missiles: independent drive up to PD + Tech.
-   Each tube fires 1 missile per round, costs 1 PD to power.
-   Note: Cannot use beams or screens when firing missiles."
-  (let* (;; How many missiles can we fire?
-         (max-missile-drive (+ pd tech))
-         (fireable-count (min tubes missiles))
-         ;; PD needed: 1 per tube powered
-         (tube-pd fireable-count)
+(defun crt-torpedo-alloc (pd launchers torpedoes tech enemy-drive)
+  "Allocate for torpedo alpha strike.
+   Torpedoes: independent drive up to PD + Tech.
+   Each launcher fires 1 torpedo per round, costs 1 PD to power.
+   Note: Cannot use phasics or shields when firing torpedoes."
+  (let* (;; How many torpedoes can we fire?
+         (max-torpedo-drive (+ pd tech))
+         (fireable-count (min launchers torpedoes))
+         ;; PD needed: 1 per launcher powered
+         (launcher-pd fireable-count)
          ;; Remaining PD for drive (maneuver during combat)
-         (drive-alloc (- pd tube-pd))
-         ;; Set missile drive for optimal CRT hit vs dodgers
-         (missile-drive (min max-missile-drive
+         (drive-alloc (- pd launcher-pd))
+         ;; Set torpedo drive for optimal CRT hit vs dodgers
+         (torpedo-drive (min max-torpedo-drive
                              (+ enemy-drive (theta 'theta-crt-max-safe-diff))))
-         ;; Build list of missile drives
-         (missile-drives (make-list fireable-count :initial-element missile-drive)))
-    (format t "[LISP] Firing ~A missiles at drive ~A~%" fireable-count missile-drive)
-    (list :tactic "a"  ; Missiles always attack
+         ;; Build list of torpedo drives
+         (torpedo-drives (make-list fireable-count :initial-element torpedo-drive)))
+    (format t "[LISP] Firing ~A torpedoes at drive ~A~%" fireable-count torpedo-drive)
+    (list :tactic "a"  ; Torpedoes always attack
           :alloc (list :d drive-alloc :b 0 :s 0)
-          :missiles missile-drives)))
+          :torpedoes torpedo-drives)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Force Concentration Analysis
 ;;; ----------------------------------------------------------------------------
 
-(defun beam-damage (ship)
-  "Calculate beam damage if hit: beam_power + tech_level."
-  (+ (ship-beam ship) (ship-tech ship)))
+(defun phasic-damage (ship)
+  "Calculate phasic damage if hit: phasic_power + tech_level."
+  (+ (ship-phasic ship) (ship-tech ship)))
 
-(defun screen-absorption (ship screen-power)
-  "Calculate screen absorption: screen_power + tech_level (if powered)."
-  (if (> screen-power 0)
-      (+ screen-power (ship-tech ship))
+(defun shield-absorption (ship shield-power)
+  "Calculate shield absorption: shield_power + tech_level (if powered)."
+  (if (> shield-power 0)
+      (+ shield-power (ship-tech ship))
       0))
 
 (defun calculate-force-balance (own-ships enemies)
-  "Calculate if our force can penetrate enemy screens.
+  "Calculate if our force can penetrate enemy shields.
    Returns (:advantage T/NIL :damage-potential N :enemy-absorption N)"
-  (let* (;; Our combined beam damage (assume all hit)
-         (our-damage (reduce #'+ (mapcar #'beam-damage own-ships) :initial-value 0))
-         ;; Enemy's screen absorption (assume powered)
+  (let* (;; Our combined phasic damage (assume all hit)
+         (our-damage (reduce #'+ (mapcar #'phasic-damage own-ships) :initial-value 0))
+         ;; Enemy's shield absorption (assume powered)
          (enemy-absorb (reduce #'+
                                (mapcar (lambda (e)
-                                         (+ (ship-screen e) (ship-tech e)))
+                                         (+ (ship-shield e) (ship-tech e)))
                                        enemies)
                                :initial-value 0))
          ;; Net damage we can deal per round
@@ -575,11 +577,11 @@
           :net-damage net-damage)))
 
 (defun can-guarantee-damage-p (own-ships enemies)
-  "Check if our force concentration can guarantee damage through screens.
+  "Check if our force concentration can guarantee damage through shields.
    This is crucial for avoiding stalemate traps."
   (let ((balance (calculate-force-balance own-ships enemies)))
     (when (getf balance :advantage)
-      (format t "[LISP] Force balance: ~A damage vs ~A screens = ~A net~%"
+      (format t "[LISP] Force balance: ~A damage vs ~A shields = ~A net~%"
               (getf balance :damage-potential)
               (getf balance :enemy-absorption)
               (getf balance :net-damage)))
@@ -592,12 +594,12 @@
 (defun compute-matchup-score (ship target)
   "Expected damage exchange between SHIP and TARGET.
    Returns plist (:we-deal N :they-deal N :exchange-ratio N :favorable-p T/NIL).
-   Based on beam+tech vs screen+tech for both sides."
-  (let* ((our-damage (+ (ship-beam ship) (ship-tech ship)))
-         (their-absorb (+ (ship-screen target) (ship-tech target)))
+   Based on phasic+tech vs shield+tech for both sides."
+  (let* ((our-damage (+ (ship-phasic ship) (ship-tech ship)))
+         (their-absorb (+ (ship-shield target) (ship-tech target)))
          (we-deal (max 0 (- our-damage their-absorb)))
-         (their-damage (+ (ship-beam target) (ship-tech target)))
-         (our-absorb (+ (ship-screen ship) (ship-tech ship)))
+         (their-damage (+ (ship-phasic target) (ship-tech target)))
+         (our-absorb (+ (ship-shield ship) (ship-tech ship)))
          (they-deal (max 0 (- their-damage our-absorb)))
          (exchange-ratio (if (> they-deal 0)
                              (/ (float we-deal) (float they-deal))
@@ -616,10 +618,10 @@
    Thresholds by risk-tolerance: :low=60%, :normal=40%, :high=25%.
    Only applies to warpships (systemships can't retreat)."
   (when (ship-warpship-p ship)
-    (let* ((current-hp (+ (ship-pd ship) (ship-beam ship)
-                          (ship-screen ship) (ship-tube ship)))
-           (max-hp (+ (ship-pd-max ship) (ship-beam-max ship)
-                      (ship-screen-max ship) (ship-tube-max ship)))
+    (let* ((current-hp (+ (ship-pd ship) (ship-phasic ship)
+                          (ship-shield ship) (ship-launcher ship)))
+           (max-hp (+ (ship-pd-max ship) (ship-phasic-max ship)
+                      (ship-shield-max ship) (ship-launcher-max ship)))
            (health-pct (if (> max-hp 0)
                            (/ (float current-hp) (float max-hp))
                            1.0))
@@ -630,10 +632,10 @@
       (< health-pct threshold))))
 
 (defun minimum-ships-to-penetrate (target-ship)
-  "Calculate minimum brawlers needed to penetrate target's screens.
-   Assumes brawler does ~5 damage (B=4 + T=1 avg tech)."
-  (let* ((screen (ship-screen target-ship))
+  "Calculate minimum brawlers needed to penetrate target's shields.
+   Assumes brawler does ~5 damage (P=4 + L=1 avg tech)."
+  (let* ((shield (ship-shield target-ship))
          (tech (ship-tech target-ship))
-         (absorption (+ screen tech))
+         (absorption (+ shield tech))
          (brawler-damage (theta 'theta-brawler-damage-estimate)))
     (1+ (floor absorption brawler-damage))))

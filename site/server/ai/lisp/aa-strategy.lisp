@@ -20,45 +20,45 @@
 
 (defun ship-combat-power (ship)
   "Compute numeric combat power score for a single ship.
-   Weights: PD + beam*1.5 + screen*1.2 + tech*2.5 + tube*0.5 + missile*0.3.
+   Weights: PD + phasic*1.5 + shield*1.2 + tech*2.5 + launcher*0.5 + torpedo*0.3.
    Scaled by health-ratio (current stats / max stats) so damaged ships report lower."
   (let* ((raw (+ (* (ship-pd ship) (theta 'theta-pd-weight))
-                 (* (ship-beam ship) (theta 'theta-beam-weight))
-                 (* (ship-screen ship) (theta 'theta-screen-weight))
+                 (* (ship-phasic ship) (theta 'theta-phasic-weight))
+                 (* (ship-shield ship) (theta 'theta-shield-weight))
                  (* (ship-tech ship) (theta 'theta-tech-weight))
-                 (* (ship-tube ship) (theta 'theta-tube-weight))
-                 (* (ship-missile ship) (theta 'theta-missile-weight))))
-         (current-total (+ (ship-pd ship) (ship-beam ship)
-                           (ship-screen ship) (ship-tube ship)))
-         (max-total (+ (ship-pd-max ship) (ship-beam-max ship)
-                       (ship-screen-max ship) (ship-tube-max ship)))
+                 (* (ship-launcher ship) (theta 'theta-launcher-weight))
+                 (* (ship-torpedo ship) (theta 'theta-torpedo-weight))))
+         (current-total (+ (ship-pd ship) (ship-phasic ship)
+                           (ship-shield ship) (ship-launcher ship)))
+         (max-total (+ (ship-pd-max ship) (ship-phasic-max ship)
+                       (ship-shield-max ship) (ship-launcher-max ship)))
          (health-ratio (if (> max-total 0)
                            (/ (float current-total) (float max-total))
                            1.0)))
     (* raw health-ratio)))
 
 (defun ship-combat-effective-p (ship)
-  "T if ship has PD >= 50% of pd-max AND beam >= 50% of beam-max."
+  "T if ship has PD >= 50% of pd-max AND phasic >= 50% of phasic-max."
   (let ((pd (ship-pd ship))
         (pd-max (ship-pd-max ship))
-        (beam (ship-beam ship))
-        (beam-max (ship-beam-max ship)))
+        (phasic (ship-phasic ship))
+        (phasic-max (ship-phasic-max ship)))
     (and (>= (* pd 2) pd-max)
-         (>= (* beam 2) beam-max))))
+         (>= (* phasic 2) phasic-max))))
 
 (defun classify-ship-role (ship)
   "Classify ship into a role keyword based on stat thresholds.
-   Returns :brawler, :interceptor, :missile-boat, :fortress, or :defender."
+   Returns :brawler, :interceptor, :torpedo-boat, :fortress, or :defender."
   (let ((pd (ship-pd ship))
-        (beam (ship-beam ship))
-        (tube (ship-tube ship))
+        (phasic (ship-phasic ship))
+        (launcher (ship-launcher ship))
         (warp (ship-warpship-p ship)))
     (cond
-      ((> tube 0) :missile-boat)
+      ((> launcher 0) :torpedo-boat)
       ((and (not warp) (>= pd (theta 'theta-classify-fortress-pd))) :fortress)
       ((and (not warp)) :defender)
       ((and (>= pd (theta 'theta-classify-brawler-pd))
-            (>= beam (theta 'theta-classify-brawler-beam))) :brawler)
+            (>= phasic (theta 'theta-classify-brawler-phasic))) :brawler)
       (t :interceptor))))
 
 ;;; ============================================================================
@@ -176,12 +176,12 @@
         (fleet-pd 0)
         (enemy-pd 0)
         (enemy-warp-count 0)
-        (fleet-beam 0)
-        (fleet-screen 0)
-        (fleet-tube 0)
-        (fleet-missiles 0)
-        (enemy-beam 0)
-        (enemy-screen 0)
+        (fleet-phasic 0)
+        (fleet-shield 0)
+        (fleet-launcher 0)
+        (fleet-torpedoes 0)
+        (enemy-phasic 0)
+        (enemy-shield 0)
         (own-tech-sum 0)
         (enemy-tech-sum 0)
         (own-hex-set nil)
@@ -194,10 +194,10 @@
     ;; Own ship stats
     (dolist (ship own-ships)
       (incf fleet-pd (ship-pd ship))
-      (incf fleet-beam (ship-beam ship))
-      (incf fleet-screen (ship-screen ship))
-      (incf fleet-tube (ship-tube ship))
-      (incf fleet-missiles (ship-missile ship))
+      (incf fleet-phasic (ship-phasic ship))
+      (incf fleet-shield (ship-shield ship))
+      (incf fleet-launcher (ship-launcher ship))
+      (incf fleet-torpedoes (ship-torpedo ship))
       (incf own-tech-sum (ship-tech ship))
       (incf fleet-power (ship-combat-power ship))
       (let ((hex (ship-hex ship)))
@@ -229,8 +229,8 @@
     ;; Enemy ship stats
     (dolist (eship enemy-ships)
       (incf enemy-pd (ship-pd eship))
-      (incf enemy-beam (ship-beam eship))
-      (incf enemy-screen (ship-screen eship))
+      (incf enemy-phasic (ship-phasic eship))
+      (incf enemy-shield (ship-shield eship))
       (incf enemy-tech-sum (ship-tech eship))
       (incf enemy-power (ship-combat-power eship))
       (when (ship-warpship-p eship)
@@ -264,12 +264,12 @@
             :fleet-total-pd fleet-pd
             :enemy-fleet-total-pd enemy-pd
             :fleet-advantage-p (> fleet-pd enemy-pd)
-            :fleet-total-beam fleet-beam
-            :fleet-total-screen fleet-screen
-            :fleet-total-tube fleet-tube
-            :fleet-missiles-loaded fleet-missiles
-            :enemy-total-beam enemy-beam
-            :enemy-total-screen enemy-screen
+            :fleet-total-phasic fleet-phasic
+            :fleet-total-shield fleet-shield
+            :fleet-total-launcher fleet-launcher
+            :fleet-torpedoes-loaded fleet-torpedoes
+            :enemy-total-phasic enemy-phasic
+            :enemy-total-shield enemy-shield
             :own-avg-tech own-avg-tech
             :enemy-avg-tech enemy-avg-tech
             :tech-advantage (- own-avg-tech enemy-avg-tech)
@@ -318,13 +318,13 @@
         (enemy-count 0)
         (enemy-warp 0)
         (enemy-max-tech 0)
-        (has-missiles nil)
-        (high-screen nil)
+        (has-torpedoes nil)
+        (high-shield nil)
         (positions nil)
         (at-our-bases nil)
         (enemy-fleet-power 0.0)
         (enemy-role-mix nil)
-        (enemy-missile-capable 0))
+        (enemy-torpedo-capable 0))
     (dolist (eship enemy-ships)
       (incf enemy-count)
       (incf enemy-fleet-power (ship-combat-power eship))
@@ -332,11 +332,11 @@
         (incf enemy-warp))
       (when (> (ship-tech eship) enemy-max-tech)
         (setf enemy-max-tech (ship-tech eship)))
-      (when (> (ship-tube eship) 0)
-        (setf has-missiles t)
-        (incf enemy-missile-capable))
-      (when (>= (ship-screen eship) 3)
-        (setf high-screen t))
+      (when (> (ship-launcher eship) 0)
+        (setf has-torpedoes t)
+        (incf enemy-torpedo-capable))
+      (when (>= (ship-shield eship) 3)
+        (setf high-shield t))
 
       ;; Role counting
       (let ((role (classify-ship-role eship)))
@@ -362,13 +362,13 @@
     (list :enemy-ship-count enemy-count
           :enemy-warpship-count enemy-warp
           :enemy-max-tech enemy-max-tech
-          :enemy-has-missiles-p has-missiles
-          :enemy-high-screen-p high-screen
+          :enemy-has-torpedoes-p has-torpedoes
+          :enemy-high-shield-p high-shield
           :enemy-positions (nreverse positions)
           :enemy-at-our-bases (nreverse at-our-bases)
           :enemy-fleet-power enemy-fleet-power
           :enemy-role-mix enemy-role-mix
-          :enemy-missile-capable enemy-missile-capable)))
+          :enemy-torpedo-capable enemy-torpedo-capable)))
 
 ;;; ============================================================================
 ;;; A5: Hex Valuation
@@ -753,32 +753,32 @@
 
         ;; Combat order watermarks (Category 4)
         (let* ((cur-pd (ship-last-drive eship))
-               (cur-beam (ship-last-beam eship))
-               (cur-screen (ship-last-screen eship))
-               (cur-tube (ship-last-tube eship))
+               (cur-phasic (ship-last-phasic eship))
+               (cur-shield (ship-last-shield eship))
+               (cur-launcher (ship-last-launcher eship))
                (prev-max-pd
                  (slate-metric slate
                                (format nil "enemy-~A-max-pd-seen" code) 0.0))
-               (prev-max-beam
+               (prev-max-phasic
                  (slate-metric slate
-                               (format nil "enemy-~A-max-beam-seen" code) 0.0))
-               (prev-max-screen
+                               (format nil "enemy-~A-max-phasic-seen" code) 0.0))
+               (prev-max-shield
                  (slate-metric slate
-                               (format nil "enemy-~A-max-screen-seen" code)
+                               (format nil "enemy-~A-max-shield-seen" code)
                                0.0))
-               (prev-max-tube
+               (prev-max-launcher
                  (slate-metric slate
-                               (format nil "enemy-~A-max-tube-seen" code) 0.0))
+                               (format nil "enemy-~A-max-launcher-seen" code) 0.0))
                (max-pd (max cur-pd (floor prev-max-pd)))
-               (max-beam (max cur-beam (floor prev-max-beam)))
-               (max-screen (max cur-screen (floor prev-max-screen)))
-               (max-tube (max cur-tube (floor prev-max-tube))))
+               (max-phasic (max cur-phasic (floor prev-max-phasic)))
+               (max-shield (max cur-shield (floor prev-max-shield)))
+               (max-launcher (max cur-launcher (floor prev-max-launcher))))
           (push (list code
-                      :max-pd max-pd :max-beam max-beam
-                      :max-screen max-screen :max-tube max-tube)
+                      :max-pd max-pd :max-phasic max-phasic
+                      :max-shield max-shield :max-launcher max-launcher)
                 ship-profiles))))
 
-    ;; SystemRack inference (Category 5)
+    ;; Hangar inference (Category 5)
     ;; Detect pick/drop from enemy systemship position changes
     (let ((enemy-warpships
             (remove-if-not #'ship-warpship-p enemy-ships))
@@ -829,13 +829,13 @@
                                (cdr (first sorted-converge))
                                0))
            ;; Enemy economic estimate (Section 9)
-           ;; BP estimate: WG(5) + PD + B + S + T + ceil(M/3) + SR
+           ;; BP estimate: WG(5) + PD + P + S + L + ceil(T/3) + H
            (enemy-total-bp 0))
       (dolist (eship enemy-ships)
         (let ((bp (+ (if (ship-warpship-p eship) (theta 'theta-enemy-wg-bp-cost) 0)
-                     (ship-pd eship) (ship-beam eship) (ship-screen eship)
-                     (ship-tube eship) (ceiling (ship-missile eship) 3)
-                     (ship-sr eship))))
+                     (ship-pd eship) (ship-phasic eship) (ship-shield eship)
+                     (ship-launcher eship) (ceiling (ship-torpedo eship) 3)
+                     (ship-hangar eship))))
           (incf enemy-total-bp bp)))
       (let* ((prev-bp-est (slate-metric slate "enemy-total-bp-est" 0.0))
              (enemy-spending-rate (cond
@@ -1041,15 +1041,15 @@
   (let* ((warp-count (getf strategy :warpship-count))
          (warp-needed (getf strategy :warpships-needed))
          (enemy-count (getf strategy :enemy-ship-count))
-         (enemy-high-screen (getf strategy :enemy-high-screen-p))
+         (enemy-high-shield (getf strategy :enemy-high-shield-p))
          (unguarded (getf strategy :unguarded-own-bases))
          (ship-roles (getf strategy :ship-roles))
          (save-for-tech (getf strategy :should-wait-for-tech-p))
          ;; Fleet target: max of warpships-needed and enemy-count+1
          (target (max warp-needed (1+ enemy-count)))
          (ships-to-build (max 0 (- target warp-count)))
-         ;; Count missile boats in fleet
-         (missile-boat-count (count-if (lambda (r) (eq (cdr r) :missile-boat))
+         ;; Count torpedo boats in fleet
+         (torpedo-boat-count (count-if (lambda (r) (eq (cdr r) :torpedo-boat))
                                        ship-roles)))
 
     ;; Build type: warpships first until minimum fleet met, then defenders
@@ -1063,8 +1063,8 @@
                         (t :warpship))))
       ;; Design preference
       (let ((design-pref (cond
-                           ((and enemy-high-screen (< missile-boat-count 1))
-                            :missile-boat)
+                           ((and enemy-high-shield (< torpedo-boat-count 1))
+                            :torpedo-boat)
                            (t :brawler))))
         (list :ships-to-build ships-to-build
               :build-type build-type
@@ -1296,18 +1296,18 @@
               (push (make-metric (format nil "enemy-~A-max-pd-seen" code)
                                  (getf plist :max-pd))
                     metrics))
-            (when (getf plist :max-beam)
-              (push (make-metric (format nil "enemy-~A-max-beam-seen" code)
-                                 (getf plist :max-beam))
+            (when (getf plist :max-phasic)
+              (push (make-metric (format nil "enemy-~A-max-phasic-seen" code)
+                                 (getf plist :max-phasic))
                     metrics))
-            (when (getf plist :max-screen)
+            (when (getf plist :max-shield)
               (push (make-metric
-                     (format nil "enemy-~A-max-screen-seen" code)
-                     (getf plist :max-screen))
+                     (format nil "enemy-~A-max-shield-seen" code)
+                     (getf plist :max-shield))
                     metrics))
-            (when (getf plist :max-tube)
-              (push (make-metric (format nil "enemy-~A-max-tube-seen" code)
-                                 (getf plist :max-tube))
+            (when (getf plist :max-launcher)
+              (push (make-metric (format nil "enemy-~A-max-launcher-seen" code)
+                                 (getf plist :max-launcher))
                     metrics))
             ;; Category 5: Rack inference
             (when (getf plist :has-racks)

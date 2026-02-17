@@ -541,10 +541,10 @@ The Hive. Home of the Vesh, an insectoid collective consciousness that defies hu
 | Resource | Uses | Notable Sources |
 |----------|------|-----------------|
 | FERROUS | Hull construction | The Anvil, The Shatter, The Quarry |
-| RARE_EARTH | Electronics, screens | Jewel (BELIX), The Shatter |
+| RARE_EARTH | Electronics, shields | Jewel (BELIX), The Shatter |
 | RADIOACTIVE | Power, weapons | Limited deposits |
-| CRYSTALLINE | Beams, warp drives | Glassine (XYLEN), Archive (ZAREK) |
-| VOLATILE | Fuel, missiles | Shepherd (ARVEN), Cloud Marshal (BELIX) |
+| CRYSTALLINE | Phasics, warp drives | Glassine (XYLEN), Archive (ZAREK) |
+| VOLATILE | Fuel, torpedoes | Shepherd (ARVEN), Cloud Marshal (BELIX) |
 | WATER | Life support | Verdance, Hanging Gardens, Wexar |
 | ORGANIC | Food, medicine | Verdance, Hanging Gardens, Dagan's Rest |
 | EXOTIC | Special technology | Keplerite (QUELL), Gilded Throne ruins |

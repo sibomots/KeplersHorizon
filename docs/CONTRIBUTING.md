@@ -455,7 +455,7 @@ $ cp -r . DocumentRoot/kh
 The start-up script offers a couple different ways to start the application.
 
 - It assumes you may want to work on the software!  So there's a `gdb` startup usage.
-- It assumes you may want to run it with `screen` to keep it alive if the shell dies.
+- It assumes you may want to run it with `screen` (or `tmux`) to keep it alive if the shell dies.
 - Or you can run it in the foreground.
 
 ```

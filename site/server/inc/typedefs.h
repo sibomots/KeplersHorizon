@@ -62,8 +62,8 @@ enum PhaseIndex
     PH_END_TURN
 };
 
-typedef int FiringMissile;
-typedef std::vector<FiringMissile> MissileSet;
+typedef int FiringTorpedo;
+typedef std::vector<FiringTorpedo> TorpedoSet;
 
 // Command IDs for the check_inhibits() system
 enum class CommandID

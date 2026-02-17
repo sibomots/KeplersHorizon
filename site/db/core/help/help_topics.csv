@@ -20,19 +20,19 @@ DESCRIPTION:
   Create and configure new ships during the Build Ships phase.
   Attributes and costs:
     PD (Power/Drive) = 1 BP each - engines and weapon power
-    B (Beams) = 1 BP each - destructive energy projector
-    S (Screens) = 1 BP each - protective energy shield
-    T (Tubes) = 1 BP each - launches one Missile per combat round
-    M (Missiles) = 3 per 1 BP - does 2 hits damage when it hits
-    SR (System Racks) = 1 BP each - carries one Systemship
+    P (Phasics) = 1 BP each - destructive energy projector
+    S (Shields) = 1 BP each - protective energy shield
+    L (Launchers) = 1 BP each - launches one Torpedo per combat round
+    T (Torpedoes) = 3 per 1 BP - does 2 hits damage when it hits
+    H (System Racks) = 1 BP each - carries one Systemship
   Warpships travel between star systems via Warplines.
   Systemships operate within star hexes, cannot use Warplines.
   WG (Warp Generator)cost 5 BP and are required expense by default
   for all Warpships
 EXAMPLES:
-  > bn w Falcon
-  > bs Falcon pd=9 b=3 s=2 t=1 m=3
-  > bc Falcon
+  > BN W FALCON
+  > BS FALCON PD=9 P=3 S=2 L=1 T=3
+  > BC FALCON
 SEE ALSO: fleet, deploy, ship"
 3,"TOPIC: MOVE
 SYNOPSIS:
@@ -74,15 +74,15 @@ SYNOPSIS:
 DESCRIPTION:
   Combat occurs when opposing ships occupy the same star hex.
   Each combat round, players write orders including:
-    - Tactic: (A) Attack, (D) Dodge, or (E) Retreat
-    - Target for Beam fire
-    - Target for each Missile and its drive setting
-    - Power allocation: PD to Drive, Beams, Screens, Tubes
+    - Tactic: (A) Attack, (D) Dodge, or (E) Escape
+    - Target for Phasic fire
+    - Target for each Torpedo and its drive setting
+    - Power allocation: PD to Drive, Phasics, Shields, Launchers
   Combat Results Table determines hits based on Drive difference.
-  Beams and Screens cannot be used when firing Missiles.
-  Systemships may never select Retreat.
+  Phasics and Shields cannot be used when firing Torpedoes.
+  Systemships may never select Escape
 EXAMPLES:
-  > CO W1 A S1 PD=2 B=1    (W1 attacks S1 sets Power = 2 and Beams = 1)
+  > CO W1 A S1 PD=2 P=1    (W1 attacks S1 sets Power = 2 and Phasics = 1)
   > CC                     (commits that order. Orders not commited are not invoked)
 NOTE:
   Once combat has started in a hex, the combat must conclude with either
@@ -104,11 +104,11 @@ SYNOPSIS:
 DESCRIPTION:
   Resources: FERROUS, RARE_EARTH, RADIOACTIVE, CRYSTALLINE,
              VOLATILE, WATER, ORGANIC, EXOTIC
-  Fabricate to convert resources into Missiles, ship upgrades, tech.
+  Fabricate to convert resources into Torpedoes, ship upgrades, tech.
 EXAMPLES:
   > extract scan
   > extract W1 volatile
-  > fab missiles W1
+  > fab torpedoes W1
 SEE ALSO: cargo, salvage, trade"
 6,"TOPIC: INFO
 SYNOPSIS:
@@ -155,12 +155,12 @@ DESCRIPTION:
     SYSTEMSHIP (S) - No Warp Generator, must be carried by Warpships
   Ship Attributes:
     PD (Power/Drive) - Engine strength, powers weapons in combat
-    B (Beams) - Destructive energy projection
-    S (Screens) - Protective energy shield, absorbs hits
-    T (Tubes) - Launches Missiles (1 per tube per round)
-    M (Missiles) - Does 2 hits damage when it hits
-    SR (System Racks) - Carries Systemships (Warpships only)
-  Tech Level adds to Beam, Missile, and Screen effectiveness.
+    P (Phasics) - Destructive energy projection
+    S (Shields) - Protective energy shield, absorbs hits
+    L (Launchers) - Launches Torpedoes (1 per launcher per round)
+    T (Torpedoes) - Does 2 hits damage when it hits
+    H (System Racks) - Carries Systemships (Warpships only)
+  Tech Level adds to Phasic, Torpedo, and Shield effectiveness.
 EXAMPLES:
   > fleet
   > cargo W1
@@ -170,33 +170,33 @@ SYNOPSIS:
   CRT   Display the Combat Results Table
 DESCRIPTION:
   The CRT determines combat outcomes based on:
-    - Firing ship's tactic (Attack, Dodge, Retreat)
+    - Firing ship's tactic (Attack, Dodge, Escape)
     - Target ship's tactic
     - Drive difference (firing Drive minus target Drive)
   Results: Miss, Hit, Hit +1, Hit +2, Escapes
-  Beams do damage equal to power allocation plus tech level.
-  Missiles do 2 hits damage plus tech level.
-  Screens absorb hits equal to power allocation plus tech level.
+  Phasics do damage equal to power allocation plus tech level.
+  Torpedoes do 2 hits damage plus tech level.
+  Shields absorb hits equal to power allocation plus tech level.
   When all attributes (except Warp Generator) reach 0, ship destroyed.
 EXAMPLES:
   > crt
 SEE ALSO: combat, ship"
-10,"TOPIC: MISSILES
+10,"TOPIC: TORPEDOES
 SYNOPSIS:
-  FAB missiles <ship>   Fabricate Missiles
-  RESUPPLY <ship>       Resupply Missiles at base
+  FAB torpedoes <ship>   Fabricate Torpedoes
+  RESUPPLY <ship>       Resupply Torpedoes at base
 DESCRIPTION:
-  Missiles are fired through Tubes at enemy ships.
-  Each Tube fires one Missile per combat round.
-  Powering a Tube requires 1 PD allocation.
-  A Missile does 2 hits damage when it hits, plus tech level.
-  Missiles have their own Drive setting (1 to PD+Tech of firing ship).
-  Missiles always use the Attack tactic on the CRT.
-  Missiles cannot be fired while using Beams or Screens.
-  Once fired, Missiles are expended.
-  Resupply at base star hexes (costs 1 BP per 3 Missiles).
+  Torpedoes are fired through Launchers at enemy ships.
+  Each Launcher fires one Torpedo per combat round.
+  Powering a Launcher requires 1 PD allocation.
+  A Torpedo does 2 hits damage when it hits, plus tech level.
+  Torpedoes have their own Drive setting (1 to PD+Tech of firing ship).
+  Torpedoes always use the Attack tactic on the CRT.
+  Torpedoes cannot be fired while using Phasics or Shields.
+  Once fired, Torpedoes are expended.
+  Resupply at base star hexes (costs 1 BP per 3 Torpedoes).
 EXAMPLES:
-  > fab missiles W1
+  > fab torpedoes W1
   > rs W1
 SEE ALSO: combat, fabricate, ship"
 11,"TOPIC: ATTRIBUTES
@@ -206,37 +206,37 @@ SYNOPSIS:
 DESCRIPTION:
   PD (Power/Drive)
     Engine and weapon power source. Each PD costs 1 BP.
-    In combat, PD is allocated among Drive, Beams, Screens, and Tubes.
+    In combat, PD is allocated among Drive, Phasics, Shields, and Launchers.
     Drive determines movement range (1 hex per PD) and CRT column.
     Scanning commands (hex, survey, system) each cost 1 PD.
-  B (Beams)
-    Destructive energy weapons. Each Beam costs 1 BP.
-    In combat, Beams fire at the designated target.
-    Damage equals power allocated to Beams plus Tech Level.
-    Cannot fire Beams while launching Missiles.
-  S (Screens)
-    Protective energy shields. Each Screen costs 1 BP.
-    In combat, Screens absorb incoming hits.
-    Absorption equals power allocated to Screens plus Tech Level.
-    Cannot use Screens while launching Missiles.
-  T (Tubes)
-    Missile launchers. Each Tube costs 1 BP.
-    Each Tube fires one Missile per combat round.
-    Powering a Tube requires 1 PD allocation.
-    Tubes cannot be used simultaneously with Beams or Screens.
-  M (Missiles)
-    Ordnance carried aboard ship. 3 Missiles cost 1 BP.
-    Each Missile does 2 hits damage plus Tech Level when it hits.
-    Missiles have their own Drive setting on the CRT.
-    Once fired, Missiles are expended. Resupply at base or fabricate.
-  SR (System Racks)
+  P (Phasics)
+    Destructive energy weapons. Each Phasic costs 1 BP.
+    In combat, Phasics fire at the designated target.
+    Damage equals power allocated to Phasics plus Tech Level.
+    Cannot fire Phasics while launching Torpedoes.
+  S (Shields)
+    Protective energy shields. Each Shield costs 1 BP.
+    In combat, Shields absorb incoming hits.
+    Absorption equals power allocated to Shields plus Tech Level.
+    Cannot use Shields while launching Torpedoes.
+  L (Launchers)
+    Torpedo launchers. Each Launcher costs 1 BP.
+    Each Launcher fires one Torpedo per combat round.
+    Powering a Launcher requires 1 PD allocation.
+    Launchers cannot be used simultaneously with Phasics or Shields.
+  T (Torpedoes)
+    Ordnance carried aboard ship. 3 Torpedoes cost 1 BP.
+    Each Torpedo does 2 hits damage plus Tech Level when it hits.
+    Torpedoes have their own Drive setting on the CRT.
+    Once fired, Torpedoes are expended. Resupply at base or fabricate.
+  H (Hangars)
     Warpship-only. Each Rack costs 1 BP and carries one Systemship.
     Pick up and drop off Systemships during Movement phase.
     Racking or unracking costs 1 PD each.
   LRS (Long Range Scanner)
     Enhances sensor capability for scanning operations.
 EXAMPLES:
-  > bs Falcon pd=9 b=3 s=2 t=1 m=3
-  > help pd
-  > help beams
+  > BS FALCON PD=9 P=3 S=2 L=1 T=3
+  > HELP PD
+  > HELP PHASICS
 SEE ALSO: build, ship, combat, crt"

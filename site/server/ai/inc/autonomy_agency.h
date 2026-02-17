@@ -32,11 +32,11 @@ struct AAShipInfo
     std::string hex_id;
     int pd;      // Remaining PD for power allocation (base - spent)
     int base_pd; // Physical PD for damage assignment (from ships table)
-    int beam;
-    int screen;
-    int tube;
-    int missile;
-    int sr;
+    int phasic;
+    int shield;
+    int launcher;
+    int torpedo;
+    int hangar;
     int tech_level;
     bool is_warpship;
     std::string racked_in;
@@ -53,9 +53,9 @@ struct AAShipInfo
     // Revealed enemy order from prior round (public after both commit)
     char last_tactic; // 'A', 'D', 'E', or '\0' if unknown
     int last_drive;   // Power allocated to drive
-    int last_beam;    // Power allocated to beam
-    int last_screen;  // Power allocated to screen
-    int last_tube;    // Power allocated to tube
+    int last_phasic;    // Power allocated to phasic
+    int last_shield;  // Power allocated to shield
+    int last_launcher;    // Power allocated to launcher
 
     // Economic layer: cargo and capacity
     int cargo_ferrous;
@@ -66,30 +66,30 @@ struct AAShipInfo
     int cargo_water;
     int cargo_organic;
     int cargo_exotic;
-    int cargo_missiles;
+    int cargo_torpedoes;
     int cargo_capacity;
-    int missiles_max;
+    int torpedoes_max;
     std::string at_system;
 
     // Damage tracking: max values for repair decisions
     int pd_max;
-    int beam_max;
-    int screen_max;
-    int tube_max;
+    int phasic_max;
+    int shield_max;
+    int launcher_max;
 
     // Equipment
     int lrs; // Long Range Scanner
 
     AAShipInfo()
-        : pd(0), base_pd(0), beam(0), screen(0), tube(0), missile(0), sr(0),
+        : pd(0), base_pd(0), phasic(0), shield(0), launcher(0), torpedo(0), hangar(0),
           tech_level(0), is_warpship(true), needs_combat_order(false),
           pending_damage(0), escape_pending(false), last_tactic('\0'),
-          last_drive(0), last_beam(0), last_screen(0), last_tube(0),
+          last_drive(0), last_phasic(0), last_shield(0), last_launcher(0),
           cargo_ferrous(0), cargo_rare_earth(0),
           cargo_radioactive(0), cargo_crystalline(0), cargo_volatile(0),
-          cargo_water(0), cargo_organic(0), cargo_exotic(0), cargo_missiles(0),
-          cargo_capacity(10), missiles_max(0), pd_max(0), beam_max(0),
-          screen_max(0), tube_max(0), lrs(0)
+          cargo_water(0), cargo_organic(0), cargo_exotic(0), cargo_torpedoes(0),
+          cargo_capacity(10), torpedoes_max(0), pd_max(0), phasic_max(0),
+          shield_max(0), launcher_max(0), lrs(0)
     {
     }
 };

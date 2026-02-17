@@ -106,11 +106,11 @@ ship_code VARCHAR(4) NOT NULL,
 ship_name VARCHAR(32) NOT NULL,
 ship_type CHAR(1) NOT NULL,
 pd INT NOT NULL DEFAULT 0,
-beam INT NOT NULL DEFAULT 0,
-screen INT NOT NULL DEFAULT 0,
-tube INT NOT NULL DEFAULT 0,
-missiles INT NOT NULL DEFAULT 0,
-sr INT NOT NULL DEFAULT 0,
+phasic INT NOT NULL DEFAULT 0,
+shield INT NOT NULL DEFAULT 0,
+launcher INT NOT NULL DEFAULT 0,
+torpedoes INT NOT NULL DEFAULT 0,
+hangar INT NOT NULL DEFAULT 0,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 UNIQUE KEY uniq_draft (game_id, owner, ship_code),
 FOREIGN KEY (game_id) REFERENCES games(id)
@@ -126,11 +126,11 @@ ship_type CHAR(1) NOT NULL,
 tech_level INT NOT NULL DEFAULT 0,
 built_turn VARCHAR(8) NOT NULL,
 pd INT NOT NULL DEFAULT 0,
-beam INT NOT NULL DEFAULT 0,
-screen INT NOT NULL DEFAULT 0,
-tube INT NOT NULL DEFAULT 0,
-missiles INT NOT NULL DEFAULT 0,
-sr INT NOT NULL DEFAULT 0,
+phasic INT NOT NULL DEFAULT 0,
+shield INT NOT NULL DEFAULT 0,
+launcher INT NOT NULL DEFAULT 0,
+torpedoes INT NOT NULL DEFAULT 0,
+hangar INT NOT NULL DEFAULT 0,
 -- Extraction equipment (don't affect destruction)
 lrs INT NOT NULL DEFAULT 0,   -- Long Range Scanner
 pd_spent INT NOT NULL DEFAULT 0,
@@ -148,7 +148,7 @@ cargo_volatile INT NOT NULL DEFAULT 0,
 cargo_water INT NOT NULL DEFAULT 0,
 cargo_organic INT NOT NULL DEFAULT 0,
 cargo_exotic INT NOT NULL DEFAULT 0,
-cargo_missiles INT NOT NULL DEFAULT 0,
+cargo_torpedoes INT NOT NULL DEFAULT 0,
 cargo_capacity INT NOT NULL DEFAULT 10,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 UNIQUE KEY uniq_ship (game_id, owner, ship_code),
@@ -158,11 +158,11 @@ FOREIGN KEY (game_id) REFERENCES games(id)
 
 ALTER TABLE ships 
 ADD COLUMN pd_max INT NOT NULL DEFAULT 0 COMMENT 'Original Power Drive rating' AFTER pd,
-ADD COLUMN beam_max INT NOT NULL DEFAULT 0 COMMENT 'Original Beam rating' AFTER beam,
-ADD COLUMN screen_max INT NOT NULL DEFAULT 0 COMMENT 'Original Screen rating' AFTER screen,
-ADD COLUMN tube_max INT NOT NULL DEFAULT 0 COMMENT 'Original Tube rating' AFTER tube,
-ADD COLUMN missiles_max INT NOT NULL DEFAULT 0 COMMENT 'Original Missile capacity' AFTER missiles,
-ADD COLUMN sr_max INT NOT NULL DEFAULT 0 COMMENT 'Original System Rack rating' AFTER sr;
+ADD COLUMN phasic_max INT NOT NULL DEFAULT 0 COMMENT 'Original Phasic rating' AFTER phasic,
+ADD COLUMN shield_max INT NOT NULL DEFAULT 0 COMMENT 'Original Shield rating' AFTER shield,
+ADD COLUMN launcher_max INT NOT NULL DEFAULT 0 COMMENT 'Original Launcher rating' AFTER launcher,
+ADD COLUMN torpedoes_max INT NOT NULL DEFAULT 0 COMMENT 'Original Torpedo capacity' AFTER torpedoes,
+ADD COLUMN hangar_max INT NOT NULL DEFAULT 0 COMMENT 'Original System Rack rating' AFTER hangar;
 
 
 CREATE TABLE IF NOT EXISTS sightings (
@@ -461,7 +461,7 @@ power_d INT NOT NULL DEFAULT 0,
 power_b INT NOT NULL DEFAULT 0,
 power_s INT NOT NULL DEFAULT 0,
 power_t INT NOT NULL DEFAULT 0,
-missiles_data TEXT DEFAULT NULL,
+torpedoes_data TEXT DEFAULT NULL,
 committed BOOLEAN NOT NULL DEFAULT 0,
 PRIMARY KEY (game_id, owner, ship_code, round),
 FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
@@ -515,7 +515,7 @@ cost_water INT DEFAULT 0,
 cost_organic INT DEFAULT 0,
 cost_exotic INT DEFAULT 0,
 output_qty INT DEFAULT 1,
-output_type ENUM('MISSILE','TUBE','BEAM','SCREEN','TECH') NOT NULL,
+output_type ENUM('TORPEDO','LAUNCHER','PHASIC','SHIELD','TECH') NOT NULL,
 FOREIGN KEY (module_id) REFERENCES modules(module_id),
 INDEX (module_id, name),
 INDEX (output_type)
@@ -524,22 +524,22 @@ INDEX (output_type)
 INSERT INTO fabrication_plan
 (name, description, build_time, cost_ferrous, cost_radioactive, cost_volatile, output_qty, output_type)
 VALUES
-('missiles', 'Basic Missiles (x4)', 1, 2, 1, 1, 4, 'MISSILE');
+('torpedoes', 'Basic Torpedoes (x4)', 1, 2, 1, 1, 4, 'TORPEDO');
 
 INSERT INTO fabrication_plan
 (name, description, build_time, cost_ferrous, cost_rare_earth, cost_crystalline, output_qty, output_type)
 VALUES
-('tubes', 'Tube Upgrade (+1 capacity)', 3, 5, 3, 2, 1, 'TUBE');
+('launchers', 'Launcher Upgrade (+1 capacity)', 3, 5, 3, 2, 1, 'LAUNCHER');
 
 INSERT INTO fabrication_plan
 (name, description, build_time, cost_ferrous, cost_rare_earth, cost_crystalline, output_qty, output_type)
 VALUES
-('beams', 'Beam Upgrade (+1 rating)', 3, 8, 4, 3, 1, 'BEAM');
+('phasics', 'Phasic Upgrade (+1 rating)', 3, 8, 4, 3, 1, 'PHASIC');
 
 INSERT INTO fabrication_plan
 (name, description, build_time, cost_ferrous, cost_rare_earth, cost_crystalline, output_qty, output_type)
 VALUES
-('screens', 'Screen Upgrade (+1 rating)', 3, 6, 2, 4, 1, 'SCREEN');
+('shields', 'Shield Upgrade (+1 rating)', 3, 6, 2, 4, 1, 'SHIELD');
 
 INSERT INTO fabrication_plan
 (name, description, build_time, cost_rare_earth, cost_crystalline, cost_exotic, output_qty, output_type)

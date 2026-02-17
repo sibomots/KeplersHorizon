@@ -30,16 +30,16 @@
 ;;;   :params       — optional parameters (e.g., resource type, qty)
 
 ;;; ----------------------------------------------------------------------------
-;;; Missile Recipe Constants (from K31)
+;;; Torpedo Recipe Constants (from K31)
 ;;; ----------------------------------------------------------------------------
 
-(defparameter *missile-recipe*
+(defparameter *torpedo-recipe*
   '(("ferrous" . 2) ("radioactive" . 1) ("volatile" . 1))
-  "Missile fabrication recipe: resource-type → quantity needed.")
+  "Torpedo fabrication recipe: resource-type → quantity needed.")
 
-(defparameter *missile-recipe-resources*
+(defparameter *torpedo-recipe-resources*
   '("ferrous" "radioactive" "volatile")
-  "Resource types consumed by missile fabrication.")
+  "Resource types consumed by torpedo fabrication.")
 
 ;;; ----------------------------------------------------------------------------
 ;;; Fleet Aggregate Queries
@@ -62,16 +62,16 @@
               (t 0))))
     total))
 
-(defun fleet-missile-ratio (slate)
-  "Ratio of current missiles to max capacity across fleet.
-   Returns 1.0 if fleet has no missile capacity."
-  (let ((total-missiles 0)
+(defun fleet-torpedo-ratio (slate)
+  "Ratio of current torpedoes to max capacity across fleet.
+   Returns 1.0 if fleet has no torpedo capacity."
+  (let ((total-torpedoes 0)
         (total-max 0))
     (dolist (ship (slate-own-ships slate))
-      (incf total-missiles (ship-missile ship))
-      (incf total-max (ship-missiles-max ship)))
+      (incf total-torpedoes (ship-torpedo ship))
+      (incf total-max (ship-torpedoes-max ship)))
     (if (> total-max 0)
-        (/ (float total-missiles) total-max)
+        (/ (float total-torpedoes) total-max)
         1.0)))
 
 ;;; ----------------------------------------------------------------------------
@@ -90,53 +90,53 @@
 
 (setf *all-goals* nil)
 
-(defgoal :maintain-missile-stock
+(defgoal :maintain-torpedo-stock
   :priority 1
   :supported-by :win-game
-  :satisfied (>= (fleet-missile-ratio slate) (theta 'theta-missile-ratio-target))
+  :satisfied (>= (fleet-torpedo-ratio slate) (theta 'theta-torpedo-ratio-target))
   :precondition t
   :action nil
   :needed-resources nil
-  :doc "Fleet missile reserves above operational threshold.")
+  :doc "Fleet torpedo reserves above operational threshold.")
 
-(defgoal :resupply-missiles
+(defgoal :resupply-torpedoes
   :priority 2
-  :supported-by :maintain-missile-stock
+  :supported-by :maintain-torpedo-stock
   :satisfied (null (find-resupplyable-ship-for-goal slate))
-  :precondition (and (not (goal-satisfied-p :maintain-missile-stock))
+  :precondition (and (not (goal-satisfied-p :maintain-torpedo-stock))
                      (find-resupplyable-ship-for-goal slate))
   :action (issue-resupply-action slate)
   :needed-resources nil
-  :doc "Reload missiles at own base.")
+  :doc "Reload torpedoes at own base.")
 
 (defgoal :fabricate-materiel
   :priority 3
-  :supported-by :maintain-missile-stock
-  :satisfied (goal-satisfied-p :maintain-missile-stock)
-  :precondition (and (not (goal-satisfied-p :maintain-missile-stock))
+  :supported-by :maintain-torpedo-stock
+  :satisfied (goal-satisfied-p :maintain-torpedo-stock)
+  :precondition (and (not (goal-satisfied-p :maintain-torpedo-stock))
                      (find-fabricatable-ship-for-goal slate))
   :action (issue-fabricate-action slate)
-  :needed-resources *missile-recipe-resources*
-  :doc "Convert resources to missiles at shipyard.")
+  :needed-resources *torpedo-recipe-resources*
+  :doc "Convert resources to torpedoes at shipyard.")
 
 (defgoal :acquire-resource
   :priority 4
   :supported-by :fabricate-materiel
-  :satisfied (null (missile-ingredients-needed slate))
+  :satisfied (null (torpedo-ingredients-needed slate))
   :precondition (and (not (goal-satisfied-p :acquire-resource))
-                     (not (goal-satisfied-p :maintain-missile-stock))
+                     (not (goal-satisfied-p :maintain-torpedo-stock))
                      (or (find-extractable-for-goal slate)
                          (find-buyable-for-goal slate)))
   :action (issue-acquire-action slate)
-  :needed-resources (mapcar #'car (missile-ingredients-needed slate))
-  :doc "Extract or buy needed missile ingredients.")
+  :needed-resources (mapcar #'car (torpedo-ingredients-needed slate))
+  :doc "Extract or buy needed torpedo ingredients.")
 
 (defgoal :survey-for-yield
   :priority 5
   :supported-by :acquire-resource
   :satisfied (null (find-surveyable-for-goal slate))
   :precondition (and (not (goal-satisfied-p :acquire-resource))
-                     (not (goal-satisfied-p :maintain-missile-stock))
+                     (not (goal-satisfied-p :maintain-torpedo-stock))
                      (find-surveyable-for-goal slate))
   :action (issue-survey-action slate)
   :needed-resources nil
@@ -221,11 +221,11 @@
 ;;; Ingredient Queries
 ;;; ----------------------------------------------------------------------------
 
-(defun missile-ingredients-needed (slate)
-  "Return alist of (resource-type . qty-short) for missile recipe.
+(defun torpedo-ingredients-needed (slate)
+  "Return alist of (resource-type . qty-short) for torpedo recipe.
    Only includes resources where fleet has less than recipe requires."
   (let ((needs nil))
-    (dolist (ingredient *missile-recipe*)
+    (dolist (ingredient *torpedo-recipe*)
       (let* ((rtype (car ingredient))
              (qty-required (cdr ingredient))
              (qty-have (fleet-resource-total slate rtype))
@@ -252,7 +252,7 @@
 (defun find-extractable-for-goal (slate)
   "Find ship that can extract a NEEDED resource.
    Only extract what the active goal chain requires."
-  (let ((needed (missile-ingredients-needed slate)))
+  (let ((needed (torpedo-ingredients-needed slate)))
     (when needed
       (dolist (ship (slate-own-ships slate))
         (let ((sys (ship-at-system ship)))
@@ -269,7 +269,7 @@
 
 (defun find-buyable-for-goal (slate)
   "Find ship at trade hub that can buy a NEEDED resource."
-  (let ((needed (missile-ingredients-needed slate)))
+  (let ((needed (torpedo-ingredients-needed slate)))
     (when (and needed (> (slate-credits slate) (theta 'theta-buy-credits-min)))
       (dolist (ship (slate-own-ships slate))
         (let ((sys (ship-at-system ship)))
@@ -280,15 +280,15 @@
               (list ship (caar needed)))))))))
 
 (defun find-fabricatable-ship-for-goal (slate)
-  "Find ship at shipyard with all missile ingredients."
+  "Find ship at shipyard with all torpedo ingredients."
   (let ((player (slate-get slate :aa-player)))
     (dolist (ship (slate-own-ships slate))
       (let ((sys (ship-at-system ship)))
         (when (and (not (string= sys ""))
                    (can-fabricate-at-p slate sys player)
-                   (>= (ship-cargo-ferrous ship) (theta 'theta-missile-recipe-ferrous))
-                   (>= (ship-cargo-radioactive ship) (theta 'theta-missile-recipe-radioactive))
-                   (>= (ship-cargo-volatile ship) (theta 'theta-missile-recipe-volatile)))
+                   (>= (ship-cargo-ferrous ship) (theta 'theta-torpedo-recipe-ferrous))
+                   (>= (ship-cargo-radioactive ship) (theta 'theta-torpedo-recipe-radioactive))
+                   (>= (ship-cargo-volatile ship) (theta 'theta-torpedo-recipe-volatile)))
           (return-from find-fabricatable-ship-for-goal ship)))))
   nil)
 
@@ -297,14 +297,14 @@
    Evaluates cargo against active goals to determine excess."
   (let ((goals (list
                  (list :objective :fabricate-materiel
-                       :satisfied (>= (fleet-missile-ratio slate)
-                                      (theta 'theta-missile-ratio-target))
+                       :satisfied (>= (fleet-torpedo-ratio slate)
+                                      (theta 'theta-torpedo-ratio-target))
                        :relevant t
-                       :needed-resources *missile-recipe-resources*)
+                       :needed-resources *torpedo-recipe-resources*)
                  (list :objective :acquire-resource
-                       :satisfied (null (missile-ingredients-needed slate))
+                       :satisfied (null (torpedo-ingredients-needed slate))
                        :relevant t
-                       :needed-resources (mapcar #'car (missile-ingredients-needed slate))))))
+                       :needed-resources (mapcar #'car (torpedo-ingredients-needed slate))))))
     (dolist (ship (slate-own-ships slate))
       (let ((sys (ship-at-system ship)))
         (when (and (not (string= sys ""))
@@ -329,16 +329,16 @@
   nil)
 
 (defun find-resupplyable-ship-for-goal (slate)
-  "Find ship at own base needing missiles."
+  "Find ship at own base needing torpedoes."
   (let ((own-bases (slate-own-bases slate)))
     (dolist (ship (slate-own-ships slate))
       (let ((hex (ship-hex ship))
-            (missiles (ship-missile ship))
-            (max-missiles (ship-missiles-max ship)))
+            (torpedoes (ship-torpedo ship))
+            (max-torpedoes (ship-torpedoes-max ship)))
         (when (and (member hex own-bases :test #'string=)
-                   (> max-missiles 0)
-                   (< missiles max-missiles)
-                   (< (/ (float missiles) max-missiles) (theta 'theta-resupply-threshold)))
+                   (> max-torpedoes 0)
+                   (< torpedoes max-torpedoes)
+                   (< (/ (float torpedoes) max-torpedoes) (theta 'theta-resupply-threshold)))
           (return-from find-resupplyable-ship-for-goal ship)))))
   nil)
 

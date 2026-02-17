@@ -448,7 +448,7 @@ void StateMachine::advance_next(GameState& s)
                     // Query ships in this hex
                     auto shipRows = db.Query(
                         "SELECT ship_code, ship_name, ship_type, owner, pd, "
-                        "beam, screen, tube, missiles "
+                        "phasic, shield, launcher, torpedoes "
                         "FROM ships WHERE game_id=? AND at_hex=? "
                         "AND destroyed_at IS NULL ORDER BY owner, ship_code",
                         {s.game_id, combat.hex_id});
@@ -477,9 +477,9 @@ void StateMachine::advance_next(GameState& s)
                                 combatMsg
                                     << "             " << blueNum++ << ". "
                                     << shipClass << " class " << ship[0] << " "
-                                    << ship[1] << " (PD:" << ship[4]
-                                    << " B:" << ship[5] << " S:" << ship[6]
-                                    << " T:" << ship[7] << " M:" << ship[8]
+                                    << ship[1] << " (PowerDrive:" << ship[4]
+                                    << " Phasic:" << ship[5] << " Shield:" << ship[6]
+                                    << " Launcher:" << ship[7] << " Torpedo:" << ship[8]
                                     << ")\n";
                             }
                         }

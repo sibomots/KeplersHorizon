@@ -28,7 +28,7 @@ bool BuildCancelActor::invoke(void)
     // Build parameter
     BuildCancelParam bp = BuildCancelParam::Builder()
                               .set_game_id(s.game_id)
-                              // JDW .set_module_id(s.module_id)
+                              // BUGBUG .set_module_id(s.module_id)
                               .set_player(owner)
                               .set_target(m_target)
                               .build();

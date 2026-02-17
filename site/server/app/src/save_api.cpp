@@ -144,9 +144,9 @@ void handle_game_save(const HttpRequest* req, HttpResponse* resp)
 
     auto ships =
         db.Query("SELECT ship_code, ship_name, owner, "
-                 "CONCAT('{\"pd\":', pd, ',\"beam\":', beam, ',\"screen\":', "
-                 "screen, ',\"tube\":', tube, "
-                 "',\"missiles\":', missiles, ',\"sr\":', sr, "
+                 "CONCAT('{\"pd\":', pd, ',\"phasic\":', phasic, ',\"shield\":', "
+                 "shield, ',\"launcher\":', launcher, "
+                 "',\"torpedoes\":', torpedoes, ',\"hangar\":', hangar, "
                  "',\"pd_spent\":', pd_spent, "
                  "',\"at_hex\":\"', IFNULL(at_hex,''), '\",\"at_system\":\"', "
                  "IFNULL(at_system,''), '\"}') "

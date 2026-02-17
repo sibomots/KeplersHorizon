@@ -55,7 +55,7 @@ produced or consumed, and decisions accumulated consequences over time. It
 felt less like a puzzle and more like a world that responded to pressure.
 
 The name of that game, along with its authorship and implementation details, 
-has been lost. No screenshots survive, and no source code remains. This was 
+has been lost. No screen-shots survive, and no source code remains. This was 
 long before the habit of archiving everything digitally. What remained was 
 the impression that a space game could be about structure rather than 
 spectacle, and that simulation did not need to announce itself loudly to be 

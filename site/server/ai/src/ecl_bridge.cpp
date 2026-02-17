@@ -259,7 +259,7 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_bool(s.is_warpship), plist);
         plist = make_cons(make_keyword("warpship"), plist);
 
-        // Racked systemships (for warpships with SR > 0)
+        // Racked systemships (for warpships with H > 0)
         plist = make_cons(marshal_string_list(s.carried_systemships), plist);
         plist = make_cons(make_keyword("racked"), plist);
 
@@ -281,14 +281,14 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_int(s.last_drive), plist);
         plist = make_cons(make_keyword("last-drive"), plist);
 
-        plist = make_cons(make_int(s.last_beam), plist);
-        plist = make_cons(make_keyword("last-beam"), plist);
+        plist = make_cons(make_int(s.last_phasic), plist);
+        plist = make_cons(make_keyword("last-phasic"), plist);
 
-        plist = make_cons(make_int(s.last_screen), plist);
-        plist = make_cons(make_keyword("last-screen"), plist);
+        plist = make_cons(make_int(s.last_shield), plist);
+        plist = make_cons(make_keyword("last-shield"), plist);
 
-        plist = make_cons(make_int(s.last_tube), plist);
-        plist = make_cons(make_keyword("last-tube"), plist);
+        plist = make_cons(make_int(s.last_launcher), plist);
+        plist = make_cons(make_keyword("last-launcher"), plist);
 
         // AI movement suggestion (empty if no valid move)
         plist = make_cons(make_string(s.suggested_destination), plist);
@@ -307,19 +307,19 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_int(s.tech_level), plist);
         plist = make_cons(make_keyword("tech"), plist);
 
-        plist = make_cons(make_int(s.sr), plist);
-        plist = make_cons(make_keyword("sr"), plist);
+        plist = make_cons(make_int(s.hangar), plist);
+        plist = make_cons(make_keyword("hangar"), plist);
 
-        plist = make_cons(make_int(s.missile), plist);
+        plist = make_cons(make_int(s.torpedo), plist);
         plist = make_cons(make_keyword("m"), plist);
 
-        plist = make_cons(make_int(s.tube), plist);
+        plist = make_cons(make_int(s.launcher), plist);
         plist = make_cons(make_keyword("t"), plist);
 
-        plist = make_cons(make_int(s.screen), plist);
+        plist = make_cons(make_int(s.shield), plist);
         plist = make_cons(make_keyword("s"), plist);
 
-        plist = make_cons(make_int(s.beam), plist);
+        plist = make_cons(make_int(s.phasic), plist);
         plist = make_cons(make_keyword("b"), plist);
 
         plist = make_cons(make_int(s.pd), plist);
@@ -362,14 +362,14 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_int(s.cargo_exotic), plist);
         plist = make_cons(make_keyword("cargo-exotic"), plist);
 
-        plist = make_cons(make_int(s.cargo_missiles), plist);
-        plist = make_cons(make_keyword("cargo-missiles"), plist);
+        plist = make_cons(make_int(s.cargo_torpedoes), plist);
+        plist = make_cons(make_keyword("cargo-torpedoes"), plist);
 
         plist = make_cons(make_int(s.cargo_capacity), plist);
         plist = make_cons(make_keyword("cargo-capacity"), plist);
 
-        plist = make_cons(make_int(s.missiles_max), plist);
-        plist = make_cons(make_keyword("missiles-max"), plist);
+        plist = make_cons(make_int(s.torpedoes_max), plist);
+        plist = make_cons(make_keyword("torpedoes-max"), plist);
 
         plist = make_cons(make_string(s.at_system), plist);
         plist = make_cons(make_keyword("at-system"), plist);
@@ -378,14 +378,14 @@ cl_object EclBridge::marshal_ship_list(const std::vector<AAShipInfo>& ships)
         plist = make_cons(make_int(s.pd_max), plist);
         plist = make_cons(make_keyword("pd-max"), plist);
 
-        plist = make_cons(make_int(s.beam_max), plist);
-        plist = make_cons(make_keyword("beam-max"), plist);
+        plist = make_cons(make_int(s.phasic_max), plist);
+        plist = make_cons(make_keyword("phasic-max"), plist);
 
-        plist = make_cons(make_int(s.screen_max), plist);
-        plist = make_cons(make_keyword("screen-max"), plist);
+        plist = make_cons(make_int(s.shield_max), plist);
+        plist = make_cons(make_keyword("shield-max"), plist);
 
-        plist = make_cons(make_int(s.tube_max), plist);
-        plist = make_cons(make_keyword("tube-max"), plist);
+        plist = make_cons(make_int(s.launcher_max), plist);
+        plist = make_cons(make_keyword("launcher-max"), plist);
 
         // Equipment
         plist = make_cons(make_int(s.lrs), plist);

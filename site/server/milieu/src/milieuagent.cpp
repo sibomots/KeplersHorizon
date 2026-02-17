@@ -167,11 +167,11 @@ bool MilieuAgent::apply(CargoParam& param)
 
     // Query ship with cargo info
     std::string q =
-        "SELECT ship_name, pd, sr, "
+        "SELECT ship_name, pd, hangar, "
         " cargo_ferrous, cargo_rare_earth, cargo_radioactive, "
         "cargo_crystalline, "
         " cargo_volatile, cargo_water, cargo_organic, cargo_exotic, "
-        "cargo_missiles "
+        "cargo_torpedoes "
         " FROM ships WHERE game_id=?  AND owner=? "
         " AND ( ship_code=? OR ship_name=?) AND destroyed_at IS NULL";
 
@@ -186,7 +186,7 @@ bool MilieuAgent::apply(CargoParam& param)
     {
         std::string name = rows[0][0];
         int pd = std::atoi(rows[0][1].c_str());
-        int sr = std::atoi(rows[0][2].c_str());
+        int hangar = std::atoi(rows[0][2].c_str());
 
         // Cargo values
         int cargo[9];
@@ -195,8 +195,8 @@ bool MilieuAgent::apply(CargoParam& param)
             cargo[i] = std::atoi(rows[0][3 + i].c_str());
         }
 
-        // Capacity formula: 2*PD + SR (minimum 1)
-        int capacity = 2 * pd + sr;
+        // Capacity formula: 2*PD + H (minimum 1)
+        int capacity = 2 * pd + hangar;
         if (capacity < 1)
         {
             capacity = 1;
@@ -204,7 +204,7 @@ bool MilieuAgent::apply(CargoParam& param)
         int total_cargo = 0;
         for (int i = 0; i < 8; i++)
         {
-            total_cargo += cargo[i]; // missiles don't count against capacity
+            total_cargo += cargo[i]; // torpedoes don't count against capacity
         }
 
         std::ostringstream out;
@@ -219,7 +219,7 @@ bool MilieuAgent::apply(CargoParam& param)
 
         const char* names[] = {"Ferrous",     "Rare Earth", "Radioactive",
                                "Crystalline", "Volatile",   "Water",
-                               "Organic",     "Exotic",     "Missiles"};
+                               "Organic",     "Exotic",     "Torpedoes"};
 
         for (int i = 0; i < 9; i++)
         {
@@ -272,17 +272,17 @@ bool MilieuAgent::apply(FabricateParam& param)
     case FabricateMode::LIST_PLANS:
         bres = FabricateStrategy::show_plans(game_id, module_id);
         break;
-    case FabricateMode::FABRICATE_MISSILE:
-        bres = FabricateStrategy::fabricate_missile(game_id, owner, qty);
+    case FabricateMode::FABRICATE_TORPEDO:
+        bres = FabricateStrategy::fabricate_torpedo(game_id, owner, qty);
         break;
-    case FabricateMode::FABRICATE_TUBE:
-        bres = FabricateStrategy::fabricate_tube(game_id, owner, qty);
+    case FabricateMode::FABRICATE_LAUNCHER:
+        bres = FabricateStrategy::fabricate_launcher(game_id, owner, qty);
         break;
-    case FabricateMode::FABRICATE_BEAM:
-        bres = FabricateStrategy::fabricate_beam(game_id, owner, qty);
+    case FabricateMode::FABRICATE_PHASIC:
+        bres = FabricateStrategy::fabricate_phasic(game_id, owner, qty);
         break;
-    case FabricateMode::FABRICATE_SCREEN:
-        bres = FabricateStrategy::fabricate_screen(game_id, owner, qty);
+    case FabricateMode::FABRICATE_SHIELD:
+        bres = FabricateStrategy::fabricate_shield(game_id, owner, qty);
         break;
     case FabricateMode::FABRICATE_TECH:
         bres = FabricateStrategy::fabricate_tech(game_id, owner, qty);

@@ -15,7 +15,7 @@
 ;;;;
 ;;;; Goal chain:
 ;;;;   :win-game
-;;;;     ← :maintain-missile-stock (fleet missiles >= 50%)
+;;;;     ← :maintain-torpedo-stock (fleet torpedoes >= 50%)
 ;;;;       ← :fabricate-materiel (convert resources at shipyard)
 ;;;;         ← :acquire-resource (extract or buy needed ingredients)
 ;;;;           ← :survey-for-yield (improve knowledge for better yield)
@@ -71,7 +71,7 @@
 
 (defun issue-acquire-action (slate)
   "Extract or buy a NEEDED resource.
-   Only extracts resources required by the missile recipe.
+   Only extracts resources required by the torpedo recipe.
    Only fires when :acquire-resource goal is active."
   ;; Prefer extraction over buying (free vs costs credits)
   (let ((extractable (find-extractable-for-goal slate)))
@@ -94,12 +94,12 @@
                                       rtype (theta 'theta-buy-quantity))))))))
 
 (defun issue-fabricate-action (slate)
-  "Fabricate missiles at shipyard.
+  "Fabricate torpedoes at shipyard.
    Only fires when :fabricate-materiel goal is active."
   (let ((ship (find-fabricatable-ship-for-goal slate)))
     (when ship
-      (format t "[LISP] -> fab missiles (goal: fabricate-materiel)~%")
-      (list (make-cmd "fab" "missiles")))))
+      (format t "[LISP] -> fab torpedoes (goal: fabricate-materiel)~%")
+      (list (make-cmd "fab" "torpedoes")))))
 
 (defun issue-sell-action (slate goals)
   "Sell cargo that serves no active goal.
@@ -116,15 +116,15 @@
                                         cargo-type qty))))))))
 
 (defun issue-resupply-action (slate)
-  "Resupply missiles at own base.
-   Only fires when :resupply-missiles goal is active."
+  "Resupply torpedoes at own base.
+   Only fires when :resupply-torpedoes goal is active."
   (let ((ship (find-resupplyable-ship-for-goal slate)))
     (when ship
-      (let* ((max-missiles (ship-missiles-max ship))
-             (current (ship-missile ship))
-             (need (- max-missiles current))
+      (let* ((max-torpedoes (ship-torpedoes-max ship))
+             (current (ship-torpedo ship))
+             (need (- max-torpedoes current))
              (qty (min need (theta 'theta-resupply-max))))
-        (format t "[LISP] -> rs ~A ~A (goal: resupply-missiles)~%"
+        (format t "[LISP] -> rs ~A ~A (goal: resupply-torpedoes)~%"
                 (ship-code ship) qty)
         (list (make-cmd "rs" (format nil "~A ~A"
                                       (ship-code ship) qty)))))))

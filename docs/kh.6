@@ -1,4 +1,4 @@
-.TH KEPLERS_HORIZON 6 "2026-02-17" "Version 1.5" "Kepler's Horizon Game Manual"
+.TH KEPLERS_HORIZON 6 "2026-02-17" "Version 1.7" "Kepler's Horizon Game Manual"
 .\"
 .\" ===================================================================
 .\" KEPLER'S HORIZON - COMPLETE GAME MANUAL
@@ -195,7 +195,7 @@ as space hexes for movement purposes.
 .TP
 .B WarpShip (W1\-W9)
 Capital ships capable of interstellar travel via warplines.
-WarpShips carry a Warp Generator (5 BP, mandatory) and may equip
+WarpShips carry a Warp Generator (5 CR, mandatory) and may equip
 SystemShip Racks to carry escort vessels.
 Hull codes are W followed by a single digit: W1, W2, ... W9.
 A fleet may contain up to 9 WarpShips.
@@ -207,19 +207,19 @@ They must be carried by WarpShips in SystemShip Racks.
 Hull codes are S followed by one or two digits: S1, S11, S25, etc.
 .SS "Ship Attributes"
 Every ship has the following combat-relevant attributes, each costing
-Build Points (BP) at construction time:
+Credit Points (CR) at construction time:
 .TS
 tab(|);
 l l l l.
 Attribute|Code|Cost|Description
 _
-Power/Drive|PD|1 BP/unit|Engine strength; powers movement and combat
-Warp Generator|WG|5 BP|WarpShips only (automatic, mandatory)
-Beam|B|1 BP/unit|Energy weapon; damage = allocation + tech level
-Screen|S|1 BP/unit|Energy shield; absorbs = allocation + tech level
-Tube|T|1 BP/tube|Launches 1 missile per combat round
-Missiles|M|1 BP/3|Projectile weapons; damage = 2 + tech level
-SystemShip Racks|SR|1 BP/rack|Carries 1 SystemShip per rack (WarpShips only)
+Power/Drive|PD|1 CR/unit|Engine strength; powers movement and combat
+Warp Generator|WG|5 CR|WarpShips only (automatic, mandatory)
+Phasic|P|1 CR/unit|Energy weapon; damage = allocation + tech level
+Shield|S|1 CR/unit|Energy shield; absorbs = allocation + tech level
+Launcher|L|1 CR/launcher|Launches 1 torpedo per combat round
+Torpedoes|T|1 CR/3|Projectile weapons; damage = 2 + tech level
+SystemShip Hangar|H|1 CR/hangar|Carries 1 SystemShip per hangar (WarpShips only)
 .TE
 .PP
 Additionally, ships may be equipped with economic hardware:
@@ -232,7 +232,7 @@ Long Range Scanner|LRS|50 CR|Required for \fBextract scan\fR and \fBsurvey\fR
 .TE
 .PP
 Equipment does not affect combat.
-A ship is destroyed only when all combat attributes (PD, B, S, T, M, SR)
+A ship is destroyed only when all combat attributes (PD, P, S, L, T, H)
 are reduced to zero.
 The Warp Generator never takes damage.
 .SS "Technology Levels"
@@ -252,14 +252,14 @@ _
 .PP
 Tech level adds to:
 .IP \(bu 2
-Beam damage (when hitting)
+Phasic damage (when hitting)
 .IP \(bu 2
-Missile damage (base 2 + tech level)
+Torpedo damage (base 2 + tech level)
 .IP \(bu 2
-Screen absorption (when powered)
+Shield absorption (when powered)
 .PP
-A Tech Level 2 ship with Beam 3 allocated to beams deals 5 damage on a hit.
-A Tech Level 2 ship with Screen 2 allocated absorbs 4 hits.
+A Tech Level 2 ship with Phasic 3 allocated to phasics deals 5 damage on a hit.
+A Tech Level 2 ship with Shield 2 allocated absorbs 4 hits.
 .\" ===================================================================
 .SH GAME SEQUENCE
 Each player-turn consists of the following phases, in order.
@@ -274,8 +274,8 @@ At the start of each player-turn, the system awards 1 VP for each
 enemy base star hex occupied by your ships.
 .IP "2." 4
 \fBBuild Ships.\fR
-Receive Stellar Credits (CR) and spend Build Points (BP) to construct
-new ships, repair damaged ships, resupply missiles, and manage equipment.
+Receive Stellar Credits (CR) and spend Credit Points (CR) to construct
+new ships, repair damaged ships, resupply torpedoes, and manage equipment.
 .IP "3." 4
 \fBMovement.\fR
 Move WarpShips along hex paths and warplines.
@@ -355,11 +355,11 @@ round and tech level and display current game state: whose turn, phase, round, c
 .TP
 .B fleet
 Display a manifest of your entire fleet: every ship with its hull code,
-name, location, and current attribute values (PD, B, S, T, M, SR, equipment).
+name, location, and current attribute values (PD, P, S, L, T, H, equipment).
 .TP
 .B cargo \fIship\fR
 Display the cargo manifest for \fIship\fR: quantities of each resource
-type in the hold, cargo capacity, and missile storage.
+type in the hold, cargo capacity, and torpedo storage.
 .TP
 .B hex \fIlocation\fR
 Show information about hex \fIlocation\fR: which ships occupy it,
@@ -395,14 +395,14 @@ Display the Combat Results Table.
 .B help \fItopic\fR\fR, \fB? \fItopic\fR
 Show help for a command or topic.
 Without arguments, lists all available topics.
-Topics: general, build, move, combat, economy, info, turn, ship, crt, missiles.
+Topics: general, build, move, combat, economy, info, turn, ship, crt, torpedoes.
 .TP
 .B recap
 Display a summary of recent game events.
 .SS "Build Commands"
 .TP
 .B build\fR, \fBbb
-Show current build state: active drafts and available BP.
+Show current build state: active drafts and available CR.
 .TP
 .B build new \fIclass\fR \fIname\fR\fR, \fBbn \fIclass\fR \fIname\fR
 Create a new ship draft.
@@ -433,34 +433,34 @@ Attribute syntax:
 .RS
 .TP
 .BR PD= N " or " D= N
-Power/Drive (1 BP per unit)
+Power/Drive (1 CR per unit)
 .TP
-.BR B= N
-Beam weapon (1 BP per unit)
+.BR P= N
+Phasic weapon (1 CR per unit)
 .TP
 .BR S= N
-Screen defense (1 BP per unit)
+Shield defense (1 CR per unit)
+.TP
+.BR L= N
+Torpedo launchers (1 CR per launcher)
 .TP
 .BR T= N
-Missile tubes (1 BP per tube)
+Torpedoes (1 CR per 3 torpedoes)
 .TP
-.BR M= N
-Missiles (1 BP per 3 missiles)
-.TP
-.BR SR= N
-SystemShip racks (1 BP per rack, WarpShips only)
+.BR H= N
+SystemShip hangars (1 CR per hangar, WarpShips only)
 .PP
-\fBExample:\fR BS FALCON PD=7 B=3 S=2 T=1 M=6
+\fBExample:\fR BS FALCON PD=7 P=3 S=2 L=1 T=6
 .RE
 .TP
 .B build commit \fItarget\fR\fR, \fBBC \fItarget\fR
 Finalize a draft and add the ship to your fleet.
-BP is deducted.
+CR is deducted.
 The ship appears in the fleet but must be deployed before it can act.
 .TP
 .B build cancel \fItarget\fR\fR, \fBbx \fItarget\fR
 Cancel a draft.
-No BP is deducted.
+No CR is deducted.
 .SS "Deployment Commands"
 .TP
 .B deploy \fIship\fR \fIsystem\fR\fR, \fBds \fIship\fR \fIsystem\fR
@@ -523,20 +523,23 @@ Attempt to flee combat.
 WarpShips only.
 SystemShips may never select escape.
 .PP
-\fBAllocation:\fR pd=N b=N s=N t=N m=N
+\fBAllocation:\fR PD=N P=N S=N L=N T=N
 .PP
-\fBBeam fire example:\fR
+\fBPhasic fire example:\fR
 .nf
-> co W3 a S25 pd=2 b=3 s=2
+> CO W3 A S25 PD=2 P=3 S=2
 .fi
-W3 attacks S25: 2 drive, 3 beam, 2 screen.
+W3 attacks S25: 2 drive, 3 phasic, 2 shield.
 .PP
-\fBMissile fire example:\fR
+\fBTorpedo fire example:\fR
 .nf
-> co S25 d W3 pd=4 t=1 m=3
+> CO S25 D W3 PD=4 L=1 T=3
 .fi
-S25 dodges while firing 1 missile at W3 with missile drive=3.
-Each \fBm=\fR parameter specifies one missile's drive power.
+S25 dodges while firing 1 torpedo at W3 with torpedo drive=3.
+Each \fBT=\fR parameter specifies that torpedo's drive power.
+If two torpedoes were fires, the player would need to use two Launchers:
+\fBL=2\fR and then assign \fIeach\fR Torpedo power: \fBT=3\fR \fBT=2\fR for 
+power assignments 3 and 2 respectively.
 .RE
 .TP
 .B combat commit\fR, \fBcc
@@ -553,9 +556,9 @@ Show your pending (uncommitted) combat orders.
 Assign damage to a ship's attributes after combat resolution.
 .RS
 .PP
-\fBExample:\fR ca W3 pd=2 b=1 s=2
+\fBExample:\fR CA W3 PD=2 P=1 S=2
 .br
-Distributes 5 total damage: 2 to PD, 1 to Beam, 2 to Screen.
+Distributes 5 total damage: 2 to PD, 1 to Phasic, 2 to Shield.
 The total assigned must equal the damage dealt (or consume all
 remaining HP if the ship is destroyed).
 .RE
@@ -567,7 +570,7 @@ Retreat destinations are validated against the hex adjacency graph.
 .TP
 .B repair \fIship\fR \fIattr\fR=\fIN\fR\fR, \fBrp \fIship\fR \fIattr\fR=\fIN\fR
 Repair a damaged ship.
-1 BP per attribute point restored.
+1 CR per attribute point restored.
 Ship must start the turn at a friendly base star hex (or at a
 REPAIR_DOCK or SHIPYARD facility).
 Cannot repair beyond original built capacity.
@@ -578,7 +581,7 @@ One attribute per command invocation.
 .RE
 .TP
 .B resupply \fIship\fR \fIquantity\fR\fR, \fBrs \fIship\fR \fIquantity\fR
-Resupply missiles at 1 BP per 3 missiles (up to original capacity).
+Resupply torpedoes at 1 CR per 3 torpedoes (up to original capacity).
 Ship must be at a friendly base star hex.
 .SS "Economy Commands"
 .TP
@@ -723,45 +726,45 @@ Determines the row/column on the CRT.
 Higher drive = better chance to hit or dodge, but diverts power
 from weapons and shields.
 .TP
-.B Beam (B)
+.B Phasic (B)
 Weapon power.
-Cannot exceed the ship's built beam rating.
-Damage on hit = beam allocation + tech level.
+Cannot exceed the ship's built phasic rating.
+Damage on hit = phasic allocation + tech level.
 .TP
-.B Screen (S)
+.B Shield (S)
 Defensive shield.
-Cannot exceed the ship's built screen rating.
-Absorption = screen allocation + tech level.
+Cannot exceed the ship's built shield rating.
+Absorption = shield allocation + tech level.
 .TP
-.B Tubes (T)
-Number of missiles to fire.
-Each tube requires 1 PD.
+.B Launchers (T)
+Number of torpedoes to fire.
+Each launcher requires 1 PD.
 .PP
-\fBConstraint:\fR D + B + S + T \[<=] current PD.
+\fBConstraint:\fR D + P + S + L \[<=] current PD.
 .PP
-\fBCritical rule:\fR Beams/Screens and Missiles cannot be used in the
+\fBCritical rule:\fR Phasics/Shields and Torpedoes cannot be used in the
 same round.
-If you fire missiles, you cannot power beams or screens.
-.SS "Beam Damage"
-When a beam attack hits:
+If you fire torpedoes, you cannot power phasics or shields.
+.SS "Phasic Damage"
+When a phasic attack hits:
 .IP 1. 3
-Damage = Beam power allocation + Tech level
+Damage = Phasic power allocation + Tech level
 .IP 2. 3
-If target powered screens: absorption = Screen allocation + Tech level
+If target powered shields: absorption = Shield allocation + Tech level
 .IP 3. 3
 Net damage = max(0, damage \- absorption)
-.SS "Missile Damage"
-Each missile is individually resolved:
+.SS "Torpedo Damage"
+Each torpedo is individually resolved:
 .IP \(bu 2
-Missiles always use the \fBAttack\fR tactic on the CRT
+Torpedoes always use the \fBAttack\fR tactic on the CRT
 .IP \(bu 2
-Each missile has its own drive setting (specified via \fBm=N\fR)
+Each torpedo has its own drive setting (specified via \fBT=N\fR)
 .IP \(bu 2
-Damage per hitting missile = 2 + Tech level
+Damage per hitting torpedo = 2 + Tech level
 .IP \(bu 2
-Missiles are expended on firing (regardless of hit/miss)
+Torpedoes are expended on firing (regardless of hit/miss)
 .IP \(bu 2
-Each tube fires at most 1 missile per round
+Each launcher fires at most 1 torpedo per round
 .SS "Damage Assignment"
 After resolution (Stage 2), each player must assign their ship's
 damage to specific attributes using \fBcombat apply\fR.
@@ -770,7 +773,7 @@ Total assigned must equal damage dealt
 .IP \(bu 2
 If damage exceeds remaining HP, the ship is destroyed (overkill accepted)
 .IP \(bu 2
-Ship is destroyed when PD + B + S + T + M + SR = 0
+Ship is destroyed when PD + P + S + L + T + H = 0
 .IP \(bu 2
 The Warp Generator is never damaged
 .SS "Retreat"
@@ -851,10 +854,10 @@ l l l l.
 Resource|Abbrev|Base Price|Primary Uses
 _
 FERROUS|Fe|5 CR|Hull construction, fabrication
-RARE_EARTH|Re|20 CR|Electronics, screens, tech
+RARE_EARTH|Re|20 CR|Electronics, shields, tech
 RADIOACTIVE|Rd|30 CR|Power, weapons, fabrication
-CRYSTALLINE|Cr|25 CR|Beams, warp drives, tech
-VOLATILE|Vo|8 CR|Fuel, missiles, fabrication
+CRYSTALLINE|Cr|25 CR|Phasics, warp drives, tech
+VOLATILE|Vo|8 CR|Fuel, torpedoes, fabrication
 WATER|H2O|3 CR|Life support
 ORGANIC|Or|6 CR|Food, medicine
 EXOTIC|Ex|100 CR|Special technology, advanced fabrication
@@ -906,10 +909,10 @@ tab(|);
 l l l l.
 Recipe|Output|Time|Material Cost
 _
-missiles|4 missiles|1 round|2 Fe, 1 Rd, 1 Vo
-tubes|+1 tube|3 rounds|5 Fe, 3 Re, 2 Cr
-beams|+1 beam|3 rounds|8 Fe, 4 Re, 3 Cr
-screens|+1 screen|3 rounds|6 Fe, 2 Re, 4 Cr
+torpedoes|4 torpedoes|1 round|2 Fe, 1 Rd, 1 Vo
+launchers|+1 launcher|3 rounds|5 Fe, 3 Re, 2 Cr
+phasics|+1 phasic|3 rounds|8 Fe, 4 Re, 3 Cr
+shields|+1 shield|3 rounds|6 Fe, 2 Re, 4 Cr
 tech|+1 tech level|5 rounds|10 Re, 5 Cr, 2 Ex
 .TE
 .SS "Salvage"
@@ -929,7 +932,7 @@ If PD reaches 0, the ship is destroyed.
 Knowledge level reduces hazard chance.
 .PP
 \fBYields:\fR
-Military wrecks yield missiles and rare electronics.
+Military wrecks yield torpedoes and rare electronics.
 Commercial wrecks yield common resources and credits.
 Ancient derelicts yield exotic materials.
 Debris fields yield ferrous and basic materials.
@@ -1217,8 +1220,8 @@ Ship counts by role, total combat attributes, weighted combat power
 (PD + 1.5B + 1.2S + 0.5T + 0.3M scaled by health ratio), and fleet
 composition analysis.
 .IP "\fBEnemy Profile\fR" 4
-Enemy ship count, positions, maximum observed tech, missile capability,
-screen density, and estimated total BP investment.
+Enemy ship count, positions, maximum observed tech, torpedo capability,
+shield density, and estimated total CR investment.
 Cross-turn metrics track historical enemy positions and watermarks
 from combat observations.
 .IP "\fBHex Valuation\fR" 4
@@ -1286,15 +1289,16 @@ sub-goals to be satisfied first.
 The \fB:needed-resources\fR declaration prevents the sell-excess
 logic from liquidating cargo that serves an active goal.
 .PP
+.ne 7
 The current goal graph:
 .TS
 tab(|);
 l l l l.
 Goal|Pri|Parent|Trigger
 _
-:maintain-missile-stock|1|:win-game|Fleet missiles below 50%
-:resupply-missiles|2|:maintain-missile-stock|Ship at own base with depleted missiles
-:fabricate-materiel|3|:maintain-missile-stock|Ship at shipyard with ingredients
+:maintain-torpedo-stock|1|:win-game|Fleet torpedoes below 50%
+:resupply-torpedoes|2|:maintain-torpedo-stock|Ship on base with depleted torpedoes
+:fabricate-materiel|3|:maintain-torpedo-stock|Ship at shipyard with ingredients
 :acquire-resource|4|:fabricate-materiel|Missing fabrication ingredient
 :survey-for-yield|5|:acquire-resource|System knowledge below Surveyed
 :salvage-opportunity|6|:win-game|Ship at hex with salvageable wreckage
@@ -1326,19 +1330,19 @@ tab(|);
 l l l.
 Template|Attributes|Role
 _
-Brawler|PD=6 B=4 S=3|Main battle ship; default first build
-Interceptor|PD=5 B=2 S=2|Fast pursuit; spreads across enemy bases
-Missile Boat|PD=4 S=1 T=2 M=6|Alpha strike; counters heavy screens
-Fortress|PD=8 B=6 S=5|SystemShip for base defense
-Defender|PD=6 B=4 S=3|SystemShip garrison
+Brawler|PD=6 P=4 S=3|Main battle ship; default first build
+Interceptor|PD=5 P=2 S=2|Fast pursuit; spreads across enemy bases
+Torpedo Boat|PD=4 S=1 L=2 T=6|Alpha strike; counters heavy shields
+Fortress|PD=8 P=6 S=5|SystemShip for base defense
+Defender|PD=6 P=4 S=3|SystemShip garrison
 .TE
 .PP
 Design selection is driven by design rules: the first build is always
-a Brawler; missile boats are chosen when the enemy fields heavy
-screens; interceptors fill the fleet for base coverage; defenders
+a Brawler; torpedo boats are chosen when the enemy fields heavy
+shields; interceptors fill the fleet for base coverage; defenders
 garrison unguarded home bases.
 .PP
-Build heuristics gate construction on BP availability, tech-level
+Build heuristics gate construction on CR availability, tech-level
 timing (the AI may delay a build if tech upgrades within 1\-2 turns),
 and fleet size relative to the enemy.
 .SS "Combat Strategy"
@@ -1363,22 +1367,22 @@ the +5 automatic miss.
 Three allocation modes: standard attack (target diff +2), pursuit
 (+4), and counter-dodge (+3).
 .IP \(bu 2
-Missile boats fire when they have stock; retreat when empty.
+Torpedo boats fire when they have stock; retreat when empty.
 .IP \(bu 2
 Stalemate breaker: if the AI is the attacker and stalemate count
 reaches 2, it forces maximum damage output or retreats.
 .IP \(bu 2
 Damage assignment sacrifices attributes in order:
-tubes, beams, screens, PD (preserved last for retreat capability).
+launchers, phasics, shields, PD (preserved last for retreat capability).
 .SS "Economic Strategy"
 Economic actions are driven by the goal graph.
 The MPC evaluator selects the highest-priority unsatisfied goal
 and dispatches its action generator.
 Action generators map goals to concrete commands:
 .IP \(bu 2
-\fBResupply:\fR reload missiles at own base.
+\fBResupply:\fR reload torpedoes at own base.
 .IP \(bu 2
-\fBFabricate:\fR convert raw materials to missiles at a shipyard
+\fBFabricate:\fR convert raw materials to torpedoes at a shipyard
 (recipe: 2 Fe + 1 Rd + 1 Vo).
 .IP \(bu 2
 \fBAcquire:\fR extract resources from a deposit or buy them at
@@ -1412,13 +1416,13 @@ Enemy position history (per-ship hex snapshots)
 .IP \(bu 2
 Enemy distance-to-base (closing rate inference)
 .IP \(bu 2
-Combat watermarks (maximum observed PD, beam, screen, tubes per enemy)
+Combat watermarks (maximum observed PD, phasic, shield, launchers per enemy)
 .IP \(bu 2
 Rack inference (enemy ship carried SystemShips)
 .IP \(bu 2
 Per-theater engagement history (rounds fought, power committed)
 .IP \(bu 2
-Enemy economic estimate (inferred total BP investment)
+Enemy economic estimate (inferred total CR investment)
 .\" ===================================================================
 .SH SYSTEMSHIP PICKUP AND DROP
 .SS "During Movement Phase"
@@ -1428,15 +1432,15 @@ Costs 1 PD per SystemShip picked up or dropped
 Can be performed at any star hex during movement
 .SS "During Combat"
 .IP \(bu 2
-Requires: Drive=0, Screen=0, Dodge or Escape tactic
+Requires: Drive=0, Shield=0, Dodge or Escape tactic
 .IP \(bu 2
 Only 1 SystemShip per combat round
 .IP \(bu 2
-May fire Beam (but not Missiles) while picking up/dropping
+May fire Phasic (but not Torpedoes) while picking up/dropping
 .IP \(bu 2
 Dropped SystemShips cannot fire that round
 .IP \(bu 2
-Picked up SystemShips cannot fire but may power Screens
+Picked up SystemShips cannot fire but may power Shields
 .SS "After Combat (Phase 5)"
 .IP \(bu 2
 Free rearrangement of SystemShips at star hexes
@@ -1451,13 +1455,13 @@ tab(|);
 l l.
 Attribute|Cost
 _
-Power/Drive (PD)|1 BP per unit
-Warp Generator (WG)|5 BP (WarpShips only, automatic)
-Beam (B)|1 BP per unit
-Screen (S)|1 BP per unit
-Tube (T)|1 BP per tube
-Missiles (M)|1 BP per 3 missiles
-SystemShip Rack (SR)|1 BP per rack (WarpShips only)
+Power/Drive (PD)|1 CR per unit
+Warp Generator (WG)|5 CR (WarpShips only, automatic)
+Phasic (P)|1 CR per unit
+Shield (S)|1 CR per unit
+Launcher (L)|1 CR per launcher
+Torpedoes (T)|1 CR per 3 torpedoes
+SystemShip Hangar (H)|1 CR per hangar (WarpShips only)
 .TE
 .\" ===================================================================
 .SH CONSTRAINTS AND INVARIANTS
@@ -1482,7 +1486,7 @@ SystemShips cannot have Warp Generators or SystemShip Racks.
 .IP \(bu 2
 WarpShips cannot be carried in SystemShip Racks.
 .IP \(bu 2
-Beams/Screens and Missiles cannot be used in the same combat round.
+Phasics/Shields and Torpedoes cannot be used in the same combat round.
 .IP \(bu 2
 SystemShips may never select the Escape tactic.
 .IP \(bu 2
@@ -1490,30 +1494,30 @@ PD used for movement is not permanently expended.
 .IP \(bu 2
 Repairs cannot exceed original built capacity.
 .IP \(bu 2
-Missile resupply cannot exceed original missile capacity.
+Torpedo resupply cannot exceed original torpedo capacity.
 .\" ===================================================================
 .SH EXAMPLES
 .SS "Building a WarpShip"
 .nf
-> \fBbn\fR W Falcon
-> \fBbs\fR Falcon pd=5 b=3 s=2 t=1 m=3
-> \fBbc\fR Falcon
+> \fBbn\fR W FALCON
+> \fBbs\fR FALCON PD=5 P=3 S=2 L=1 T=3
+> \fBbc\fR FALCON
 .fi
 .PP
-Total cost: PD(5) + B(3) + S(2) + T(1) + M(1) + WG(5) = 17 BP.
+Total cost: PD(5) + P(3) + S(2) + L(1) + T(1) + WG(5) = 17 CR.
 Tech level determined by current round.
 .SS "Building a SystemShip"
 .nf
-> \fBbn\fR S Avenger
-> \fBbs\fR Avenger pd=1 t=1 m=6
-> \fBbc\fR Avenger
+> \fBBN\fR S AVENGER
+> \fBBS\fR AVENGER PD=1 L=1 T=6
+> \fBBC\fR AVENGER
 .fi
 .PP
-Total cost: PD(1) + T(1) + M(2) = 4 BP.
+Total cost: PD(1) + L(1) + T(2) = 4 CR.
 No Warp Generator required.
 .SS "Movement"
 .nf
-> \fBm\fR W6 Tavon Xylen
+> \fBM\fR W6 Tavon Xylen
 .fi
 .PP
 W6 moves from current hex to Tavon via the nearest warpline path,
@@ -1521,21 +1525,21 @@ then onward to Xylen.
 Total PD cost depends on path length (BFS-computed).
 .SS "Combat Sequence"
 .nf
-> \fBco\fR W3 a S25 pd=2 b=3 s=2
-> \fBcc\fR
+> \fBCO\fR W3 A S25 PD=2 P=3 S=2
+> \fBCC\fR
 \fI(Wait for opponent to commit...)\fR
 \fI(Resolution: W3 hits S25 for 3+tech damage)\fR
-> \fBca\fR S25 pd=2 b=1
+> \fBCA\fR S25 PD=2 P=1
 .fi
-.SS "Missile Fire"
+.SS "Torpedo Fire"
 .nf
-> \fBco\fR S25 d W3 pd=4 t=1 m=3
-> \fBcc\fR
+> \fBCO\fR S25 D W3 PD=4 L=1 T=3
+> \fBCC\fR
 .fi
 .PP
-S25 dodges while firing 1 missile at W3.
-The missile uses Attack tactic with drive=3.
-Missile damage on hit = 2 + tech level.
+S25 dodges while firing 1 torpedo at W3.
+The torpedo uses Attack tactic with drive=3 on the Torpedo.
+Torpedo damage on hit = 2 + tech level.
 .SS "Economic Workflow"
 .nf
 > \fBout\fR W1 lrs
@@ -1544,7 +1548,7 @@ Missile damage on hit = 2 + tech level.
 > \fBex\fR W1 ferrous
 > \fBmarket\fR
 > \fBtrade sell\fR ferrous 5
-> \fBfab\fR missiles W1
+> \fBfab\fR torpedoes W1
 .fi
 .SS "Save and Load"
 .nf
@@ -1599,7 +1603,7 @@ l l.
 Event Type|Effect
 _
 NAVIGATION_HAZARD|+N PD cost to move through hex
-COMBAT_INTERFERENCE|\-N beam damage in hex
+COMBAT_INTERFERENCE|\-N phasic damage in hex
 SALVAGE_OPPORTUNITY|+25% salvage yields
 EXTRACTION_BONUS|+N extraction yield
 .TE
@@ -1756,7 +1760,7 @@ It returns a list of command plists or nil.
                                  (compute-hex-value slate h))))))
         (format t "[LISP] fortify-chokepoint -> ~A~%" best)
         (list (make-cmd "BN" "S SENTINEL")
-              (make-cmd "BS" "SENTINEL PD=6 B=4 S=3")
+              (make-cmd "BS" "SENTINEL PD=6 P=4 S=3")
               (make-cmd "BC" "SENTINEL")
               (make-cmd "DS"
                 (format nil "SENTINEL ~A" best)))))))
@@ -1921,14 +1925,14 @@ Three translation approaches, ordered by complexity:
 \fBParameter Tables.\fR
 The diary feeds a statistical pass that emits a
 \f(CWdefparameter\fR config file.
-Example: "average earliest viable missile build = round 5.2
+Example: "average earliest viable torpedo build = round 5.2
 across 47 games" becomes a theta value.
 No generated Lisp code.
 Simplest and likely captures 80% of the benefit.
 .IP "2." 4
 \fBRule Selection.\fR
 Multiple strategy variants are written by hand (aggressive,
-turtle, missile-rush).
+turtle, torpedo-rush).
 Diary analysis determines which variants performed best per
 opponent profile.
 The build step emits a selection table.

@@ -357,13 +357,13 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
 
             result << "  Recovered " << qty << " " << item_name << "\n";
         }
-        else if (KH_EQU(item_type, "missiles"))
+        else if (KH_EQU(item_type, "torpedoes"))
         {
-            db.Exec("UPDATE ships SET missiles=missiles+? "
+            db.Exec("UPDATE ships SET torpedoes=torpedoes+? "
                     "WHERE game_id=? AND owner=? AND ship_code=?",
                     {qty, game_id, me, ship_code});
 
-            result << "  Recovered " << qty << " missiles\n";
+            result << "  Recovered " << qty << " torpedoes\n";
         }
         else if (KH_EQU(item_type, "credits"))
         {

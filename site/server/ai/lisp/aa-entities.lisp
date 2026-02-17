@@ -29,19 +29,19 @@
 
   ;; --- Core Stats ---
   (:pd :type integer :default 0)
-  (:beam :alias :b :type integer :default 0)
-  (:screen :alias :s :type integer :default 0)
-  (:tube :alias :t :type integer :default 0)
-  (:missile :alias :m :type integer :default 0)
-  (:sr :type integer :default 0)
+  (:phasic :alias :b :type integer :default 0)
+  (:shield :alias :s :type integer :default 0)
+  (:launcher :alias :t :type integer :default 0)
+  (:torpedo :alias :m :type integer :default 0)
+  (:hangar :type integer :default 0)
   (:tech :type integer :default 0)
 
   ;; --- Max Stats (for damage/repair) ---
   (:base-pd :type integer :default-form (ship-pd ship))
   (:pd-max :type integer :default-form (ship-pd ship))
-  (:beam-max :type integer :default-form (ship-beam ship))
-  (:screen-max :type integer :default-form (ship-screen ship))
-  (:tube-max :type integer :default-form (ship-tube ship))
+  (:phasic-max :type integer :default-form (ship-phasic ship))
+  (:shield-max :type integer :default-form (ship-shield ship))
+  (:launcher-max :type integer :default-form (ship-launcher ship))
 
   ;; --- Warp / Rack ---
   (:warpship-p :alias :warpship)
@@ -63,9 +63,9 @@
   (:cargo-water :type integer :default 0)
   (:cargo-organic :type integer :default 0)
   (:cargo-exotic :type integer :default 0)
-  (:cargo-missiles :type integer :default 0)
+  (:cargo-torpedoes :type integer :default 0)
   (:cargo-capacity :type integer :default 10)
-  (:missiles-max :type integer :default 0)
+  (:torpedoes-max :type integer :default 0)
 
   ;; --- Derived Cargo ---
   (:cargo-total :derived (+ (ship-cargo-ferrous ship)
@@ -76,7 +76,7 @@
                             (ship-cargo-water ship)
                             (ship-cargo-organic ship)
                             (ship-cargo-exotic ship)
-                            (ship-cargo-missiles ship)))
+                            (ship-cargo-torpedoes ship)))
   (:cargo-free-space :derived (- (ship-cargo-capacity ship)
                                  (ship-cargo-total ship)))
 
@@ -88,9 +88,9 @@
   ;; --- Revealed Enemy Orders ---
   (:last-tactic :type character)
   (:last-drive :type integer :default 0)
-  (:last-beam :type integer :default 0)
-  (:last-screen :type integer :default 0)
-  (:last-tube :type integer :default 0))
+  (:last-phasic :type integer :default 0)
+  (:last-shield :type integer :default 0)
+  (:last-launcher :type integer :default 0))
 
 ;;; ============================================================================
 ;;; Combat Entity (active combat instance at a hex)

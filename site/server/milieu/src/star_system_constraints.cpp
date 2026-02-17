@@ -66,19 +66,19 @@ int StarSystemConstraints::getConstraintModifier(
 }
 
 // Combat modifiers
-int StarSystemConstraints::getBeamModifier(int game_id,
+int StarSystemConstraints::getPhasicModifier(int game_id,
                                            const std::string& hex_id)
 {
     return getConstraintModifier(game_id, hex_id, "COMBAT");
 }
 
-int StarSystemConstraints::getScreenModifier(int game_id,
+int StarSystemConstraints::getShieldModifier(int game_id,
                                              const std::string& hex_id)
 {
     return getConstraintModifier(game_id, hex_id, "COMBAT");
 }
 
-int StarSystemConstraints::getMissileModifier(int game_id,
+int StarSystemConstraints::getTorpedoModifier(int game_id,
                                               const std::string& hex_id)
 {
     return getConstraintModifier(game_id, hex_id, "COMBAT");

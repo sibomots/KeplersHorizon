@@ -92,7 +92,7 @@
         (enemy-bases (slate-enemy-bases slate)))
     (dolist (ship own-ships)
       (when (and (ship-warpship-p ship)
-                 (> (ship-sr ship) 0))
+                 (> (ship-hangar ship) 0))
         (let ((hex (ship-hex ship))
               (racked (ship-racked ship)))
           ;; Only drop at enemy bases (star systems)
@@ -118,11 +118,11 @@
     ;; Find warpships with available rack capacity
     (dolist (warp own-ships)
       (when (and (ship-warpship-p warp)
-                 (> (ship-sr warp) 0))
+                 (> (ship-hangar warp) 0))
         (let* ((hex (ship-hex warp))
                (racked (ship-racked warp))
                (racked-count (if racked (length racked) 0))
-               (capacity (ship-sr warp)))
+               (capacity (ship-hangar warp)))
           ;; Only pick at star systems (check if at own base or any star)
           (when (and hex
                      (< racked-count capacity))

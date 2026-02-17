@@ -17,8 +17,8 @@
 
 // FabricateActor - Manufacture items from raw materials
 // Usage: fabricate list
-//        fabricate missiles <qty>
-//        fabricate tubes <qty>
+//        fabricate torpedoes <qty>
+//        fabricate launchers <qty>
 //        fabricate tech
 class FabricateActor : public ICmd
 {

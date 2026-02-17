@@ -102,7 +102,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
    std::string* sval;
    std::vector<std::string>* vec_sval;
    AttributeMap* vec_attr;
-   std::pair<AttributeMap*, MissileSet*>* combat_pair;
+   std::pair<AttributeMap*, TorpedoSet*>* combat_pair;
 }
 
 %type <ival> combat_tactic;
@@ -125,7 +125,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
 %token TOK_APPLY
 %token TOK_ATTACK
-%token TOK_BEAM
+%token TOK_PHASIC
 %token TOK_BUILD
 %token TOK_BUILD_COMMIT
 %token TOK_BUILD_NEW
@@ -158,7 +158,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_LICENSE
 %token TOK_LIST
 %token TOK_LOAD
-%token TOK_MISSILE
+%token TOK_TORPEDO
 %token TOK_MOVE
 %token TOK_CHART
 %token TOK_NEW
@@ -173,7 +173,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_SAVE
 %token TOK_ACCEPT
 %token TOK_REJECT
-%token TOK_SCREEN
+%token TOK_SHIELD
 %token TOK_SCORE
 %token TOK_EXTRACT
 %token TOK_MARKET
@@ -193,7 +193,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %token TOK_RESOURCES
 %token TOK_PLANETS
 %token TOK_SURVEY
-%token TOK_TUBE
+%token TOK_LAUNCHER
 %token TOK_CLEAR
 %token TOK_CONFIGURE
 %token TOK_RELOAD
@@ -204,14 +204,14 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 
 /* Attribute assignment tokens - value in yylval.ival */
 %token <ival> TOK_PD_ASSIGN
-%token <ival> TOK_B_ASSIGN
+%token <ival> TOK_P_ASSIGN
 %token <ival> TOK_S_ASSIGN
+%token <ival> TOK_L_ASSIGN
 %token <ival> TOK_T_ASSIGN
-%token <ival> TOK_M_ASSIGN
-%token <ival> TOK_SR_ASSIGN
+%token <ival> TOK_H_ASSIGN
 
-%token <sval> TOK_PD_ASSIGN_INVALID TOK_B_ASSIGN_INVALID TOK_S_ASSIGN_INVALID
-%token <sval> TOK_T_ASSIGN_INVALID TOK_M_ASSIGN_INVALID TOK_SR_ASSIGN_INVALID
+%token <sval> TOK_PD_ASSIGN_INVALID TOK_P_ASSIGN_INVALID TOK_S_ASSIGN_INVALID
+%token <sval> TOK_L_ASSIGN_INVALID TOK_T_ASSIGN_INVALID TOK_H_ASSIGN_INVALID
 
 %token TOK_UNKNOWN
 
@@ -244,7 +244,7 @@ command:
 license_cmd:
    TOK_LICENSE
    {
-       // JDW OK
+       // BUGBUG OK
        ICmd* pCmd = LicenseCommand::Builder().build();
        pCmd->invoke();
        SafeDelete(pCmd);
@@ -253,7 +253,7 @@ license_cmd:
 session_cmd:
    TOK_SAVE
    {
-       // JDW OK
+       // BUGBUG OK
        ICmd *pCmd = SaveCommand::Builder().set_show_usage().build();
        pCmd->invoke();
        SafeDelete(pCmd);
@@ -261,7 +261,7 @@ session_cmd:
    |
    TOK_SAVE TOK_STRING
    {
-       // JDW OK
+       // BUGBUG OK
        std::string save_name(*$2);
        ICmd *pCmd = SaveCommand::Builder().set_name(save_name).build();
        pCmd->invoke();
@@ -271,7 +271,7 @@ session_cmd:
    |
    TOK_LOAD
    {
-        // JDW OK
+        // BUGBUG OK
         ICmd *pCmd = LoadCommand::Builder().set_list_saves().build();
         pCmd->invoke();
         SafeDelete(pCmd);
@@ -279,7 +279,7 @@ session_cmd:
    |
    TOK_LOAD TOK_STRING
    {
-        // JDW OK
+        // BUGBUG OK
         std::string load_name(*$2);
         ICmd *pCmd = LoadCommand::Builder().set_name(load_name).build();
         pCmd->invoke();
@@ -289,7 +289,7 @@ session_cmd:
    |
    TOK_ACCEPT TOK_STRING
    {
-        // JDW OK
+        // BUGBUG OK
         std::string accept_name(*$2);
         ICmd *pCmd = AcceptCommand::Builder().set_name(accept_name).build();
         pCmd->invoke();
@@ -299,7 +299,7 @@ session_cmd:
    |
    TOK_REJECT TOK_STRING
    {
-        // JDW OK
+        // BUGBUG OK
         std::string reject_name(*$2);
         ICmd *pCmd = RejectCommand::Builder().set_name(reject_name).build();
         pCmd->invoke();
@@ -307,7 +307,7 @@ session_cmd:
         SafeDelete(pCmd);
    }
    | TOK_DELETE TOK_STRING {
-        // JDW OK
+        // BUGBUG OK
         std::string target_game(*$2);
         ICmd* pCmd = DeleteCommand::Builder().setSaveName(target_game).build();
         if (pCmd && pCmd->invoke()) { /* success */ }
@@ -317,8 +317,8 @@ session_cmd:
    |
    TOK_CLEAR
    {
-        // JDW OK
-        // Using ANSI escape sequence ESC[2J which means "clear entire screen"
+        // BUGBUG OK
+        // Using ANSI escape sequence ESC[2J which means "clear entire shield"
         Telemetry::instance().write("\033[2J");
    }
    
@@ -341,13 +341,13 @@ info_cmd:
       SafeDelete(pCmd);
    }
    | TOK_CRT {
-      // JDW OK
+      // BUGBUG OK
       ICmd* pCmd = CrtCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
    }
    | TOK_RECAP {
-      // JDW BUGBUG should be cleaned up
+      // BUGBUG BUGBUG should be cleaned up
       ICmd* pCmd = RecapCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
@@ -372,7 +372,7 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_HEX TOK_STRING {
-      // JDW OK
+      // BUGBUG OK
       std::string identifier(*$2);
       ICmd* pCmd = HexCommand::Builder().setLocation(identifier).build();
       if (pCmd && pCmd->invoke()) { /* success */ }
@@ -470,7 +470,7 @@ looking_cmd:
   }
   | TOK_EXTRACT TOK_STRING TOK_STRING chain_resource_words {
 
-      // JDW OK, it works.
+      // BUGBUG OK, it works.
       std::string ship(*$2);
 
       // Join words with underscore: "rare" + "earth" -> "RARE_EARTH"
@@ -674,11 +674,11 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   | TOK_CARGO {
-      // JDW OK
+      // BUGBUG OK
       Telemetry::instance().write("Usage: cargo <ship_code>");
   }
   | TOK_CARGO TOK_STRING {
-      // JDW OK
+      // BUGBUG OK
       std::string ship(*$2);
       ICmd* pCmd = CargoActor::Builder()
                       .ship(ship)
@@ -704,13 +704,13 @@ looking_cmd:
 
 turn_cmd:
   TOK_NEXT {
-      // JDW OK
+      // BUGBUG OK
       ICmd* pCmd = NextCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
   }
   | TOK_DONE {
-      // JDW OK
+      // BUGBUG OK
       ICmd* pCmd = DoneCommand::Builder().build();
       if (pCmd && pCmd->invoke()) { /* success */ }
       SafeDelete(pCmd);
@@ -722,20 +722,20 @@ turn_cmd:
 
 combat_cmd:
    TOK_COMBAT TOK_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
-       // JDW OK
+       // BUGBUG OK
        // Build and invoke combat order command
        std::string* attacker_ship = $3;
        std::string* attackee_ship = $5;
        char tact = $4;
-       std::pair<AttributeMap*, MissileSet*>* compair = $6;
+       std::pair<AttributeMap*, TorpedoSet*>* compair = $6;
        AttributeMap* patmap = compair->first;
-       MissileSet* pmisset  = compair->second;
+       TorpedoSet* pmisset  = compair->second;
 
        ICmd* pCmd = CombatOrderActor::Builder()
                                 .ship_code(*attacker_ship)
                                 .target(*attackee_ship)
                                 .tactic(tact)
-                                .set_missiles(*pmisset)
+                                .set_torpedoes(*pmisset)
                                 .set_attributes(*patmap)
                                 .build(); 
        if (pCmd)
@@ -750,20 +750,20 @@ combat_cmd:
        SafeDelete(pCmd);
    }
    | TOK_COMBAT_ORDER combat_initiator_ship combat_tactic combat_target_ship new_combat_order_attr_spec {
-       // JDW OK
+       // BUGBUG OK
        // Build and invoke combat order command
        std::string* attacker_ship = $2;
        std::string* attackee_ship = $4;
        char tact = $3;
-       std::pair<AttributeMap*, MissileSet*>* compair = $5;
+       std::pair<AttributeMap*, TorpedoSet*>* compair = $5;
        AttributeMap* patmap = compair->first;
-       MissileSet* pmisset  = compair->second;
+       TorpedoSet* pmisset  = compair->second;
 
        ICmd* pCmd = CombatOrderActor::Builder()
                                 .ship_code(*attacker_ship)
                                 .target(*attackee_ship)
                                 .tactic(tact)
-                                .set_missiles(*pmisset)
+                                .set_torpedoes(*pmisset)
                                 .set_attributes(*patmap)
                                 .build(); 
        if (pCmd)
@@ -779,7 +779,7 @@ combat_cmd:
    }
    // combat apply ...
    | TOK_COMBAT TOK_APPLY combat_damaged_ship combat_apply_spec {
-       // JDW OK
+       // BUGBUG OK
        // $3 is target ship to apply on
        // $4 is AttributeMap to use.  We do allow repairing "M"
        std::string* target_ship = $3;
@@ -797,7 +797,7 @@ combat_cmd:
    }
    // ca ...
    | TOK_COMBAT_APPLY combat_damaged_ship combat_apply_spec {
-       // JDW OK
+       // BUGBUG OK
        // $2 is target ship to apply on
        // $3 is AttributeMap to use.  We do allow repairing "M"
        std::string* target_ship = $2;
@@ -817,7 +817,7 @@ combat_cmd:
           yyerror(&@1, "cd: usage: cd"); YYABORT;
    }
    | TOK_COMBAT_ORDER error {
-          yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n B=n S=n T=n M=n SR=n]");
+          yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n P=n S=n L=n T=n H=n]");
           YYABORT;
    }
    | TOK_COMBAT_APPLY error {
@@ -832,35 +832,35 @@ combat_cmd:
    }
    //  cd
    | TOK_COMBAT_DRAFTS {
-       // JDW OK
+       // BUGBUG OK
        ICmd* pCmd = CombatDraftsActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // combat commit
    | TOK_COMBAT TOK_COMMIT {
-       // JDW OK
+       // BUGBUG OK
        ICmd* pCmd = CombatCommitActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // cc
    | TOK_COMBAT_COMMIT {
-       // JDW OK
+       // BUGBUG OK
        ICmd* pCmd = CombatCommitActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // combat cancel
    | TOK_COMBAT TOK_CANCEL {
-       // JDW OK
+       // BUGBUG OK
        ICmd* pCmd = CombatCancelActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
    }
    // cx
    | TOK_COMBAT_CANCEL {
-       // JDW OK
+       // BUGBUG OK
        ICmd* pCmd = CombatCancelActor::Builder().build();
        if (pCmd && pCmd->invoke()) { /* success */ }
        SafeDelete(pCmd);
@@ -905,9 +905,9 @@ combat_tactic:
 
 
 new_combat_order_attr_spec: {  
-     $$ = new std::pair<AttributeMap*,  MissileSet*>;
+     $$ = new std::pair<AttributeMap*,  TorpedoSet*>;
      $$->first = new AttributeMap;
-     $$->second = new MissileSet;
+     $$->second = new TorpedoSet;
   }
   | new_combat_order_attr_spec TOK_PD_ASSIGN {
       $$ = $1;
@@ -917,34 +917,34 @@ new_combat_order_attr_spec: {
         it->second = $2; // choose: overwrite, or keep old
       }
   }
-  | new_combat_order_attr_spec TOK_B_ASSIGN {
+  | new_combat_order_attr_spec TOK_P_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->first->insert({AttributeID::BEAM, $2});
+      auto [it, inserted] = $$->first->insert({AttributeID::PHASIC, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate BEAM assignment");
+        yyerror(&@2, "duplicate PHASIC assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
   | new_combat_order_attr_spec TOK_S_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->first->insert({AttributeID::SCREEN, $2});
+      auto [it, inserted] = $$->first->insert({AttributeID::SHIELD, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate SCREEN assignment");
+        yyerror(&@2, "duplicate SHIELD assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
+  }
+  | new_combat_order_attr_spec TOK_L_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->first->insert({AttributeID::LAUNCHER, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate LAUNCHER assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
   | new_combat_order_attr_spec TOK_T_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->first->insert({AttributeID::TUBE, $2});
-      if (!inserted) {
-        yyerror(&@2, "duplicate TUBE assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | new_combat_order_attr_spec TOK_M_ASSIGN {
-      $$ = $1;
-      // Missile power per missile is inserted into the vector of MissileSet
-      // The AttributeMap[MISSILE] value is left alone. We don't
+      // Torpedo power per torpedo is inserted into the vector of TorpedoSet
+      // The AttributeMap[TORPEDO] value is left alone. We don't
       // use it for combat per se. 
       $$->second->push_back($2);
   }
@@ -962,39 +962,39 @@ combat_apply_spec: {
         it->second = $2; // choose: overwrite, or keep old
       }
   }
-  | combat_apply_spec TOK_B_ASSIGN {
+  | combat_apply_spec TOK_P_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
+      auto [it, inserted] = $$->insert({AttributeID::PHASIC, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate BEAM assignment");
+        yyerror(&@2, "duplicate PHASIC assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
   | combat_apply_spec TOK_S_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
+      auto [it, inserted] = $$->insert({AttributeID::SHIELD, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate SCREEN assignment");
+        yyerror(&@2, "duplicate SHIELD assignment");
+        it->second = $2; // choose: overwrite, or keep old
+      }
+  }
+  | combat_apply_spec TOK_L_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::LAUNCHER, $2});
+      if (!inserted) {
+        yyerror(&@2, "duplicate LAUNCHER assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
   | combat_apply_spec TOK_T_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
-      if (!inserted) {
-        yyerror(&@2, "duplicate TUBE assignment");
-        it->second = $2; // choose: overwrite, or keep old
-      }
-  }
-  | combat_apply_spec TOK_M_ASSIGN {
       $$ = $1;
-      $$ = $1;
-      // Allow the damage to hit the "Missile" enterprise of the
-      // ship. Effectively destroys missiles.  BIGBUG -- should
+      // Allow the damage to hit the "Torpedo" enterprise of the
+      // ship. Effectively destroys torpedoes.  BIGBUG -- should
       // be somewhat more catastrophic than this.
-      auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
+      auto [it, inserted] = $$->insert({AttributeID::TORPEDO, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate TUBE assignment");
+        yyerror(&@2, "duplicate LAUNCHER assignment");
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -1036,25 +1036,25 @@ build_attr_spec_nonempty:
       $$ = new AttributeMap;
       $$->insert({AttributeID::POWER_DRIVE, $1});
   }
-  | TOK_B_ASSIGN {
+  | TOK_P_ASSIGN {
       $$ = new AttributeMap;
-      $$->insert({AttributeID::BEAM, $1});
+      $$->insert({AttributeID::PHASIC, $1});
   }
   | TOK_S_ASSIGN {
       $$ = new AttributeMap;
-      $$->insert({AttributeID::SCREEN, $1});
+      $$->insert({AttributeID::SHIELD, $1});
+  }
+  | TOK_L_ASSIGN {
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::LAUNCHER, $1});
   }
   | TOK_T_ASSIGN {
       $$ = new AttributeMap;
-      $$->insert({AttributeID::TUBE, $1});
+      $$->insert({AttributeID::TORPEDO, $1});
   }
-  | TOK_M_ASSIGN {
+  | TOK_H_ASSIGN {
       $$ = new AttributeMap;
-      $$->insert({AttributeID::MISSILE, $1});
-  }
-  | TOK_SR_ASSIGN {
-      $$ = new AttributeMap;
-      $$->insert({AttributeID::SYSTEM_RACK, $1});
+      $$->insert({AttributeID::HANGAR, $1});
   }
   
   | TOK_PD_ASSIGN_INVALID {
@@ -1063,8 +1063,8 @@ build_attr_spec_nonempty:
       SafeDelete($1);
       YYABORT;
   }
-  | TOK_B_ASSIGN_INVALID {
-      std::string err = "Invalid value for B: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+  | TOK_P_ASSIGN_INVALID {
+      std::string err = "Invalid value for P: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
@@ -1075,20 +1075,20 @@ build_attr_spec_nonempty:
       SafeDelete($1);
       YYABORT;
   }
+  | TOK_L_ASSIGN_INVALID {
+      std::string err = "Invalid value for L: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      yyerror(&@1, err.c_str());
+      SafeDelete($1);
+      YYABORT;
+  }
   | TOK_T_ASSIGN_INVALID {
       std::string err = "Invalid value for T: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
-  | TOK_M_ASSIGN_INVALID {
-      std::string err = "Invalid value for M: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
-      yyerror(&@1, err.c_str());
-      SafeDelete($1);
-      YYABORT;
-  }
-  | TOK_SR_ASSIGN_INVALID {
-      std::string err = "Invalid value for SR: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+  | TOK_H_ASSIGN_INVALID {
+      std::string err = "Invalid value for H: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
@@ -1101,37 +1101,37 @@ build_attr_spec_nonempty:
         it->second = $2;
       }
   }
-  | build_attr_spec_nonempty TOK_B_ASSIGN {
+  | build_attr_spec_nonempty TOK_P_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::BEAM, $2});
+      auto [it, inserted] = $$->insert({AttributeID::PHASIC, $2});
       if (!inserted) {
         it->second = $2;
       }
   }
   | build_attr_spec_nonempty TOK_S_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::SCREEN, $2});
+      auto [it, inserted] = $$->insert({AttributeID::SHIELD, $2});
+      if (!inserted) {
+        it->second = $2;
+      }
+  }
+  | build_attr_spec_nonempty TOK_L_ASSIGN {
+      $$ = $1;
+      auto [it, inserted] = $$->insert({AttributeID::LAUNCHER, $2});
       if (!inserted) {
         it->second = $2;
       }
   }
   | build_attr_spec_nonempty TOK_T_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::TUBE, $2});
+      auto [it, inserted] = $$->insert({AttributeID::TORPEDO, $2});
       if (!inserted) {
         it->second = $2;
       }
   }
-  | build_attr_spec_nonempty TOK_M_ASSIGN {
+  | build_attr_spec_nonempty TOK_H_ASSIGN {
       $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::MISSILE, $2});
-      if (!inserted) {
-        it->second = $2;
-      }
-  }
-  | build_attr_spec_nonempty TOK_SR_ASSIGN {
-      $$ = $1;
-      auto [it, inserted] = $$->insert({AttributeID::SYSTEM_RACK, $2});
+      auto [it, inserted] = $$->insert({AttributeID::HANGAR, $2});
       if (!inserted) {
         it->second = $2;
       }
@@ -1145,8 +1145,8 @@ build_attr_spec_nonempty:
       SafeDelete($2);
       YYABORT;
   }
-  | build_attr_spec_nonempty TOK_B_ASSIGN_INVALID {
-      std::string err = "Invalid value for B: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+  | build_attr_spec_nonempty TOK_P_ASSIGN_INVALID {
+      std::string err = "Invalid value for P: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
@@ -1159,6 +1159,13 @@ build_attr_spec_nonempty:
       SafeDelete($2);
       YYABORT;
   }
+  | build_attr_spec_nonempty TOK_L_ASSIGN_INVALID {
+      std::string err = "Invalid value for L: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      yyerror(&@2, err.c_str());
+      SafeDelete($1);
+      SafeDelete($2);
+      YYABORT;
+  }
   | build_attr_spec_nonempty TOK_T_ASSIGN_INVALID {
       std::string err = "Invalid value for T: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
@@ -1166,15 +1173,8 @@ build_attr_spec_nonempty:
       SafeDelete($2);
       YYABORT;
   }
-  | build_attr_spec_nonempty TOK_M_ASSIGN_INVALID {
-      std::string err = "Invalid value for M: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
-      yyerror(&@2, err.c_str());
-      SafeDelete($1);
-      SafeDelete($2);
-      YYABORT;
-  }
-  | build_attr_spec_nonempty TOK_SR_ASSIGN_INVALID {
-      std::string err = "Invalid value for SR: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+  | build_attr_spec_nonempty TOK_H_ASSIGN_INVALID {
+      std::string err = "Invalid value for H: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
@@ -1184,7 +1184,7 @@ build_attr_spec_nonempty:
 
 build_cmd:
   TOK_BUILD_NEW ship_class TOK_STRING {
-      // JDW OK
+      // BUGBUG OK
       // build new W|S NAME
       // Example:  BN W FooShip
       // Example:  BN S BarShip
@@ -1206,21 +1206,21 @@ build_cmd:
       }
   }
   | TOK_BUILD_NEW ship_class TOK_STRING error {
-      // JDW OK
+      // BUGBUG OK
       yyerror(&@4, "Too many arguments. Usage: bn {W|S} name > HELP BN");
       SafeDelete($2);
       SafeDelete($3);
       YYABORT;
   }
   | TOK_BUILD_NEW ship_class error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BN W (missing ship name)
       yyerror(&@3, "Missing ship name. Usage: bn {W|S} name > HELP BN");
       SafeDelete($2);
       YYABORT;
   }
   | TOK_BUILD_NEW error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BN (no arguments at all)
       yyerror(&@2, "Missing arguments. Usage: bn {W|S} name > HELP BN");
       YYABORT;
@@ -1229,7 +1229,7 @@ build_cmd:
   // build new ...
   // build new W|S NAME
   | TOK_BUILD TOK_NEW ship_class TOK_STRING {
-      // JDW OK
+      // BUGBUG OK
       if ($3 == nullptr) {
             // ship_class validation failed. already reported error
             SafeDelete($4);
@@ -1246,14 +1246,14 @@ build_cmd:
       }
   }
   | TOK_BUILD TOK_NEW ship_class TOK_STRING error {
-      // JDW OK
+      // BUGBUG OK
       yyerror(&@5, "Too many arguments. Usage: build new {W|S} name > HELP BUILD");
       SafeDelete($3);
       SafeDelete($4);
       YYABORT;
   }
   | TOK_BUILD TOK_NEW ship_class error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BUILD NEW W (missing name)
       yyerror(&@4, "Missing ship name. Usage: build new {W|S} name > HELP BUILD");
       SafeDelete($3);
@@ -1261,7 +1261,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_NEW error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BUILD NEW (missing ship class and name)
       yyerror(&@3, "Missing arguments. Usage: build new {W|S} name > HELP BUILD");
       YYABORT;
@@ -1269,7 +1269,7 @@ build_cmd:
   // bd SHIP_ID
   // bd SHIP_NAME
   | TOK_BUILD_DRAFTS building_draft_ship {
-      // JDW OK
+      // BUGBUG OK
       // can also be a name, but we will take it as it comes.
       ICmd *pCmd = BuildShowDraftActor::Builder()
                   .set_target(*$2)
@@ -1280,14 +1280,14 @@ build_cmd:
   }
   // bd
   | TOK_BUILD_DRAFTS {
-      // JDW OK
+      // BUGBUG OK
       ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty {
-      // JDW OK
+      // BUGBUG OK
       // SUCCESS: BUILD SET target attr=# [attr=# ...]
       ICmd *pCmd = BuildSetActor::Builder()
                     .set_target(*$3)
@@ -1300,7 +1300,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BUILD SET target (missing attributes)
       yyerror(&@3, "Missing attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
       SafeDelete($3);
@@ -1308,10 +1308,10 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target TOK_STRING {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BUILD SET target X=1 (invalid attribute key)
       std::string err = "Invalid attribute: " + *$4;
-      err += ". Valid attributes: PD, B, S, T, M, SR > HELP ATTR";
+      err += ". Valid attributes: PD, P, S, L, T, H > HELP ATTR";
       yyerror(&@4, err.c_str());
       SafeDelete($3);
       SafeDelete($4);
@@ -1319,7 +1319,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BUILD SET target attr=# ... extra junk
       yyerror(&@5, "Unexpected tokens after attributes. > HELP BS");
       SafeDelete($3);
@@ -1328,7 +1328,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_SET_ATTR error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BUILD SET (missing target and attributes)
       yyerror(&@3, "Missing ship name/hull and attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
       YYABORT;
@@ -1339,7 +1339,7 @@ build_cmd:
   // =========================================================================
 
   | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty {
-      // JDW OK
+      // BUGBUG OK
       // SUCCESS: BS target attr=# [attr=# ...]
       ICmd *pCmd = BuildSetActor::Builder()
                     .set_target(*$2)
@@ -1352,7 +1352,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR build_target {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BS target (missing attributes)
       yyerror(&@2, "Missing attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
       SafeDelete($2);
@@ -1360,10 +1360,10 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR build_target TOK_STRING {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BS target X=1 (invalid attribute - caught as TOK_STRING)
       std::string err = "Invalid attribute: " + *$3;
-      err += ". Valid attributes: PD, B, S, T, M, SR > HELP BS";
+      err += ". Valid attributes: PD, P, S, L, T, H > HELP BS";
       yyerror(&@3, err.c_str());
       SafeDelete($2);
       SafeDelete($3);
@@ -1371,7 +1371,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BS target attr=# ... extra junk
       yyerror(&@4, "Unexpected tokens after attributes. > HELP BS");
       SafeDelete($2);
@@ -1380,7 +1380,7 @@ build_cmd:
   }
 
   | TOK_BUILD_SET_ATTR error {
-      // JDW OK
+      // BUGBUG OK
       // ERROR: BS (missing everything)
       yyerror(&@2, "Missing ship name/hull and attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
       YYABORT;
@@ -1389,7 +1389,7 @@ build_cmd:
   // build commit
   // build commit CODE|NAME
   | TOK_BUILD TOK_COMMIT build_target {
-      // JDW OK
+      // BUGBUG OK
       ICmd *pCmd = BuildCommitActor::Builder()
                   .set_target(*$3)
                   .build();
@@ -1400,7 +1400,7 @@ build_cmd:
 
   // bc
   | TOK_BUILD_COMMIT build_target {
-      // JDW OK
+      // BUGBUG OK
       ICmd *pCmd = BuildCommitActor::Builder()
                    .set_target(*$2)
                    .build();
@@ -1410,7 +1410,7 @@ build_cmd:
   }
 
   | TOK_BUILD TOK_CANCEL build_target {
-      // JDW OK
+      // BUGBUG OK
       ICmd *pCmd = BuildCancelActor::Builder()
                   .set_target(*$3)
                   .build();
@@ -1421,7 +1421,7 @@ build_cmd:
 
   // bx
   | TOK_BUILD_CANCEL build_target {
-      // JDW OK
+      // BUGBUG OK
       ICmd *pCmd = BuildCancelActor::Builder()
                   .set_target(*$2)
                   .build();
@@ -1434,7 +1434,7 @@ build_cmd:
   // build
   // b
   TOK_BUILD {
-      // JDW OK
+      // BUGBUG OK
       ICmd *pCmd = BuildDraftsActor::Builder().build();
       pCmd->invoke();
       SafeDelete(pCmd);
@@ -1463,7 +1463,7 @@ deployable_ship:
 
 deploy_cmd:
     TOK_DEPLOY deployable_ship TOK_STRING {
-       // JDW OK
+       // BUGBUG OK
        std::string ship(*$2);
        std::string dest(*$3);
        ICmd* pCmd = DeployCommand::Builder()
@@ -1513,7 +1513,7 @@ move_cmd:
   // move
   // m
   TOK_MOVE TOK_STRING TOK_STRING chain_move_location {
-       // JDW OK
+       // BUGBUG OK
        std::string ship(*$2);
        std::string first_dest(*$3);
        std::vector<std::string>* waypoints = $4;
@@ -1569,7 +1569,7 @@ chart_cmd:
 // "drop" { return TOK_DROP; }
 pickdrop_cmd:
   TOK_PICK TOK_STRING TOK_STRING {
-     // JDW OK
+     // BUGBUG OK
      // pick <systemship> <warpship>
      std::string sysship(*$2);
      std::string warpship(*$3);
@@ -1636,7 +1636,7 @@ rep_cmd:
   | TOK_RESUPPLY TOK_STRING TOK_INT {
      std::string ship(*$2);
      int qty = (int) $3;
-     ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_missiles(qty).build();
+     ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_torpedoes(qty).build();
      if (pCmd && pCmd->invoke()) { /* success */ }
      SafeDelete(pCmd);
    }
@@ -1652,7 +1652,7 @@ rep_cmd:
       delete $3;
    }
   
-| TOK_REPAIR error { yyerror(&@1, "repair: usage: repair <ship> PD=n|B=n|S=n|T=n (one attribute)"); YYABORT; }
+| TOK_REPAIR error { yyerror(&@1, "repair: usage: repair <ship> PD=n|P=n|S=n|L=n (one attribute)"); YYABORT; }
 | TOK_RESUPPLY error { yyerror(&@1, "resupply: usage: resupply <ship> <amount>"); YYABORT; }
 | TOK_RETREAT error { yyerror(&@1, "retreat: usage: retreat <ship> <destination>"); YYABORT; }
 ;
@@ -1662,16 +1662,16 @@ repair_attr_spec:
       g_repair_builder->set_attribute("pd");
       g_repair_builder->set_amount($1);
   }
-  | TOK_B_ASSIGN {
-      g_repair_builder->set_attribute("b");
+  | TOK_P_ASSIGN {
+      g_repair_builder->set_attribute("p");
       g_repair_builder->set_amount($1);
   }
   | TOK_S_ASSIGN {
       g_repair_builder->set_attribute("s");
       g_repair_builder->set_amount($1);
   }
-  | TOK_T_ASSIGN {
-      g_repair_builder->set_attribute("t");
+  | TOK_L_ASSIGN {
+      g_repair_builder->set_attribute("l");
       g_repair_builder->set_amount($1);
   }
   ; 

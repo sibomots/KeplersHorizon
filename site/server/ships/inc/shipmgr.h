@@ -70,7 +70,7 @@ class ShipManager
     void pstxt(std::ostringstream& out, const std::string& s, int w);
     void pstxt_right(std::ostringstream& out, const std::string& s, int w);
     void psnum(std::ostringstream& out, const int& n, int w);
-    std::string sr_na_glyph();
+    std::string hangar_na_glyph();
     std::string itos(int v);
     void put_title(std::ostringstream& out, const std::string& label,
                    const std::string& bracket_text, int total_width);

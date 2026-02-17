@@ -38,22 +38,22 @@ static const std::string demo_page =
     "DEMONSTRATION\n"
     "BUILD\n"
     " > BN W IRONSTAR\n"
-    " > BS PD=8 B=4 S=1 T=1 M=3 SR=1\n"
+    " > BS PD=8 P=4 S=1 L=1 T=3 H=1\n"
     " > BC\n"
     "MOVE\n"
     "  A Waypoint can be a HEX or a named Star System\n"
     "  If W4 desires movement from HAVOR to LYRIS to NOREX to H1613\n"
     " > M W4 LYRIS NOREX H1613\n"
     "COMBAT\n"
-    " > CO W2 A W9 PD=5 B=3\n"
+    " > CO W2 A W9 PD=5 P=3\n"
     "  W2 is using Attack tactic against W9.\n"
     "  W2 is powering up to powerdrive level 5\n"
-    "  W2 is powering beams to level 3\n"
+    "  W2 is powering phasics to level 3\n"
     " As the defender (owner of W9), set your orders:\n"
-    " > CO W9 D W2 PD=4 B=1\n"
+    " > CO W9 D W2 PD=4 P=1\n"
     "  W9 is using Dodge tactic against W2.\n"
     "  W9 is powering up to powerdrive level 4\n"
-    "  W9 is powering beams to level 1\n";
+    "  W9 is powering phasics to level 1\n";
 
 bool HelpCommand::invoke(void)
 {

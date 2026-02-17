@@ -275,7 +275,7 @@ class StateMachine
         std::string pending_repair_attribute;
         int pending_repair_amount = 0;
         std::string pending_resupply_ship;
-        int pending_resupply_missiles = 0;
+        int pending_resupply_torpedoes = 0;
 
         // NEW: Single-player mode tracking
         bool is_singleplayer_mode;
@@ -414,10 +414,10 @@ class StateMachine
         data.pending_repair_amount = amount;
     }
 
-    void set_pending_resupply(const std::string& ship, int missiles)
+    void set_pending_resupply(const std::string& ship, int torpedoes)
     {
         data.pending_resupply_ship = ship;
-        data.pending_resupply_missiles = missiles;
+        data.pending_resupply_torpedoes = torpedoes;
     }
 
     // inward facing utilities
@@ -441,7 +441,7 @@ class StateMachine
         data.pending_repair_attribute.clear();
         data.pending_repair_amount = 0;
         data.pending_resupply_ship.clear();
-        data.pending_resupply_missiles = 0;
+        data.pending_resupply_torpedoes = 0;
         data.is_singleplayer_mode = false;
         data.ai_player_side = '\0';
     }
@@ -466,7 +466,7 @@ class StateMachine
         data.pending_repair_attribute.clear();
         data.pending_repair_amount = 0;
         data.pending_resupply_ship.clear();
-        data.pending_resupply_missiles = 0;
+        data.pending_resupply_torpedoes = 0;
     }
 };
 

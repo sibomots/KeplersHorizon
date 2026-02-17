@@ -227,8 +227,8 @@ static std::string getShipsJson(int game_id, char player)
 
     // Friendly ships (owned by current player) - include specs for tooltip
     std::string friendly_q =
-        "SELECT ship_code, ship_type, at_hex, at_system, pd, beam, screen, "
-        "tube, missiles, sr, ship_name FROM ships "
+        "SELECT ship_code, ship_type, at_hex, at_system, pd, phasic, shield, "
+        "launcher, torpedoes, hangar, ship_name FROM ships "
         "WHERE destroyed_at IS NULL AND game_id=? AND owner=?";
     auto friendly = db.Query(friendly_q, {game_id, player});
 
@@ -241,9 +241,9 @@ static std::string getShipsJson(int game_id, char player)
             << ",\"type\":\"" << json_escape(friendly[i][1]) << "\""
             << ",\"hex\":\"" << json_escape(friendly[i][2]) << "\""
             << ",\"system\":\"" << json_escape(friendly[i][3]) << "\""
-            << ",\"pd\":" << friendly[i][4] << ",\"b\":" << friendly[i][5]
-            << ",\"s\":" << friendly[i][6] << ",\"t\":" << friendly[i][7]
-            << ",\"m\":" << friendly[i][8] << ",\"sr\":" << friendly[i][9]
+            << ",\"pd\":" << friendly[i][4] << ",\"phasic\":" << friendly[i][5]
+            << ",\"shield\":" << friendly[i][6] << ",\"launcher\":" << friendly[i][7]
+            << ",\"torpedo\":" << friendly[i][8] << ",\"hangar\":" << friendly[i][9]
             << ",\"name\":\"" << json_escape(friendly[i][10]) << "\""
             << "}";
     }

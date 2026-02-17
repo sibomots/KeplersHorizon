@@ -228,23 +228,23 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
         std::string msg;
 
         // BUGBUG WHY ARE we still using strings as keys here??
-        if (KH_EQU(recipe, "BEAM_UPGRADE"))
+        if (KH_EQU(recipe, "PHASIC_UPGRADE"))
         {
             update_sql =
-                "UPDATE ships SET beam=beam+" + std::to_string(quantity);
-            msg = "Beam weapon upgraded (+" + std::to_string(quantity) + ")";
+                "UPDATE ships SET phasic=phasic+" + std::to_string(quantity);
+            msg = "Phasic weapon upgraded (+" + std::to_string(quantity) + ")";
         }
-        else if (KH_EQU(recipe, "SCREEN_UPGRADE"))
+        else if (KH_EQU(recipe, "SHIELD_UPGRADE"))
         {
             update_sql =
-                "UPDATE ships SET screen=screen+" + std::to_string(quantity);
+                "UPDATE ships SET shield=shield+" + std::to_string(quantity);
             msg = "Shields upgraded (+" + std::to_string(quantity) + ")";
         }
-        else if (KH_EQU(recipe, "TUBE_UPGRADE"))
+        else if (KH_EQU(recipe, "LAUNCHER_UPGRADE"))
         {
             update_sql =
-                "UPDATE ships SET tube=tube+" + std::to_string(quantity);
-            msg = "Missile tubes upgraded (+" + std::to_string(quantity) + ")";
+                "UPDATE ships SET launcher=launcher+" + std::to_string(quantity);
+            msg = "Torpedo launchers upgraded (+" + std::to_string(quantity) + ")";
         }
         else if (KH_EQU(recipe, "TECH_UPGRADE"))
         {
@@ -252,11 +252,11 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
                          std::to_string(quantity);
             msg = "Tech level upgraded (+" + std::to_string(quantity) + ")";
         }
-        else if (KH_EQU(recipe, "MISSILES"))
+        else if (KH_EQU(recipe, "TORPEDOES"))
         {
-            update_sql = "UPDATE ships SET missiles=missiles+" +
+            update_sql = "UPDATE ships SET torpedoes=torpedoes+" +
                          std::to_string(quantity);
-            msg = "Missiles manufactured (+" + std::to_string(quantity) + ")";
+            msg = "Torpedoes manufactured (+" + std::to_string(quantity) + ")";
         }
         else
         {

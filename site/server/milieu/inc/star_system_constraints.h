@@ -23,9 +23,9 @@ class StarSystemConstraints
 {
   public:
     // Combat modifiers - affect damage/defense calculations
-    static int getBeamModifier(int game_id, const std::string& hex_id);
-    static int getScreenModifier(int game_id, const std::string& hex_id);
-    static int getMissileModifier(int game_id, const std::string& hex_id);
+    static int getPhasicModifier(int game_id, const std::string& hex_id);
+    static int getShieldModifier(int game_id, const std::string& hex_id);
+    static int getTorpedoModifier(int game_id, const std::string& hex_id);
     static int getDriveModifier(int game_id, const std::string& hex_id);
 
     // Movement/Repair/Resupply modifiers

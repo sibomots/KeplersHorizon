@@ -42,21 +42,21 @@ FabricateMode FabricateActor::plan_name_to_mode(const std::string& name)
     FabricateMode result = FabricateMode::LIST_PLANS;
 
     // BUGBUG WHY are these keyed on strings??
-    if (KH_EQU(name, "missiles"))
+    if (KH_EQU(name, "torpedoes"))
     {
-        result = FabricateMode::FABRICATE_MISSILE;
+        result = FabricateMode::FABRICATE_TORPEDO;
     }
-    else if (KH_EQU(name, "tubes"))
+    else if (KH_EQU(name, "launchers"))
     {
-        result = FabricateMode::FABRICATE_TUBE;
+        result = FabricateMode::FABRICATE_LAUNCHER;
     }
-    else if (KH_EQU(name, "beams"))
+    else if (KH_EQU(name, "phasics"))
     {
-        result = FabricateMode::FABRICATE_BEAM;
+        result = FabricateMode::FABRICATE_PHASIC;
     }
-    else if (KH_EQU(name, "screens"))
+    else if (KH_EQU(name, "shields"))
     {
-        result = FabricateMode::FABRICATE_SCREEN;
+        result = FabricateMode::FABRICATE_SHIELD;
     }
     else if (KH_EQU(name, "tech"))
     {

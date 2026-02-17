@@ -52,7 +52,7 @@ struct CombatOrder
     int power_b;
     int power_s;
     int power_t;
-    std::string missiles_data; // Comma-separated drive values, e.g. "4,5,3"
+    std::string torpedoes_data; // Comma-separated drive values, e.g. "4,5,3"
 };
 
 class CombatEngine

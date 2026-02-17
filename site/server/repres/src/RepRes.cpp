@@ -26,17 +26,17 @@ bool RepairCommand::invoke(void)
     {
         // Find ships at player's base stars that have damage
         auto rows = db.Query(
-            "SELECT s.ship_code, s.ship_name, s.at_hex, s.pd, s.beam, "
-            "s.screen, "
-            "s.tube, s.missiles, s.pd_max, s.beam_max, s.screen_max, "
-            "s.tube_max, s.missiles_max FROM ships s "
+            "SELECT s.ship_code, s.ship_name, s.at_hex, s.pd, s.phasic, "
+            "s.shield, "
+            "s.launcher, s.torpedoes, s.pd_max, s.phasic_max, s.shield_max, "
+            "s.launcher_max, s.torpedoes_max FROM ships s "
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = "
             "s.game_id "
             "WHERE s.game_id=? AND s.owner=? AND bs.owner=? "
             "AND s.destroyed_at IS NULL AND ("
-            "s.pd < s.pd_max OR s.beam < s.beam_max OR "
-            "s.screen < s.screen_max OR s.tube < s.tube_max OR "
-            "s.missiles < s.missiles_max)",
+            "s.pd < s.pd_max OR s.phasic < s.phasic_max OR "
+            "s.shield < s.shield_max OR s.launcher < s.launcher_max OR "
+            "s.torpedoes < s.torpedoes_max)",
             {s.game_id, owner, owner});
 
         if (rows.empty())
@@ -60,8 +60,8 @@ bool RepairCommand::invoke(void)
     // Validate ship exists and is at player's base star OR controlled repair
     // facility
     auto shipRow = db.Query(
-        "SELECT s.at_hex, s.pd, s.beam, s.screen, s.tube, s.missiles, "
-        "s.pd_max, s.beam_max, s.screen_max, s.tube_max, s.missiles_max, "
+        "SELECT s.at_hex, s.pd, s.phasic, s.shield, s.launcher, s.torpedoes, "
+        "s.pd_max, s.phasic_max, s.shield_max, s.launcher_max, s.torpedoes_max, "
         "ss.name "
         "FROM ships s "
         "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.module_id = "
@@ -116,20 +116,20 @@ bool RepairCommand::invoke(void)
         col = "pd";
         origCol = "pd_max";
     }
-    else if (KH_EQU(m_attribute, "b") || KH_EQU(m_attribute, "beam"))
+    else if (KH_EQU(m_attribute, "b") || KH_EQU(m_attribute, "phasic"))
     {
-        col = "beam";
-        origCol = "beam_max";
+        col = "phasic";
+        origCol = "phasic_max";
     }
-    else if (KH_EQU(m_attribute, "s") || KH_EQU(m_attribute, "screen"))
+    else if (KH_EQU(m_attribute, "s") || KH_EQU(m_attribute, "shield"))
     {
-        col = "screen";
-        origCol = "screen_max";
+        col = "shield";
+        origCol = "shield_max";
     }
-    else if (KH_EQU(m_attribute, "t") || KH_EQU(m_attribute, "tube"))
+    else if (KH_EQU(m_attribute, "t") || KH_EQU(m_attribute, "launcher"))
     {
-        col = "tube";
-        origCol = "tube_max";
+        col = "launcher";
+        origCol = "launcher_max";
     }
     else
     {
@@ -143,17 +143,17 @@ bool RepairCommand::invoke(void)
         current = std::atoi(shipRow[0][1].c_str());
         orig = std::atoi(shipRow[0][6].c_str());
     }
-    else if (KH_EQU(col, "beam"))
+    else if (KH_EQU(col, "phasic"))
     {
         current = std::atoi(shipRow[0][2].c_str());
         orig = std::atoi(shipRow[0][7].c_str());
     }
-    else if (KH_EQU(col, "screen"))
+    else if (KH_EQU(col, "shield"))
     {
         current = std::atoi(shipRow[0][3].c_str());
         orig = std::atoi(shipRow[0][8].c_str());
     }
-    else if (KH_EQU(col, "tube"))
+    else if (KH_EQU(col, "launcher"))
     {
         current = std::atoi(shipRow[0][4].c_str());
         orig = std::atoi(shipRow[0][9].c_str());
@@ -216,21 +216,21 @@ bool ResupplyCommand::invoke(void)
     // If no ship specified, list ships that can be resupplied
     if (m_ship_code.empty())
     {
-        // Find ships at player's base stars that can take missiles
+        // Find ships at player's base stars that can take torpedoes
         auto rows = db.Query(
-            "SELECT s.ship_code, s.ship_name, s.at_hex, s.missiles, "
-            "s.missiles_max "
+            "SELECT s.ship_code, s.ship_name, s.at_hex, s.torpedoes, "
+            "s.torpedoes_max "
             "FROM ships s "
             "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = "
             "s.game_id "
             "WHERE s.game_id=? AND s.owner=? AND bs.owner=? "
-            "AND s.missiles < s.missiles_max AND s.destroyed_at IS NULL",
+            "AND s.torpedoes < s.torpedoes_max AND s.destroyed_at IS NULL",
             {s.game_id, owner, owner});
 
         if (rows.empty())
         {
             Telemetry::instance().write(
-                "No ships need missile resupply at your base stars.");
+                "No ships need torpedo resupply at your base stars.");
             return true;
         }
 
@@ -240,18 +240,18 @@ bool ResupplyCommand::invoke(void)
         {
             int cur = std::atoi(r[3].c_str());
             int max = std::atoi(r[4].c_str());
-            out << "  " << r[0] << " (" << r[1] << ") - Missiles: " << cur
+            out << "  " << r[0] << " (" << r[1] << ") - Torpedoes: " << cur
                 << "/" << max << "\n";
         }
         out << "Use: resupply <ship_code> <quantity>\n";
-        out << "Example: resupply W1 6 (costs 2 BP for 6 missiles)\n";
+        out << "Example: resupply W1 6 (costs 2 BP for 6 torpedoes)\n";
         Telemetry::instance().write(out.str());
         return true;
     }
 
     // Validate ship exists and is at player's base star
     auto shipRow = db.Query(
-        "SELECT s.missiles, s.missiles_max, s.at_hex "
+        "SELECT s.torpedoes, s.torpedoes_max, s.at_hex "
         "FROM ships s "
         "JOIN base_stars bs ON bs.hex_id = s.at_hex AND bs.game_id = s.game_id "
         "WHERE s.game_id=? AND s.owner=? AND s.ship_code=? AND bs.owner=? "
@@ -264,26 +264,26 @@ bool ResupplyCommand::invoke(void)
         return false;
     }
 
-    int curMissiles = std::atoi(shipRow[0][0].c_str());
-    int maxMissiles = std::atoi(shipRow[0][1].c_str());
+    int curTorpedoes = std::atoi(shipRow[0][0].c_str());
+    int maxTorpedoes = std::atoi(shipRow[0][1].c_str());
     std::string at_hex = shipRow[0][2];
-    int canAdd = maxMissiles - curMissiles;
+    int canAdd = maxTorpedoes - curTorpedoes;
 
     if (canAdd <= 0)
     {
         Telemetry::instance().write(
-            "Ship already at maximum missile capacity.");
+            "Ship already at maximum torpedo capacity.");
         return false;
     }
 
-    if (m_missiles <= 0)
+    if (m_torpedoes <= 0)
     {
         Telemetry::instance().write("Specify quantity: resupply " +
                                     m_ship_code + " <N>");
         return false;
     }
 
-    int addAmt = std::min(m_missiles, canAdd);
+    int addAmt = std::min(m_torpedoes, canAdd);
 
     // Apply environmental resupply modifier
     int resupplyMod =
@@ -291,7 +291,7 @@ bool ResupplyCommand::invoke(void)
     addAmt = std::max(1, addAmt + resupplyMod);
     addAmt = std::min(addAmt, canAdd); // Can't exceed capacity
 
-    int cost = ((addAmt + 2) / 3) * 20; // 20 CR per 3 missiles (inflated ×20)
+    int cost = ((addAmt + 2) / 3) * 20; // 20 CR per 3 torpedoes (inflated ×20)
 
     // Check BP
     int availBP = (KH_EQU(owner, 'A')) ? s.creditsA : s.creditsB;
@@ -304,9 +304,9 @@ bool ResupplyCommand::invoke(void)
     }
 
     // Apply resupply
-    int newMissiles = curMissiles + addAmt;
-    db.Exec("UPDATE ships SET missiles=? WHERE game_id=? AND ship_code=?",
-            {newMissiles, s.game_id, m_ship_code});
+    int newTorpedoes = curTorpedoes + addAmt;
+    db.Exec("UPDATE ships SET torpedoes=? WHERE game_id=? AND ship_code=?",
+            {newTorpedoes, s.game_id, m_ship_code});
 
     // Deduct BP via GameState
     if (KH_EQU(owner, 'A'))
@@ -321,6 +321,6 @@ bool ResupplyCommand::invoke(void)
 
     Telemetry::instance().write(
         "Resupplied " + m_ship_code + " with " + std::to_string(addAmt) +
-        " missiles (cost: " + std::to_string(cost) + " BP)");
+        " torpedoes (cost: " + std::to_string(cost) + " BP)");
     return true;
 }

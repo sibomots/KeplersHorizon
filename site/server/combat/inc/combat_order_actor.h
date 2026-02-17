@@ -21,7 +21,7 @@ class CombatOrderActor : public ICmd
     std::string m_target_id;
     char m_tactic;
     AttributeMap m_attributes;
-    MissileSet m_firing_missiles;
+    TorpedoSet m_firing_torpedoes;
 
   public:
     class Builder
@@ -31,7 +31,7 @@ class CombatOrderActor : public ICmd
         std::string _target_id;
         char _tactic;
         AttributeMap _attributes;
-        MissileSet _firing_missiles;
+        TorpedoSet _firing_torpedoes;
 
         Builder() : _tactic(KH_N_TACTIC)
         {
@@ -61,9 +61,9 @@ class CombatOrderActor : public ICmd
             return *this;
         }
 
-        Builder& set_missiles(const MissileSet& ms)
+        Builder& set_torpedoes(const TorpedoSet& ms)
         {
-            _firing_missiles = ms;
+            _firing_torpedoes = ms;
             return *this;
         }
 
@@ -80,7 +80,7 @@ class CombatOrderActor : public ICmd
         : m_ship_code(std::move(builder._ship_code)),
           m_target_id(std::move(builder._target_id)), m_tactic(builder._tactic),
           m_attributes(std::move(builder._attributes)),
-          m_firing_missiles(std::move(builder._firing_missiles))
+          m_firing_torpedoes(std::move(builder._firing_torpedoes))
     {
     }
 };

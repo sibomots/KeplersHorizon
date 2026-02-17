@@ -450,14 +450,14 @@ void AutonomyAgency::gather()
     // Also fetch racked_in to track systemship rack status
     // Extended for economic layer: cargo, capacity, max values, equipment
     std::string sql_own =
-        "SELECT ship_code, ship_name, at_hex, at_system, pd, beam, screen, "
-        "tube, missiles, sr, tech_level, ship_type, COALESCE(pd_spent,0), "
+        "SELECT ship_code, ship_name, at_hex, at_system, pd, phasic, shield, "
+        "launcher, torpedoes, hangar, tech_level, ship_type, COALESCE(pd_spent,0), "
         "COALESCE(racked_in,''), "
         "cargo_ferrous, cargo_rare_earth, cargo_radioactive, "
         "cargo_crystalline, "
         "cargo_volatile, cargo_water, cargo_organic, cargo_exotic, "
-        "cargo_missiles, cargo_capacity, missiles_max, "
-        "pd_max, beam_max, screen_max, tube_max, "
+        "cargo_torpedoes, cargo_capacity, torpedoes_max, "
+        "pd_max, phasic_max, shield_max, launcher_max, "
         "COALESCE(lrs,0) "
         "FROM ships WHERE game_id=? AND owner=? AND destroyed_at IS NULL";
 
@@ -486,11 +486,11 @@ void AutonomyAgency::gather()
             int pd_spent = std::atoi(row[12].c_str());
             ship.base_pd = raw_pd;
             ship.pd = raw_pd - pd_spent;
-            ship.beam = std::atoi(row[5].c_str());
-            ship.screen = std::atoi(row[6].c_str());
-            ship.tube = std::atoi(row[7].c_str());
-            ship.missile = std::atoi(row[8].c_str());
-            ship.sr = std::atoi(row[9].c_str());
+            ship.phasic = std::atoi(row[5].c_str());
+            ship.shield = std::atoi(row[6].c_str());
+            ship.launcher = std::atoi(row[7].c_str());
+            ship.torpedo = std::atoi(row[8].c_str());
+            ship.hangar = std::atoi(row[9].c_str());
             ship.tech_level = std::atoi(row[10].c_str());
             ship.is_warpship = (KH_EQU(row[11], "W"));
             ship.racked_in = row[13];
@@ -504,21 +504,21 @@ void AutonomyAgency::gather()
             ship.cargo_water = std::atoi(row[19].c_str());
             ship.cargo_organic = std::atoi(row[20].c_str());
             ship.cargo_exotic = std::atoi(row[21].c_str());
-            ship.cargo_missiles = std::atoi(row[22].c_str());
+            ship.cargo_torpedoes = std::atoi(row[22].c_str());
             ship.cargo_capacity = std::atoi(row[23].c_str());
-            ship.missiles_max = std::atoi(row[24].c_str());
+            ship.torpedoes_max = std::atoi(row[24].c_str());
 
             // Max values for repair decisions
             ship.pd_max = std::atoi(row[25].c_str());
-            ship.beam_max = std::atoi(row[26].c_str());
-            ship.screen_max = std::atoi(row[27].c_str());
-            ship.tube_max = std::atoi(row[28].c_str());
+            ship.phasic_max = std::atoi(row[26].c_str());
+            ship.shield_max = std::atoi(row[27].c_str());
+            ship.launcher_max = std::atoi(row[28].c_str());
 
             // Equipment
             ship.lrs = std::atoi(row[29].c_str());
 
             // Query systemships racked in this warpship
-            if (ship.is_warpship && ship.sr > 0)
+            if (ship.is_warpship && ship.hangar > 0)
             {
                 std::string sql_racked =
                     "SELECT ship_code FROM ships WHERE game_id=? AND owner=? "
@@ -541,8 +541,8 @@ void AutonomyAgency::gather()
 
     // Enemy ships
     std::string sql_enemy =
-        "SELECT ship_code, ship_name, at_hex, at_system, pd, beam, screen, "
-        "tube, missiles, sr, tech_level, ship_type "
+        "SELECT ship_code, ship_name, at_hex, at_system, pd, phasic, shield, "
+        "launcher, torpedoes, hangar, tech_level, ship_type "
         "FROM ships WHERE game_id=? AND owner!=? AND destroyed_at IS NULL";
 
     auto enemy_rows = db.Query(sql_enemy, {m_slate.game_id, m_slate.aa_player});
@@ -562,11 +562,11 @@ void AutonomyAgency::gather()
         }
 
         ship.pd = std::atoi(row[4].c_str());
-        ship.beam = std::atoi(row[5].c_str());
-        ship.screen = std::atoi(row[6].c_str());
-        ship.tube = std::atoi(row[7].c_str());
-        ship.missile = std::atoi(row[8].c_str());
-        ship.sr = std::atoi(row[9].c_str());
+        ship.phasic = std::atoi(row[5].c_str());
+        ship.shield = std::atoi(row[6].c_str());
+        ship.launcher = std::atoi(row[7].c_str());
+        ship.torpedo = std::atoi(row[8].c_str());
+        ship.hangar = std::atoi(row[9].c_str());
         ship.tech_level = std::atoi(row[10].c_str());
         ship.is_warpship = KH_EQU(row[11], "W");
         m_slate.enemy_ships.push_back(ship);
@@ -574,7 +574,7 @@ void AutonomyAgency::gather()
 
     // Draft ships (from drafts table)
     std::string sql_drafts =
-        "SELECT ship_code, ship_name, pd, beam, screen, tube, missiles, sr, "
+        "SELECT ship_code, ship_name, pd, phasic, shield, launcher, torpedoes, hangar, "
         "ship_type FROM drafts WHERE game_id=? AND owner=?";
 
     auto draft_rows =
@@ -586,11 +586,11 @@ void AutonomyAgency::gather()
         ship.code = row[0];
         ship.name = row[1];
         ship.pd = std::atoi(row[2].c_str());
-        ship.beam = std::atoi(row[3].c_str());
-        ship.screen = std::atoi(row[4].c_str());
-        ship.tube = std::atoi(row[5].c_str());
-        ship.missile = std::atoi(row[6].c_str());
-        ship.sr = std::atoi(row[7].c_str());
+        ship.phasic = std::atoi(row[3].c_str());
+        ship.shield = std::atoi(row[4].c_str());
+        ship.launcher = std::atoi(row[5].c_str());
+        ship.torpedo = std::atoi(row[6].c_str());
+        ship.hangar = std::atoi(row[7].c_str());
         ship.tech_level = m_slate.tech_level;
         ship.is_warpship = KH_EQU(row[8], "W");
         m_slate.draft_ships.push_back(ship);
@@ -750,9 +750,9 @@ void AutonomyAgency::gather()
         {
             enemy.last_tactic = order_rows[0][0][0];
             enemy.last_drive = std::atoi(order_rows[0][1].c_str());
-            enemy.last_beam = std::atoi(order_rows[0][2].c_str());
-            enemy.last_screen = std::atoi(order_rows[0][3].c_str());
-            enemy.last_tube = std::atoi(order_rows[0][4].c_str());
+            enemy.last_phasic = std::atoi(order_rows[0][2].c_str());
+            enemy.last_shield = std::atoi(order_rows[0][3].c_str());
+            enemy.last_launcher = std::atoi(order_rows[0][4].c_str());
         }
     }
 

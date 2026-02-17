@@ -21,11 +21,11 @@ class ShipAttributes
     char type;
     int tech;
     int PD;
-    int B;
-    int S;
-    int T;
-    int M;
-    int SR;
+    int Phasic;
+    int Shield;
+    int Launcher;
+    int Torpedo;
+    int Hangar;
 
     int LS;
 
@@ -35,11 +35,11 @@ class ShipAttributes
         type = 'W';
         tech = 0;
         PD = 0;
-        B = 0;
-        S = 0;
-        T = 0;
-        M = 0;
-        SR = 0;
+        Phasic = 0;
+        Shield = 0;
+        Launcher = 0;
+        Torpedo = 0;
+        Hangar = 0;
         LS = 0;
     }
     void deep_copy(ShipAttributes& dest, const ShipAttributes& src)
@@ -47,11 +47,11 @@ class ShipAttributes
         dest.tech = src.tech;
         dest.type = src.type;
         dest.PD = src.PD;
-        dest.B = src.B;
-        dest.S = src.S;
-        dest.T = src.T;
-        dest.M = src.M;
-        dest.SR = src.SR;
+        dest.Phasic = src.Phasic;
+        dest.Shield = src.Shield;
+        dest.Launcher = src.Launcher;
+        dest.Torpedo = src.Torpedo;
+        dest.Hangar = src.Hangar;
         dest.LS = src.LS;
     }
 
@@ -96,11 +96,11 @@ class DraftRow
            << "Cost: " << ob.get_cost() << "\n"
            << "    Attributes: "
            << "[PD=" << ob.get_PD() << " "
-           << "B=" << ob.get_B() << " "
-           << "S=" << ob.get_S() << " "
-           << "T=" << ob.get_T() << " "
-           << "M=" << ob.get_M() << " "
-           << "SR=" << ob.get_SR() << "]\n";
+           << "P=" << ob.get_Phasic() << " "
+           << "S=" << ob.get_Shield() << " "
+           << "L=" << ob.get_Launcher() << " "
+           << "T=" << ob.get_Torpedo() << " "
+           << "H=" << ob.get_Hanger() << "]\n";
         return os;
     }
 
@@ -110,22 +110,22 @@ class DraftRow
     void set_tech(int t) { attr.tech = t; }
     void set_type(char t) { attr.type = t; }
     void set_PD(int pd) { attr.PD = pd; }
-    void set_B(int b) { attr.B = b; }
-    void set_S(int s) { attr.S = s; }
-    void set_T(int t) { attr.T = t; }
-    void set_M(int m) { attr.M = m; }
-    void set_SR(int sr) { attr.SR = sr; }
+    void set_Phasic(int b) { attr.Phasic = b; }
+    void set_Shield(int s) { attr.Shield = s; }
+    void set_Launcher(int t) { attr.Launcher = t; }
+    void set_Torpedo(int m) { attr.Torpedo = m; }
+    void set_Hanger(int hangar) { attr.Hangar = hangar; }
 
     std::string get_code() const { return std::string(code); }
     std::string get_name() const { return std::string(name); }
     int get_tech() const { return attr.tech; }
     char get_type() const { return attr.type; }
     int get_PD() const { return attr.PD; }
-    int get_B() const { return attr.B; }
-    int get_S() const { return attr.S; }
-    int get_T() const { return attr.T; }
-    int get_M() const { return attr.M; }
-    int get_SR() const { return attr.SR; }
+    int get_Phasic() const { return attr.Phasic; }
+    int get_Shield() const { return attr.Shield; }
+    int get_Launcher() const { return attr.Launcher; }
+    int get_Torpedo() const { return attr.Torpedo; }
+    int get_Hanger() const { return attr.Hangar; }
     int get_cost() const { return total_cost; }
     // clang-format on
 
@@ -140,30 +140,30 @@ class DraftRow
             subtotal += 0; // No Warp Drive
         }
         subtotal += attr.PD;
-        subtotal += attr.B;
-        subtotal += attr.S;
-        subtotal += attr.T;
-        subtotal += attr.M;
-        subtotal += attr.SR;
+        subtotal += attr.Phasic;
+        subtotal += attr.Shield;
+        subtotal += attr.Launcher;
+        subtotal += attr.Torpedo;
+        subtotal += attr.Hangar;
         total_cost = subtotal;
     }
 
     bool value_ranges_invalid()
     {
-        return (attr.PD < 0) || (attr.B < 0) || (attr.S < 0) || (attr.T < 0) ||
-               (attr.M < 0) || (attr.SR < 0);
+        return (attr.PD < 0) || (attr.Phasic < 0) || (attr.Shield < 0) || (attr.Launcher < 0) ||
+               (attr.Torpedo < 0) || (attr.Hangar < 0);
     }
     bool system_ship_fitment_invalid()
     {
-        return ((attr.type != 'W') && (attr.SR > 0));
+        return ((attr.type != 'W') && (attr.Hangar > 0));
     }
-    bool missile_count_invalid()
+    bool torpedo_count_invalid()
     {
-        return ((attr.M > 0) && ((attr.M % 3) != 0));
+        return ((attr.Torpedo > 0) && ((attr.Torpedo % 3) != 0));
     }
-    bool tube_missile_match_invalid()
+    bool launcher_torpedo_match_invalid()
     {
-        return ((attr.T < 1) && missile_count_invalid());
+        return ((attr.Launcher < 1) && torpedo_count_invalid());
     }
 };
 
@@ -229,11 +229,11 @@ class ShipRow
     void set_tech(int t) { attr.tech = t; }
     void set_type(char t) { attr.type = t; }
     void set_PD(int pd) { attr.PD = pd; }
-    void set_B(int b) { attr.B = b; }
-    void set_S(int s) { attr.S = s; }
-    void set_T(int t) { attr.T = t; }
-    void set_M(int m) { attr.M = m; }
-    void set_SR(int sr) { attr.SR = sr; }
+    void set_Phasic(int b) { attr.Phasic = b; }
+    void set_Shield(int s) { attr.Shield = s; }
+    void set_Launcher(int t) { attr.Launcher = t; }
+    void set_Torpedo(int m) { attr.Torpedo = m; }
+    void set_Hanger(int hangar) { attr.Hangar = hangar; }
     void set_LS(int lrs) { attr.LS = lrs; }
 
     std::string get_code() const { return std::string(code); }
@@ -241,11 +241,11 @@ class ShipRow
     int get_tech() const { return attr.tech; }
     char get_type() const { return attr.type; }
     int get_PD() const { return attr.PD; }
-    int get_B() const { return attr.B; }
-    int get_S() const { return attr.S; }
-    int get_T() const { return attr.T; }
-    int get_M() const { return attr.M; }
-    int get_SR() const { return attr.SR; }
+    int get_Phasic() const { return attr.Phasic; }
+    int get_Shield() const { return attr.Shield; }
+    int get_Launcher() const { return attr.Launcher; }
+    int get_Torpedo() const { return attr.Torpedo; }
+    int get_Hanger() const { return attr.Hangar; }
     int get_LS() const { return attr.LS; }
     int get_cost() const { return total_cost; }
     std::string get_sector() const {

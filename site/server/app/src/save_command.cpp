@@ -49,23 +49,23 @@ static bool cloneGameState(int sourceGameId, int& newGameId)
     stmts.push_back(std::format(
         "INSERT INTO ships (game_id, owner, ship_code, ship_name, "
         "ship_type, tech_level, built_turn, "
-        "pd, pd_max, beam, beam_max, screen, screen_max, "
-        "tube, tube_max, missiles, missiles_max, sr, sr_max, "
+        "pd, pd_max, phasic, phasic_max, shield, shield_max, "
+        "launcher, launcher_max, torpedoes, torpedoes_max, hangar, hangar_max, "
         "lrs, dr, pd_spent, "
         "at_system, at_hex, racked_in, destroyed_at, escape_pending, "
         "cargo_ferrous, cargo_rare_earth, cargo_radioactive, "
         "cargo_crystalline, cargo_volatile, cargo_water, "
-        "cargo_organic, cargo_exotic, cargo_missiles, "
+        "cargo_organic, cargo_exotic, cargo_torpedoes, "
         "cargo_capacity, created_at) "
         "SELECT @kh_clone_gid, owner, ship_code, ship_name, "
         "ship_type, tech_level, built_turn, "
-        "pd, pd_max, beam, beam_max, screen, screen_max, "
-        "tube, tube_max, missiles, missiles_max, sr, sr_max, "
+        "pd, pd_max, phasic, phasic_max, shield, shield_max, "
+        "launcher, launcher_max, torpedoes, torpedoes_max, hangar, hangar_max, "
         "lrs, dr, pd_spent, "
         "at_system, at_hex, racked_in, destroyed_at, escape_pending, "
         "cargo_ferrous, cargo_rare_earth, cargo_radioactive, "
         "cargo_crystalline, cargo_volatile, cargo_water, "
-        "cargo_organic, cargo_exotic, cargo_missiles, "
+        "cargo_organic, cargo_exotic, cargo_torpedoes, "
         "cargo_capacity, created_at "
         "FROM ships WHERE game_id = {}",
         sourceGameId));
@@ -74,10 +74,10 @@ static bool cloneGameState(int sourceGameId, int& newGameId)
     stmts.push_back(std::format(
         "INSERT INTO combat_orders (game_id, ship_code, owner, round, "
         "tactic, target_id, power_d, power_b, power_s, power_t, "
-        "missiles_data, committed) "
+        "torpedoes_data, committed) "
         "SELECT @kh_clone_gid, ship_code, owner, round, "
         "tactic, target_id, power_d, power_b, power_s, power_t, "
-        "missiles_data, committed "
+        "torpedoes_data, committed "
         "FROM combat_orders WHERE game_id = {}",
         sourceGameId));
 
@@ -104,9 +104,9 @@ static bool cloneGameState(int sourceGameId, int& newGameId)
     // 8. drafts
     stmts.push_back(std::format(
         "INSERT INTO drafts (game_id, owner, ship_code, ship_name, "
-        "ship_type, pd, beam, screen, tube, missiles, sr, created_at) "
+        "ship_type, pd, phasic, shield, launcher, torpedoes, hangar, created_at) "
         "SELECT @kh_clone_gid, owner, ship_code, ship_name, "
-        "ship_type, pd, beam, screen, tube, missiles, sr, created_at "
+        "ship_type, pd, phasic, shield, launcher, torpedoes, hangar, created_at "
         "FROM drafts WHERE game_id = {}",
         sourceGameId));
 

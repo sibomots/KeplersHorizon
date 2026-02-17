@@ -193,20 +193,20 @@ bool BuildAgent::apply(BuildSetParam& param)
         case AttributeID::POWER_DRIVE:
             drow.set_PD(value);
             break;
-        case AttributeID::BEAM:
-            drow.set_B(value);
+        case AttributeID::PHASIC:
+            drow.set_Phasic(value);
             break;
-        case AttributeID::SCREEN:
-            drow.set_S(value);
+        case AttributeID::SHIELD:
+            drow.set_Shield(value);
             break;
-        case AttributeID::TUBE:
-            drow.set_T(value);
+        case AttributeID::LAUNCHER:
+            drow.set_Launcher(value);
             break;
-        case AttributeID::MISSILE:
-            drow.set_M(value);
+        case AttributeID::TORPEDO:
+            drow.set_Torpedo(value);
             break;
-        case AttributeID::SYSTEM_RACK:
-            drow.set_SR(value);
+        case AttributeID::HANGAR:
+            drow.set_Hanger(value);
             break;
         case AttributeID::UNKNOWN:
             break;
@@ -477,9 +477,9 @@ bool BuildAgent::apply(BuildFleetListParam& param)
     // Select both current and max values for combat attributes
     std::string q =
         "SELECT s.ship_code, s.ship_name, s.at_hex, s.racked_in, "
-        " s.pd, s.pd_max, s.beam, s.beam_max, "
-        " s.screen, s.screen_max, s.tube, s.tube_max, "
-        " s.missiles, s.missiles_max, s.tech_level, s.lrs, s.sr, s.sr_max, "
+        " s.pd, s.pd_max, s.phasic, s.phasic_max, "
+        " s.shield, s.shield_max, s.launcher, s.launcher_max, "
+        " s.torpedoes, s.torpedoes_max, s.tech_level, s.lrs, s.hangar, s.hangar_max, "
         " ss.name "
         " FROM ships s "
         " LEFT JOIN star_systems ss ON s.at_hex = ss.hex_id AND ss.module_id = "
@@ -497,18 +497,18 @@ bool BuildAgent::apply(BuildFleetListParam& param)
     {
         // Column indices:
         //  0=ship_code  1=ship_name  2=at_hex  3=racked_in
-        //  4=pd  5=pd_max  6=beam  7=beam_max
-        //  8=screen  9=screen_max  10=tube  11=tube_max
-        //  12=missiles  13=missiles_max  14=tech_level  15=lrs
-        //  16=sr  17=sr_max  18=ss.name
-        // Column order: HULL, DESIGNATION, SECTOR, TECH LV, PD, B, S, T, M, SR, LRS
+        //  4=pd  5=pd_max  6=phasic  7=phasic_max
+        //  8=shield  9=shield_max  10=launcher  11=launcher_max
+        //  12=torpedoes  13=torpedoes_max  14=tech_level  15=lrs
+        //  16=hangar  17=hangar_max  18=ss.name
+        // Column order: HULL, DESIGNATION, SECTOR, TECH LV, PD, P, S, L, T, H, LRS
         std::ostringstream out;
         out << "FLEET REGISTRY [" << rows.size() << " vessels operational]\n";
         out << std::format("{:<6}{:<16}{:<16} {:>4} {:>5} {:>5} {:>5} "
                            "{:>5} {:>5} {:>5} {:>3}\n",
                            "HULL", "DESIGNATION", "SECTOR", "TECH",
-                           "PD", "B", "S", "T",
-                           "M", "SR", "LRS");
+                           "PD", "P", "S", "L",
+                           "T", "H", "LRS");
         out << std::format("{:<6}{:<16}{:<16} {:>4} {:>5} {:>5} {:>5} "
                            "{:>5} {:>5} {:>5} {:>3}\n",
                            "----", "--------------", "--------------",
@@ -544,17 +544,17 @@ bool BuildAgent::apply(BuildFleetListParam& param)
             };
 
             std::string sPD = fmtAttr(r[4], r[5]);
-            std::string sB  = fmtAttr(r[6], r[7]);
+            std::string sP  = fmtAttr(r[6], r[7]);
             std::string sS  = fmtAttr(r[8], r[9]);
-            std::string sT  = fmtAttr(r[10], r[11]);
-            std::string sM  = fmtAttr(r[12], r[13]);
-            std::string sSR = fmtAttr(r[16], r[17]);
+            std::string sL  = fmtAttr(r[10], r[11]);
+            std::string sT  = fmtAttr(r[12], r[13]);
+            std::string sH = fmtAttr(r[16], r[17]);
 
             out << std::format("{:<6}{:<16}{:<16} {:>4} {:>5} {:>5} {:>5} "
                                "{:>5} {:>5} {:>5} {:>3}\n",
                                hull, r[1].substr(0, 14), loc.substr(0, 18),
-                               r[14], sPD, sB, sS, sT,
-                               sM, sSR, r[15]);
+                               r[14], sPD, sP, sS, sL,
+                               sT, sH, r[15]);
         }
 
         Telemetry::instance().write(out.str());

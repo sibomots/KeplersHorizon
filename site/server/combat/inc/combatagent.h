@@ -318,9 +318,9 @@ class CombatOrderParam : public CombatParam
   public:
     CombatOrderParam(int gid, int mid, char user, std::string attacker,
                      std::string attackee, char tactic, AttributeMap attr,
-                     MissileSet missiles)
+                     TorpedoSet torpedoes)
         : CombatParam(gid, mid, user), m_tactic(tactic), m_attacker(attacker),
-          m_attackee(attackee), m_attr(attr), m_missiles(missiles)
+          m_attackee(attackee), m_attr(attr), m_torpedoes(torpedoes)
     {
     }
 
@@ -369,9 +369,9 @@ class CombatOrderParam : public CombatParam
             attr = _attr;
             return *this;
         }
-        Builder& set_missiles(MissileSet _missiles)
+        Builder& set_torpedoes(TorpedoSet _torpedoes)
         {
-            missiles = _missiles;
+            torpedoes = _torpedoes;
             return *this;
         }
 
@@ -379,7 +379,7 @@ class CombatOrderParam : public CombatParam
         {
             return CombatOrderParam(base_builder.gid, base_builder.mid,
                                     base_builder.player, attacker, attackee,
-                                    tactic, attr, missiles);
+                                    tactic, attr, torpedoes);
         }
 
       protected:
@@ -388,7 +388,7 @@ class CombatOrderParam : public CombatParam
         std::string attackee;
         char tactic;
         AttributeMap attr;
-        MissileSet missiles;
+        TorpedoSet torpedoes;
     };
 
     int get_game_id()
@@ -420,9 +420,9 @@ class CombatOrderParam : public CombatParam
     {
         return m_attr;
     }
-    MissileSet get_missiles()
+    TorpedoSet get_torpedoes()
     {
-        return m_missiles;
+        return m_torpedoes;
     }
 
   private:
@@ -430,7 +430,7 @@ class CombatOrderParam : public CombatParam
     std::string m_attackee;
     char m_tactic;
     AttributeMap m_attr;
-    MissileSet m_missiles;
+    TorpedoSet m_torpedoes;
 };
 
 class CombatApplyParam : public CombatParam

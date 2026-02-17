@@ -40,7 +40,7 @@ bool CombatOrderActor::invoke(void)
                               .set_attackee(m_target_id)
                               .set_tactic(m_tactic)
                               .set_attr(m_attributes)
-                              .set_missiles(m_firing_missiles)
+                              .set_torpedoes(m_firing_torpedoes)
                               .build();
     CombatAgentParam capm(cp);
     bool bresult = CombatAgent::instance().apply(capm);

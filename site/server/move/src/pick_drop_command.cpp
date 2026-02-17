@@ -76,10 +76,10 @@ bool PickCommand::invoke(void)
     }
 
     // Verify warpship has system rack capacity
-    if (warpship.attr.SR <= 0)
+    if (warpship.attr.Hangar <= 0)
     {
         Telemetry::instance().write("OPS: " + warpship.name +
-                                    " has no system racks (SR=0).");
+                                    " has no system hangars (H=0).");
         return false;
     }
 
@@ -103,12 +103,12 @@ bool PickCommand::invoke(void)
         current_racked = std::atoi(racked_count[0][0].c_str());
     }
 
-    if (current_racked >= warpship.attr.SR)
+    if (current_racked >= warpship.attr.Hangar)
     {
         Telemetry::instance().write("OPS: " + warpship.name +
-                                    " racks are full (" +
+                                    " hangars are full (" +
                                     std::to_string(current_racked) + "/" +
-                                    std::to_string(warpship.attr.SR) + ").");
+                                    std::to_string(warpship.attr.Hangar) + ").");
         return false;
     }
 

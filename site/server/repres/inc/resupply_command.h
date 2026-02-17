@@ -20,7 +20,7 @@ class ResupplyCommand : public ICmd
     {
       public:
         std::string ship_code;
-        int missiles = 0;
+        int torpedoes = 0;
 
         Builder& set_ship_code(const std::string& code)
         {
@@ -28,9 +28,9 @@ class ResupplyCommand : public ICmd
             return *this;
         }
 
-        Builder& set_missiles(int m)
+        Builder& set_torpedoes(int m)
         {
-            missiles = m;
+            torpedoes = m;
             return *this;
         }
 
@@ -43,12 +43,12 @@ class ResupplyCommand : public ICmd
   private:
     ResupplyCommand(Builder& builder)
         : m_ship_code(std::move(builder.ship_code)),
-          m_missiles(std::move(builder.missiles))
+          m_torpedoes(std::move(builder.torpedoes))
     {
     }
 
     std::string m_ship_code;
-    int m_missiles;
+    int m_torpedoes;
 
   public:
     virtual bool invoke(void);
