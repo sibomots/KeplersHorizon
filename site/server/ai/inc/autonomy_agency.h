@@ -79,7 +79,6 @@ struct AAShipInfo
 
     // Equipment
     int lrs; // Long Range Scanner
-    int tb;  // Transporter Beam
 
     AAShipInfo()
         : pd(0), base_pd(0), beam(0), screen(0), tube(0), missile(0), sr(0),
@@ -90,7 +89,7 @@ struct AAShipInfo
           cargo_radioactive(0), cargo_crystalline(0), cargo_volatile(0),
           cargo_water(0), cargo_organic(0), cargo_exotic(0), cargo_missiles(0),
           cargo_capacity(10), missiles_max(0), pd_max(0), beam_max(0),
-          screen_max(0), tube_max(0), lrs(0), tb(0)
+          screen_max(0), tube_max(0), lrs(0)
     {
     }
 };

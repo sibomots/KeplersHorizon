@@ -16,7 +16,7 @@
 
 // ExtractActor - Extract resources from current location
 // Usage: extract scan           -- Requires LRS to scan for resources
-//        extract <ship> <res>   -- Requires TB or DR to extract
+//        extract <ship> <res>   -- Extract resources into ship cargo
 
 class ExtractActor : public ICmd
 {

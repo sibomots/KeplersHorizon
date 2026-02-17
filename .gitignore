@@ -7,3 +7,4 @@ site/db/99-fix.sql
 site/server/build/**
 site/server/run.sh
 site/server/dsl/*
+site/server/*.md

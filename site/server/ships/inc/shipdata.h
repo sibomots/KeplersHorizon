@@ -28,7 +28,6 @@ class ShipAttributes
     int SR;
 
     int LS;
-    int TB;
 
   public:
     ShipAttributes()
@@ -42,7 +41,6 @@ class ShipAttributes
         M = 0;
         SR = 0;
         LS = 0;
-        TB = 0;
     }
     void deep_copy(ShipAttributes& dest, const ShipAttributes& src)
     {
@@ -55,7 +53,6 @@ class ShipAttributes
         dest.M = src.M;
         dest.SR = src.SR;
         dest.LS = src.LS;
-        dest.TB = src.TB;
     }
 
     ShipAttributes& operator=(const ShipAttributes& rhs)
@@ -238,7 +235,6 @@ class ShipRow
     void set_M(int m) { attr.M = m; }
     void set_SR(int sr) { attr.SR = sr; }
     void set_LS(int lrs) { attr.LS = lrs; }
-    void set_TB(int tb) { attr.TB = tb; }
 
     std::string get_code() const { return std::string(code); }
     std::string get_name() const { return std::string(name); }
@@ -251,7 +247,6 @@ class ShipRow
     int get_M() const { return attr.M; }
     int get_SR() const { return attr.SR; }
     int get_LS() const { return attr.LS; }
-    int get_TB() const { return attr.TB; }
     int get_cost() const { return total_cost; }
     std::string get_sector() const {
        if (at_system.empty()) {

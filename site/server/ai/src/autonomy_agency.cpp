@@ -458,7 +458,7 @@ void AutonomyAgency::gather()
         "cargo_volatile, cargo_water, cargo_organic, cargo_exotic, "
         "cargo_missiles, cargo_capacity, missiles_max, "
         "pd_max, beam_max, screen_max, tube_max, "
-        "COALESCE(lrs,0), COALESCE(tb,0) "
+        "COALESCE(lrs,0) "
         "FROM ships WHERE game_id=? AND owner=? AND destroyed_at IS NULL";
 
     auto own_rows = db.Query(sql_own, {m_slate.game_id, m_slate.aa_player});
@@ -516,7 +516,6 @@ void AutonomyAgency::gather()
 
             // Equipment
             ship.lrs = std::atoi(row[29].c_str());
-            ship.tb = std::atoi(row[30].c_str());
 
             // Query systemships racked in this warpship
             if (ship.is_warpship && ship.sr > 0)

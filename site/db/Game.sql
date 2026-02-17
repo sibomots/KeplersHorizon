@@ -133,7 +133,6 @@ missiles INT NOT NULL DEFAULT 0,
 sr INT NOT NULL DEFAULT 0,
 -- Extraction equipment (don't affect destruction)
 lrs INT NOT NULL DEFAULT 0,   -- Long Range Scanner
-tb INT NOT NULL DEFAULT 0,    -- Transporter Beam
 pd_spent INT NOT NULL DEFAULT 0,
 at_system VARCHAR(16) DEFAULT NULL,
 at_hex VARCHAR(8) DEFAULT NULL,
@@ -412,8 +411,7 @@ FOREIGN KEY (module_id) REFERENCES modules(module_id)
 );
 
 INSERT INTO equipment_catalog (module_id, equipment_type, description, price, ship_column) VALUES
-(1, 'LRS', 'Long Range Scanner', 50, 'lrs'),
-(1, 'TB', 'Transporter Beam', 75, 'tb');
+(1, 'LRS', 'Long Range Scanner', 50, 'lrs');
 
 CREATE TABLE IF NOT EXISTS system_asteroid_belts (
 id INT AUTO_INCREMENT PRIMARY KEY,
