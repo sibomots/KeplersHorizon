@@ -16,6 +16,7 @@
 #include "db.h"
 #include "logger.h"
 #include "moduleutil.h"
+#include "recap_command.h"
 #include "shipmgr.h"
 #include "telemetry.h"
 #include "turn_end.h"
@@ -305,7 +306,7 @@ void StateMachine::apply_start_of_turn(GameState& s)
 
     if (s.game_over)
     {
-        // BIGBUG not sure what happens.
+        // Game ended — no phase processing needed.
         return;
     }
 
@@ -350,6 +351,10 @@ void StateMachine::apply_start_of_turn(GameState& s)
     {
         s.game_over = true;
         s.winner = std::string(1, me);
+        db.Exec("UPDATE games SET winner=? WHERE id=?",
+                {s.winner, s.game_id});
+        RecapCommand::emit_recap(s.game_id, 'A');
+        RecapCommand::emit_recap(s.game_id, 'B');
         return;
     }
 
@@ -538,6 +543,20 @@ void StateMachine::advance_next(GameState& s)
 
         // Trigger round-end processing (market, facilities, resources, income)
         TurnEndProcessor::on_round_complete(s.game_id, s.round - 1);
+
+        // Check if round-end processing detected a winner
+        {
+            DatabaseManager& dbRef = DatabaseManager::instance();
+            std::vector<std::vector<std::string>> wr = dbRef.Query(
+                "SELECT winner FROM games WHERE id=?", {s.game_id});
+            if (!wr.empty() && !wr[0].empty() && !wr[0][0].empty())
+            {
+                s.game_over = true;
+                s.winner = wr[0][0];
+                save_game(s);
+                return;
+            }
+        }
     }
     s.phase_index = PH_BUILD_SHIPS;
     apply_start_of_turn(s);
@@ -615,6 +634,18 @@ std::string StateMachine::get_player_name(int game_id, const std::string& seat)
 bool StateMachine::check_inhibits(CommandID cmd, std::string& error_msg)
 {
     GameState s = get_game_state();
+
+    // Game over: block all gameplay commands
+    if (s.game_over)
+    {
+        if (cmd == CommandID::STATUS || cmd == CommandID::HELP)
+        {
+            return true;
+        }
+        error_msg = std::format("Game over. {} has won.", s.winner);
+        return false;
+    }
+
     char requesting_player = data.current_player;
     bool has_initiative = (KH_EQU(s.active_player[0], requesting_player));
 
