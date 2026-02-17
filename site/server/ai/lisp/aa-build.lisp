@@ -31,100 +31,23 @@
 ;;; Ship Design Templates
 ;;; ----------------------------------------------------------------------------
 
-;;; The Brawler: High PD, strong beam, good screen (17-19 BP warpship)
-(defparameter *brawler-spec* "PD=6 B=4 S=3 T=0 M=0"
-  "Main battle ship: WG(5) + stats(12) = 17 BP")
-
-;;; The Interceptor: Fast, light weapons (12 BP warpship)
-(defparameter *interceptor-spec* "PD=5 B=2 S=2 T=0 M=0"
-  "Fast pursuit ship: WG(5) + stats(9) = 14 BP")
-
-;;; The Missile Boat: Tubes and missiles (15 BP warpship)
-(defparameter *missile-boat-spec* "PD=4 B=0 S=1 T=2 M=6"
-  "Alpha strike ship: WG(5) + stats(10) = 15 BP")
-
-;;; The Fortress: Heavy systemship for base defense (no WG saves 5 BP)
-(defparameter *fortress-spec* "PD=8 B=6 S=5 T=0 M=0"
-  "Base defender: stats(19) = 19 BP, no warp generator")
-
-;;; The Light Defender: Economical systemship (12 BP)
-(defparameter *defender-spec* "PD=6 B=4 S=3 T=0 M=0"
-  "Light base defender: stats(13) = 13 BP, no warp generator")
+;;; Ship Design Templates (defined in aa-theta.lisp *ship-templates*)
+;;; Access via (get-ship-template :brawler), (get-ship-template :defender), etc.
 
 ;;; ----------------------------------------------------------------------------
 ;;; Build Phase Entry
 ;;; ----------------------------------------------------------------------------
 
-(defparameter *minimum-reserve* 10
-  "Keep at least this many credits for emergencies/repairs.")
+;;; Minimum reserve now in theta: (theta 'theta-minimum-reserve)
 
 (defun decide-build-phase (slate &optional strategy)
   "Decide ONE action in build phase. Called repeatedly until NEXT.
    STRATEGY is the full strategic state plist from compute-strategic-state.
-   State machine:
-   1. Draft with specs (pd>0) -> commit it (bc)
-   2. Draft without specs -> set specs (bs)
-   3. Ship not deployed -> deploy it (ds)
-   4. Should repair? -> repair command
-   5. Economic actions? -> economic command
-   6. Should build defender? -> create systemship draft (bn s)
-   7. Should build warpship? -> create warpship draft (bn w)
-   8. Otherwise -> advance (NEXT)"
-  (let ((drafts (slate-drafts slate))
-        (ships (slate-own-ships slate))
-        (credits (slate-credits slate))
-        (round (slate-round slate))
-        (tech (slate-tech-level slate)))
-    (format t "[LISP] decide-build: drafts=~A ships=~A credits=~A round=~A tech=~A~%"
-            (length drafts) (length ships) credits round tech)
-    (cond
-      ;; Draft with specs ready to commit
-      ((draft-ready-p drafts)
-       (let ((name (ship-name (first drafts))))
-         (format t "[LISP] -> bc ~A~%" name)
-         (list (make-cmd "bc" name))))
-
-      ;; Draft needs specs
-      ((draft-needs-specs-p drafts)
-       (let* ((name (ship-name (first drafts)))
-              (spec (choose-ship-design slate strategy)))
-         (format t "[LISP] -> bs ~A ~A~%" name spec)
-         (list (make-cmd "bs" (format nil "~A ~A" name spec)))))
-
-      ;; Ship needs deployment
-      ((ship-needs-deploy-p ships)
-       (let* ((ship (find-undeployed-ship ships))
-              (base (ensure-hex-prefix
-                     (choose-deploy-base slate ships strategy))))
-         (format t "[LISP] -> ds ~A to ~A~%" (ship-name ship) base)
-         (list (make-cmd "ds" (format nil "~A ~A" (ship-code ship) base)))))
-
-      ;; Check for repairs needed
-      ((should-repair-p slate)
-       (issue-repair-command slate))
-
-      ;; Economic actions before building new ships (fix C2: return value)
-      ((let ((econ-cmds (decide-economic-actions slate)))
-         (when econ-cmds
-           (format t "[LISP] -> economic action~%")
-           econ-cmds)))
-
-      ;; Should we build a base defender (systemship)?
-      ((should-build-defender-p slate strategy)
-       (let ((name (next-ship-name)))
-         (format t "[LISP] -> bn s ~A (base defender)~%" name)
-         (list (make-cmd "bn" (format nil "s ~A" name)))))
-
-      ;; Should we start building a new warpship?
-      ((should-build-p slate strategy)
-       (let ((name (next-ship-name)))
-         (format t "[LISP] -> bn w ~A~%" name)
-         (list (make-cmd "bn" (format nil "w ~A" name)))))
-
-      ;; Done with build phase
-      (t
-       (format t "[LISP] -> NEXT~%")
-       (list (cmd-next))))))
+   Gen4: dispatches to build rules via fire-first-producing-rule."
+  (format t "[LISP] decide-build: drafts=~A ships=~A credits=~A round=~A tech=~A~%"
+          (length (slate-drafts slate)) (length (slate-own-ships slate))
+          (slate-credits slate) (slate-round slate) (slate-tech-level slate))
+  (fire-first-producing-rule :build slate strategy))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Strategic Ship Design Selection
@@ -132,62 +55,13 @@
 
 (defun choose-ship-design (slate &optional strategy)
   "Choose ship design based on game state and strategy.
-   Consults strategy :design-preference when available.
-   Consider: tech level, enemy composition, fleet balance, systemship flag."
-  (let* ((tech (slate-tech-level slate))
-         (own-ships (slate-own-ships slate))
-         (enemy-ships (slate-enemy-ships slate))
-         (drafts (slate-drafts slate))
-         (num-brawlers (count-ship-type own-ships :brawler))
-         (num-interceptors (count-ship-type own-ships :interceptor))
-         (num-missile-boats (count-ship-type own-ships :missile-boat))
-         (design-pref (when strategy (getf strategy :design-preference)))
-         (enemy-high-screen (if strategy
-                                (getf strategy :enemy-high-screen-p)
-                                (enemy-heavy-screens-p enemy-ships))))
-
-    ;; Check if the draft is a systemship (no WG)
-    (when (and drafts (is-draft-systemship-p (first drafts)))
-      (format t "[LISP] Designing systemship defender~%")
-      (return-from choose-ship-design *defender-spec*))
-
-    (cond
-      ;; First ship should be a brawler (main combat)
-      ((null own-ships)
-       (format t "[LISP] First ship - building brawler~%")
-       *brawler-spec*)
-
-      ;; Strategy says missile-boat and we lack them
-      ((and (eq design-pref :missile-boat) (< num-missile-boats 1))
-       (format t "[LISP] Strategy: building missile boat (enemy high screen)~%")
-       *missile-boat-spec*)
-
-      ;; Enemy has heavy screens and we lack missile boats
-      ((and enemy-high-screen (< num-missile-boats 1))
-       (format t "[LISP] Enemy has heavy screens - building missile boat~%")
-       *missile-boat-spec*)
-
-      ;; If tech 1+ and we have ships, build stronger
-      ((and (>= tech 1) (< num-brawlers 3))
-       (format t "[LISP] Tech ~A - building brawler~%" tech)
-       *brawler-spec*)
-
-      ;; Need interceptors to spread across bases
-      ((< num-interceptors 2)
-       (format t "[LISP] Fleet needs interceptors~%")
-       *interceptor-spec*)
-
-      ;; Every 3rd+ ship could be a missile boat for variety
-      ((and (>= (length own-ships) 3) (< num-missile-boats 1))
-       (format t "[LISP] Adding missile boat to fleet mix~%")
-       *missile-boat-spec*)
-
-      ;; Default: brawler
-      (t *brawler-spec*))))
+   Gen4: dispatches to design rules via fire-first-matching-rule."
+  (fire-first-matching-rule :design slate strategy))
 
 (defun enemy-heavy-screens-p (enemy-ships)
   "Check if any enemy ship has heavy screens (S >= 4)."
-  (some (lambda (s) (>= (ship-screen s) 4)) enemy-ships))
+  (some (lambda (s) (>= (ship-screen s) (theta 'theta-heavy-screen-threshold)))
+        enemy-ships))
 
 (defun is-draft-systemship-p (draft)
   "Check if draft is a systemship (no warp generator)."
@@ -224,9 +98,9 @@
   (let ((turns (turns-until-tech-up slate))
         (num-ships (length (slate-own-ships slate)))
         (credits (slate-credits slate)))
-    (and (<= turns 2)
-         (>= num-ships 2)
-         (>= credits 20)))) ; Have BP to spend at higher tech
+    (and (<= turns (theta 'theta-wait-tech-turns))
+         (>= num-ships (theta 'theta-wait-tech-ships-min))
+         (>= credits (theta 'theta-wait-tech-credits-min)))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Build Decision
@@ -239,13 +113,11 @@
   (let* ((credits (slate-credits slate))
          (own-bases (slate-own-bases slate))
          (own-ships (slate-own-ships slate))
-         (defender-cost 13)
+         (defender-cost (theta 'theta-defender-cost))
          (build-type (when strategy (getf strategy :build-type)))
          (unguarded (when strategy (getf strategy :unguarded-own-bases)))
          (defenders-at-base (count-ships-at-bases own-ships own-bases))
-         ;; Count existing systemship defenders (non-warpships)
          (existing-defenders (count-if-not #'ship-warpship-p own-ships))
-         ;; How many unguarded bases actually need a defender
          (bases-needing (if unguarded (length unguarded) 0)))
 
     ;; Strategy-driven: build defender if strategy says so AND under cap
@@ -253,15 +125,15 @@
       (return-from should-build-defender-p
         (and (> bases-needing 0)
              (< existing-defenders bases-needing)
-             (<= existing-defenders 2)
-             (>= credits (+ defender-cost *minimum-reserve*)))))
+             (<= existing-defenders (theta 'theta-max-defenders))
+             (>= credits (+ defender-cost (theta 'theta-minimum-reserve))))))
 
     ;; Fallback: original logic
-    (and (>= (length own-bases) 2)
+    (and (>= (length own-bases) (theta 'theta-defender-base-threshold))
          (< defenders-at-base 1)
          (>= (length own-ships) 1)
-         (<= existing-defenders 2)
-         (>= credits (+ defender-cost *minimum-reserve*)))))
+         (<= existing-defenders (theta 'theta-max-defenders))
+         (>= credits (+ defender-cost (theta 'theta-minimum-reserve))))))
 
 (defun count-ships-at-bases (ships bases)
   "Count how many ships are stationed at our bases."
@@ -273,7 +145,7 @@
   "Heuristic: Should we build another warpship?
    Strategy-driven: no hardcoded cap. Build until fleet meets strategic need."
   (let* ((credits (slate-credits slate))
-         (ship-cost 17)
+         (ship-cost (theta 'theta-warpship-cost))
          (ships-to-build (when strategy (getf strategy :ships-to-build)))
          (save-for-tech (when strategy (getf strategy :save-for-tech-p)))
          (warp-count (if strategy
@@ -289,7 +161,7 @@
       (return-from should-build-p nil))
 
     ;; Build if: affordable AND need more ships (no hardcoded cap)
-    (and (>= credits (+ ship-cost *minimum-reserve*))
+    (and (>= credits (+ ship-cost (theta 'theta-minimum-reserve)))
          (< warp-count need-ships))))
 
 ;;; ----------------------------------------------------------------------------

@@ -5,7 +5,7 @@
 ;;                                       ;;
 ;; Copyright (c) 2025, sibomots          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; aa-strategy.lisp - Strategic Ontology (3rd Generation)
+;;;; aa-strategy.lisp - Strategic Ontology (Gen4)
 ;;;;
 ;;;; Full ontology: victory state, fleet assessment, ship assessments,
 ;;;; enemy profile, hex valuation, force projection, temporal state,
@@ -22,12 +22,12 @@
   "Compute numeric combat power score for a single ship.
    Weights: PD + beam*1.5 + screen*1.2 + tech*2.5 + tube*0.5 + missile*0.3.
    Scaled by health-ratio (current stats / max stats) so damaged ships report lower."
-  (let* ((raw (+ (ship-pd ship)
-                 (* (ship-beam ship) 1.5)
-                 (* (ship-screen ship) 1.2)
-                 (* (ship-tech ship) 2.5)
-                 (* (ship-tube ship) 0.5)
-                 (* (ship-missile ship) 0.3)))
+  (let* ((raw (+ (* (ship-pd ship) (theta 'theta-pd-weight))
+                 (* (ship-beam ship) (theta 'theta-beam-weight))
+                 (* (ship-screen ship) (theta 'theta-screen-weight))
+                 (* (ship-tech ship) (theta 'theta-tech-weight))
+                 (* (ship-tube ship) (theta 'theta-tube-weight))
+                 (* (ship-missile ship) (theta 'theta-missile-weight))))
          (current-total (+ (ship-pd ship) (ship-beam ship)
                            (ship-screen ship) (ship-tube ship)))
          (max-total (+ (ship-pd-max ship) (ship-beam-max ship)
@@ -55,9 +55,10 @@
         (warp (ship-warpship-p ship)))
     (cond
       ((> tube 0) :missile-boat)
-      ((and (not warp) (>= pd 7)) :fortress)
+      ((and (not warp) (>= pd (theta 'theta-classify-fortress-pd))) :fortress)
       ((and (not warp)) :defender)
-      ((and (>= pd 5) (>= beam 3)) :brawler)
+      ((and (>= pd (theta 'theta-classify-brawler-pd))
+            (>= beam (theta 'theta-classify-brawler-beam))) :brawler)
       (t :interceptor))))
 
 ;;; ============================================================================
@@ -383,38 +384,42 @@
         (facilities (slate-facilities slate)))
     ;; Base type bonuses
     (when (member hex enemy-bases :test #'string=)
-      (incf score 100))
+      (incf score (theta 'theta-hex-enemy-base)))
     (when (member hex own-bases :test #'string=)
-      (incf score 80))
+      (incf score (theta 'theta-hex-own-base)))
 
     ;; Facility bonuses
     (dolist (fac facilities)
       (when (string-equal (getf fac :system) hex)
         (let ((ftype (facility-type fac)))
           (cond
-            ((string-equal ftype "SHIPYARD") (incf score 30))
-            ((string-equal ftype "REFINERY") (incf score 20))
-            ((string-equal ftype "REPAIR_DOCK") (incf score 15))
-            ((string-equal ftype "TRADE_HUB") (incf score 10))))))
+            ((string-equal ftype "SHIPYARD") (incf score (theta 'theta-hex-shipyard)))
+            ((string-equal ftype "REFINERY") (incf score (theta 'theta-hex-refinery)))
+            ((string-equal ftype "REPAIR_DOCK") (incf score (theta 'theta-hex-repair-dock)))
+            ((string-equal ftype "TRADE_HUB") (incf score (theta 'theta-hex-trade-hub)))))))
 
-    ;; Proximity bonus: +10 for each base within BFS distance 4
+    ;; Proximity bonus for each base within BFS range
     (dolist (base (append own-bases enemy-bases))
       (when (and (not (string= base hex))
-                 (<= (slate-distance slate base hex) 4))
-        (incf score 10)))
+                 (<= (slate-distance slate base hex)
+                     (theta 'theta-hex-proximity-range)))
+        (incf score (theta 'theta-hex-proximity-bonus))))
 
     ;; Warpline bonus: hex on a warpline has strategic value
     (when (warpline-hex-p slate hex)
-      (incf score 15))
+      (incf score (theta 'theta-hex-warpline-bonus)))
 
     ;; Resource value: hexes with rich extraction sites
     (let ((res-at-hex (resources-at-system slate hex)))
       (dolist (res res-at-hex)
         (let ((yield (resource-yield res)))
           (cond
-            ((>= yield 8) (incf score 20))
-            ((>= yield 4) (incf score 10))
-            ((>= yield 2) (incf score 5))))))
+            ((>= yield (theta 'theta-hex-resource-high-threshold))
+             (incf score (theta 'theta-hex-resource-high-value)))
+            ((>= yield (theta 'theta-hex-resource-med-threshold))
+             (incf score (theta 'theta-hex-resource-med-value)))
+            ((>= yield (theta 'theta-hex-resource-low-threshold))
+             (incf score (theta 'theta-hex-resource-low-value)))))))
 
     ;; Chokepoint detection: warpline hex connecting bases on both sides
     (when (warpline-hex-p slate hex)
@@ -427,14 +432,14 @@
           (when (member nbr enemy-bases :test #'string=)
             (incf near-enemy)))
         (when (and (> near-own 0) (> near-enemy 0))
-          (incf score 25))))
+          (incf score (theta 'theta-hex-chokepoint-bonus)))))
 
     ;; Denial value: hex on enemy threat path
     (when strategy
       (let ((threat-hexes (getf strategy :enemy-threat-hexes)))
         (when (and threat-hexes
                    (member hex threat-hexes :test #'string-equal))
-          (incf score 10))))
+          (incf score (theta 'theta-hex-denial-bonus)))))
 
     ;; VP scoring rate: enemy base we currently occupy is high-defend
     (when (member hex enemy-bases :test #'string=)
@@ -443,7 +448,7 @@
           (when (string= (ship-hex ship) hex)
             (setf occupied t)))
         (when occupied
-          (incf score 40))))
+          (incf score (theta 'theta-hex-vp-occupied-bonus)))))
 
     score))
 
@@ -574,12 +579,13 @@
         (dolist (ship own-ships)
           (when (string= (ship-hex ship) ohex)
             (setf has-friendly t)))
-        ;; Threat: enemy within BFS distance <= 6
+        ;; Threat: enemy within BFS distance <= threshold
         (dolist (eship enemy-ships)
           (let ((ehex (ship-hex eship)))
             (when (and ehex
                        (not (string= ehex ""))
-                       (<= (slate-distance slate ehex ohex) 6))
+                       (<= (slate-distance slate ehex ohex)
+                           (theta 'theta-force-threat-distance)))
               (setf has-threat t))))
         (when (not has-friendly)
           (push ohex unguarded-own))
@@ -738,7 +744,8 @@
                       (incf (cdr existing) rate)
                       (push (cons base rate) threat-velocity)))))
             ;; Convergence: count enemies approaching same base
-            (when (< (slate-enemy-distance slate code base) 6)
+            (when (< (slate-enemy-distance slate code base)
+                     (theta 'theta-enemy-near-threshold))
               (let ((existing (assoc base converge-counts :test #'string=)))
                 (if existing
                     (incf (cdr existing))
@@ -815,7 +822,8 @@
              (sort (copy-list converge-counts)
                    (lambda (a b) (> (cdr a) (cdr b)))))
            (converge-hex (when (and sorted-converge
-                                    (>= (cdr (first sorted-converge)) 2))
+                                    (>= (cdr (first sorted-converge))
+                                        (theta 'theta-enemy-converge-minimum)))
                            (car (first sorted-converge))))
            (converge-count (if sorted-converge
                                (cdr (first sorted-converge))
@@ -824,7 +832,7 @@
            ;; BP estimate: WG(5) + PD + B + S + T + ceil(M/3) + SR
            (enemy-total-bp 0))
       (dolist (eship enemy-ships)
-        (let ((bp (+ (if (ship-warpship-p eship) 5 0)
+        (let ((bp (+ (if (ship-warpship-p eship) (theta 'theta-enemy-wg-bp-cost) 0)
                      (ship-pd eship) (ship-beam eship) (ship-screen eship)
                      (ship-tube eship) (ceiling (ship-missile eship) 3)
                      (ship-sr eship))))
@@ -846,7 +854,8 @@
                                ;; No enemies visible: unknown (skip classification)
                                ((null enemy-ships) :unknown)
                                ;; 3+ enemies converging on one base
-                               ((>= converge-count 3) :aggressive)
+                               ((>= converge-count (theta 'theta-enemy-converge-aggressive))
+                                :aggressive)
                                ;; Enemies at bases AND closing
                                ((and (> converge-count 0) has-velocity) :aggressive)
                                ;; Saving and not building (only if enemies exist)
@@ -870,12 +879,13 @@
   "Time-aware facts: tech timing, game phase, cross-turn trends."
   (let* ((round (slate-round slate))
          (credits (slate-credits slate))
-         (tech-boundary (* (1+ (floor (1- round) 4)) 4))
+         (tech-period (theta 'theta-tech-period))
+         (tech-boundary (* (1+ (floor (1- round) tech-period)) tech-period))
          (turns-until-tech (max 0 (- tech-boundary round)))
          (should-wait (and (= turns-until-tech 1)
-                           (>= credits 15)))
-         (game-phase (cond ((<= round 3) :early)
-                           ((<= round 10) :mid)
+                           (>= credits (theta 'theta-wait-for-tech-credits))))
+         (game-phase (cond ((<= round (theta 'theta-phase-early-end)) :early)
+                           ((<= round (theta 'theta-phase-mid-end)) :mid)
                            (t :late)))
          ;; Trend analysis from persisted metrics
          (credits-prev (slate-metric slate "credits-prev" 0.0))
@@ -895,7 +905,8 @@
            (power-trend (- fleet-power fleet-power-prev))
            (fleet-attrition (- fleet-power-prev fleet-power))
            (enemy-building-p (> enemy-count (floor enemy-count-prev)))
-           (enemy-saving-p (>= enemy-stable-rounds 3.0))
+           (enemy-saving-p (>= enemy-stable-rounds
+                              (theta 'theta-enemy-stable-rounds)))
            ;; Economic trajectory: 3-turn rolling average
            (credits-prev2 (slate-metric slate "credits-prev2" 0.0))
            (econ-delta-1 (- credits (floor credits-prev)))
@@ -916,10 +927,12 @@
                                 (format nil "theater-~A-rounds" hex) 0.0)))
                (state (cond
                         ((and (> our-p 0) (> their-p 0)
-                              (> (/ our-p their-p) 1.3))
+                              (> (/ our-p their-p)
+                                 (theta 'theta-theater-winning-ratio)))
                          :winning)
                         ((and (> our-p 0) (> their-p 0)
-                              (< (/ our-p their-p) 0.7))
+                              (< (/ our-p their-p)
+                                 (theta 'theta-theater-losing-ratio)))
                          :losing)
                         (t :stalled))))
           (push (list hex :state state :rounds rounds
@@ -967,18 +980,18 @@
         ;; Defense bonus: own base under threat
         (when (and under-threat
                    (member hex under-threat :test #'string-equal))
-          (incf score 50))
+          (incf score (theta 'theta-theater-defense-bonus)))
         ;; VP scoring bonus: enemy base we hold
         (when (and bases-held
                    (member hex bases-held :test #'string-equal))
-          (incf score 40))
+          (incf score (theta 'theta-theater-vp-bonus)))
         ;; Needs reinforcement: our ships outnumbered here
         (let ((our-count (count-if (lambda (s) (string-equal (ship-hex s) hex))
                                    own-ships))
               (their-count (count-if (lambda (s) (string-equal (ship-hex s) hex))
                                      enemy-ships)))
           (when (and (> their-count 0) (< our-count their-count))
-            (incf score 30)))
+            (incf score (theta 'theta-theater-reinforce-bonus))))
         (push (cons hex score) results)))
     ;; Sort descending by score
     (sort results (lambda (a b) (> (cdr a) (cdr b))))))
@@ -1169,71 +1182,25 @@
          (projection (compute-force-projection slate))
          (temporal (compute-temporal-state slate))
          (enemy-intent (compute-enemy-intent slate))
-         (posture :balanced)
-         (posture-reason "default balanced")
-         ;; Extract keys for posture logic
+         ;; Extract keys for posture rule dispatch
          (fleet-power (getf fstate :fleet-combat-power))
          (enemy-power (getf fstate :enemy-combat-power))
-         (score-state (getf vstate :score-state))
-         (score-margin (getf vstate :score-margin))
-         (tech-adv (getf fstate :tech-advantage))
-         (vdist (getf vstate :victory-distance))
-         (evdist (getf vstate :enemy-victory-distance)))
+         (posture-context (list :fleet-power fleet-power
+                                :enemy-power enemy-power
+                                :score-state (getf vstate :score-state)
+                                :score-margin (getf vstate :score-margin)
+                                :tech-adv (getf fstate :tech-advantage)
+                                :vdist (getf vstate :victory-distance)
+                                :evdist (getf vstate :enemy-victory-distance)
+                                :enemy-strategy (getf enemy-intent :enemy-strategy)))
+         (posture :balanced)
+         (posture-reason "default balanced"))
 
-    ;; Rule 1: Base posture from combat power comparison
-    (cond
-      ((> fleet-power enemy-power)
-       (setf posture :aggressive)
-       (setf posture-reason "fleet combat power advantage"))
-      ((< fleet-power enemy-power)
-       (setf posture :defensive)
-       (setf posture-reason "fleet combat power disadvantage"))
-      (t
-       (setf posture :balanced)
-       (setf posture-reason "fleet combat power equal")))
-
-    ;; Rule 2: Score state override — behind by 2+ VP forces aggressive
-    (when (and (eq score-state :behind) (>= score-margin 2))
-      (setf posture :aggressive)
-      (setf posture-reason "behind by 2+ VP, must push"))
-
-    ;; Rule 3: Tech advantage >= 1 leans aggressive
-    (when (>= tech-adv 1.0)
-      (when (not (eq posture :aggressive))
-        (setf posture :aggressive)
-        (setf posture-reason "tech advantage >= 1")))
-
-    ;; Rule 4: Tech disadvantage >= 1 leans defensive
-    (when (<= tech-adv -1.0)
-      (when (not (eq posture :defensive))
-        (setf posture :defensive)
-        (setf posture-reason "tech disadvantage >= 1")))
-
-    ;; Rule 5: K74 — victory-distance = 1 forces aggressive
-    (when (= vdist 1)
-      (setf posture :aggressive)
-      (setf posture-reason "one base from victory"))
-
-    ;; Rule 6: K75 — enemy-victory-distance <= 1 forces defensive (beats K74)
-    (when (<= evdist 1)
-      (setf posture :defensive)
-      (setf posture-reason "enemy one base from winning"))
-
-    ;; Rule 7: Counter-posture from opponent modeling (Section 9)
-    ;; Only applies when we have actual intel (enemy-strategy != :unknown)
-    (let ((enemy-strategy (getf enemy-intent :enemy-strategy)))
-      (when (and enemy-strategy (not (eq enemy-strategy :unknown)))
-        (cond
-          ;; Enemy aggressive → consolidate defensively
-          ((and (eq enemy-strategy :aggressive)
-                (not (eq posture :defensive)))
-           (setf posture :defensive)
-           (setf posture-reason "counter: enemy aggressive, consolidating"))
-          ;; Enemy tech-investing → push before they outtech us
-          ((and (eq enemy-strategy :tech-investing)
-                (not (eq posture :aggressive)))
-           (setf posture :aggressive)
-           (setf posture-reason "counter: enemy tech-investing, pushing")))))
+    ;; Fire posture rules (Gen4: replaces sequential setf cascade)
+    (multiple-value-bind (p pr)
+        (fire-posture-rules slate posture-context)
+      (setf posture p)
+      (setf posture-reason pr))
 
     ;; Acceptable-loss threshold (Section 8: Theater Coordination)
     (let* ((warp-count (getf fstate :warpship-count))
@@ -1282,8 +1249,9 @@
       (let* ((prev-power (slate-metric slate "fleet-power-prev" 0.0))
              (power-delta (- fleet-power prev-power))
              (prev-attrition (slate-metric slate "attrition-3turn-avg" 0.0))
-             ;; Exponential moving average: alpha=0.4 (recent turns weighted more)
-             (new-attrition (+ (* 0.4 power-delta) (* 0.6 prev-attrition))))
+             ;; Exponential moving average (recent turns weighted more)
+             (new-attrition (+ (* (theta 'theta-attrition-alpha) power-delta)
+                               (* (theta 'theta-attrition-beta) prev-attrition))))
         (push (make-metric "attrition-3turn-avg" new-attrition) metrics)))
 
     ;; Enemy count + stable rounds counter

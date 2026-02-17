@@ -66,49 +66,25 @@
 (defun assess-theater (hex our-ships their-ships enemy-bases
                        &optional (acceptable-loss 0))
   "Assess a single theater. Returns :fight, :retreat, or :hold.
-   Uses combat-power weighting (PD + beam*1.5 + screen + tech*2) and
-   screen penetration check for smarter triage.
-   ACCEPTABLE-LOSS: 0=none, 1=one ship, 2=expendable ships OK to sacrifice."
+   Gen4: dispatches to triage rules via fire-first-matching-rule."
   (let* ((our-power (reduce #'+ (mapcar #'ship-combat-power our-ships)
                             :initial-value 0.0))
          (their-power (reduce #'+ (mapcar #'ship-combat-power their-ships)
                               :initial-value 0.0))
-         (our-pd (reduce #'+ (mapcar #'ship-pd our-ships) :initial-value 0))
-         (their-pd (reduce #'+ (mapcar #'ship-pd their-ships) :initial-value 0))
-         (is-vp-hex (member hex enemy-bases :test #'string=))
          (force-ratio (if (> their-power 0.0)
                           (/ our-power their-power)
                           99.0))
+         (is-vp-hex (member hex enemy-bases :test #'string=))
+         (can-penetrate (can-guarantee-damage-p our-ships their-ships))
          (have-warpship (some #'ship-warpship-p our-ships))
-         (can-penetrate (can-guarantee-damage-p our-ships their-ships)))
+         (triage-ctx (list :triage-force-ratio force-ratio
+                           :triage-is-vp-hex is-vp-hex
+                           :triage-can-penetrate can-penetrate
+                           :triage-have-warpship have-warpship
+                           :triage-acceptable-loss acceptable-loss)))
     (format t "[LISP] Theater ~A: our-power=~,1F their-power=~,1F ratio=~,2F vp=~A penetrate=~A loss-ok=~A~%"
             hex our-power their-power force-ratio is-vp-hex can-penetrate acceptable-loss)
-    (cond
-      ;; VP hex: fight unless badly outmatched
-      ((and is-vp-hex (>= force-ratio 0.5))
-       :fight)
-      ;; VP hex but badly outmatched: hold (dodge) to buy time
-      ((and is-vp-hex (< force-ratio 0.5))
-       :hold)
-      ;; Non-VP hex with advantage and can penetrate: fight
-      ((and (>= force-ratio 1.2) can-penetrate)
-       :fight)
-      ;; Acceptable loss: fight at low-value hex even when outmatched
-      ((and (> acceptable-loss 0) (not is-vp-hex) (>= force-ratio 0.4))
-       (format t "[LISP] Acceptable loss threshold allows fighting~%")
-       :fight)
-      ;; Non-VP hex with advantage but can't penetrate: hold for reinforcements
-      ((and (>= force-ratio 1.2) (not can-penetrate))
-       (format t "[LISP] Can't penetrate screens despite advantage - holding~%")
-       :hold)
-      ;; Non-VP hex, matched: hold and evaluate
-      ((>= force-ratio 0.7)
-       :hold)
-      ;; Non-VP hex, outmatched: retreat if possible
-      ((and have-warpship (< force-ratio 0.7))
-       :retreat)
-      ;; Systemship can't retreat: hold
-      (t :hold))))
+    (fire-first-matching-rule :triage nil triage-ctx)))
 
 (defun get-theater-triage (triage-results hex)
   "Look up triage decision for a hex. Default to :fight if not found."
@@ -121,20 +97,13 @@
 
 (defun decide-combat-phase (slate &optional strategy)
   "Decide ONE combat action. Called repeatedly until NEXT.
-   RULE: Focus on ONE combat hex at a time. Finish it before moving to next.
-   STRATEGY: full strategic state plist (used for tech-weighted triage).
-   Priority:
-   1. Ships with escape_pending need retreat command
-   2. Ships with pending_damage need damage assignment
-   3. Ships needing orders in actionable combat hex get combat orders
-   4. If all orders issued but not committed, commit
-   5. If all combats waiting for enemy/user, do nothing (wait)
-   6. Otherwise advance"
+   Gen4: dispatches to combat rules via fire-first-matching-rule.
+   Computes shared combat context and augments strategy plist."
   (let* ((combats (slate-active-combats slate))
          (own-ships (slate-own-ships slate))
          ;; THEATER TRIAGE: Assess all combats before acting
          (triage (when combats (triage-all-theaters slate strategy)))
-         ;; Find combat that needs AI action (stage 0 with ships needing orders)
+         ;; Find combat that needs AI action
          (focus-combat (find-actionable-combat combats own-ships))
          (focus-hex (when focus-combat (combat-hex focus-combat)))
          ;; Filter ships to only those in focus hex
@@ -144,58 +113,17 @@
                             own-ships)))
          ;; Get triage decision for focus hex
          (theater-decision (when focus-hex
-                             (get-theater-triage triage focus-hex))))
+                             (get-theater-triage triage focus-hex)))
+         ;; Augment strategy with combat context for rules
+         (combat-strategy (append strategy
+                                  (list :combat-triage triage
+                                        :combat-focus focus-combat
+                                        :combat-focus-hex focus-hex
+                                        :combat-ships-in-focus ships-in-focus
+                                        :combat-theater-decision theater-decision))))
     (format t "[LISP] decide-combat: combats=~A focus-hex=~A ships-in-focus=~A triage=~A~%"
             (length combats) focus-hex (length ships-in-focus) theater-decision)
-    (cond
-      ;; Priority 1: Handle escaping ships (any hex)
-      ((find-escaping-ship own-ships)
-       (let ((ship (find-escaping-ship own-ships)))
-         (format t "[LISP] -> retreat ~A~%" (ship-name ship))
-         (issue-retreat ship slate strategy)))
-
-      ;; Priority 2: Assign pending damage (any hex)
-      ((find-ship-with-damage own-ships)
-       (let ((ship (find-ship-with-damage own-ships)))
-         (format t "[LISP] -> apply damage to ~A~%" (ship-name ship))
-         (issue-damage-assignment ship)))
-
-      ;; Priority 3: Issue combat orders for ships in FOCUS HEX only
-      ((and focus-hex (find-ship-needing-order ships-in-focus))
-       (let* ((ship (find-ship-needing-order ships-in-focus))
-              (hex focus-hex)
-              (enemies-here (ships-at-hex (slate-enemy-ships slate) hex))
-              ;; FOCUS FIRE: All AI ships target the same enemy (weakest first)
-              (focus-target (pick-focus-target enemies-here))
-              (stalemate (combat-stalemate-count focus-combat))
-              (ai-attacker (combat-ai-attacker-p focus-combat)))
-         ;; Stalemate warning: if AI is attacker and stalemate=2, must deal damage
-         (when (and ai-attacker (>= stalemate 2))
-           (format t "[LISP] WARNING: Stalemate=~A, must deal damage or retreat!~%"
-                   stalemate))
-         (format t "[LISP] -> combat order for ~A in ~A (focus: ~A stalemate: ~A triage: ~A)~%"
-                 (ship-name ship) hex
-                 (when focus-target (ship-code focus-target)) stalemate theater-decision)
-         (issue-combat-order-with-triage ship focus-target enemies-here
-                                         stalemate ai-attacker theater-decision
-                                         strategy)))
-
-      ;; Priority 4: Commit if orders are ready but not committed
-      ((needs-combat-commit-p combats ships-in-focus focus-hex)
-       (format t "[LISP] -> cc~%")
-       (list (make-cmd "cc")))
-
-      ;; Otherwise: check if we're waiting or can advance
-      (t
-       (if combats
-           ;; Combats exist but no action for AI - waiting for enemy/user
-           (progn
-             (format t "[LISP] -> WAIT (combat active, awaiting enemy/user)~%")
-             nil)
-           ;; No combats - advance to next phase
-           (progn
-             (format t "[LISP] -> NEXT (no combat)~%")
-             (list (cmd-next))))))))
+    (fire-first-matching-rule :combat slate combat-strategy)))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Find Ships Needing Action
@@ -477,61 +405,18 @@
 ;;; Issue Combat Order (CRT-Aware)
 ;;; ----------------------------------------------------------------------------
 
-(defun issue-combat-order (ship target enemies)
-  "Issue combat order for ship using CRT-aware tactics.
-   Format: co SHIP TACTIC TARGET d=N b=N s=N [m=N ...]
-   Note: Beams/Screens cannot be used same round as missiles."
-  (issue-combat-order-with-triage ship target enemies 0 nil :fight))
-
 (defun issue-combat-order-with-triage (ship target enemies stalemate ai-attacker
                                       triage-decision &optional strategy)
   "Issue combat order considering theater triage, stalemate state, and endgame.
-   TRIAGE-DECISION: :fight, :retreat, or :hold (from theater triage)
-   STRATEGY: full strategic state plist (for endgame overrides)
-   Stalemate rules still apply: if AI attacker and stalemate>=2, must deal damage."
-  (let* ((endgame-p (when strategy (getf strategy :endgame-p)))
-         (vp-winner (when strategy (getf strategy :vp-race-winner)))
-         (hex (ship-hex ship))
-         (enemy-bases (when strategy (getf strategy :bases-held)))
-         (at-held-base (when enemy-bases
-                         (member hex enemy-bases :test #'string-equal)))
-         (analysis
-          (cond
-            ;; Endgame override: winning VP race at held enemy base → dodge-defend
-            ((and endgame-p (eq vp-winner :us) at-held-base)
-             (format t "[LISP] Endgame: winning VP race, defending held base~%")
-             (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
-            ;; Endgame override: enemy winning VP race → force fight
-            ((and endgame-p (eq vp-winner :them))
-             (format t "[LISP] Endgame: enemy winning VP race, maximum aggression~%")
-             (crt-attack-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)
-                               (if target (or (ship-last-drive target) 0) 0)
-                               :standard))
-            ;; Auto-retreat: damaged warpship below threshold
-            ((should-auto-retreat-p ship
-               (if strategy (or (getf strategy :risk-tolerance) :normal) :normal))
-             (format t "[LISP] Auto-retreat: ship ~A below HP threshold~%"
-                     (ship-name ship))
-             (list :tactic "e"
-                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
-                   :missiles nil))
-            ;; Stalemate danger overrides triage - must deal damage or retreat
-            ((and ai-attacker (>= stalemate 2))
-             (format t "[LISP] Stalemate override: must damage or retreat~%")
-             (analyze-must-damage-situation ship target enemies))
-            ;; Triage says retreat: escape if warpship
-            ((and (eq triage-decision :retreat) (ship-warpship-p ship))
-             (format t "[LISP] Triage: RETREAT - preserving ship for better fights~%")
-             (list :tactic "e"
-                   :alloc (list :d (ship-pd ship) :b 0 :s 0)
-                   :missiles nil))
-            ;; Triage says hold: dodge defensively
-            ((eq triage-decision :hold)
-             (format t "[LISP] Triage: HOLD - dodging defensively~%")
-             (crt-dodge-alloc (ship-pd ship) (ship-beam ship) (ship-screen ship)))
-            ;; Triage says fight: normal combat analysis
-            (t
-             (analyze-combat-situation ship target enemies)))))
+   Gen4: dispatches to tactics rules via fire-first-matching-rule."
+  (let* ((tactics-strategy (append strategy
+                                   (list :tactics-ship ship
+                                         :tactics-target target
+                                         :tactics-enemies enemies
+                                         :tactics-stalemate stalemate
+                                         :tactics-ai-attacker ai-attacker
+                                         :tactics-triage-decision triage-decision)))
+         (analysis (fire-first-matching-rule :tactics nil tactics-strategy)))
     (if target
         (let* ((tactic (getf analysis :tactic))
                (alloc (getf analysis :alloc))
@@ -594,98 +479,6 @@
         (format nil "~A t=~A~{ m=~A~}" base tube-count missiles)
         base)))
 
-(defun analyze-combat-situation (ship target enemies)
-  "Analyze tactical situation and return (:tactic X :alloc (...) :missiles (...)).
-   Uses CRT knowledge, revealed enemy orders, and ship role dispatch.
-   Note: Beams/Screens and Missiles are mutually exclusive per round."
-  (let* ((my-pd (ship-pd ship))
-         (my-beam (ship-beam ship))
-         (my-screen (ship-screen ship))
-         (my-tube (ship-tube ship))
-         (my-missile (ship-missile ship))
-         (my-tech (ship-tech ship))
-         (my-role (classify-ship-role ship))
-         (total-enemy-pd (reduce #'+ (mapcar #'ship-pd enemies) :initial-value 0))
-         ;; Check revealed enemy tactic from prior round
-         (enemy-tactic (when target (ship-last-tactic target)))
-         (enemy-drive (when target (ship-last-drive target)))
-         (enemy-pd (when target (ship-pd target)))
-         (enemy-screen (when target (ship-screen target)))
-         (enemy-tech (when target (ship-tech target))))
-
-    ;; Role-specific dispatch (Section 5: Ship Capability Matching)
-    (case my-role
-      ;; Missile boats: always fire missiles if available; retreat if empty
-      (:missile-boat
-       (cond
-         ((and (> my-tube 0) (> my-missile 0))
-          (format t "[LISP] Missile-boat ~A: firing missiles~%" (ship-name ship))
-          (return-from analyze-combat-situation
-            (crt-missile-alloc my-pd my-tube my-missile my-tech
-                               (or enemy-drive 0))))
-         ((ship-warpship-p ship)
-          (format t "[LISP] Missile-boat ~A: out of missiles, retreating~%"
-                  (ship-name ship))
-          (return-from analyze-combat-situation
-            (list :tactic "e"
-                  :alloc (list :d my-pd :b 0 :s 0)
-                  :missiles nil)))))
-
-      ;; Fortress (systemship): always attack, can't retreat, max damage
-      (:fortress
-       (format t "[LISP] Fortress ~A: all-in attack~%" (ship-name ship))
-       (return-from analyze-combat-situation
-         (crt-attack-alloc my-pd my-beam my-screen (or enemy-drive 0) :standard))))
-
-    ;; Standard analysis for brawler, interceptor, defender
-
-    ;; Consider missile alpha strike if:
-    ;; - Have tubes and missiles
-    ;; - Enemy has high screens (beams won't penetrate well)
-    ;; - First combat round (no revealed tactic = NIL)
-    (when (and (> my-tube 0)
-               (> my-missile 0)
-               (null enemy-tactic)
-               (> (+ (or enemy-screen 0) (or enemy-tech 0)) 3))
-      (format t "[LISP] Missile alpha strike (enemy screens ~A+~A)~%"
-              (or enemy-screen 0) (or enemy-tech 0))
-      (return-from analyze-combat-situation
-        (crt-missile-alloc my-pd my-tube my-missile my-tech (or enemy-drive 0))))
-
-    (cond
-      ;; Badly outmatched: retreat if warpship
-      ((and (< my-pd (/ total-enemy-pd 2))
-            (ship-warpship-p ship))
-       (format t "[LISP] Outmatched (~A vs ~A total) - retreating~%"
-               my-pd total-enemy-pd)
-       (list :tactic "e" :alloc (list :d my-pd :b 0 :s 0) :missiles nil))
-
-      ;; Enemy was retreating last round: ATTACK with +3/+4 drive to catch
-      ((eql enemy-tactic #\E)
-       (format t "[LISP] Enemy retreating - attacking to pursue~%")
-       (crt-attack-alloc my-pd my-beam my-screen (or enemy-drive 0) :pursue))
-
-      ;; Enemy was dodging: ATTACK with drive to achieve +3/+4 differential
-      ((eql enemy-tactic #\D)
-       (format t "[LISP] Enemy dodging - attacking with +3/+4 drive~%")
-       (crt-attack-alloc my-pd my-beam my-screen (or enemy-drive 0) :counter-dodge))
-
-      ;; Enemy was attacking: DODGE to make them miss at extremes
-      ((eql enemy-tactic #\A)
-       (format t "[LISP] Enemy attacking - dodging to counter~%")
-       (crt-dodge-alloc my-pd my-beam my-screen))
-
-      ;; No prior intel: use strength ratio
-      ((> my-pd (* 1.5 (or enemy-pd 3)))
-       ;; Significant advantage: ATTACK with optimal drive
-       (format t "[LISP] PD advantage - attacking~%")
-       (crt-attack-alloc my-pd my-beam my-screen (or enemy-pd 3) :standard))
-
-      ;; Roughly matched: DODGE for defense + opportunity
-      (t
-       (format t "[LISP] Matched strength - dodging~%")
-       (crt-dodge-alloc my-pd my-beam my-screen)))))
-
 ;;; ----------------------------------------------------------------------------
 ;;; CRT-Based Power Allocation
 ;;; ----------------------------------------------------------------------------
@@ -695,13 +488,13 @@
    CRITICAL: Cap drive differential at +4 (never +5 = miss)
    MODE: :standard (aim for +2), :pursue (aim for +4), :counter-dodge (+3/+4)"
   (let* ((target-diff (case mode
-                        (:pursue 4)        ; Max to hit retreating
-                        (:counter-dodge 3) ; Need +2 to +4 to hit dodging
-                        (t 2)))            ; Standard: +2 is best vs attack
+                        (:pursue (theta 'theta-crt-pursue-diff))
+                        (:counter-dodge (theta 'theta-crt-counter-dodge-diff))
+                        (t (theta 'theta-crt-standard-diff))))
          ;; Drive needed to achieve target differential
          (drive-needed (+ enemy-drive target-diff))
-         ;; CRITICAL: Never exceed +4 differential (clamp drive)
-         (max-safe-drive (+ enemy-drive 4))
+         ;; CRITICAL: Never exceed max safe differential (clamp drive)
+         (max-safe-drive (+ enemy-drive (theta 'theta-crt-max-safe-diff)))
          (drive-alloc (min pd drive-needed max-safe-drive))
          ;; Remaining for offense
          (remaining (- pd drive-alloc))
@@ -715,11 +508,11 @@
   "Allocate power for DODGE tactic based on CRT.
    DODGE hits at close range (-2 to +2 vs attack, -2 to 0 vs dodge).
    Balance drive for defense, some beam for opportunistic hits, screen for absorb."
-  (let* (;; Drive: ~40% for maneuver
-         (drive-alloc (floor (* pd 0.4)))
+  (let* (;; Drive: fraction for maneuver
+         (drive-alloc (floor (* pd (theta 'theta-dodge-drive-fraction))))
          (remaining (- pd drive-alloc))
          ;; Screen: prioritize absorption (screen + tech level)
-         (screen-alloc (min max-screen (floor (* remaining 0.5))))
+         (screen-alloc (min max-screen (floor (* remaining (theta 'theta-dodge-screen-fraction)))))
          (remaining2 (- remaining screen-alloc))
          ;; Beam: rest for opportunistic fire
          (beam-alloc (min max-beam remaining2)))
@@ -739,8 +532,9 @@
          (tube-pd fireable-count)
          ;; Remaining PD for drive (maneuver during combat)
          (drive-alloc (- pd tube-pd))
-         ;; Set missile drive for optimal CRT hit vs dodgers (+3/+4)
-         (missile-drive (min max-missile-drive (+ enemy-drive 4)))
+         ;; Set missile drive for optimal CRT hit vs dodgers
+         (missile-drive (min max-missile-drive
+                             (+ enemy-drive (theta 'theta-crt-max-safe-diff))))
          ;; Build list of missile drives
          (missile-drives (make-list fireable-count :initial-element missile-drive)))
     (format t "[LISP] Firing ~A missiles at drive ~A~%" fireable-count missile-drive)
@@ -830,9 +624,9 @@
                            (/ (float current-hp) (float max-hp))
                            1.0))
            (threshold (case risk-tolerance
-                        (:low 0.60)
-                        (:high 0.25)
-                        (t 0.40))))
+                        (:low (theta 'theta-retreat-threshold-low))
+                        (:high (theta 'theta-retreat-threshold-high))
+                        (t (theta 'theta-retreat-threshold-normal)))))
       (< health-pct threshold))))
 
 (defun minimum-ships-to-penetrate (target-ship)
@@ -841,5 +635,5 @@
   (let* ((screen (ship-screen target-ship))
          (tech (ship-tech target-ship))
          (absorption (+ screen tech))
-         (brawler-damage 5))  ; Conservative estimate
+         (brawler-damage (theta 'theta-brawler-damage-estimate)))
     (1+ (floor absorption brawler-damage))))

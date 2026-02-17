@@ -75,151 +75,122 @@
         1.0)))
 
 ;;; ----------------------------------------------------------------------------
-;;; Objective Predicates: satisfied-p
+;;; Dynamic Variable for Goal Cross-References
 ;;; ----------------------------------------------------------------------------
 
-(defun objective-satisfied-p (objective slate)
-  "Is this objective currently satisfied?"
-  (case objective
-    (:maintain-missile-stock
-     (>= (fleet-missile-ratio slate) 0.5))
-
-    (:fabricate-materiel
-     ;; satisfied when we've just fabricated or have enough missiles
-     (objective-satisfied-p :maintain-missile-stock slate))
-
-    (:acquire-resource
-     ;; satisfied when fleet has all ingredients for missile recipe
-     (null (missile-ingredients-needed slate)))
-
-    (:survey-for-yield
-     ;; satisfied when no ship is at a system with knowledge < surveyed
-     ;; that also has extractable resources
-     (null (find-surveyable-for-goal slate)))
-
-    (:sell-excess-cargo
-     ;; satisfied when no ship has excess cargo (cargo serving no goal)
-     (null (find-excess-cargo-ship slate)))
-
-    (:resupply-missiles
-     ;; satisfied when no ship at base needs missile resupply
-     (null (find-resupplyable-ship-for-goal slate)))
-
-    (:salvage-opportunity
-     ;; satisfied when ship is at salvageable hex
-     (null (find-salvage-opportunity slate)))
-
-    (otherwise t)))
+(defvar *current-slate* nil
+  "Bound during goal evaluation for cross-reference lookups.")
 
 ;;; ----------------------------------------------------------------------------
-;;; Objective Predicates: relevant-p
+;;; Goal Declarations (Gen4 defgoal)
+;;; ----------------------------------------------------------------------------
+;;; Each goal traces to :win-game via :supported-by chains.
+;;; :satisfied-fn and :precondition-fn are evaluated per cycle.
+;;; :action-fn generates the command when the goal is active.
+
+(setf *all-goals* nil)
+
+(defgoal :maintain-missile-stock
+  :priority 1
+  :supported-by :win-game
+  :satisfied (>= (fleet-missile-ratio slate) (theta 'theta-missile-ratio-target))
+  :precondition t
+  :action nil
+  :needed-resources nil
+  :doc "Fleet missile reserves above operational threshold.")
+
+(defgoal :resupply-missiles
+  :priority 2
+  :supported-by :maintain-missile-stock
+  :satisfied (null (find-resupplyable-ship-for-goal slate))
+  :precondition (and (not (goal-satisfied-p :maintain-missile-stock))
+                     (find-resupplyable-ship-for-goal slate))
+  :action (issue-resupply-action slate)
+  :needed-resources nil
+  :doc "Reload missiles at own base.")
+
+(defgoal :fabricate-materiel
+  :priority 3
+  :supported-by :maintain-missile-stock
+  :satisfied (goal-satisfied-p :maintain-missile-stock)
+  :precondition (and (not (goal-satisfied-p :maintain-missile-stock))
+                     (find-fabricatable-ship-for-goal slate))
+  :action (issue-fabricate-action slate)
+  :needed-resources *missile-recipe-resources*
+  :doc "Convert resources to missiles at shipyard.")
+
+(defgoal :acquire-resource
+  :priority 4
+  :supported-by :fabricate-materiel
+  :satisfied (null (missile-ingredients-needed slate))
+  :precondition (and (not (goal-satisfied-p :acquire-resource))
+                     (not (goal-satisfied-p :maintain-missile-stock))
+                     (or (find-extractable-for-goal slate)
+                         (find-buyable-for-goal slate)))
+  :action (issue-acquire-action slate)
+  :needed-resources (mapcar #'car (missile-ingredients-needed slate))
+  :doc "Extract or buy needed missile ingredients.")
+
+(defgoal :survey-for-yield
+  :priority 5
+  :supported-by :acquire-resource
+  :satisfied (null (find-surveyable-for-goal slate))
+  :precondition (and (not (goal-satisfied-p :acquire-resource))
+                     (not (goal-satisfied-p :maintain-missile-stock))
+                     (find-surveyable-for-goal slate))
+  :action (issue-survey-action slate)
+  :needed-resources nil
+  :doc "Survey systems for better extraction yield.")
+
+(defgoal :salvage-opportunity
+  :priority 6
+  :supported-by :win-game
+  :satisfied (null (find-salvage-opportunity slate))
+  :precondition (find-salvage-opportunity slate)
+  :action (issue-salvage-action slate)
+  :needed-resources nil
+  :doc "Salvage debris at current hex.")
+
+(defgoal :sell-excess-cargo
+  :priority 8
+  :supported-by :win-game
+  :satisfied (null (find-excess-cargo-ship slate))
+  :precondition (find-excess-cargo-ship slate)
+  :action (issue-sell-action slate goals)
+  :needed-resources nil
+  :doc "Sell cargo serving no active goal.")
+
+;;; ----------------------------------------------------------------------------
+;;; Goal Engine
 ;;; ----------------------------------------------------------------------------
 
-(defun objective-relevant-p (objective slate)
-  "Is this objective relevant (actionable) in the current state?
-   A goal is relevant when its preconditions are met AND
-   pursuing it would advance the supports chain toward :win-game."
-  (case objective
-    (:maintain-missile-stock
-     ;; always relevant — top of economic chain
-     t)
+(defun goal-satisfied-p (objective)
+  "Check if the goal with OBJECTIVE keyword is currently satisfied.
+   Requires *current-slate* to be bound during goal evaluation."
+  (let ((gdef (find objective *all-goals*
+                    :key (lambda (g) (getf g :objective)))))
+    (if gdef
+        (funcall (getf gdef :satisfied-fn) *current-slate*)
+        t)))
 
-    (:fabricate-materiel
-     ;; relevant only when missile stock is unsatisfied
-     ;; AND a ship at a shipyard has the ingredients
-     (and (not (objective-satisfied-p :maintain-missile-stock slate))
-          (find-fabricatable-ship-for-goal slate)))
-
-    (:acquire-resource
-     ;; relevant only when fabrication needs ingredients
-     ;; AND a ship can extract or buy
-     (and (not (objective-satisfied-p :acquire-resource slate))
-          (not (objective-satisfied-p :maintain-missile-stock slate))
-          (or (find-extractable-for-goal slate)
-              (find-buyable-for-goal slate))))
-
-    (:survey-for-yield
-     ;; relevant only when acquiring resources
-     ;; AND ship is at a system with knowledge < surveyed
-     (and (not (objective-satisfied-p :acquire-resource slate))
-          (not (objective-satisfied-p :maintain-missile-stock slate))
-          (find-surveyable-for-goal slate)))
-
-    (:sell-excess-cargo
-     ;; relevant only when cargo serves NO active goal
-     ;; AND ship is at trade hub
-     (find-excess-cargo-ship slate))
-
-    (:resupply-missiles
-     ;; relevant when ship at own base has missiles < 50% of max
-     (and (not (objective-satisfied-p :maintain-missile-stock slate))
-          (find-resupplyable-ship-for-goal slate)))
-
-    (:salvage-opportunity
-     ;; relevant when ship is at salvageable hex
-     (find-salvage-opportunity slate))
-
-    (otherwise nil)))
-
-;;; ----------------------------------------------------------------------------
-;;; Goal Evaluation: MPC Core
-;;; ----------------------------------------------------------------------------
-
-(defun evaluate-goals (slate)
-  "Evaluate all economic objectives against current world state.
+(defun evaluate-all-goals (slate)
+  "Evaluate all goals from *all-goals* registry against current state.
    Returns list of goal plists sorted by priority.
    This is the CALCULATE step of the MPC loop."
-  (let* ((needed (missile-ingredients-needed slate))
-         (needed-types (mapcar #'car needed))
-         (goals
-           (list
-             (list :objective :maintain-missile-stock
-                   :priority 1
-                   :satisfied (objective-satisfied-p :maintain-missile-stock slate)
-                   :relevant (objective-relevant-p :maintain-missile-stock slate)
-                   :needed-resources nil)
-
-             (list :objective :resupply-missiles
-                   :priority 2
-                   :satisfied (objective-satisfied-p :resupply-missiles slate)
-                   :relevant (objective-relevant-p :resupply-missiles slate)
-                   :needed-resources nil)
-
-             (list :objective :fabricate-materiel
-                   :priority 3
-                   :satisfied (objective-satisfied-p :fabricate-materiel slate)
-                   :relevant (objective-relevant-p :fabricate-materiel slate)
-                   :needed-resources *missile-recipe-resources*)
-
-             (list :objective :acquire-resource
-                   :priority 4
-                   :satisfied (objective-satisfied-p :acquire-resource slate)
-                   :relevant (objective-relevant-p :acquire-resource slate)
-                   :needed-resources needed-types)
-
-             (list :objective :survey-for-yield
-                   :priority 5
-                   :satisfied (objective-satisfied-p :survey-for-yield slate)
-                   :relevant (objective-relevant-p :survey-for-yield slate)
-                   :needed-resources nil)
-
-             (list :objective :salvage-opportunity
-                   :priority 6
-                   :satisfied (objective-satisfied-p :salvage-opportunity slate)
-                   :relevant (objective-relevant-p :salvage-opportunity slate)
-                   :needed-resources nil)
-
-             (list :objective :sell-excess-cargo
-                   :priority 8
-                   :satisfied (objective-satisfied-p :sell-excess-cargo slate)
-                   :relevant (objective-relevant-p :sell-excess-cargo slate)
-                   :needed-resources nil))))
-    ;; Log goal state
+  (let ((*current-slate* slate)
+        (goals nil))
+    (dolist (gdef *all-goals*)
+      (push (list :objective (getf gdef :objective)
+                  :priority (getf gdef :priority)
+                  :satisfied (funcall (getf gdef :satisfied-fn) slate)
+                  :relevant (funcall (getf gdef :precondition-fn) slate)
+                  :needed-resources (funcall (getf gdef :needed-resources-fn) slate))
+            goals))
+    (setf goals (sort goals (lambda (a b)
+                              (< (getf a :priority) (getf b :priority)))))
     (dolist (g goals)
       (format t "[LISP] Goal ~A: sat=~A rel=~A pri=~A~%"
-              (getf g :objective)
-              (getf g :satisfied)
-              (getf g :relevant)
+              (getf g :objective) (getf g :satisfied) (getf g :relevant)
               (getf g :priority)))
     goals))
 
@@ -299,7 +270,7 @@
 (defun find-buyable-for-goal (slate)
   "Find ship at trade hub that can buy a NEEDED resource."
   (let ((needed (missile-ingredients-needed slate)))
-    (when (and needed (> (slate-credits slate) 50))
+    (when (and needed (> (slate-credits slate) (theta 'theta-buy-credits-min)))
       (dolist (ship (slate-own-ships slate))
         (let ((sys (ship-at-system ship)))
           (when (and (not (string= sys ""))
@@ -315,9 +286,9 @@
       (let ((sys (ship-at-system ship)))
         (when (and (not (string= sys ""))
                    (can-fabricate-at-p slate sys player)
-                   (>= (ship-cargo-ferrous ship) 2)
-                   (>= (ship-cargo-radioactive ship) 1)
-                   (>= (ship-cargo-volatile ship) 1))
+                   (>= (ship-cargo-ferrous ship) (theta 'theta-missile-recipe-ferrous))
+                   (>= (ship-cargo-radioactive ship) (theta 'theta-missile-recipe-radioactive))
+                   (>= (ship-cargo-volatile ship) (theta 'theta-missile-recipe-volatile)))
           (return-from find-fabricatable-ship-for-goal ship)))))
   nil)
 
@@ -326,11 +297,12 @@
    Evaluates cargo against active goals to determine excess."
   (let ((goals (list
                  (list :objective :fabricate-materiel
-                       :satisfied (objective-satisfied-p :fabricate-materiel slate)
+                       :satisfied (>= (fleet-missile-ratio slate)
+                                      (theta 'theta-missile-ratio-target))
                        :relevant t
                        :needed-resources *missile-recipe-resources*)
                  (list :objective :acquire-resource
-                       :satisfied (objective-satisfied-p :acquire-resource slate)
+                       :satisfied (null (missile-ingredients-needed slate))
                        :relevant t
                        :needed-resources (mapcar #'car (missile-ingredients-needed slate))))))
     (dolist (ship (slate-own-ships slate))
@@ -366,7 +338,7 @@
         (when (and (member hex own-bases :test #'string=)
                    (> max-missiles 0)
                    (< missiles max-missiles)
-                   (< (/ (float missiles) max-missiles) 0.5))
+                   (< (/ (float missiles) max-missiles) (theta 'theta-resupply-threshold)))
           (return-from find-resupplyable-ship-for-goal ship)))))
   nil)
 
@@ -378,3 +350,37 @@
                  (salvageables-at-hex slate hex))
         (return-from find-salvage-opportunity ship))))
   nil)
+
+;;; ----------------------------------------------------------------------------
+;;; Goal Graph Validation (load-time check)
+;;; ----------------------------------------------------------------------------
+
+(defun validate-goal-graph ()
+  "Check all goals reach :win-game via :supported-by, no cycles.
+   Called at load time."
+  (let ((errors nil))
+    (dolist (gdef *all-goals*)
+      (let* ((obj (getf gdef :objective))
+             (chain nil)
+             (current obj))
+        ;; Walk :supported-by chain to :win-game
+        (loop
+          (when (eq current :win-game) (return))
+          (when (member current chain)
+            (push (format nil "Goal ~A has cycle in :supported-by chain" obj) errors)
+            (return))
+          (push current chain)
+          (let ((parent (find current *all-goals*
+                              :key (lambda (g) (getf g :objective)))))
+            (if parent
+                (setf current (getf parent :supported-by))
+                (progn
+                  (push (format nil "Goal ~A :supported-by ~A not found" obj current) errors)
+                  (return)))))))
+    (if errors
+        (dolist (e errors)
+          (format t "[LISP] GOAL GRAPH ERROR: ~A~%" e))
+        (format t "[LISP] Goal graph validated: ~A goals, all reach :win-game~%"
+                (length *all-goals*)))))
+
+(validate-goal-graph)

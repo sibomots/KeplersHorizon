@@ -26,77 +26,9 @@
 
 (defun decide-movement-phase (slate &optional strategy)
   "Decide ONE movement action. Called repeatedly until NEXT.
-   Strategy-directed: consults attack-assignments and defense-assignments.
-   Falls back to C++ suggested-dest when no strategy assignment.
-   Returns NEXT when no beneficial moves remain."
+   Gen4: dispatches to movement rules via fire-first-producing-rule."
   (format t "[LISP] decide-movement: looking for movable ships~%")
-  (let ((round (slate-round slate)))
-    ;; Strategy-directed: try defense assignments first, then attack
-    (when strategy
-      ;; Defense assignments
-      (let ((def-assigns (getf strategy :defense-assignments)))
-        (dolist (assignment def-assigns)
-          (let* ((ship-code (car assignment))
-                 (target-hex (cdr assignment))
-                 (ship (find-ship-by-code (slate-own-ships slate) ship-code)))
-            (when (and ship
-                       (ship-warpship-p ship)
-                       (> (ship-pd ship) 0)
-                       (not (string= (ship-hex ship) target-hex)))
-              (format t "[LISP] -> defense move ~A to ~A~%"
-                      (ship-name ship) target-hex)
-              (return-from decide-movement-phase
-                (list (make-cmd "m" (format nil "~A ~A"
-                                             (ship-code ship)
-                                             (ensure-hex-prefix target-hex)))))))))
-
-      ;; Attack assignments
-      (let ((atk-assigns (getf strategy :attack-assignments)))
-        (dolist (assignment atk-assigns)
-          (let* ((ship-code (car assignment))
-                 (target-hex (cdr assignment))
-                 (ship (find-ship-by-code (slate-own-ships slate) ship-code)))
-            (when (and ship
-                       (ship-warpship-p ship)
-                       (> (ship-pd ship) 0)
-                       (not (string= (ship-hex ship) target-hex)))
-              ;; Turn 1 restriction
-              (when (and (= round 1) (is-enemy-base-p target-hex slate))
-                (format t "[LISP] Turn 1: can't move to enemy base~%")
-                (return-from decide-movement-phase (list (cmd-next))))
-              ;; Use C++ suggested-dest if available, else issue direct move
-              (let ((dest (ship-suggested-dest ship)))
-                (if (and dest (not (string= dest "")))
-                    (progn
-                      (format t "[LISP] -> attack move ~A to ~A (via ~A)~%"
-                              (ship-name ship) target-hex dest)
-                      (return-from decide-movement-phase
-                        (list (make-cmd "m" (format nil "~A ~A"
-                                                     (ship-code ship)
-                                                     (ensure-hex-prefix dest))))))
-                    (progn
-                      (format t "[LISP] -> attack move ~A to ~A (direct)~%"
-                              (ship-name ship) target-hex)
-                      (return-from decide-movement-phase
-                        (list (make-cmd "m" (format nil "~A ~A"
-                                                     (ship-code ship)
-                                                     (ensure-hex-prefix target-hex)))))))))))))
-
-    ;; Fallback: original logic for ships with C++ suggested-dest
-    (let ((ship (find-ship-to-move slate)))
-      (if ship
-          (let ((dest (ensure-hex-prefix (ship-suggested-dest ship))))
-            (if (and (= round 1) (is-enemy-base-p dest slate))
-                (progn
-                  (format t "[LISP] Turn 1: can't move to enemy base, skip~%")
-                  (list (cmd-next)))
-                (progn
-                  (format t "[LISP] -> move ~A to ~A~%" (ship-name ship) dest)
-                  (list (make-cmd "m" (format nil "~A ~A"
-                                               (ship-code ship) dest))))))
-          (progn
-            (format t "[LISP] -> NEXT (no ships can move)~%")
-            (list (cmd-next)))))))
+  (fire-first-producing-rule :move slate strategy))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Strategic Movement Selection
@@ -178,7 +110,8 @@
      (lambda (base)
        (some (lambda (enemy)
                (let ((ehex (ship-hex enemy)))
-                 (and ehex (hex-distance base ehex) (<= (hex-distance base ehex) 3))))
+                 (and ehex (hex-distance base ehex)
+                    (<= (hex-distance base ehex) (theta 'theta-movement-threat-range)))))
              enemy-ships))
      own-bases)))
 

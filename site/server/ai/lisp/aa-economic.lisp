@@ -31,7 +31,8 @@
 
    MPC loop: evaluate goals → find highest priority unsatisfied →
    generate single action → return. Next GATHER closes feedback loop."
-  (let* ((goals (evaluate-goals slate))
+  (let* ((*current-slate* slate)
+         (goals (evaluate-all-goals slate))
          (goal (find-actionable-goal goals)))
     (if goal
         (progn
@@ -47,34 +48,13 @@
 ;;; ----------------------------------------------------------------------------
 
 (defun goal-to-action (goal slate goals)
-  "Map an active goal to a single command.
-   Returns command list or NIL if goal cannot produce action."
-  (case (getf goal :objective)
-    (:maintain-missile-stock
-     ;; This is the top-level check — it delegates downward.
-     ;; If we reach here, something below should handle it.
-     ;; Check resupply first (cheapest path to missiles).
-     nil)
-
-    (:resupply-missiles
-     (issue-resupply-action slate))
-
-    (:fabricate-materiel
-     (issue-fabricate-action slate))
-
-    (:acquire-resource
-     (issue-acquire-action slate))
-
-    (:survey-for-yield
-     (issue-survey-action slate))
-
-    (:sell-excess-cargo
-     (issue-sell-action slate goals))
-
-    (:salvage-opportunity
-     (issue-salvage-action slate))
-
-    (otherwise nil)))
+  "Map an active goal to a command via its registered action function.
+   Gen4: looks up goal in *all-goals* and calls :action-fn."
+  (let* ((obj (getf goal :objective))
+         (gdef (find obj *all-goals*
+                     :key (lambda (g) (getf g :objective)))))
+    (when gdef
+      (funcall (getf gdef :action-fn) slate goals))))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Action Generators
@@ -108,8 +88,10 @@
     (when buyable
       (let* ((ship (first buyable))
              (rtype (second buyable)))
-        (format t "[LISP] -> tr buy ~A 2 (goal: acquire-resource)~%" rtype)
-        (list (make-cmd "tr" (format nil "buy ~A 2" rtype)))))))
+        (format t "[LISP] -> tr buy ~A ~A (goal: acquire-resource)~%"
+                rtype (theta 'theta-buy-quantity))
+        (list (make-cmd "tr" (format nil "buy ~A ~A"
+                                      rtype (theta 'theta-buy-quantity))))))))
 
 (defun issue-fabricate-action (slate)
   "Fabricate missiles at shipyard.
@@ -141,7 +123,7 @@
       (let* ((max-missiles (ship-missiles-max ship))
              (current (ship-missile ship))
              (need (- max-missiles current))
-             (qty (min need 6)))
+             (qty (min need (theta 'theta-resupply-max))))
         (format t "[LISP] -> rs ~A ~A (goal: resupply-missiles)~%"
                 (ship-code ship) qty)
         (list (make-cmd "rs" (format nil "~A ~A"
@@ -194,7 +176,7 @@
   (let ((mp (get-market-price slate cargo-type)))
     (if mp
         (>= (market-price-current mp)
-            (* 0.8 (market-price-base mp)))
+            (* (theta 'theta-sell-price-floor) (market-price-base mp)))
         t)))
 
 (defun cargo-current-price (slate cargo-type)

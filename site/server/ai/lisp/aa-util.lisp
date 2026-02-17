@@ -5,7 +5,11 @@
 ;;                                       ;;
 ;; Copyright (c) 2025, sibomots          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; aa-util.lisp - Utility predicates and helpers
+;;;; aa-util.lisp - Utility predicates and helpers (Gen4)
+;;;;
+;;;; Entity accessors moved to aa-entities.lisp (defentity macro).
+;;;; This file retains: slate accessors, compound lookups, list filters,
+;;;; predicates, hex helpers, and command helpers.
 
 ;;; ----------------------------------------------------------------------------
 ;;; Slate Accessors
@@ -163,14 +167,6 @@
                    (string-equal (getf r :system) system-name))
                  (slate-resources slate)))
 
-(defun resource-type (res)
-  (getf res :type))
-
-(defun resource-abundance (res)
-  (getf res :abundance))
-
-(defun resource-yield (res)
-  (or (getf res :yield) 1))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Economic Layer: Facility Accessors
@@ -186,11 +182,6 @@
                    (string-equal (getf f :system) system-name))
                  (slate-facilities slate)))
 
-(defun facility-type (fac)
-  (getf fac :type))
-
-(defun facility-controller (fac)
-  (getf fac :controller))
 
 (defun can-fabricate-at-p (slate system-name player)
   "Check if player can fabricate at this system (SHIPYARD or REFINERY)."
@@ -216,14 +207,6 @@
   "Get list of market prices."
   (slate-get slate :market-prices nil))
 
-(defun market-price-resource (mp)
-  (getf mp :type))
-
-(defun market-price-current (mp)
-  (or (getf mp :price) 0))
-
-(defun market-price-base (mp)
-  (or (getf mp :base-price) 0))
 
 (defun get-market-price (slate resource-type)
   "Find market price entry for a resource type."
@@ -239,17 +222,6 @@
   "Get list of salvageable objects."
   (slate-get slate :salvageables nil))
 
-(defun salvageable-hex (sv)
-  (getf sv :hex))
-
-(defun salvageable-object-type (sv)
-  (getf sv :object-type))
-
-(defun salvageable-state (sv)
-  (getf sv :state))
-
-(defun salvageable-value (sv)
-  (or (getf sv :value) 0))
 
 (defun salvageables-at-hex (slate hex)
   "Get salvageable objects at a specific hex."
@@ -257,197 +229,6 @@
                    (string-equal (getf sv :hex) hex))
                  (slate-salvageables slate)))
 
-;;; ----------------------------------------------------------------------------
-;;; Ship Accessors
-;;; ----------------------------------------------------------------------------
-
-(defun ship-code (ship)
-  "Return ship code in lowercase for command generation."
-  (let ((code (getf ship :code)))
-    (if code (string-downcase code) "")))
-
-(defun ship-name (ship)
-  "Return ship name (preserves case for display)."
-  (getf ship :name))
-
-(defun ship-hex (ship)
-  "Return hex ID in lowercase for command generation."
-  (let ((hex (getf ship :hex)))
-    (if hex (string-downcase hex) "")))
-
-(defun ship-pd (ship)
-  "Remaining PD for power allocation (base - spent)."
-  (or (getf ship :pd) 0))
-
-(defun ship-base-pd (ship)
-  "Physical PD for damage assignment (from ships table)."
-  (or (getf ship :base-pd) (ship-pd ship)))
-
-(defun ship-beam (ship)
-  (or (getf ship :b) 0))
-
-(defun ship-screen (ship)
-  (or (getf ship :s) 0))
-
-(defun ship-tube (ship)
-  (or (getf ship :t) 0))
-
-(defun ship-missile (ship)
-  (or (getf ship :m) 0))
-
-(defun ship-sr (ship)
-  (or (getf ship :sr) 0))
-
-(defun ship-tech (ship)
-  (or (getf ship :tech) 0))
-
-(defun ship-warpship-p (ship)
-  (getf ship :warpship))
-
-(defun ship-racked-in (ship)
-  "Return the warpship code this systemship is racked in (empty if not racked)."
-  (let ((racked (getf ship :racked-in)))
-    (if racked (string-downcase racked) "")))
-
-(defun ship-racked (ship)
-  "Return list of systemship codes racked in this warpship."
-  (getf ship :racked))
-
-(defun ship-racked-p (ship)
-  "Check if this systemship is racked in a warpship."
-  (let ((racked (getf ship :racked-in)))
-    (and racked (not (string= racked "")))))
-
-;;; Economic layer: cargo
-(defun ship-cargo-ferrous (ship)
-  (or (getf ship :cargo-ferrous) 0))
-
-(defun ship-cargo-rare-earth (ship)
-  (or (getf ship :cargo-rare-earth) 0))
-
-(defun ship-cargo-radioactive (ship)
-  (or (getf ship :cargo-radioactive) 0))
-
-(defun ship-cargo-crystalline (ship)
-  (or (getf ship :cargo-crystalline) 0))
-
-(defun ship-cargo-volatile (ship)
-  (or (getf ship :cargo-volatile) 0))
-
-(defun ship-cargo-water (ship)
-  (or (getf ship :cargo-water) 0))
-
-(defun ship-cargo-organic (ship)
-  (or (getf ship :cargo-organic) 0))
-
-(defun ship-cargo-exotic (ship)
-  (or (getf ship :cargo-exotic) 0))
-
-(defun ship-cargo-missiles (ship)
-  (or (getf ship :cargo-missiles) 0))
-
-(defun ship-cargo-capacity (ship)
-  (or (getf ship :cargo-capacity) 10))
-
-(defun ship-missiles-max (ship)
-  (or (getf ship :missiles-max) 0))
-
-(defun ship-at-system (ship)
-  "Get the system name where ship is located."
-  (let ((sys (getf ship :at-system)))
-    (if sys (string-downcase sys) "")))
-
-(defun ship-cargo-total (ship)
-  "Get total cargo currently aboard ship."
-  (+ (ship-cargo-ferrous ship)
-     (ship-cargo-rare-earth ship)
-     (ship-cargo-radioactive ship)
-     (ship-cargo-crystalline ship)
-     (ship-cargo-volatile ship)
-     (ship-cargo-water ship)
-     (ship-cargo-organic ship)
-     (ship-cargo-exotic ship)
-     (ship-cargo-missiles ship)))
-
-(defun ship-cargo-free-space (ship)
-  "Get available cargo space."
-  (- (ship-cargo-capacity ship) (ship-cargo-total ship)))
-
-;;; Max values for repair decisions
-(defun ship-pd-max (ship)
-  (or (getf ship :pd-max) (ship-pd ship)))
-
-(defun ship-beam-max (ship)
-  (or (getf ship :beam-max) (ship-beam ship)))
-
-(defun ship-screen-max (ship)
-  (or (getf ship :screen-max) (ship-screen ship)))
-
-(defun ship-tube-max (ship)
-  (or (getf ship :tube-max) (ship-tube ship)))
-
-(defun ship-suggested-dest (ship)
-  "Get C++ computed suggested destination for this ship (lowercase)."
-  (let ((dest (getf ship :suggested-dest)))
-    (if dest (string-downcase dest) "")))
-
-;; Combat state accessors
-(defun ship-needs-order-p (ship)
-  "Check if ship needs a combat order."
-  (getf ship :needs-order))
-
-(defun ship-pending-damage (ship)
-  "Get pending damage to assign (0 if none)."
-  (or (getf ship :pending-damage) 0))
-
-(defun ship-escape-pending-p (ship)
-  "Check if ship has escaped and needs retreat command."
-  (getf ship :escape-pending))
-
-;; Revealed enemy order accessors (public after both players commit)
-(defun ship-last-tactic (ship)
-  "Get enemy's tactic from prior round (A, D, E, or NIL if unknown)."
-  (getf ship :last-tactic))
-
-(defun ship-last-drive (ship)
-  "Get enemy's drive power from prior round."
-  (or (getf ship :last-drive) 0))
-
-(defun ship-last-beam (ship)
-  "Get enemy's beam power from prior round."
-  (or (getf ship :last-beam) 0))
-
-(defun ship-last-screen (ship)
-  "Get enemy's screen power from prior round."
-  (or (getf ship :last-screen) 0))
-
-(defun ship-last-tube (ship)
-  "Get enemy's tube power from prior round."
-  (or (getf ship :last-tube) 0))
-
-;;; ----------------------------------------------------------------------------
-;;; Combat Hex Accessors
-;;; ----------------------------------------------------------------------------
-
-(defun combat-hex (ch)
-  (getf ch :hex))
-
-(defun combat-stage (ch)
-  (or (getf ch :stage) 0))
-
-(defun combat-round (ch)
-  (or (getf ch :round) 1))
-
-(defun combat-ai-committed-p (ch)
-  (getf ch :ai-committed))
-
-(defun combat-stalemate-count (ch)
-  "Get consecutive no-damage round count."
-  (or (getf ch :stalemate) 0))
-
-(defun combat-ai-attacker-p (ch)
-  "Check if AI is the attacker (moved into hex, has initiative)."
-  (getf ch :ai-attacker))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Predicates

@@ -28,6 +28,7 @@
   "Main decision function. Dispatches by phase.
    SLATE is an alist from C++.
    Returns list of command specs: ((:cmd \"CMD\" :args \"ARGS\") ...)"
+  (reset-cycle-trace)
   (format t "~&[LISP] aa-calculate called~%")
   (format t "[LISP] slate keys: ~A~%" (mapcar #'car slate))
   (let* ((phase-pair (assoc :phase slate))
@@ -58,6 +59,10 @@
       (let ((metrics (compute-metrics-to-persist slate strategy)))
         (when metrics
           (setf result (append result metrics))))
+      ;; Log rule trace for this cycle
+      (let ((fired (fired-rules-this-cycle)))
+        (when fired
+          (format t "[LISP] Fired: ~{~A~^, ~}~%" fired)))
       (format t "[LISP] result=~A~%" result)
       result)))
 
@@ -76,26 +81,9 @@
 
 (defun decide-pickdrop-phase (slate)
   "Decide pick/drop actions for systemships.
-   Strategy:
-   1. DROP: Deploy racked systemships at enemy bases
-   2. PICK: Pick up free systemships at friendly bases
-   Returns NEXT when no beneficial pick/drop remains."
+   Gen4: dispatches to pickdrop rules via fire-first-matching-rule."
   (format t "[LISP] decide-pickdrop-phase~%")
-
-  ;; First priority: DROP systemships at enemy bases for VP
-  (let ((drop-cmd (find-drop-opportunity slate)))
-    (when drop-cmd
-      (format t "[LISP] -> issuing DROP~%")
-      (return-from decide-pickdrop-phase (list drop-cmd))))
-
-  ;; Second priority: PICK up systemships at friendly locations
-  (let ((pick-cmd (find-pick-opportunity slate)))
-    (when pick-cmd
-      (format t "[LISP] -> issuing PICK~%")
-      (return-from decide-pickdrop-phase (list pick-cmd))))
-
-  (format t "[LISP] -> NEXT (no pick/drop opportunities)~%")
-  (list (cmd-next)))
+  (fire-first-matching-rule :pickdrop slate nil))
 
 (defun find-drop-opportunity (slate)
   "Find a warpship at enemy base with racked systemships to deploy.

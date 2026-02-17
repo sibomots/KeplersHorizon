@@ -1411,11 +1411,13 @@ void AutonomyAgency::init_ecl()
         dsl_dir += '/';
     }
 
-    // Load files in dependency order (util first, core last)
-    static const char* kDslFiles[] = {"aa-util.lisp",   "aa-strategy.lisp",
-                                      "aa-goals.lisp",  "aa-economic.lisp",
-                                      "aa-build.lisp",  "aa-movement.lisp",
-                                      "aa-combat.lisp", "aa-core.lisp"};
+    // Load files in dependency order (macros first, core last)
+    static const char* kDslFiles[] = {"aa-macros.lisp",    "aa-theta.lisp",
+                                      "aa-entities.lisp",  "aa-util.lisp",
+                                      "aa-strategy.lisp",  "aa-goals.lisp",
+                                      "aa-rules.lisp",     "aa-economic.lisp",
+                                      "aa-build.lisp",     "aa-movement.lisp",
+                                      "aa-combat.lisp",    "aa-core.lisp"};
 
     for (const char* fname : kDslFiles)
     {
