@@ -5,14 +5,13 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#include "delete_command.h"
-
-#include <sstream>
-
 #include "db.h"
+#include "delete_command.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
+
+#include <sstream>
 
 bool DeleteCommand::invoke(void)
 {
@@ -21,8 +20,7 @@ bool DeleteCommand::invoke(void)
 
     if (m_save_name.empty())
     {
-        Telemetry::instance().write("DELETE: No save name specified.\n"
-                                    "Usage: delete <save_name>");
+        Telemetry::instance().write(LC_SAVE_CMD_NO_NAME);
         return false;
     }
 
@@ -34,8 +32,8 @@ bool DeleteCommand::invoke(void)
 
     if (rows.empty())
     {
-        Telemetry::instance().write("DELETE: No saved game '" + m_save_name +
-                                    "' found.");
+        Telemetry::instance().write(
+            std::format(LC_SAVE_CMD_NO_SAVED_GAME, m_save_name));
         return false;
     }
 
@@ -45,6 +43,7 @@ bool DeleteCommand::invoke(void)
     // Delete the save
     std::string dq = "DELETE FROM saved_games WHERE id=?";
     db.Exec(dq, {save_id});
-    Telemetry::instance().write("DELETE: game '" + actual_name + "' deleted.");
+    Telemetry::instance().write(
+        std::format(LC_SAVE_CMD_DELETED_GAME, actual_name));
     return true;
 }

@@ -33,9 +33,9 @@ bool OutfitStrategy::show_equipment(void)
                          {module_id});
 
     std::ostringstream out;
-    out << "         EQUIPMENT OUTFITTING\n"
+    out << "         " LC_MILIEU_OUTFIT_BANNER "\n"
         << "-------------------------------------------\n"
-        << "Requires ship at controlled SHIPYARD.\n\n"
+        << LC_MILIEU_OUTFIT_REQMT "\n\n"
         << "Item     Description             Cost\n"
         << "-------  --------------------  ------\n";
 
@@ -45,8 +45,8 @@ bool OutfitStrategy::show_equipment(void)
     }
 
     out << "-------------------------------------------\n"
-        << "Use: outfit <ship> <equipment>\n"
-        << "Example: outfit W1 lrs";
+        << LC_MILIEU_OUTFIT_USAGE "\n"
+        << LC_MILIEU_OUTFIT_EXAMPLE "\n";
 
     Telemetry::instance().write(out.str());
     bres = true;
@@ -77,7 +77,7 @@ bool OutfitStrategy::install_equipment(int game_id, char owner,
     if (equip.empty())
     {
         Telemetry::instance().write(std::format(
-            "OUTFIT: Equipment {} not in catalog.", equipment_type));
+            LC_MILIEU_OUTFIT_TARGET_NOT_IN_CATALOG, equipment_type));
     }
     else
     {
@@ -100,7 +100,8 @@ bool OutfitStrategy::install_equipment(int game_id, char owner,
         if (ships.empty())
         {
             Telemetry::instance().write(
-                std::format("OUTFIT: Ship {} not found.", ship_upper));
+                std::format(LC_MILIEU_OUTFIT_TARGET_SHIP_NOT_FOUND,
+               ship_upper));
         }
         else
         {
@@ -110,7 +111,7 @@ bool OutfitStrategy::install_equipment(int game_id, char owner,
             if (at_hex.empty())
             {
                 Telemetry::instance().write(std::format(
-                    "OUTFIT: Ship {} is not deployed.", ship_upper));
+                    LC_MILIEU_OUTFIT_TARGET_SHIP_NOT_DEPLOYED, ship_upper));
             }
             else
             {
@@ -128,14 +129,14 @@ bool OutfitStrategy::install_equipment(int game_id, char owner,
                 if (at_system.empty())
                 {
                     Telemetry::instance().write(
-                        std::format("OUTFIT: Ship {} is not at a star system.",
+                        std::format(LC_MILIEU_OUTFIT_TARGET_SHIP_NOT_AT_SYSTEM,
                                     ship_upper));
                 }
                 else if (!FacilityEngine::player_controls(game_id, at_system,
                                                           "SHIPYARD", owner))
                 {
                     Telemetry::instance().write(std::format(
-                        "OUTFIT: {} has no SHIPYARD you control.", at_system));
+                       LC_MILIEU_OUTFIT_TARGET_NO_SHIPYARD, at_system));
                 }
                 else
                 {
@@ -144,8 +145,7 @@ bool OutfitStrategy::install_equipment(int game_id, char owner,
                     if (credits < price)
                     {
                         Telemetry::instance().write(
-                            std::format("OUTFIT: Insufficient credits. "
-                                        "Need {} CR, have {} CR.",
+                            std::format(LC_MILIEU_OUTFIT_LACK_CREDIT,
                                         price, credits));
                     }
                     else
@@ -167,7 +167,7 @@ bool OutfitStrategy::install_equipment(int game_id, char owner,
                                 {game_id, owner, ship_upper});
 
                         std::string msg =
-                            std::format("OUTFIT: Installed {} on {} for {} CR.",
+                            std::format(LC_MILIEU_OUTFIT_INSTALLED,
                                         desc, ship_upper, price);
                         Telemetry::instance().write(msg);
                         bres = true;

@@ -673,10 +673,6 @@ looking_cmd:
       SafeDelete($2);
       SafeDelete(pCmd);
   }
-  | TOK_CARGO {
-      // BUGBUG OK
-      Telemetry::instance().write("Usage: cargo <ship_code>");
-  }
   | TOK_CARGO TOK_STRING {
       // BUGBUG OK
       std::string ship(*$2);

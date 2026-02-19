@@ -65,8 +65,7 @@ bool QuitCommand::invoke(void)
     // 3c. Notify the other player
     // -------------------------------------------------------
     char opponent = (quitter == 'A') ? 'B' : 'A';
-    Telemetry::instance().add_tell(game_id, opponent,
-                                   "Opponent has left the game. Game saved and ended.");
+    Telemetry::instance().add_tell(game_id, opponent, LC_TURN_OPP_LEFT_GAME);
 
     // -------------------------------------------------------
     // 3d. Clear session game_id for all players in this game
@@ -86,8 +85,7 @@ bool QuitCommand::invoke(void)
     // -------------------------------------------------------
     // 3g. Send LOBBY signal + clear StateMachine
     // -------------------------------------------------------
-    std::string msg = std::format("QUIT: Game auto-saved as '{}'.\nReturning to lobby.\n\033[LOBBY]",
-                                  save_name);
+    std::string msg = std::format(LC_TURN_TARGET_AUTO_SAVE_TO_LOBBY, save_name);
     Telemetry::instance().write(msg);
 
     StateMachine::instance().clear_game_session();

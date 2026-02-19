@@ -29,7 +29,7 @@ bool SystemActor::invoke(void)
     if (check.empty())
     {
         Telemetry::instance().write(
-            std::format("SYSTEM: Unknown system '{}'", system_name));
+            std::format(LC_MILIEU_UNKNOWN_SYSTEM, system_name));
         return false;
     }
 
@@ -39,9 +39,7 @@ bool SystemActor::invoke(void)
 
     if (!(mode > FIRST_SYSTEM_STRATEGY && mode < LAST_SYSTEM_STRATEGY))
     {
-        Telemetry::instance().write("SYSTEM: Unknown subcommand. "
-                                    "Use: show, planets, resources, "
-                                    "facilities, anomalies");
+        Telemetry::instance().write(LC_MILIEU_UNKNOWN_SYSTEM_SUBCOMMAND);
         return false;
     }
 
@@ -58,8 +56,7 @@ bool SystemActor::invoke(void)
 
     if (scanShips.empty())
     {
-        Telemetry::instance().write(
-            "SYSTEM: You have no ships at this system to investigate.");
+        Telemetry::instance().write(LC_MILIEU_SYSTEM_NO_SHIPS);
         return false;
     }
 
@@ -72,7 +69,7 @@ bool SystemActor::invoke(void)
     if (!freeScan && (pdTotal - pdSpent) < 1)
     {
         Telemetry::instance().write(
-            "SYSTEM: Insufficient PD to investigate. Requires 1 PD.");
+          std::format(LC_MILIEU_SYSTEM_NO_POWER, 1));
         return false;
     }
 

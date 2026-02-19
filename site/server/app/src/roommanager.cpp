@@ -457,16 +457,16 @@ int RoomManager::startGame(const std::string& code, bool singleplayer)
     if (KH_EQU(first_player, "A"))
     {
         Telemetry::instance().add_tell(
-            'A', "COMMAND: YOU HAVE THE INITIATIVE! " + first_phase);
+            'A', std::format(LC_ROOM_TARGET_SELF_HAVE_INIT, first_phase));
         Telemetry::instance().add_tell(
-            'B', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
+            'B', std::format(LC_ROOM_TARGET_N_SELF_HAVE_INIT, first_name));
     }
     else
     {
         Telemetry::instance().add_tell(
-            'B', "COMMAND: YOU HAVE THE INITIATIVE! " + first_phase);
+            'B', std::format(LC_ROOM_TARGET_SELF_HAVE_INIT, first_phase));
         Telemetry::instance().add_tell(
-            'A', "COMMAND: " + first_name + " HAS INITIATIVE. STANDING BY...");
+            'A', std::format(LC_ROOM_TARGET_N_SELF_HAVE_INIT, first_name));
     }
 
     // Should never happen, but leaving it here in case we want to

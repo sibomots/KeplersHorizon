@@ -77,16 +77,14 @@ bool BuildAgent::apply(BuildNewParam& param)
     int& bp = (KH_EQU(s.active_player, "A")) ? s.creditsA : s.creditsB;
     if (bp <= 0)
     {
-        Telemetry::instance().write(
-            "SHIPYARD: Insufficient Build Points. Construction halted.");
+        Telemetry::instance().write(LC_INSUFFICIENT_BUILD_CREDITS);
         return false;
     }
 
     // Validate ship code format
     if (ship_code.empty() || ship_name.empty())
     {
-        Telemetry::instance().write(
-            "SHIPYARD: Invalid hull designation. Review ship code.");
+        Telemetry::instance().write(LC_INVALID_HULL_DESIGNATION);
         return false;
     }
 
@@ -118,15 +116,15 @@ bool BuildAgent::apply(BuildNewParam& param)
     // Check for duplicates
     if (get_draft_by_spec(did, game_id, owner, ship_code))
     {
-        Telemetry::instance().write("SHIPYARD: Hull " + ship_code +
-                                    " already on drafting board.");
+        Telemetry::instance().write(
+          std::format(LC_DUPLICATE_HULL_CODE , ship_code));
         return false;
     }
 
     if (shipmgr.ship_code_taken(game_id, owner, ship_code))
     {
-        Telemetry::instance().write("SHIPYARD: Vessel " + ship_code +
-                                    " already commissioned in fleet.");
+        Telemetry::instance().write(
+          std::format(LC_SHIP_ALREADY_COMISSIONED, ship_code));
         return false;
     }
 
@@ -138,11 +136,8 @@ bool BuildAgent::apply(BuildNewParam& param)
     draft.update_cost();
 
     shipmgr.insert_draft(game_id, owner, draft);
-
-    std::ostringstream msg;
-    msg << "SHIPYARD: Hull " << ship_code
-        << " laid down. Designation: " << ship_name;
-    Telemetry::instance().write(msg.str());
+    Telemetry::instance().write(
+          std::format(LC_SHIP_HULL_LAID, ship_code, ship_name));
 
     return true;
 }
@@ -163,13 +158,12 @@ bool BuildAgent::apply(BuildSetParam& param)
     {
         if (target.empty())
         {
-            Telemetry::instance().write(
-                "SHIPYARD: Need ship hull designator or name to find it");
+            Telemetry::instance().write(LC_NEED_HULL_DESIGNATOR_TO_FIND);
         }
         else
         {
-            Telemetry::instance().write("SHIPYARD: Ship " + target +
-                                        " does not exist");
+            Telemetry::instance().write(
+              std::format(LC_SHIPYARD_SHIP_NOT_EXIST, target));
         }
         return false;
     }
@@ -180,8 +174,8 @@ bool BuildAgent::apply(BuildSetParam& param)
 
     if (!found_ship_draft)
     {
-        Telemetry::instance().write("SHIPYARD: Ship " + target +
-                                    " is LOST from space dock.");
+        Telemetry::instance().write(
+            std::format(LC_SHIPYARD_LOST_SHIP, target));
         return false;
     }
 
@@ -241,14 +235,13 @@ bool BuildAgent::apply(BuildCommitParam& param)
     {
         if (target.empty())
         {
-            Telemetry::instance().write(
-                "SHIPYARD: Need ship hull designator or name to find it");
+            Telemetry::instance().write(LC_NEED_HULL_DESIGNATOR_TO_FIND);
+                
         }
         else
         {
             Telemetry::instance().write(
-                "SHIPYARD: Ship with hull designation " + target +
-                " not in space dock.");
+               std::format(LC_SHIPYARD_SHIP_NOT_FOUND, target));
         }
         return false;
     }
@@ -260,8 +253,8 @@ bool BuildAgent::apply(BuildCommitParam& param)
 
     if (!found_draft_row)
     {
-        Telemetry::instance().write("SHIPYARD: Ship " + target +
-                                    " is LOST from space dock.");
+        Telemetry::instance().write(
+            std::format(LC_SHIPYARD_LOST_SHIP, target));
         return false;
     }
 
@@ -399,8 +392,8 @@ bool BuildAgent::apply(BuildShowDraftParam& param)
         }
         else
         {
-            Telemetry::instance().write("SHIPYARD: Ship " + target +
-                                        " is LOST from space dock.");
+            Telemetry::instance().write(
+                std::format(LC_SHIPYARD_LOST_SHIP, target));
             result = false;
         }
     }
@@ -420,15 +413,16 @@ bool BuildAgent::apply(BuildCancelParam& param)
 
     if (!has_draft)
     {
-        Telemetry::instance().write("SHIPYARD: No ship with hull designation " +
-                                    target + " in the shipyard.");
+        Telemetry::instance().write(
+             std::format(LC_SHIPYARD_SHIP_NOT_FOUND, target));
         return false;
     }
 
     // Delete the draft
     shipmgr.delete_draft(did, game_id, owner, target);
 
-    Telemetry::instance().write("SHIPYARD: Canceled: " + target);
+    Telemetry::instance().write(
+         std::format(LC_SHIPYARD_HULL_CANCELED, target));
 
     return true;
 }
@@ -491,7 +485,7 @@ bool BuildAgent::apply(BuildFleetListParam& param)
 
     if (rows.empty())
     {
-        Telemetry::instance().write("FLEET OPS: No ships under your command.");
+        Telemetry::instance().write(LC_FLEET_OPS_NO_SHIPS);
     }
     else
     {

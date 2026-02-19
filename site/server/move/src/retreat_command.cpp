@@ -35,7 +35,8 @@ bool RetreatCommand::invoke(void)
 
     if (ship_rows.empty())
     {
-        Telemetry::instance().write("RETREAT: Ship not found: " + ship_code);
+        Telemetry::instance().write(
+            std::format(LC_RETREAT_TARGET_SHIP_NOT_FOUND, ship_code));
         return false;
     }
 
@@ -46,8 +47,7 @@ bool RetreatCommand::invoke(void)
     if (escape_pending != 1)
     {
         Telemetry::instance().write(
-            "RETREAT: " + ship_code +
-            " has no pending retreat. Use during escape or stalemate.");
+            std::format(LC_RETREAT_TARGET_NO_PENDING_RETREAT_REQMT, ship_code));
         return false;
     }
 
@@ -56,7 +56,9 @@ bool RetreatCommand::invoke(void)
     std::string dest_hex = mg.resolve_hex(m_dest_hex);
     if (dest_hex.empty())
     {
-        Telemetry::instance().write("RETREAT: Invalid hex: " + m_dest_hex);
+        Telemetry::instance().write(
+            std::format(LC_RETREAT_TARGET_INVALID_HEX,
+                m_dest_hex));
         return false;
     }
 
@@ -75,9 +77,10 @@ bool RetreatCommand::invoke(void)
     if (!is_adjacent)
     {
         std::ostringstream out;
-        out << "RETREAT: " << dest_hex << " is not adjacent to " << current_hex
-            << ".\n";
-        out << "Valid retreat destinations:";
+        out << std::format(LC_RETREAT_TARGET_INVALID_PROXIMITY,
+                    dest_hex, current_hex)
+            << "\n"
+            << LC_RETREAT_VALID_DEST_BANNER << ":\n";
         for (const auto& adj : adjacent)
         {
             // Get system name if any
@@ -119,8 +122,9 @@ bool RetreatCommand::invoke(void)
         dest_name = dest_sys[0][0] + " (" + dest_hex + ")";
     }
 
-    Telemetry::instance().write("RETREAT: " + ship_code + " withdraws to " +
-                                dest_name);
+    Telemetry::instance().write(
+          std::format(LC_RETREAT_TARGET_ANNOUNCE,
+                ship_code, dest_name));
 
     // Update the combat status -
     // The retreat might  have left the hex
@@ -142,7 +146,7 @@ bool RetreatCommand::invoke(void)
                        " AND s.at_hex = cs.hex_id "
                        " SET cs.attacker_remains = 0 "
                        " WHERE cs.attacker_remains = 1 "
-                       " AND cs.stalemate_counter > 2";
+                       " AND cs.stalemate_counter > 1";
 
     db.Exec(qqqq, {s.game_id, owner, current_hex});
 

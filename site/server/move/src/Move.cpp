@@ -57,8 +57,9 @@ bool DeployCommand::invoke(void)
     if (!shipmgr.ship_exists_by_code_or_name(m_game_id, active_player,
                                              m_ship_code))
     {
-        Telemetry::instance().write("FLEET REGISTRY: Vessel " + m_ship_code +
-                                    " is not in your fleet!");
+        Telemetry::instance().write(
+             std::format(LC_MOVE_TARGET_SHIP_NOT_IN_FLEET,
+              m_ship_code));
         return false;
     }
 
@@ -68,7 +69,8 @@ bool DeployCommand::invoke(void)
     if (has_ship && !sh.racked_in.empty())
     {
         Telemetry::instance().write(
-            "Error: Ship is racked; drop it before deploying: " + m_ship_code);
+            std::format(LC_MOVE_TARGET_SHIP_IN_HANGAR_ERROR,
+                    m_ship_code));
         return false;
     }
 
@@ -81,14 +83,14 @@ bool DeployCommand::invoke(void)
 
     if (base_info.empty())
     {
-        Telemetry::instance().write("DEPLOY: Unknown system: " + m_system_name);
+        Telemetry::instance().write(
+            std::format(LC_MOVE_DEPLOY_UNKNOWN_SYSTEM, m_system_name));
         return false;
     }
 
     if (base_info[0][0] != "1")
     {
-        Telemetry::instance().write(
-            "DEPLOY: Ships can only be deployed at a home base system.");
+        Telemetry::instance().write(LC_MOVE_DEPLOY_ONLY_AT_BASES);
         return false;
     }
 
@@ -123,9 +125,9 @@ bool DeployCommand::invoke(void)
         std::string player_name =
             user_rows.empty() ? "Player" : user_rows[0][0];
 
-        Telemetry::instance().broadcast("DEPLOY: " + player_name +
-                                        " has claimed the " + territory_name +
-                                        ".");
+        Telemetry::instance().broadcast(
+           std::format(LC_MOVE_TARGET_DEPLOY_ANNOUNCE_BASE_CLAIM,
+                  player_name, territory_name));
 
         // Populate base_stars for BOTH sides now that sides are determined
         // This is needed for VP scoring in turn_end and repair eligibility
@@ -219,8 +221,7 @@ bool DeployCommand::invoke(void)
     else if (player_side != base_side)
     {
         // Trying to deploy on enemy's side
-        Telemetry::instance().write(
-            "DEPLOY: Cannot deploy in enemy territory. Use your home bases.");
+        Telemetry::instance().write(LC_MOVE_DEPLOY_INHIBITED_IN_ENEMY_TERRITORY);
         return false;
     }
 
@@ -231,8 +232,8 @@ bool DeployCommand::invoke(void)
     // Save game state to persist side assignment
     StateMachine::instance().save_game(s);
 
-    Telemetry::instance().write("FLEET COMMAND: " + sh.name + " (" + sh.code +
-                                ") deployed to " + sys);
+    Telemetry::instance().write(
+       std::format(LC_MOVE_TARGET_ANNOUNCE_DEPLOY, sh.name, sh.code, sys));
 
     return true;
 }
@@ -263,8 +264,9 @@ bool MoveCommand::invoke(void)
 
     if (!ship_present)
     {
-        Telemetry::instance().write("FLEET REGISTRY: Vessel " + m_ship_code +
-                                    " is not in your fleet!");
+        Telemetry::instance().write(
+              std::format(LC_MOVE_TARGET_SHIP_NOT_IN_FLEET,
+                     m_ship_code));
         return false;
     }
 
@@ -274,23 +276,21 @@ bool MoveCommand::invoke(void)
 
     if (has_ship && sh.attr.type != 'W')
     {
-        Telemetry::instance().write(
-            "NAV: Only WarpShip class vessels can engage hyperdrive.");
+        Telemetry::instance().write(LC_MOVE_INHIBITED_WARP);
         return false;
     }
 
     if (sh.attr.PD <= 0)
     {
         Telemetry::instance().write(
-            "NAV: " + sh.name +
-            " has no power drive capacity. Unable to maneuver.");
+            std::format(LC_MOVE_TARGET_INHIBITED_WARP, sh.name));
         return false;
     }
 
     if (!sh.racked_in.empty())
     {
-        Telemetry::instance().write("OPS: Ship is racked and cannot move: " +
-                                    sh.racked_in);
+        Telemetry::instance().write(
+              std::format(LC_MOVE_TARGET_SHIP_IN_HANGAR, sh.racked_in));
         return false;
     }
 
@@ -304,7 +304,7 @@ bool MoveCommand::invoke(void)
     if (startHex.empty())
     {
         Telemetry::instance().write(
-            "NAV: " + sh.name + " is not deployed. It is still in shipyard.");
+            std::format(LC_MOVE_TARGET_IN_SHIPYARD_INHIBITED, sh.name));
         return false;
     }
 
@@ -323,8 +323,8 @@ bool MoveCommand::invoke(void)
 
         if (KH_EQU(destHex, startHex))
         {
-            Telemetry::instance().write("NAV: " + sh.name + " is already at " +
-                                        firstDest + ".");
+            Telemetry::instance().write(
+                std::format(LC_MOVE_TARGET_AT_DEST, sh.name, firstDest));
             return false;
         }
     }
@@ -360,7 +360,8 @@ bool MoveCommand::invoke(void)
     if (allowance <= 0)
     {
         Telemetry::instance().write(
-            "NAV: " + sh.name + " has exhausted power drive for this turn.");
+            std::format(LC_MOVE_TARGET_POWERDRIVE_DEPLEATED,
+                  sh.name));
         return false;
     }
 
@@ -525,8 +526,7 @@ bool MoveCommand::invoke(void)
             if (hexEventMod > 0)
             {
                 Telemetry::instance().write(
-                    std::format("HAZARD: Navigation hazard in hex {}! "
-                                "+{} PD cost.", stepHex, hexEventMod));
+                    std::format(LC_MOVE_TARGET_HAZARD_ON_MOVE, stepHex, hexEventMod));
             }
 
             // Apply tuning override if enabled
@@ -682,7 +682,7 @@ bool MoveCommand::invoke(void)
         };
 
         std::ostringstream pathOut;
-        pathOut << "NAV: Course plotted. Standby.\n";
+        pathOut << LC_MOVE_COURSE_PLOT_BANNER << "\n";
         for (size_t i = 0; i < fullPath.size(); ++i)
         {
             // Add connector before all but first
@@ -706,9 +706,13 @@ bool MoveCommand::invoke(void)
                 // Mark bases explicitly (helps debugging + matches "base
                 // star-hex" requirement)
                 if (sit->second.is_base)
+                {
                     pathOut << sit->second.name << " [BASE] (" << hex << ")";
+                }
                 else
+                {
                     pathOut << sit->second.name << " (" << hex << ")";
+                }
             }
             else
             {
@@ -721,11 +725,11 @@ bool MoveCommand::invoke(void)
         }
         Telemetry::instance().write(pathOut.str());
 
-        std::ostringstream o;
-        o << "OPS: " << sh.name << " (" << sh.code << ") transit to "
-          << (finalSystem.empty() ? finalHex : finalSystem) << " [" << finalHex
-          << "] complete.\nPower expended: " << totalCost << " PD";
-        Telemetry::instance().write(o.str());
+        Telemetry::instance().write(
+        std::format(LC_MOVE_TARGET_TRANSIT_PATH,
+           sh.name,  sh.code, (finalSystem.empty() ? finalHex : finalSystem),
+           finalHex, totalCost));
+
         if (!milieu_report.empty())
         {
             Telemetry::instance().write(milieu_report);
@@ -751,12 +755,25 @@ bool MoveCommand::invoke(void)
         CombatEngine ce(m_game_id);
         ce.check_for_combat_triggers();
 
-        // Notify both players
+        // Message differs for base-star (mandatory combat) vs non-base (voluntary)
         std::string sysName = finalSystem.empty() ? finalHex : finalSystem;
-        std::string alertMsg =
-            "TACTICAL ALERT: Contact! Enemy forces detected in " + sysName +
-            "!\n>> Combat will resolve when movement phase ends.";
-
+        bool bIsBase = false;
+        {
+            auto sit = starByHex.find(finalHex);
+            if (sit != starByHex.end())
+            {
+                bIsBase = sit->second.second;
+            }
+        }
+        std::string alertMsg;
+        if (bIsBase)
+        {
+            alertMsg = std::format(LC_MOVE_TARGET_TRIGGER_TACTICAL, sysName);
+        }
+        else
+        {
+            alertMsg = std::format(LC_MOVE_TARGET_TRIGGER_ENEMY_IN_RANGE, sysName);
+        }
         Telemetry::instance().write(alertMsg);
         Telemetry::instance().tell(PlayerTarget::THEM, alertMsg);
     }
@@ -830,8 +847,9 @@ bool MoveCommand::invoke(void)
                 them = involved[1][1];
             }
 
-            whodat << "> TACTICAL ALERT:\n"
-                   << "              SCANNERS DETECT\n"
+            whodat << "> " << LC_MOVE_TACTICAL_ALERT_BANNER << ":\n"
+                   << "              " 
+                   << LC_MOVE_TACTICAL_ALERT_DETECTED << "\n"
                    << "  ---------------------------------------\n"
                    << "  Code  Name                        Owner\n"
                    << "  ---------------------------------------\n";

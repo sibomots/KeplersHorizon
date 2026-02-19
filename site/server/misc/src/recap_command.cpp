@@ -21,12 +21,12 @@
 #include "telemetry.h"
 
 static const char* kClosingQuotes[] = {
-    "\"The stars remember those who dared.\"",
-    "\"Per aspera ad astra.\"",
-    "\"Beyond the horizon, the light endures.\"",
-    "\"What was charted can never be uncharted.\"",
-    "\"The void yields its secrets to the persistent.\"",
-    "\"All voyages end. Few are remembered.\"",
+    LC_RECAP_FLAVOR_1,
+    LC_RECAP_FLAVOR_2,
+    LC_RECAP_FLAVOR_3,
+    LC_RECAP_FLAVOR_4,
+    LC_RECAP_FLAVOR_5,
+    LC_RECAP_FLAVOR_6,
 };
 static const int kNumQuotes =
     sizeof(kClosingQuotes) / sizeof(kClosingQuotes[0]);
@@ -42,7 +42,7 @@ bool RecapCommand::invoke(void)
 
     if (!s.game_over)
     {
-        Telemetry::instance().write("Game is still in progress.");
+        Telemetry::instance().write(LC_RECAP_IN_PROGRESS);
         return true;
     }
 

@@ -56,7 +56,8 @@ bool StatusCommand::invoke(void)
     {
         std::string winning_player_real_name =
             StateMachine::instance().get_player_name(game_id, s.winner);
-        out << "GAME OVER - Winner: " << winning_player_real_name << "\n";
+        out << std::format(LC_GAME_WINNER, winning_player_real_name)
+            << "\n";
     }
 
     Telemetry::instance().write(out.str());

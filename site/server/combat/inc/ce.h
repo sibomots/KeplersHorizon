@@ -84,12 +84,17 @@ class CombatEngine
     // Commit checking
     bool all_orders_committed(const std::string& hex_id, int round);
 
+    // Returns true if any hex has ships from both players but no combat record
+    bool has_voluntary_combat_opportunity();
+
+    // Creates a new combat_state record for the given hex
+    void create_combat(const std::string& hex_id);
+
   private:
     int game_id;
 
     // Helpers
     bool all_orders_submitted(const std::string& hex_id, int round);
-    void create_combat(const std::string& hex_id);
 };
 
 #endif

@@ -71,7 +71,9 @@ bool MarketStrategy::show_all_prices(int game_id)
                  {game_id});
 
     std::ostringstream out;
-    out << std::format("          MARKET EXCHANGE (Round {})\n", s.round)
+    out << "          "
+        << std::format(LC_MILIEU_MARKET_SHOW_BANNER, s.round)
+        << "\n"
         << "-------------------------------------------\n"
         << "Resource      Price   Trend\n"
         << "----------    -----   -----\n";
@@ -137,10 +139,11 @@ bool MarketStrategy::show_price_history(int game_id,
 
     if (history.empty())
     {
-        out << std::format("No trading history for {}.\n",
-                           display_resource_name(res_upper));
-        out << "Prices may not have fluctuated yet this game.\n";
-        out << "Use 'trade list' to see current exchange rates.\n";
+        out << std::format(LC_MILIEU_MARKET_TARGET_NO_HISTORY, 
+                           display_resource_name(res_upper))
+            << "\n"
+            << LC_MILIEU_MARKET_NO_HISTORY_HINT
+            << "\n";
     }
     else
     {

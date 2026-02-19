@@ -179,7 +179,8 @@ bool MilieuAgent::apply(CargoParam& param)
 
     if (rows.empty())
     {
-        Telemetry::instance().write("Ship not found: " + ship_code);
+        Telemetry::instance().write(
+            std::format(LC_TARGET_SHIP_NOT_FOUND, ship_code));
         bres = false;
     }
     else
@@ -288,7 +289,7 @@ bool MilieuAgent::apply(FabricateParam& param)
         bres = FabricateStrategy::fabricate_tech(game_id, owner, qty);
         break;
     default:
-        Telemetry::instance().write("FABRICATE: Unknown fabrication mode.");
+        Telemetry::instance().write(LC_MILIEU_UNKNOWN_FABRICATE_MODE);
         break;
     }
 
@@ -448,7 +449,7 @@ bool MilieuAgent::apply(SurveyParam& param)
             if (loc_rows.empty())
             {
                 Telemetry::instance().write(
-                    "SURVEY: No ships available to conduct survey.");
+                    LC_MILIEU_NO_SHIPS_FOR_SURVEY);
                 return false;
             }
             target_system = loc_rows[0][0];
@@ -459,9 +460,11 @@ bool MilieuAgent::apply(SurveyParam& param)
                      {target_system});
         if (check.empty())
         {
-            Telemetry::instance().write("SURVEY: Unknown system '" +
-                                        target_system + "'");
-            // BUGBUG - that we return early
+            Telemetry::instance().write(
+                std::format(LC_MILIEU_SURVEY_UNKNOWN_SYSTEM,
+                           target_system));
+
+            // BUGBUG - Not liking that we return early..
             return false;
         }
         target_system = check[0][0];
@@ -470,9 +473,9 @@ bool MilieuAgent::apply(SurveyParam& param)
         if (!SurveyStrategy::has_ship_in_system(target_system))
         {
             Telemetry::instance().write(
-                "SURVEY: No ships present in " + target_system +
-                ".\nYou must have a vessel in-system to "
-                "conduct survey operations.");
+               std::format(LC_MILIEU_SURVEY_NO_SHIPS_PRESENT, target_system));
+            Telemetry::instance().write(LC_MILIEU_SURVEY_SHIPS_REQUIRED);
+
             // BUGBUG - that we return early
             return false;
         }
@@ -495,10 +498,8 @@ bool MilieuAgent::apply(SurveyParam& param)
         if (KH_EQU(new_level, current_level))
         {
             Telemetry::instance().write(
-                "SURVEY: " + target_system +
-                " already at maximum knowledge level (Intimate).\n"
-                "All system secrets are known to you.");
-            // BUGBUG - that we return early
+              std::format(LC_MILIEU_SURVEY_MAX_INFO, target_system));
+            Telemetry::instance().write(LC_MILIEU_SURVEY_MAX_SECRETS);
             return true;
         }
 
@@ -519,27 +520,34 @@ bool MilieuAgent::apply(SurveyParam& param)
 
         // Report success
         std::ostringstream out;
-        out << "SURVEY: " << target_system << " survey complete.\n";
-        out << "Knowledge upgraded: " << current_level << " -> " << new_level
+        out << std::format(LC_MILIEU_TARGET_SURVEY_COMPLETE, target_system)
+            << "\n"
+            << std::format(LC_MILIEU_TARGET_INFO_UPGRADED, current_level,
+                       new_level)
             << "\n\n";
 
         // Show what's newly available
         if (KH_EQU(new_level, "Charted"))
         {
-            out << "Planetary data and facility locations now available.\n";
-            out << "Use 'system " << target_system << " planets' to view.\n";
+            out << LC_MILIEU_SURVEY_CHARTED_LEVEL
+                << "\n"
+                << std::format(LC_MILIEU_SURVEY_TARGET_MORE, target_system)
+                << "\n";
         }
         else if (KH_EQU(new_level, "Surveyed"))
         {
-            out << "Detailed resource data now available.\n";
-            out << "Use 'system " << target_system << " resources' to view.\n";
+            out << LC_MILIEU_SURVEY_DETAILED_LEVEL
+                << "\n"
+                << std::format(LC_MILIEU_SURVEY_TARGET_RESOURCES, target_system)
+                << "\n";
         }
         else if (KH_EQU(new_level, "Intimate"))
         {
-            out << "All system secrets revealed, including anomalies.\n";
-            out << "Use 'system " << target_system << " anomalies' to view.\n";
+            out << LC_MILIEU_SURVEY_INTIMATE_LEVEL
+                << "\n"
+                << std::format(LC_MILIEU_SURVEY_TARGET_ANOMALIES, target_system)
+                << "\n";
         }
-
         Telemetry::instance().write(out.str());
         bres = true;
         break;
@@ -580,9 +588,6 @@ bool MilieuAgent::apply(SystemParam& param)
         break;
     case SystemMode::SYS_RESOURCES:
         bres = SystemStrategy::show_resources(system_name);
-        break;
-    case SystemMode::SYS_POPULATIONS:
-        bres = SystemStrategy::show_populations(system_name);
         break;
     case SystemMode::SYS_FACILITIES:
         bres = SystemStrategy::show_facilities(system_name);

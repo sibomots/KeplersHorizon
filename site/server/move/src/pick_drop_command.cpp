@@ -35,25 +35,27 @@ bool PickCommand::invoke(void)
     if (!shipmgr.load_ship_by_code_or_name(sysship, game_id, active_player,
                                            m_systemship_code))
     {
-        Telemetry::instance().write("OPS: Systemship " + m_systemship_code +
-                                    " not found in your fleet.");
+        Telemetry::instance().write(
+            std::format(LC_PICKDROP_TARGET_NO_SHIP_IN_FLEET,
+                   m_systemship_code));
         return false;
     }
 
     // Verify it's a systemship (no warp generator)
     if (KH_EQU(sysship.attr.type, 'W'))
     {
-        Telemetry::instance().write("OPS: " + sysship.name +
-                                    " is a warpship. Cannot rack a warpship.");
+        Telemetry::instance().write(
+             std::format(LC_PICKDROP_TARGET_INHIBIT_WARPSHIP,
+                       sysship.name));
         return false;
     }
 
     // Verify it's not already racked
     if (!sysship.racked_in.empty())
     {
-        Telemetry::instance().write("OPS: " + sysship.name +
-                                    " is already racked in " +
-                                    sysship.racked_in);
+        Telemetry::instance().write(
+            std::format(LC_PICKDROP_TARGET_ALREADY_HANGAR,
+                      sysship.name, sysship.racked_in));
         return false;
     }
 
@@ -62,24 +64,27 @@ bool PickCommand::invoke(void)
     if (!shipmgr.load_ship_by_code_or_name(warpship, game_id, active_player,
                                            m_warpship_code))
     {
-        Telemetry::instance().write("OPS: Warpship " + m_warpship_code +
-                                    " not found in your fleet.");
+        Telemetry::instance().write(
+              std::format(LC_PICKDROP_TARGET_NO_WARPSHIP_IN_FLEET,
+                     m_warpship_code));
         return false;
     }
 
     // Verify it's a warpship
     if (warpship.attr.type != 'W')
     {
-        Telemetry::instance().write("OPS: " + warpship.name +
-                                    " is not a warpship.");
+        Telemetry::instance().write(
+            std::format(LC_PICKDROP_TARGET_NOT_WARPSHIP,
+                       warpship.name));
         return false;
     }
 
     // Verify warpship has system rack capacity
     if (warpship.attr.Hangar <= 0)
     {
-        Telemetry::instance().write("OPS: " + warpship.name +
-                                    " has no system hangars (H=0).");
+        Telemetry::instance().write(
+             std::format(LC_PICKDROP_TARGET_WARPSHIP_LACK_HANGAR,
+                     warpship.name));
         return false;
     }
 
@@ -87,8 +92,8 @@ bool PickCommand::invoke(void)
     if (sysship.at_hex != warpship.at_hex)
     {
         Telemetry::instance().write(
-            "OPS: Ships must be at same location. " + sysship.name + " at " +
-            sysship.at_hex + ", " + warpship.name + " at " + warpship.at_hex);
+            std::format(LC_PICKDROP_TARGET_WARPSHIP_LOCATION,
+            sysship.name, sysship.at_hex, warpship.name, warpship.at_hex));
         return false;
     }
 
@@ -105,10 +110,9 @@ bool PickCommand::invoke(void)
 
     if (current_racked >= warpship.attr.Hangar)
     {
-        Telemetry::instance().write("OPS: " + warpship.name +
-                                    " hangars are full (" +
-                                    std::to_string(current_racked) + "/" +
-                                    std::to_string(warpship.attr.Hangar) + ").");
+        Telemetry::instance().write(
+             std::format(LC_PICKDROP_TARGET_WARPSHIP_HANGAR_CAPACITY,
+                   warpship.name, current_racked, warpship.attr.Hangar));
         return false;
     }
 
@@ -116,8 +120,9 @@ bool PickCommand::invoke(void)
     shipmgr.update_ship_location(game_id, active_player, sysship.code, "", "",
                                  warpship.code);
 
-    Telemetry::instance().write("OPS: " + sysship.name + " racked aboard " +
-                                warpship.name + ".");
+    Telemetry::instance().write(
+           std::format(LC_PICKDROP_TARGET_SYSTEMSHIP_HANGAR_SUCCESS,
+                    sysship.name, warpship.name));
     return true;
 }
 
@@ -142,16 +147,18 @@ bool DropCommand::invoke(void)
     if (!shipmgr.load_ship_by_code_or_name(sysship, game_id, active_player,
                                            m_systemship_code))
     {
-        Telemetry::instance().write("OPS: Systemship " + m_systemship_code +
-                                    " not found in your fleet.");
+        Telemetry::instance().write(
+             std::format(LC_PICKDROP_TARGET_NO_SHIP_IN_FLEET,
+                      m_systemship_code));
         return false;
     }
 
     // Verify it's racked
     if (sysship.racked_in.empty())
     {
-        Telemetry::instance().write("OPS: " + sysship.name +
-                                    " is not racked in any warpship.");
+        Telemetry::instance().write(
+            std::format(LC_PICKDROP_TARGET_SYSTEMSHIP_NOT_IN_HANGAR,
+                      sysship.name));
         return false;
     }
 
@@ -160,17 +167,18 @@ bool DropCommand::invoke(void)
     if (!shipmgr.load_ship_by_code_or_name(warpship, game_id, active_player,
                                            m_warpship_code))
     {
-        Telemetry::instance().write("OPS: Warpship " + m_warpship_code +
-                                    " not found in your fleet.");
+        Telemetry::instance().write(
+             std::format(LC_PICKDROP_TARGET_NO_WARP_SHIP_IN_FLEET,
+                    m_warpship_code));
         return false;
     }
 
     // Verify systemship is racked in this warpship
     if (sysship.racked_in != warpship.code)
     {
-        Telemetry::instance().write("OPS: " + sysship.name +
-                                    " is not racked in " + warpship.name +
-                                    " (racked in " + sysship.racked_in + ").");
+        Telemetry::instance().write(
+               std::format(LC_PICKDROP_TARGET_SYSTEMSHIP_HELD_DIFFERENT,
+                       sysship.name, warpship.name, sysship.racked_in));
         return false;
     }
 
@@ -178,8 +186,8 @@ bool DropCommand::invoke(void)
     if (warpship.at_system.empty())
     {
         Telemetry::instance().write(
-            "OPS: Cannot drop systemship in deep space. " + warpship.name +
-            " must be at a star system.");
+            std::format(LC_PICKDROP_TARGET_INHIBIT_DROP_SPACE,
+              warpship.name));
         return false;
     }
 
@@ -187,8 +195,8 @@ bool DropCommand::invoke(void)
     shipmgr.update_ship_location(game_id, active_player, sysship.code,
                                  warpship.at_system, warpship.at_hex, "");
 
-    Telemetry::instance().write("OPS: " + sysship.name + " deployed from " +
-                                warpship.name + " at " + warpship.at_system +
-                                ".");
+    Telemetry::instance().write(
+             std::format(LC_PICKDROP_TARGET_SYSTEMSHIP_DROP_SUCCESS,
+                  sysship.name, warpship.name, warpship.at_system));
     return true;
 }

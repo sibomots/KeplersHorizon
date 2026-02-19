@@ -283,28 +283,28 @@ bool ShipManager::is_ship_draft_valid(DraftRow& drow,
     // sanity check
     if (drow.value_ranges_invalid())
     {
-        report.push_back(LOC_STR_NEG_ATTR);
+        report.push_back(LC_NEG_ATTR);
         result |= E_NEG_SHIP_ATTR;
     }
 
     // system ships cannot have system rack
     if (drow.system_ship_fitment_invalid())
     {
-        report.push_back(LOC_STR_SS_H);
+        report.push_back(LC_SS_H);
         result |= E_H_ON_SYSTEM_SHIP;
     }
 
     // if torpedoes, then they come in multiples of 3
     if (drow.torpedo_count_invalid())
     {
-        report.push_back(LOC_STR_TORPEDO_BY_THREE);
+        report.push_back(LC_TORPEDO_BY_THREE);
         result |= E_TORPEDO_BY_THREE;
     }
 
     // launcher and missle match is wrong
     if (drow.launcher_torpedo_match_invalid())
     {
-        report.push_back(LOC_STR_TORPEDO_LAUNCHER_MISMATCH);
+        report.push_back(LC_TORPEDO_LAUNCHER_MISMATCH);
         result |= E_TORPEDO_LAUNCHER_MISMATCH;
     }
     if (KH_EQU(0, result))

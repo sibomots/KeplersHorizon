@@ -38,8 +38,8 @@ bool ChartCommand::invoke(void)
 
     if (!shipPresent)
     {
-        Telemetry::instance().write("FLEET REGISTRY: Vessel " + m_ship_code +
-                                    " is not in your fleet!");
+        Telemetry::instance().write(
+            std::format(LC_MOVE_TARGET_SHIP_NOT_IN_FLEET, m_ship_code));
         return false;
     }
 
@@ -49,15 +49,14 @@ bool ChartCommand::invoke(void)
 
     if (hasShip && sh.attr.type != 'W')
     {
-        Telemetry::instance().write(
-            "CHART: Only WarpShip class vessels can chart warp courses.");
+        Telemetry::instance().write(LC_MOVE_ONLY_W_SHIP_CAN_CHART);
         return false;
     }
 
     if (sh.attr.PD <= 0)
     {
         Telemetry::instance().write(
-            "CHART: " + sh.name + " has no power drive capacity.");
+            std::format(LC_MOVE_TARGET_SHIP_HAS_NO_WARP_CAP, sh.name));
         return false;
     }
 
@@ -71,7 +70,7 @@ bool ChartCommand::invoke(void)
     if (startHex.empty())
     {
         Telemetry::instance().write(
-            "CHART: " + sh.name + " is not deployed.");
+            std::format(LC_MOVE_TARGET_SHIP_NOT_DEPLOYED, sh.name));
         return false;
     }
 
@@ -239,7 +238,7 @@ bool ChartCommand::invoke(void)
 
     if (!errorMsg.empty())
     {
-        Telemetry::instance().write("CHART: " + errorMsg);
+        Telemetry::instance().write(std::format("CHART: {}", errorMsg));
         return false;
     }
 
@@ -282,12 +281,11 @@ bool ChartCommand::invoke(void)
     }
     out << "\n";
 
-    out << std::format("Cost: {} PD (available: {})",
-                       totalCost, allowance);
+    out << std::format(LC_MOVE_TARGET_MOVEMENT_COST_PREAMBLE, totalCost, allowance);
     if (warplinesUsed > 0)
     {
-        out << std::format(", {} warpline jump{}", warplinesUsed,
-                           (warplinesUsed > 1) ? "s" : "");
+        std::string plural_jump = (warplinesUsed > 1) ? "jumps" : "jump";
+        out << std::format("," LC_MOVE_TARGET_WARPLINE_JUMP, warplinesUsed, plural_jump);
     }
     out << "\n";
 

@@ -23,7 +23,6 @@ class SystemStrategy
     static bool show_overview(const std::string& system_name);
     static bool show_planets(const std::string& system_name);
     static bool show_resources(const std::string& system_name);
-    static bool show_populations(const std::string& system_name);
     static bool show_facilities(const std::string& system_name);
     static bool show_anomalies(const std::string& system_name);
 

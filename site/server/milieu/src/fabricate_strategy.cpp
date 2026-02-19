@@ -5,17 +5,16 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#include "fabricate_strategy.h"
-
-#include <sstream>
-
 #include "db.h"
 #include "fabricate_modes.h"
+#include "fabricate_strategy.h"
 #include "facilities.h"
 #include "logger.h"
 #include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
+
+#include <sstream>
 
 static const char* RES_NAMES[8] = {"Fe", "Re",  "Rd", "Cr",
                                    "Vo", "H2O", "Or", "Ex"};
@@ -51,8 +50,7 @@ bool FabricateStrategy::show_plans(int game_id, int module_id)
 
     for (const auto& row : plans)
     {
-        std::string output =
-            row[3] + " x" + row[4];
+        std::string output = row[3] + " x" + row[4];
 
         std::string cost_str;
         for (int i = 0; i < 8; i++)
@@ -72,7 +70,7 @@ bool FabricateStrategy::show_plans(int game_id, int module_id)
                            cost_str);
     }
     out << "───────────────────────────────────────────────────────────\n";
-    out << "Use: fabricate <plan> [qty]";
+    out << LC_MILIEU_FABRICATE_HINT;
 
     Telemetry::instance().write(out.str());
     bres = true;
@@ -105,8 +103,7 @@ bool FabricateStrategy::check_cargo_cost(int game_id, char owner, int cost[8],
 
     if (cargo.empty())
     {
-        Telemetry::instance().write(
-            "FABRICATE: Unable to check cargo inventory.");
+        Telemetry::instance().write(LC_MILIEU_FABRICATE_CARGO_CHK_FAILED);
         bres = false;
     }
     else
@@ -117,10 +114,9 @@ bool FabricateStrategy::check_cargo_cost(int game_id, char owner, int cost[8],
             int need = cost[i] * qty;
             if (have < need)
             {
-                Telemetry::instance().write("FABRICATE: Insufficient " +
-                                            std::string(RES_NAMES[i]) +
-                                            ". Need " + std::to_string(need) +
-                                            ", have " + std::to_string(have));
+                Telemetry::instance().write(
+                    std::format(LC_MILIEU_FABRICATE_TARGET_LACK_RES,
+                                std::string(RES_NAMES[i]), need, have));
                 bres = false;
             }
         }
@@ -198,7 +194,15 @@ static bool load_plan_costs(const char* output_type, int cost[8],
     }
     else
     {
-        Telemetry::instance().write("FABRICATE: Plan not found in database.");
+        std::string invalid_plan("Unknown");
+
+        if (output_type)
+        {
+            invalid_plan = std::string(output_type);
+        }
+
+        Telemetry::instance().write(
+            std::format(LC_MILIEU_FABRICATE_TARGET_NO_PLAN, invalid_plan));
     }
 
     return bres;
@@ -220,8 +224,7 @@ static bool find_fabrication_ship(int game_id, char owner,
 
     if (ships.empty())
     {
-        Telemetry::instance().write(
-            "FABRICATE: No ships deployed to fabrication sites.");
+        Telemetry::instance().write(LC_MILIEU_FABRICATE_NO_SHIPS_DEPLOYED);
     }
     else
     {
@@ -239,8 +242,8 @@ static bool find_fabrication_ship(int game_id, char owner,
         }
         else
         {
-            Telemetry::instance().write("FABRICATE: Ship must be at a SHIPYARD "
-                                        "or REFINERY you control.");
+            Telemetry::instance().write(
+                LC_MILIEU_FABRICATE_SHIP_LOCATION_INVALID);
         }
     }
 
@@ -269,9 +272,8 @@ bool FabricateStrategy::fabricate_torpedo(int game_id, char owner, int qty)
                 "WHERE game_id=? AND owner=? AND ship_code=?",
                 {total_torpedoes, game_id, owner, ship_code});
 
-        std::string msg = "Fabricated " + std::to_string(total_torpedoes) +
-                          " torpedoes, loaded to " + ship_code;
-        Telemetry::instance().write("FABRICATE: " + msg);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_FABRICATE_TARGET_RESULT, total_torpedoes, ship_code));
         bres = true;
     }
 
@@ -296,15 +298,17 @@ bool FabricateStrategy::fabricate_launcher(int game_id, char owner, int qty)
         GameState s = StateMachine::instance().get_game_state();
         int completion = s.round + build_time;
 
-        db.Exec("INSERT INTO fabrication_queue"
-                "(game_id,player,ship_code,recipe,"
-                "quantity,started_turn,completion_turn,status) VALUES("
-                "?,?,?,?,?,?,?,'IN_PROGRESS')",
-                {game_id, owner, ship_code, "launchers", qty, s.round, completion});
+        db.Exec(
+            "INSERT INTO fabrication_queue"
+            "(game_id,player,ship_code,recipe,"
+            "quantity,started_turn,completion_turn,status) VALUES("
+            "?,?,?,?,?,?,?,'IN_PROGRESS')",
+            {game_id, owner, ship_code, "launchers", qty, s.round, completion});
 
-        std::string msg = "Queued launcher upgrade x" + std::to_string(qty) +
-                          ". Completes round " + std::to_string(completion);
-        Telemetry::instance().write("FABRICATE: " + msg);
+        Telemetry::instance().write(
+            std::format(LC_MILIEU_FABRICATE_LAUNCHER_UPGRADE_TARGET_RESULT, qty,
+                        completion));
+
         bres = true;
     }
 
@@ -329,15 +333,16 @@ bool FabricateStrategy::fabricate_phasic(int game_id, char owner, int qty)
         GameState s = StateMachine::instance().get_game_state();
         int completion = s.round + build_time;
 
-        db.Exec("INSERT INTO fabrication_queue"
-                "(game_id,player,ship_code,recipe,"
-                "quantity,started_turn,completion_turn,status) VALUES("
-                "?,?,?,?,?,?,?,'IN_PROGRESS')",
-                {game_id, owner, ship_code, "phasics", qty, s.round, completion});
+        db.Exec(
+            "INSERT INTO fabrication_queue"
+            "(game_id,player,ship_code,recipe,"
+            "quantity,started_turn,completion_turn,status) VALUES("
+            "?,?,?,?,?,?,?,'IN_PROGRESS')",
+            {game_id, owner, ship_code, "phasics", qty, s.round, completion});
 
-        std::string msg = "Queued phasic upgrade x" + std::to_string(qty) +
-                          ". Completes round " + std::to_string(completion);
-        Telemetry::instance().write("FABRICATE: " + msg);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_FABRICATE_PHASIC_UPGRADE_TARGET_RESULT, qty, completion));
+
         bres = true;
     }
 
@@ -369,9 +374,9 @@ bool FabricateStrategy::fabricate_shield(int game_id, char owner, int qty)
             "?,?,?,?,?,?,?,'IN_PROGRESS')",
             {game_id, owner, ship_code, "shields", qty, s.round, completion});
 
-        std::string msg = "Queued shield upgrade x" + std::to_string(qty) +
-                          ". Completes round " + std::to_string(completion);
-        Telemetry::instance().write("FABRICATE: " + msg);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_FABRICATE_SHIELD_UPGRADE_TARGET_RESULT, qty, completion));
+
         bres = true;
     }
 
@@ -403,12 +408,11 @@ bool FabricateStrategy::fabricate_tech(int game_id, char owner, int qty)
                 "?,?,?,?,?,?,?,'IN_PROGRESS')",
                 {game_id, owner, ship_code, "tech", qty, s.round, completion});
 
-        std::string msg = "Queued tech research x" + std::to_string(qty) +
-                          ". Completes round " + std::to_string(completion);
-        Telemetry::instance().write("FABRICATE: " + msg);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_FABRICATE_TECH_UPGRADE_TARGET_RESULT, qty, completion));
+
         bres = true;
     }
 
     return bres;
 }
-

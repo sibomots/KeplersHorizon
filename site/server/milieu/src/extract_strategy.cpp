@@ -5,9 +5,8 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#include "extract_strategy.h"
-
 #include "db.h"
+#include "extract_strategy.h"
 #include "shipmgr.h"
 #include "statemachine.h"
 
@@ -52,14 +51,13 @@ bool ExtractStrategy::do_scan(void)
 
     if (ships.empty())
     {
-        Telemetry::instance().write(
-            "No deployed ships available for extracting.");
+        Telemetry::instance().write(LC_MILIEU_EXTRACT_NO_DEPLOYED_SHIPS);
         return false;
     }
 
     std::ostringstream out;
-    out << "         HARVESTABLE RESOURCES\n";
-    out << "-------------------------------------------\n";
+    out << "         " << LC_MILIEU_EXTRACT_BANNER << "\n"
+        << "-------------------------------------------\n";
 
     for (const auto& ship : ships)
     {
@@ -89,11 +87,12 @@ bool ExtractStrategy::do_scan(void)
 
         if (resources.empty())
         {
-            out << code << " at " << sys << ": No resources\n";
+            out << std::format(LC_MILIEU_TARGET_NO_EXTRACT_RESOURCES, code, sys)
+                << "\n";
         }
         else
         {
-            out << code << " at " << sys << ":\n";
+            out << std::format(LC_MILIEU_TARGET_AT, code, sys) << "\n";
             for (const auto& r : resources)
             {
                 out << "  " << display_resource(r[0]) << " (" << r[1] << "/"
@@ -102,8 +101,8 @@ bool ExtractStrategy::do_scan(void)
         }
     }
 
-    out << "-------------------------------------------\n";
-    out << "Use: extract <ship> <resource_type>";
+    out << "-------------------------------------------\n"
+        << LC_MILIEU_EXTRACT_HINT_RESOURCE << "\n";
     Telemetry::instance().write(out.str());
     return true;
 }
@@ -120,8 +119,9 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
     // Verify ship exists and get location
     if (!ShipManager::instance().ship_exists(game_id, me, ship_code))
     {
-        Telemetry::instance().write("FLEET REGISTRY: Vessel " + ship_code +
-                                    " not found.");
+        Telemetry::instance().write(
+            std::format(LC_MILIEU_EXTRACT_TARGET_SHIP_MISSING, ship_code));
+
         return false;
     }
 
@@ -129,10 +129,9 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
     bool has_ship = ShipManager::instance().load_ship_by_code_or_name(
         ship, game_id, me, ship_code);
 
-    if (!has_ship) 
+    if (!has_ship)
     {
-        Telemetry::instance().write(
-            "HARVEST: Ship must be deployed to a system to extract.");
+        Telemetry::instance().write(LC_MILIEU_EXTRACT_SHIP_MUST_BE);
         return false;
     }
 
@@ -165,8 +164,9 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
 
     if (res_check.empty())
     {
-        Telemetry::instance().write("HARVEST: No " + res_upper +
-                                    " deposits found in " + ship.at_system);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_EXTRACT_TARGET_NO_DEPOSITS, res_upper, ship.at_system));
+
         return false;
     }
 
@@ -238,12 +238,12 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
         HexEventEngine::get_extraction_modifier(game_id, s.round, ship.at_hex);
 
     // Check cargo capacity
-    auto cargo =
-        db.Query("SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
-                 "cargo_crystalline+cargo_volatile+cargo_water+cargo_organic+"
-                 "cargo_exotic+cargo_torpedoes, cargo_capacity FROM ships WHERE "
-                 "game_id=? AND owner=? AND ship_code=?",
-                 {game_id, me, ship_code});
+    auto cargo = db.Query(
+        "SELECT cargo_ferrous+cargo_rare_earth+cargo_radioactive+"
+        "cargo_crystalline+cargo_volatile+cargo_water+cargo_organic+"
+        "cargo_exotic+cargo_torpedoes, cargo_capacity FROM ships WHERE "
+        "game_id=? AND owner=? AND ship_code=?",
+        {game_id, me, ship_code});
 
     int current_cargo = cargo.empty() ? 0 : std::atoi(cargo[0][0].c_str());
     int capacity = cargo.empty() ? 10 : std::atoi(cargo[0][1].c_str());
@@ -253,8 +253,8 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
         yield = capacity - current_cargo;
         if (yield <= 0)
         {
-            Telemetry::instance().write("HARVEST: " + ship.name +
-                                        " cargo hold is full!");
+            Telemetry::instance().write(
+                std::format(LC_MILIEU_EXTRACT_CARGO_FULL, ship.name));
             return false;
         }
     }
@@ -304,9 +304,9 @@ bool ExtractStrategy::do_extract(const std::string& ship_code,
         "?,?,?,'Planet',0,?,?,1,?)",
         {game_id, ship_code, me, res_upper, s.round, yield});
 
-    std::string msg = std::format("HARVEST: {} extracted {} units of {} from {} ({})", ship.name, yield, display_resource(res_upper), location, ship.at_system);
-
-    Telemetry::instance().write(msg);
+    Telemetry::instance().write(
+        std::format(LC_MILIEU_EXTRACT_TARGET_SUCCEEDED, ship.name, yield,
+                    display_resource(res_upper), location, ship.at_system));
 
     return true;
 }

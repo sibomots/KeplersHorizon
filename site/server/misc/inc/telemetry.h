@@ -14,6 +14,7 @@
 
 #include "comms.h"
 #include "typedefs.h"
+#include "localization.h"
 
 // Player targeting - clean enum-based API
 // Future: migrate entire codebase from char 'A'/'B' to this pattern

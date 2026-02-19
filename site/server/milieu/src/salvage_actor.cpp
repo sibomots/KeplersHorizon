@@ -28,9 +28,7 @@ bool SalvageActor::invoke(void)
 
     if (m_ship_code.empty())
     {
-        Telemetry::instance().write("Usage: salvage scan\n"
-                                    "       salvage <ship>\n"
-                                    "       salvage <ship> <target_name>");
+        Telemetry::instance().write(LC_SALVAGE_NO_SHIP_CODE);
         return false;
     }
 

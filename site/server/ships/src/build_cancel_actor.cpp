@@ -20,8 +20,7 @@ bool BuildCancelActor::invoke(void)
     // Check if target is empty
     if (m_target.empty())
     {
-        Telemetry::instance().write(
-            "SHIPYARD: Need ship hull designator or name to find it");
+        Telemetry::instance().write(LC_NEED_HULL_DESIGNATOR_TO_FIND);
         return false;
     }
 

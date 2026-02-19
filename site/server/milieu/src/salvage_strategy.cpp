@@ -28,8 +28,7 @@ bool SalvageStrategy::do_scan()
 
     if (ships.empty())
     {
-        Telemetry::instance().write(
-            "SALVAGE SCAN: No deployed ships to scan from.");
+        Telemetry::instance().write(LC_SALVAGE_NO_SHIPS);
         return false;
     }
 
@@ -89,6 +88,7 @@ bool SalvageStrategy::do_scan()
                     "AND player=? AND system_name=?",
                     {game_id, me, sys});
 
+                // BUGBUG -- these strings are in the database and not localized.
                 std::string know_level =
                     knowledge.empty() ? "Unknown" : knowledge[0][0];
                 double intel_mult = 0.5; // Unknown = half chance
@@ -124,7 +124,7 @@ bool SalvageStrategy::do_scan()
                 }
                 else
                 {
-                    out << "  [?] Unknown signal detected (scan again?)\n";
+                    out << "  " LC_SALVAGE_UNKNOWN_SIGNAL "\n";
                 }
             }
         }
@@ -132,13 +132,15 @@ bool SalvageStrategy::do_scan()
 
     if (KH_EQU(total_found,0))
     {
-        out << "\nNo salvageables found. Try scanning in SYDRA or similar "
-               "systems.\n";
+        out << "\n" LC_SALVAGE_NONE "\n";
     }
     else
     {
-        out << "\n" << total_found << " salvageable(s) known.\n";
-        out << "Use: salvage <ship> <resource> to salvage.\n";
+        out << "\n"
+            << std::format(LC_SALVAGE_FOUND, total_found)
+            << "\n"
+            << LC_SALVAGE_EXAMPLE
+            << "\n";
     }
 
     Telemetry::instance().write(out.str());
@@ -158,8 +160,8 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
     if (!ShipManager::instance().ship_exists_by_code_or_name(game_id, me,
                                                              ship_code))
     {
-        Telemetry::instance().write("SALVAGE: Ship " + ship_code +
-                                    " not found.");
+        Telemetry::instance().write(
+             std::format(LC_SALVAGE_SHIP_NOT_FOUND, ship_code));
         return false;
     }
 
@@ -169,8 +171,7 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
 
     if (has_ship && ship.at_system.empty())
     {
-        Telemetry::instance().write(
-            "SALVAGE: Ship must be deployed to salvage.");
+        Telemetry::instance().write(LC_SALVAGE_NEED_DEPLOYED_SHIP);
         return false;
     }
 
@@ -184,19 +185,20 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
 
         if (avail.empty())
         {
-            Telemetry::instance().write("SALVAGE: No known salvageables in " +
-                                        ship.at_system +
-                                        ". Use 'salvage scan' to search.");
+            Telemetry::instance().write(
+                 std::format(LC_SALVAGE_TARGET_NOT_FOUND, ship.at_system));
+            Telemetry::instance().write(LC_SALVAGE_SUGGEST_SCAN);
             return true;
         }
 
         std::ostringstream out;
-        out << "Available salvageables in " << ship.at_system << ":\n";
+        out << std::format(LC_SALVAGE_TARGET_AVAILABLE, ship.at_system)
+            << "\n";
         for (const auto& a : avail)
         {
             out << "  - " << a[0] << "\n";
         }
-        out << "Use: salvage " << ship_code << " <resource>";
+        out << LC_SALVAGE_SUGGEST_TARGET_SALVAGE;
         Telemetry::instance().write(out.str());
         return true;
     }
@@ -214,9 +216,9 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
 
     if (resource.empty())
     {
-        Telemetry::instance().write("SALVAGE: No salvageable matching '" +
-                                    resource + "' found in " + ship.at_system +
-                                    ".");
+        Telemetry::instance().write(
+           std::format(LC_SALVAGE_NO_MATCH_TARGET,
+                  resource, ship.at_system));
         return false;
     }
 
@@ -264,8 +266,9 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
     if (hazard_roll < effective_hazard)
     {
         int damage = hazard_min + (rand() % (hazard_max - hazard_min + 1));
-        result << "SALVAGE: " << ship.name << " encountered hazards at "
-               << salv_name << "! Suffered " << damage << " hull damage.\n";
+
+        result << std::format(LC_SALVAGE_TARGET_HAZARD,
+                  ship.name, salv_name, damage) << "\n";
 
         int new_pd = ship.attr.PD - damage;
         if (new_pd < 0)
@@ -278,7 +281,8 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
 
         if (KH_EQU(new_pd, 0))
         {
-            result << "Ship destroyed!";
+            result << std::format(LC_SALVAGE_SHIP_DESTROYED, ship.name)
+                   << "\n"; 
             db.Exec("UPDATE ships SET destroyed_at=NOW() WHERE game_id=? "
                     "AND owner=? AND ship_code=?",
                     {game_id, me, ship_code});
@@ -400,7 +404,7 @@ bool SalvageStrategy::do_salvage(const std::string& ship_code,
         db.Exec("UPDATE discovered_salvageables SET depleted=1 "
                 "WHERE game_id=? AND salvageable_id=?",
                 {game_id, salv_id});
-        result << salv_name << " is now depleted.\n";
+        result << std::format(LC_SALVAGE_TARGET_DEPLEATED, salv_name);
     }
 
     // Log operation

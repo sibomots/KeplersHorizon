@@ -14,7 +14,7 @@
 bool CrtCommand::invoke(void)
 {
     static constexpr const char crt_table[] =
-        "              COMBAT RESULTS TABLE\n"
+        "              " LC_CRT_TABLE_BANNER "\n"
         "┌────────┬─────────┬────────┬──────────┬────────┐\n"
         "│Tactic  │ Drive Δ │ vs ATT │ vs DODGE │ vs RET │\n"
         "├────────┼─────────┼────────┼──────────┼────────┤\n"
@@ -35,9 +35,8 @@ bool CrtCommand::invoke(void)
         "│RETREAT │ -1,0    │ Hit    │ Miss     │ Escapes│\n"
         "│RETREAT │ >=+1    │ Miss   │ Miss     │ Escapes│\n"
         "└────────┴─────────┴────────┴──────────┴────────┘\n"
-        "      Damage = Phasic Power + Tech Level\n"
-        "     >> may be modified by hex events << \n";
-
+        "      " LC_CRT_SUFFIX_PHASIC_NOTE "\n"
+        "     "  LC_CRT_SUFFIX_HEX_NOTE "\n";
     Telemetry::instance().write(crt_table);
     return true;
 }

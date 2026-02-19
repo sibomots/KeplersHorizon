@@ -56,15 +56,14 @@ bool DoneCommand::invoke(void)
         {
             // Blocked on combat - don't advance turn, report combat pending
             std::ostringstream msg;
-            msg << "TACTICAL: Combat pending! " << combats.size()
-                << " active engagement(s) must be resolved.";
+            msg << std::format(LC_COMBAT_TACTICAL_COMBAT_PENDING_STAT,
+                   combats.size()) << "\n";
+          
             for (const auto& c : combats)
             {
-                msg << "\n  - Sector " << c.hex_id << " (Round " << c.round
-                    << ")";
+                msg << "      Sector " << c.hex_id << " (Round " << c.round << ")\n";
             }
-            msg << "\nUse: combat order <ship> <target> <tactic> <power "
-                   "allocation>";
+            msg << LC_COMBAT_TACTICAL_HINT << "\n";
 
             Telemetry::instance().write(msg.str());
 
@@ -83,13 +82,15 @@ bool DoneCommand::invoke(void)
     if (!retreat_pending.empty())
     {
         std::ostringstream msg;
-        msg << "TACTICAL: Retreat pending! " << retreat_pending.size()
-            << " ship(s) must complete withdrawal:";
+        msg << std::format(LC_COMBAT_TACTICAL_TARGET_RETREAT_PENDING,
+             retreat_pending.size())
+            << ":\n";
         for (const auto& r : retreat_pending)
         {
-            msg << "\n  - " << r[0];
+            msg << "    - " << r[0] << "\n";
         }
-        msg << "\nUse: retreat <ship> <hex>";
+        msg << LC_COMBAT_TACTICAL_RETREAT_HINT
+            << "\n";
         Telemetry::instance().write(msg.str());
         StateMachine::instance().save_game(s);
         return true;
@@ -98,7 +99,7 @@ bool DoneCommand::invoke(void)
     // Game over check
     if (s.game_over)
     {
-        Telemetry::instance().broadcast(">> GAME OVER <<");
+        Telemetry::instance().broadcast(LC_COMBAT_TACTICAL_GAME_OVER);
     }
     else
     {
@@ -124,13 +125,14 @@ bool DoneCommand::invoke(void)
         std::string phase_name = s.phase_name();
         int round = s.round;
 
-        Telemetry::instance().write("Your turn has ended.");
+        Telemetry::instance().write(LC_TURN_HAS_ENDED);
         // After advance, s.active_player is the NEW active player
         // The requester (ME) is the OLD player, so THEM = the new player
         Telemetry::instance().broadcast(
-          std::format("{}'s turn has begun.", oppUser));
+          std::format(LC_TURN_TARGET_PLAYER_TURN_BEGUN, oppUser));
         Telemetry::instance().tell(PlayerTarget::THEM,
-               std::format("Your Turn: {} Round {}", phase_name, round));
+               std::format(LC_TURN_TARGET_THIS_PLAYER_TURN_BEGUN,
+               phase_name, round));
     }
 
     // Save game state to persist changes
@@ -191,17 +193,17 @@ bool NextCommand::invoke(void)
         if (player_change)
         {
             Telemetry::instance().tell(PlayerTarget::THEM,
-                                       "It's YOUR turn! " + s.phase_name());
+                std::format(LC_TURN_TARGET_IT_IS_YOUR_TURN, s.phase_name()));
         }
     }
     else
     {
         if (phase_change)
         {
-            msg << "Phase: " << s.phase_name();
+            msg << std::format(LC_TURN_DECLARE_PHASE, s.phase_name());
             if (round_change)
             {
-                msg << " Round: " << s.round;
+                msg << "  " << std::format(LC_TURN_DECLARE_ROUND, s.round);
             }
             msg_updated = true;
         }
@@ -209,7 +211,7 @@ bool NextCommand::invoke(void)
         {
             if (round_change)
             {
-                msg << "Round: " << s.round;
+                msg << std::format(LC_TURN_DECLARE_ROUND, s.round);
                 msg_updated = true;
             }
         }

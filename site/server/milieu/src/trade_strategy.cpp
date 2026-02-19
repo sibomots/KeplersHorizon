@@ -5,17 +5,16 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#include "trade_strategy.h"
-
-#include <format>
-#include <sstream>
-
 #include "db.h"
 #include "logger.h"
 #include "moduleutil.h"
 #include "shipmgr.h"
 #include "statemachine.h"
 #include "telemetry.h"
+#include "trade_strategy.h"
+
+#include <format>
+#include <sstream>
 
 // Base prices (CR per unit)
 static const struct
@@ -102,8 +101,9 @@ std::string TradeStrategy::get_cargo_column(const std::string& res)
     {
         return "cargo_exotic";
     }
-    else {
-    return "";
+    else
+    {
+        return "";
     }
 }
 
@@ -135,10 +135,10 @@ static std::string display_resource(const std::string& raw)
 bool TradeStrategy::show_prices(void)
 {
     std::ostringstream out;
-    out << "         TRADE EXCHANGE RATES\n";
-    out << "-------------------------------------------\n";
-    out << "Resource      Buy    Sell\n";
-    out << "----------    ---    ----\n";
+    out << "         " << LC_MILIEU_MARKET_TRADE_BANNER << "\n"
+        << "-------------------------------------------\n"
+        << "Resource      Buy    Sell\n"
+        << "----------    ---    ----\n";
 
     for (int i = 0; i < NUM_PRICES; i++)
     {
@@ -150,7 +150,7 @@ bool TradeStrategy::show_prices(void)
     }
 
     out << "-------------------------------------------\n";
-    out << "Trade requires ship at TRADE_HUB facility.";
+    out << LC_MILIEU_MARKET_TRADE_REQMT;
     Telemetry::instance().write(out.str());
     return true;
 }
@@ -173,8 +173,8 @@ bool TradeStrategy::do_buy(const std::string& resource, const int qty)
     int price = get_market_price(game_id, res_upper);
     if (KH_EQU(price, 0))
     {
-        Telemetry::instance().write("TRADE: Unknown resource type: " +
-                                    resource);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_MARKET_TRADE_TARGET_UNKNOWN_RESOURCE, resource));
         bres = false;
     }
     else
@@ -184,10 +184,9 @@ bool TradeStrategy::do_buy(const std::string& resource, const int qty)
 
         if (total_cost > my_credits)
         {
-            Telemetry::instance().write("TRADE: Insufficient credits. Need " +
-                                        std::to_string(total_cost) +
-                                        " CR, have " +
-                                        std::to_string(my_credits) + " CR");
+            Telemetry::instance().write(
+                std::format(LC_MILIEU_MARKET_TRADE_TARGET_LACKING_CREDIT,
+                            total_cost, my_credits));
             bres = false;
         }
         else
@@ -229,16 +228,15 @@ bool TradeStrategy::do_buy(const std::string& resource, const int qty)
                 // Track for market dynamics
                 track_trade(game_id, res_upper, qty, true);
 
-                std::ostringstream msg;
-                msg << "TRADE: Purchased " << qty << " " << res_upper << " for "
-                    << total_cost << " CR. Loaded onto " << ship_name;
-                Telemetry::instance().write(msg.str());
+                Telemetry::instance().write(
+                    std::format(LC_MILIEU_MARKET_TRADE_TARGET_SUCCEEDED, qty,
+                                res_upper, total_cost, ship_name));
                 bres = true;
             }
             else
             {
                 Telemetry::instance().write(
-                    "TRADE: No ships available to receive cargo.");
+                    LC_MILIEU_MARKET_TRADE_NO_CARGO_SHIP);
                 bres = false;
             }
         }
@@ -267,8 +265,8 @@ bool TradeStrategy::do_sell(const std::string& resource, const int qty)
     int price = (market * 3) / 4; // 75% of market
     if (KH_EQU(price, 0))
     {
-        Telemetry::instance().write("TRADE: Unknown resource type: " +
-                                    resource);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_MARKET_TRADE_TARGET_UNKNOWN_RESOURCE, resource));
         bres = false;
     }
     else
@@ -286,9 +284,9 @@ bool TradeStrategy::do_sell(const std::string& resource, const int qty)
 
         if (qty > available)
         {
-            Telemetry::instance().write("TRADE: Insufficient " + res_upper +
-                                        ". Have " + std::to_string(available) +
-                                        ", need " + std::to_string(qty));
+            Telemetry::instance().write(
+                std::format(LC_MILIEU_MARKET_TRADE_TARGET_LACKING_RESOURCE,
+                            res_upper, available, qty));
             bres = false;
         }
         else
@@ -335,10 +333,9 @@ bool TradeStrategy::do_sell(const std::string& resource, const int qty)
             // Track for market dynamics
             track_trade(game_id, res_upper, qty, false);
 
-            std::string msg = std::format("TRADE: Sold {} {} for {} CR",
-              qty, res_upper, total_revenue);
-
-            Telemetry::instance().write(msg);
+            Telemetry::instance().write(
+                std::format(LC_MILIEU_MARKET_TRADE_TARGET_SOLD, qty, res_upper,
+                            total_revenue));
             bres = true;
         }
     }
@@ -365,7 +362,8 @@ bool TradeStrategy::do_transfer(const std::string& resource, const int qty,
     std::string col = get_cargo_column(res_upper);
     if (col.empty())
     {
-        Telemetry::instance().write("TRADE: Unknown resource: " + resource);
+        Telemetry::instance().write(std::format(
+            LC_MILIEU_MARKET_TRADE_TARGET_UNKNOWN_RESOURCE, resource));
         bres = false;
     }
     else
@@ -383,7 +381,8 @@ bool TradeStrategy::do_transfer(const std::string& resource, const int qty,
             if (has < qty)
             {
                 Telemetry::instance().write(std::format(
-                    "TRADE: {} only has {} {}", srcship, has, res_upper));
+                    LC_MILIEU_MARKET_TRADE_TARGET_SHIP_LACKING_RESOURCE,
+                    srcship, has, res_upper));
                 bres = false;
             }
             else
@@ -407,17 +406,16 @@ bool TradeStrategy::do_transfer(const std::string& resource, const int qty,
                         " AND NOT (ship_code=? OR ship_name=?)",
                     {qty, game_id, me, destship, destship, srcship, srcship});
 
-                std::string msg(
-                    std::format("TRADE: Transferred {} {} from {} to {}", qty,
+                Telemetry::instance().write(
+                    std::format(LC_MILIEU_MARKET_TRADE_TARGET_XFR, qty,
                                 res_upper, srcship, destship));
-                Telemetry::instance().write(msg);
                 bres = true;
             }
         }
         else
         {
-            Telemetry::instance().write("TRADE: Ship " + srcship +
-                                        " not found.");
+            Telemetry::instance().write(
+                std::format(LC_MILIEU_MARKET_TRADE_SHIP_MISSING, srcship));
             bres = false;
         }
     }

@@ -82,13 +82,15 @@ void ScoreCommand::show_overview()
         << std::format(" Ships   {:>8}  {:>16}\n", my_ships, enemy_ships)
         << std::format(" Tech    {:>8}\n", tech_level)
         << "────────────────────────────────────────────\n"
-        << std::format(" Victory: {} to win\n", vp_needed);
+        << std::format(LC_VP_TO_WIN, vp_needed)
+        << "\n";
 
     if (s.game_over)
     {
         std::string winner_name =
             StateMachine::instance().get_player_name(game_id, s.winner);
-        out << " GAME OVER - Winner: " << winner_name << "\n";
+        out << std::format(LC_GAME_WINNER, winner_name)
+            << "\n";
     }
 
     out << "────────────────────────────────────────────";

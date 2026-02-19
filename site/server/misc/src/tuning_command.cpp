@@ -6,12 +6,12 @@
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
 #include "autonomy_agency.h"
-#include "tuning_command.h"
 #include "db.h"
-#include "tuning_state.h"
 #include "logger.h"
 #include "statemachine.h"
 #include "telemetry.h"
+#include "tuning_command.h"
+#include "tuning_state.h"
 
 #include <format>
 #include <fstream>
@@ -23,8 +23,7 @@ bool TuningCommand::invoke(void)
     bool bres = false;
     if (!check_privilege())
     {
-        Telemetry::instance().write(
-            "CONFIGURE: Access denied. Administrator privilege required.");
+        Telemetry::instance().write(LC_CONFIGURE_ACCESS_DENIED);
         bres = false;
     }
     else
@@ -67,17 +66,17 @@ bool TuningCommand::do_show()
     TuningState& gds = TuningState::instance();
     std::ostringstream out;
 
-    out << "CONFIGURE: Current Settings\n";
-    out << "───────────────────────────────────────\n";
+    out << LC_CONFIGURE_BANNER "\n"
+        << "───────────────────────────────────────\n";
 
     std::string status;
     gds.get_status(status);
     out << status;
 
-    out << "───────────────────────────────────────\n";
-    out << "Subcommands:\n";
-    out << "  configure reload conf  — Reload kh.conf\n";
-    out << "  configure reload ai    — Reload AI DSL\n";
+    out << "───────────────────────────────────────\n"
+        << LC_CONFIGURE_SUBCMDS "\n"
+        << LC_CONFIGURE_RELOAD_CONF "\n"
+        << LC_CONFIGURE_AI_RELOAD "\n";
 
     Telemetry::instance().write(out.str());
     return bres;
@@ -90,7 +89,8 @@ int TuningCommand::load_conf_file()
     std::ifstream confFile("kh.conf");
     if (!confFile.is_open())
     {
-        Logger::instance().info("[TUNING] kh.conf not found in server directory");
+        Logger::instance().info(
+            "[TUNING] kh.conf not found in server directory");
         return -1;
     }
 
@@ -167,41 +167,30 @@ int TuningCommand::load_conf_file()
 bool TuningCommand::do_reload_conf()
 {
     bool bres = false;
-    std::ostringstream out;
-    out << "CONFIGURE: Loading kh.conf\n";
-
     int nLoaded = load_conf_file();
 
     if (nLoaded < 0)
     {
-        Telemetry::instance().write("CONFIGURE: Cannot open kh.conf. "
-                                    "File not found in server directory.");
+        Telemetry::instance().write(LC_CONFIGURE_CANNOT_LOAD);
         return false;
     }
-
-    out << std::format("CONFIGURE: Loaded {} settings.\n", nLoaded);
-    Telemetry::instance().write(out.str());
-
-    bres = true;
+    else
+    {
+        Telemetry::instance().write(
+            std::format(LC_CONFIGURE_LOADED, nLoaded));
+        bres = true;
+    }
     return bres;
 }
 
 bool TuningCommand::do_reload_ai()
 {
     bool bres = false;
-    std::ostringstream out;
-
-    out << "CONFIGURE: Reloading AI DSL...\n";
-
+    Telemetry::instance().write(LC_CONFIGURE_DSL_LOADING);
     AutonomyAgency& aa = AutonomyAgency::instance();
     aa.shutdown_ecl();
     aa.init_ecl();
-
-    out << "CONFIGURE: AI DSL reloaded.\n";
-
-    Telemetry::instance().write(out.str());
-    Logger::instance().info("[TUNING] AI DSL reloaded by admin");
-
+    Telemetry::instance().write(LC_CONFIGURE_DSL_LOADED);
     bres = true;
     return bres;
 }

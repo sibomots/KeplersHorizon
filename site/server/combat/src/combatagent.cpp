@@ -170,7 +170,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
     if (attacker_rows.empty())
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Ship {} does not exist.", attacker));
+            std::format(LC_COMBAT_SHIP_NOT_EXIST, attacker));
         return false;
     }
     char attacker_actual_owner = attacker_rows[0][0][0];
@@ -178,13 +178,13 @@ bool CombatAgent::apply(CombatOrderParam& param)
     if (attacker_destroyed)
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Ship {} has been destroyed.", attacker));
+            std::format(LC_COMBAT_SHIP_DESTROYED, attacker));
         return false;
     }
     if (attacker_actual_owner != combatting_players.first)
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Ship {} is not yours.", attacker));
+            std::format(LC_COMBAT_SHIP_NOT_YOURS, attacker));
         return false;
     }
 
@@ -193,7 +193,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
     if (attackee_rows.empty())
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Target {} does not exist.", attackee));
+            std::format(LC_COMBAT_SHIP_NOT_EXIST, attackee));
         return false;
     }
     char attackee_actual_owner = attackee_rows[0][0][0];
@@ -201,13 +201,13 @@ bool CombatAgent::apply(CombatOrderParam& param)
     if (attackee_destroyed)
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Target {} has been destroyed.", attackee));
+            std::format(LC_COMBAT_SHIP_DESTROYED, attackee));
         return false;
     }
     if (attackee_actual_owner != combatting_players.second)
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: {} is not a hostile target.", attackee));
+            std::format(LC_COMBAT_SHIP_NOT_HOSTILE, attackee));
         return false;
     }
 
@@ -225,7 +225,7 @@ bool CombatAgent::apply(CombatOrderParam& param)
     if (attacker_stats.empty() || attacker_stats[0][0].empty())
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Ship {} is not deployed.", attacker));
+            std::format(LC_COMBAT_SHIP_NOT_DEPLOYED, attacker));
         return false;
     }
 
@@ -252,14 +252,40 @@ bool CombatAgent::apply(CombatOrderParam& param)
 
     if (KH_EQU(combat_state.game_id, 0))
     {
-        Telemetry::instance().write("TACTICAL: No combat at this hex.");
-        return false;
+        // No combat record - check if this is a voluntary trigger by the initiative player
+        GameState ngs = StateMachine::instance().get_game_state();
+        char chActive = ngs.active_player.empty() ? 'A' : ngs.active_player[0];
+
+        if (player != chActive)
+        {
+            Telemetry::instance().write(LC_COMBAT_INITIATIVE_PLAYER_ONLY);
+            return false;
+        }
+
+        // Verify opposing forces are present in this hex
+        auto oppose_check = db.Query(
+            "SELECT COUNT(*) FROM ships WHERE game_id=? AND at_hex=? "
+            "AND owner=? AND destroyed_at IS NULL "
+            "AND (racked_in IS NULL OR racked_in = '')",
+            {gid, combat_hex_id, combatting_players.second});
+
+        int nOppose = std::atoi(oppose_check[0][0].c_str());
+        if (nOppose == 0)
+        {
+            Telemetry::instance().write(LC_COMBAT_NO_RED_FORCES);
+            return false;
+        }
+
+        // Initiative player voluntarily triggers combat
+        CombatEngine ce(gid);
+        ce.create_combat(combat_hex_id);
+        combat_state = get_combat_state_at_hex(gid, combat_hex_id);
     }
+
     if (combat_state.stage != 0)
     {
         Telemetry::instance().write(
-            std::format("TACTICAL: Not accepting orders (stage {}).",
-                        combat_state.stage));
+            std::format(LC_COMBAT_NO_ORDERS, combat_state.stage));
         return false;
     }
 
@@ -399,7 +425,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
 
     if (hexRows.empty())
     {
-        Telemetry::instance().write("TACTICAL: No combat orders queued.");
+        Telemetry::instance().write(LC_COMBAT_NO_QUEUED_ORDERS);
         return true;
     }
 
@@ -411,9 +437,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
             if (row[0] != activeHex)
             {
                 Telemetry::instance().write(
-                    std::format("Error: Orders pending for hex {} but active "
-                                "combat is in hex {}",
-                                row[0], activeHex));
+                    std::format(LC_COMBAT_PENDING_ORDER_ERR, row[0], activeHex));
                 return false;
             }
         }
@@ -426,7 +450,7 @@ bool CombatAgent::apply(CombatCommitParam& param)
             "AND owner=? AND committed=0",
             {gid, owner});
 
-    Telemetry::instance().write("TACTICAL: Combat orders transmitted.");
+    Telemetry::instance().write(LC_COMBAT_ORDERS_TX);
 
     // Check each affected hex for resolution
     CombatEngine ce(gid);
@@ -482,10 +506,10 @@ bool CombatAgent::apply(CombatCommitParam& param)
             char opponent = owner ^ 0x03;
 
             Telemetry::instance().add_tell(opponent,
-                std::format("Enemy has committed combat orders for hex {}", hex_id));
+                std::format(LC_COMBAT_RED_FORCE_HAS_ORDERS, hex_id));
 
-            Telemetry::instance().write(std::format(
-                "TACTICAL: Sector {} - Awaiting enemy orders from enemy", hex_id));
+            Telemetry::instance().write(
+                std::format(LC_COMBAT_WAIT_RED_FORCE_ORDERS, hex_id));
         }
     }
     return true;
@@ -506,8 +530,7 @@ bool CombatAgent::apply(CombatCancelParam& param)
 
     if (orderRows.empty() || KH_EQU(orderRows[0][0], "0"))
     {
-        Telemetry::instance().write(
-            "TACTICAL: No combat orders have been received.");
+        Telemetry::instance().write(LC_COMBAT_ORDERS_NO_RX);
         return true;
     }
 
@@ -516,8 +539,7 @@ bool CombatAgent::apply(CombatCancelParam& param)
             "AND committed=0",
             {gid, owner});
 
-    Telemetry::instance().write(
-        "TACTICAL: Orders rescinded. Issue new orders.");
+    Telemetry::instance().write(LC_COMBAT_ORDERS_RECINDED);
     return true;
 }
 
@@ -541,7 +563,7 @@ bool CombatAgent::apply(CombatDraftsParam& param)
 
     if (rows.empty())
     {
-        Telemetry::instance().write("No pending combat orders.");
+        Telemetry::instance().write(LC_COMBAT_NO_PENDING_ORDERS);
         return true;
     }
 

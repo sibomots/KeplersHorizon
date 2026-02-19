@@ -77,9 +77,24 @@ void CombatEngine::check_for_combat_triggers()
                     {game_id, hex});
                 if (exist.empty())
                 {
-                    Logger::instance().debug(std::format(
-                         "[COMBAT] Creating combat at {}", hex));
-                    create_combat(hex);
+                    // Only base-star hexes trigger mandatory combat
+                    auto base_check = db.Query(
+                        "SELECT 1 FROM star_systems "
+                        "JOIN games ON games.module_id = star_systems.module_id "
+                        "WHERE games.id = ? AND star_systems.hex_id = ? "
+                        "AND star_systems.is_base = 1",
+                        {game_id, hex});
+                    if (!base_check.empty())
+                    {
+                        Logger::instance().debug(std::format(
+                            "[COMBAT] Creating mandatory combat at base-star {}", hex));
+                        create_combat(hex);
+                    }
+                    else
+                    {
+                        Logger::instance().debug(std::format(
+                            "[COMBAT] Non-base hex {} - voluntary combat only", hex));
+                    }
                 }
             }
         }
@@ -133,6 +148,27 @@ void CombatEngine::create_combat(const std::string& hex_id)
     db.Exec("INSERT INTO combat_state (game_id, hex_id, round, stage, "
             "attacker_remains, stalemate_counter) VALUES (?, ?, 1, 0, 0, 0)",
             {game_id, hex_id});
+}
+
+bool CombatEngine::has_voluntary_combat_opportunity()
+{
+    DatabaseManager& db = DatabaseManager::instance();
+
+    // Find contested hexes (both players present) with no existing combat record
+    auto rows = db.Query(
+        "SELECT at_hex FROM ships "
+        "WHERE game_id=? "
+        "AND at_hex IS NOT NULL "
+        "AND (racked_in IS NULL OR racked_in = '') "
+        "AND destroyed_at IS NULL "
+        "AND owner IN ('A','B') "
+        "GROUP BY at_hex HAVING COUNT(DISTINCT owner) > 1 "
+        "AND at_hex NOT IN ("
+        "    SELECT hex_id FROM combat_state WHERE game_id=?"
+        ")",
+        {game_id, game_id});
+
+    return !rows.empty();
 }
 
 // The point here is that we are looking for potential combats
@@ -909,36 +945,26 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         {
             Telemetry::instance().add_tell(
                 game_id, 'A',
-                "TACTICAL: ROUND " + std::to_string(cs.round) +
-                    " DAMAGE REPORT\n" + dmgA.str() + "TOTAL: " +
-                    std::to_string(dmgA_total) + " DAMAGE TO ASSIGN\n" +
-                    ">> Use 'combat apply <ship> pd=N b=N...' to assign "
-                    "damage.");
+                std::format(LC_COMBAT_ROUND_TARGET_DMG_REPORT,
+                cs.round, dmgA.str(), dmgA_total));
         }
         else
         {
             Telemetry::instance().add_tell(game_id, 'A',
-                                           "TACTICAL: ROUND " +
-                                               std::to_string(cs.round) +
-                                               " - YOUR SHIPS TOOK NO DAMAGE.");
+                          std::format(LC_COMBAT_ROUND_TARGET_NO_DMG, cs.round));
         }
 
         if (dmgB_total > 0)
         {
             Telemetry::instance().add_tell(
                 game_id, 'B',
-                "TACTICAL: ROUND " + std::to_string(cs.round) +
-                    " DAMAGE REPORT\n" + dmgB.str() + "TOTAL: " +
-                    std::to_string(dmgB_total) + " DAMAGE TO ASSIGN\n" +
-                    ">> Use 'combat apply <ship> pd=N b=N...' to assign "
-                    "damage.");
+                std::format(LC_COMBAT_ROUND_TARGET_DMG_REPORT,
+                cs.round, dmgB.str(), dmgB_total));
         }
         else
         {
             Telemetry::instance().add_tell(game_id, 'B',
-                                           "TACTICAL: ROUND " +
-                                               std::to_string(cs.round) +
-                                               " - YOUR SHIPS TOOK NO DAMAGE.");
+                          std::format(LC_COMBAT_ROUND_TARGET_NO_DMG, cs.round));
         }
     }
     else
@@ -946,13 +972,13 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
         next_stalemate++;
         log << "No hull damage.\n";
 
-        // Check for 3 consecutive stalemates - per rules, initiative player
+        // Check for 2 consecutive stalemates - per rules, initiative player
         // must retreat
-        if (next_stalemate >= 3)
+        if (next_stalemate >= 2)
         {
             // RETREAT_PENDING
             next_stage = 3; // RETREAT_PENDING
-            log << "STALEMATE: 3 rounds with no damage!\n";
+            log << "STALEMATE: 2 rounds with no damage!\n";
             log << "Initiative player must withdraw all ships from this "
                    "hex.\n";
             // Mark for retreat - user must issue 'retreat <ship> <hex>'
@@ -972,8 +998,7 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
             // Notify initiative player they must retreat
             Telemetry::instance().add_tell(
                 game_id, active_player,
-                "Three consecutive stalemates: You must retreat your ships "
-                "from hex " + hex_id);
+                std::format(LC_COMBAT_TARGET_STALEMATE_MSG, hex_id));
         }
         else
         {
@@ -982,8 +1007,8 @@ std::string CombatEngine::resolve_round(const std::string& hex_id)
 
             // Notify both players next round begins
             Telemetry::instance().add_broadcast(
-                "Combat Round " + std::to_string(next_round) +
-                " begins in hex " + hex_id + ". Submit orders.");
+                std::format(LC_COMBAT_NEXT_ROUND,
+                next_round, hex_id));
         }
     }
 
@@ -1146,17 +1171,6 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 "WHERE game_id=? AND ship_code=? AND owner=?",
                 {game_id, ship_code, owner});
 
-#if NOT_HOW_VP_ARE_ADDED_BUGBUG
-        // Award VP to enemy
-        char enemy = owner ^ 0x03;
-        std::string vp_col = (KH_EQU(enemy, 'A')) ? "vp_A" : "vp_B";
-        db.Exec("UPDATE games SET " + vp_col + "=" + vp_col + "+1 WHERE id=?",
-                {game_id});
-
-        Telemetry::instance().add_tell(
-            game_id, enemy,
-            "VICTORY: +1 VP for destroying enemy ship " + ship_code);
-#endif
         Logger::instance().info("Destroyed ship " + ship_code + " owned by " +
                                 std::string(1, owner) + " at hex " + hex);
     }
@@ -1191,8 +1205,7 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
                  StateMachine::instance().get_player_name(game_id, owner);
 
         Telemetry::instance().add_tell(game_id, opponent,
-                          std::format("{} has assigned all damage.",
-                                      this_player_real_name));
+                          std::format(LC_COMBAT_TARGET_DMG_ASSIGNED, this_player_real_name));
     }
 
     // 11. Check if ALL damage is assigned (both players)
@@ -1240,9 +1253,10 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
             std::string the_player_real_name =
                  StateMachine::instance().get_player_name(game_id, winner);
 
-            std::string victory_msg = std::format("Combat in hex {} ended. {} controls the hex.", hex, the_player_real_name);
+            std::string victory_msg = std::format(LC_COMBAT_TARGET_COMBAT_ENDED, hex, the_player_real_name);
 
             Telemetry::instance().add_broadcast(victory_msg);
+            // BUGBUG why are we returning this string?
             return victory_msg;
         }
 
@@ -1254,9 +1268,8 @@ std::string CombatEngine::apply_damage(char owner, const std::string& ship_code,
                 {next_round, game_id, hex});
 
         Telemetry::instance().add_broadcast(
-            game_id, "All damage assigned. Combat Round " +
-                         std::to_string(next_round) + " begins in hex " + hex +
-                         ". Submit orders!");
+            game_id, std::format(LC_COMBAT_TARGET_ALL_DMG_NEW_ORDERS,
+                         next_round, hex));
     }
 
     return "Damage Applied";

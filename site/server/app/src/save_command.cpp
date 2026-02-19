@@ -288,8 +288,7 @@ bool SaveCommand::invoke()
 {
     if (m_show_usage)
     {
-        Telemetry::instance().write(
-            "Usage: save <NAME> - save current game under label NAME");
+        Telemetry::instance().write(LC_SAVE_CMD_HINT);
         return true;
     }
 
@@ -300,8 +299,7 @@ bool SaveCommand::invoke()
 
     if (m_name.empty())
     {
-        Telemetry::instance().write(
-            "Usage: save <NAME> - save current game under label NAME");
+        Telemetry::instance().write(LC_SAVE_CMD_HINT);
         return true;
     }
 
@@ -310,7 +308,7 @@ bool SaveCommand::invoke()
     bool cloned = cloneGameState(game_id, cloneId);
     if (!cloned)
     {
-        Telemetry::instance().write("SAVE: Failed to snapshot game state.");
+        Telemetry::instance().write(LC_SAVE_FAILED);
         return false;
     }
 
@@ -328,7 +326,7 @@ bool SaveCommand::invoke()
         db.Exec("UPDATE saved_games SET game_id=?, saved_at=NOW() WHERE id=?",
                 {cloneId, sgid});
         Telemetry::instance().write(
-            std::format("SAVE: Updated '{}' (Turn {}).", m_name, gs.round));
+            std::format(LC_SAVE_UPDATE_TARGET_SAVED, m_name, gs.round));
     }
     else
     {
@@ -336,8 +334,8 @@ bool SaveCommand::invoke()
         db.Exec("INSERT INTO saved_games(user_id, save_name, game_id) "
                 "VALUES(?,?,?)",
                 {user_id, m_name, cloneId});
-        Telemetry::instance().write(std::format(
-            "SAVE: Game saved as '{}' (Turn {}).", m_name, gs.round));
+        Telemetry::instance().write(
+            std::format(LC_SAVE_NEW_TARGET_SAVED, m_name, gs.round));
     }
     return true;
 }
@@ -368,20 +366,17 @@ bool LoadCommand::invoke()
 
         if (saves.empty())
         {
-            Telemetry::instance().write("LOAD: No saved games found.");
-            Telemetry::instance().write(
-                "Usage: load <NAME> - load a saved game by name");
+            Telemetry::instance().write(LC_LOAD_NOT_FOUND);
             return false;
         }
 
         std::ostringstream out;
-        out << "LOAD: Your saved games:\n";
+        out << LC_LOAD_LIST_BANNER ":\n";
         for (const auto& row : saves)
         {
             out << "  " << row[0] << " (Turn " << row[3] << ", " << row[2]
                 << ")\n";
         }
-        out << "Usage: load <NAME> - load a saved game by name";
         Telemetry::instance().write(out.str());
         return true;
     }
@@ -389,8 +384,7 @@ bool LoadCommand::invoke()
     // Check phase - only allow during BUILD_SHIPS
     if (gs.phase_index != 0)
     {
-        Telemetry::instance().write(
-            "LOAD: Only allowed during BUILD_SHIPS phase.");
+        Telemetry::instance().write(LC_LOAD_INHIBITED);
         return false;
     }
 
@@ -405,8 +399,9 @@ bool LoadCommand::invoke()
 
     if (saves.empty())
     {
-        Telemetry::instance().write("LOAD: No saved game named '" + m_name +
-                                    "' found.");
+        Telemetry::instance().write(
+             std::format(LC_LOAD_TARGET_NOT_FOUND,
+              m_name));
         return false;
     }
 
@@ -418,7 +413,7 @@ bool LoadCommand::invoke()
     // Can't load the same game we're in
     if (KH_EQU(target_game_id, game_id))
     {
-        Telemetry::instance().write("LOAD: You're already in that game.");
+        Telemetry::instance().write(LC_LOAD_OVERWRITE);
         return false;
     }
 
@@ -439,8 +434,7 @@ bool LoadCommand::invoke()
                     {target_game_id, uid});
         }
 
-        std::string msg = std::format(
-            "COMMAND: Game '{}' loaded. Resuming Turn {}.", m_name, round);
+        std::string msg = std::format(LC_LOAD_TARGET_SUCCEEDED, m_name, round);
         Telemetry::instance().write(msg);
         return true;
     }
@@ -479,8 +473,8 @@ bool LoadCommand::invoke()
             db.Exec("DELETE FROM load_requests WHERE game_id=?", {game_id});
 
             // Notify both players
-            std::string msg = std::format(
-                "COMMAND: Game '{}' loaded. Resuming Turn {}.", m_name, round);
+            std::string msg = std::format(LC_LOAD_TARGET_SUCCEEDED, m_name, round);
+
             Telemetry::instance().add_tell(target_game_id, 'A', msg);
             Telemetry::instance().add_tell(target_game_id, 'B', msg);
             Telemetry::instance().write(msg);
@@ -489,11 +483,10 @@ bool LoadCommand::invoke()
         else
         {
             // Different request pending
-            Telemetry::instance().write("LOAD: A load request for '" +
-                                        existing_name +
-                                        "' is pending. "
-                                        "Type 'reject " +
-                                        existing_name + "' first.");
+            Telemetry::instance().write(
+                 std::format(LC_LOAD_TARGET_REQUESTED,
+                                        existing_name,
+                                        existing_name));
             return true;
         }
     }
@@ -509,19 +502,17 @@ bool LoadCommand::invoke()
     std::string username = username_row.empty() ? "Player" : username_row[0][0];
 
     // Notify the requester
-    Telemetry::instance().write("LOAD: Requested to load '" + m_name +
-                                "' (Turn " + round +
-                                "). "
-                                "Waiting for other player to accept.");
+    Telemetry::instance().write(
+        std::format(LC_LOAD_TARGET_WAIT, m_name, round));
 
     // Notify the opponent
     char opponent = player ^ 0x03;
-    std::string opponent_msg = "COMMAND: " + username + " proposes loading '" +
-                               m_name + "' (Turn " + round +
-                               ").\n"
-                               "Type 'accept " +
-                               m_name + "' or 'reject " + m_name + "'.";
-    Telemetry::instance().add_tell(game_id, opponent, opponent_msg);
+
+
+    Telemetry::instance().add_tell(game_id, opponent, 
+    std::format(LC_LOAD_TARGET_PROPOSAL,
+                    username, m_name, round, m_name, m_name));
+  
 
     return true;
 }
@@ -544,7 +535,7 @@ bool AcceptCommand::invoke()
 
     if (pending.empty())
     {
-        Telemetry::instance().write("ACCEPT: No pending load request.");
+        Telemetry::instance().write(LC_LOAD_NO_PENDING);
         return false;
     }
 
@@ -555,22 +546,22 @@ bool AcceptCommand::invoke()
     // Check if name matches (if provided)
     if (!m_name.empty() && m_name != save_name)
     {
-        Telemetry::instance().write("ACCEPT: Pending request is for '" +
-                                    save_name + "', not '" + m_name + "'.");
+        Telemetry::instance().write(
+            std::format(LC_LOAD_TARGET_PENDING,
+                        save_name, m_name));
         return false;
     }
 
     // Can't accept your own request
     if (KH_EQU(requester[0], player))
     {
-        Telemetry::instance().write(
-            "ACCEPT: Waiting for the other player to accept your request.");
+        Telemetry::instance().write(LC_LOAD_WAIT_FOR_ACCEPT);
         return false;
     }
 
     // Execute the load!
-    Logger::instance().info("[LOAD] Accept confirmed, switching to game " +
-                            std::to_string(target_game_id));
+    Logger::instance().info(
+           std::format(LC_LOAD_TARGET_LOAD_CONFIRMED, target_game_id));
 
     // Get round from target game
     auto target_state = db.Query("SELECT JSON_UNQUOTE(JSON_EXTRACT(state_json, "
@@ -620,8 +611,7 @@ bool AcceptCommand::invoke()
     }
 
     // Notify both players
-    std::string msg = "COMMAND: Game '" + save_name +
-                      "' loaded. Resuming Turn " + round + "." + extra_msg;
+    std::string msg = std::format(LC_LOAD_TARGET_LOADED, save_name, round, extra_msg);
     Telemetry::instance().add_tell(target_game_id, 'A', msg);
     Telemetry::instance().add_tell(target_game_id, 'B', msg);
     Telemetry::instance().write(msg);
@@ -645,7 +635,7 @@ bool RejectCommand::invoke()
 
     if (pending.empty())
     {
-        Telemetry::instance().write("REJECT: No pending load request.");
+        Telemetry::instance().write(LC_LOAD_NO_PENDING_REQ);
         return false;
     }
 
@@ -656,8 +646,9 @@ bool RejectCommand::invoke()
     // Check if name matches (if provided)
     if (!m_name.empty() && m_name != save_name)
     {
-        Telemetry::instance().write("REJECT: Pending request is for '" +
-                                    save_name + "', not '" + m_name + "'.");
+        Telemetry::instance().write(
+             std::format(LC_LOAD_TARGET_REJECT_NOT_SAME_REQ,
+                save_name, m_name));
         return false;
     }
 
@@ -671,13 +662,14 @@ bool RejectCommand::invoke()
     db.Exec("DELETE FROM load_requests WHERE game_id=?", {game_id});
 
     // Notify the rejector
-    Telemetry::instance().write("REJECT: Load request for '" + save_name +
-                                "' rejected.");
+    Telemetry::instance().write(
+            std::format(LC_LOAD_TARGET_REJECT_REQ,
+                   save_name));
 
     // Notify the requester
     char requester_player = requester[0];
     std::string requester_msg =
-        "COMMAND: " + username + " rejected loading '" + save_name + "'.";
+         std::format(LC_LOAD_TARGET_REJECTED_RESPONSE, username, save_name);
     Telemetry::instance().add_tell(game_id, requester_player, requester_msg);
 
     return true;

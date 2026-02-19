@@ -69,8 +69,11 @@ bool SystemStrategy::show_overview(const std::string& system_name)
     int rank = knowledge_rank(level);
 
     std::ostringstream out;
-    out << "=== SYSTEM: " << system_name << " ===\n";
-    out << "Knowledge Level: " << level << "\n\n";
+    out << "=== "
+        << std::format(LC_MILIEU_SYSTEM_SHOW_BANNER, system_name)
+        << " ===\n"
+        << std::format(LC_MILIEU_SYSTEM_SHOW_INFO_LEVEL, level)
+        << "\n";
 
     // Always show star info if at least Rumored
     if (rank >= 1)
@@ -107,7 +110,8 @@ bool SystemStrategy::show_overview(const std::string& system_name)
 
         if (!pcount.empty())
         {
-            out << "Planets: " << pcount[0][0] << "\n";
+            out << std::format(LC_MILIEU_SYSTEM_SHOW_PLANET, pcount[0][0])
+                << "\n";
         }
 
         // Belt count
@@ -117,7 +121,8 @@ bool SystemStrategy::show_overview(const std::string& system_name)
 
         if (!bcount.empty() && bcount[0][0] != "0")
         {
-            out << "Asteroid Belts: " << bcount[0][0] << "\n";
+            out << std::format(LC_MILIEU_SYSTEM_SHOW_ASTEROID, bcount[0][0])
+                << "\n";
         }
     }
 
@@ -134,21 +139,21 @@ bool SystemStrategy::show_overview(const std::string& system_name)
     // Hints for more info
     if (rank >= 2)
     {
-        out << "\nUse 'system " << system_name
-            << " planets' for planetary data.\n";
-        out << "Use 'system " << system_name
-            << " facilities' for infrastructure.\n";
+        out << "\n"
+            << std::format(LC_MILIEU_SYSTEM_SHOW_TARGET_PLANET_HINT, system_name)
+            << "\n"
+            << std::format(LC_MILIEU_SYSTEM_SHOW_TARGET_FACILITIES_HINT, system_name)
+            << "\n";
     }
     if (rank >= 3)
     {
-        out << "Use 'system " << system_name << " resources' for deposits.\n";
-        out << "Use 'system " << system_name
-            << " population' for inhabitants.\n";
+        out << std::format(LC_MILIEU_SYSTEM_SHOW_TARGET_RESOURCES_HINT, system_name)
+            << "\n";
     }
     if (rank >= 4)
     {
-        out << "Use 'system " << system_name
-            << " anomalies' for discoveries.\n";
+        out << std::format(LC_MILIEU_SYSTEM_SHOW_TARGET_ANOMALIES_HINT, system_name)
+            << "\n";
     }
 
     Telemetry::instance().write(out.str());
@@ -166,9 +171,7 @@ bool SystemStrategy::show_planets(const std::string& system_name)
     if (rank < 2)
     {
         Telemetry::instance().write(
-            "SYSTEM: Planetary data requires Charted knowledge level.\n"
-            "Current: " +
-            level + ". Send a ship to survey.");
+            std::format(LC_MILIEU_SYSTEM_SHOW_TARGET_INFO_MIN, level));
         return false;
     }
 
@@ -184,7 +187,7 @@ bool SystemStrategy::show_planets(const std::string& system_name)
 
     if (rows.empty())
     {
-        out << "No planetary bodies on record.\n";
+        out << LC_MILIEU_SYSTEM_NO_PLANET_RECORDS << "\n";
     }
     else
     {
@@ -216,9 +219,7 @@ bool SystemStrategy::show_resources(const std::string& system_name)
     if (rank < 3)
     {
         Telemetry::instance().write(
-            "SYSTEM: Resource data requires Surveyed knowledge level.\n"
-            "Current: " +
-            level + ". Use 'survey' command.");
+            std::format(LC_MILIEU_SYSTEM_SHOW_TARGET_INFO_MIN_SURVEY, level));
         return false;
     }
 
@@ -286,73 +287,6 @@ bool SystemStrategy::show_resources(const std::string& system_name)
     return true;
 }
 
-bool SystemStrategy::show_populations(const std::string& system_name)
-{
-    // BUGBUG this ought to be std::pair or something.. better.
-    std::string level = get_knowledge_level(system_name);
-    int rank = knowledge_rank(level);
-
-    // BUGBUG move to invoke to limit call into this.
-    if (rank < 3)
-    {
-        Telemetry::instance().write(
-            "SYSTEM: Population data requires Surveyed knowledge level.\n"
-            "Current: " +
-            level + ". Use 'survey' command.");
-        return false;
-    }
-
-    DatabaseManager& db = DatabaseManager::instance();
-    std::ostringstream out;
-    out << "=== " << system_name << " POPULATIONS ===\n\n";
-
-    std::string q =
-        "SELECT p.common_name, p.designation, sp.name, pop.pop_class, "
-        " pop.population_millions, pop.tech_level, pop.disposition "
-        " FROM system_populations pop "
-        " JOIN system_planets p ON pop.location_type='Planet' AND "
-        " pop.location_id=p.id "
-        " JOIN system_species sp ON pop.species_id=sp.id "
-        " WHERE p.system_name=? ORDER BY pop.population_millions DESC";
-    auto rows = db.Query(q, {system_name});
-
-    if (rows.empty())
-    {
-        out << "No significant population centers on record.\n";
-    }
-    else
-    {
-        out << "World            Species         Class       Pop(M)  Tech  "
-               "Disposition\n";
-        out << "---------------  --------------  ----------  ------  ----  "
-               "-----------\n";
-        for (const auto& r : rows)
-        {
-            std::string loc = r[0].empty() ? r[1] : r[0];
-            if (loc.size() > 15)
-            {
-                loc = loc.substr(0, 13) + "..";
-            }
-            out << loc << std::string(17 - loc.size(), ' ');
-
-            std::string species = r[2];
-            if (species.size() > 14)
-            {
-                species = species.substr(0, 12) + "..";
-            }
-            out << species << std::string(16 - species.size(), ' ');
-
-            out << r[3] << std::string(12 - r[3].size(), ' ');
-            out << r[4] << std::string(8 - r[4].size(), ' ');
-            out << r[5] << std::string(6 - r[5].size(), ' ');
-            out << r[6] << "\n";
-        }
-    }
-
-    Telemetry::instance().write(out.str());
-    return true;
-}
-
 bool SystemStrategy::show_facilities(const std::string& system_name)
 {
     // BUGBUG ugly
@@ -363,16 +297,17 @@ bool SystemStrategy::show_facilities(const std::string& system_name)
     if (rank < 2)
     {
         Telemetry::instance().write(
-            "SYSTEM: Facility data requires Charted knowledge level.\n"
-            "Current: " +
-            level + ". Send a ship to survey.");
+         std::format(LC_MILIEU_SYSTEM_FACILITIES_DATA_TARGET_INFO_MIN_CHARTED,
+              level));
         return false;
     }
 
     GameState s = StateMachine::instance().get_game_state();
     DatabaseManager& db = DatabaseManager::instance();
     std::ostringstream out;
-    out << "=== " << system_name << " FACILITIES ===\n\n";
+    out << "=== "
+        << std::format(LC_MILIEU_SYSTEM_SHOW_FACILITIES_BANNER, system_name)
+        << " ===\n\n";
 
     // Join static facility data with live controller from facility_control
     std::string q =
@@ -388,7 +323,7 @@ bool SystemStrategy::show_facilities(const std::string& system_name)
 
     if (rows.empty())
     {
-        out << "No significant infrastructure on record.\n";
+        out << LC_MILIEU_SYSTEM_NO_INFRA_RECORDS << "\n";
     }
     else
     {
@@ -446,9 +381,8 @@ bool SystemStrategy::show_anomalies(const std::string& system_name)
     if (rank < 4)
     {
         Telemetry::instance().write(
-            "SYSTEM: Anomaly data requires Intimate knowledge level.\n"
-            "Current: " +
-            level + ". Extended presence required.");
+         std::format(LC_MILIEU_SYSTEM_ANOMALIES_DATA_TARGET_INFO_MIN_INTIMATE,
+              level));
         return false;
     }
 

@@ -414,10 +414,22 @@ void StateMachine::advance_next(GameState& s)
 
             if (combats.empty())
             {
-                // No combat? Auto-skip to next phase
-                Logger::instance().info("[SM][advance_next] No combat, "
-                                        "skipping to Pick/Drop phase");
-                s.phase_index = PH_SYSTEM_PICKDROP;
+                if (ce.has_voluntary_combat_opportunity())
+                {
+                    // Non-base hex with opposing forces - pause to let initiative player decide
+                    Logger::instance().info("[SM][advance_next] Voluntary combat "
+                                           "opportunity detected, pausing at Combat phase");
+                    char chActive = s.active_player.empty() ? 'A' : s.active_player[0];
+                    Telemetry::instance().add_tell(
+                        s.game_id, chActive, LC_COMBAT_ENEMY_DETECTED);
+                }
+                else
+                {
+                    // No combat? Auto-skip to next phase
+                    Logger::instance().info("[SM][advance_next] No combat, "
+                                           "skipping to Pick/Drop phase");
+                    s.phase_index = PH_SYSTEM_PICKDROP;
+                }
             }
             else
             {
@@ -460,12 +472,13 @@ void StateMachine::advance_next(GameState& s)
                         char enemyOwner = viewer ^ 0x03;
 
                         std::ostringstream combatMsg;
-                        combatMsg << "   CONFLICT IN STAR SYSTEM: " << sysName
-                                  << " [" << combat.hex_id << "]\n";
-                        combatMsg << "     SHIPS IN SYSTEM " << sysName << "\n";
+                        combatMsg << std::format(LC_COMBAT_TARGET_CONFLICT_BANNER,
+                                 sysName, combat.hex_id, sysName);
 
                         // Blue-Force (viewer's ships) - show stats
-                        combatMsg << "         Blue-Force\n";
+                        combatMsg << "         " 
+                                  << LC_COMBAT_TARGET_CONFLICT_BLUEFORCE
+                                  << "\n";
                         int blueNum = 1;
                         for (const auto& ship : shipRows)
                         {
@@ -477,15 +490,17 @@ void StateMachine::advance_next(GameState& s)
                                 combatMsg
                                     << "             " << blueNum++ << ". "
                                     << shipClass << " class " << ship[0] << " "
-                                    << ship[1] << " (PowerDrive:" << ship[4]
-                                    << " Phasic:" << ship[5] << " Shield:" << ship[6]
-                                    << " Launcher:" << ship[7] << " Torpedo:" << ship[8]
+                                    << ship[1] << " (PD:" << ship[4]
+                                    << " PHA:" << ship[5] << " SLD:" << ship[6]
+                                    << " LCH:" << ship[7] << " TOR" << ship[8]
                                     << ")\n";
                             }
                         }
 
                         // Red-Force (enemy ships) - NO stats (private info)
-                        combatMsg << "         Red-Force\n";
+                        combatMsg << "         "
+                                  << LC_COMBAT_TARGET_CONFLICT_REDFORCE
+                                  << "\n";
                         int redNum = 1;
                         for (const auto& ship : shipRows)
                         {

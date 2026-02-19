@@ -197,8 +197,7 @@ void TurnEndProcessor::apply_trade_hub_income(int game_id, int round)
                     // Notify player
                     Telemetry::instance().add_tell(
                         game_id, player,
-                        "INCOME: Trade hub revenue +" + std::to_string(income) +
-                            " CR this round.");
+                        std::format(LC_MILIEU_MARKET_TARGET_HUB_REVENUE, income));
                 }
             }
         }
@@ -274,7 +273,7 @@ void TurnEndProcessor::process_fabrication_queue(int game_id, int round)
             // Notify player
             Telemetry::instance().add_tell(
                 game_id, player,
-                "FABRICATION COMPLETE: " + ship_code + " - " + msg);
+                std::format(LC_MILIEU_FABRICATE_TARGET_QUEUED_COMPLETE, ship_code,msg));
         }
 
         // Mark job complete
@@ -349,7 +348,7 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
             }
             Telemetry::instance().add_tell(
                 game_id, enemy,
-                "VICTORY: +2 VP for controlling enemy base star!");
+                std::format(LC_ADDED_TARGET_VP, 1));
 
             Logger::instance().info("[VP] Player " + std::string(1, enemy) +
                                     " controls enemy base star at " + hex_id);
@@ -360,20 +359,16 @@ void TurnEndProcessor::check_victory_conditions(int game_id, int round)
     if (vp_A >= 3)
     {
         db.Exec("UPDATE games SET winner='A' WHERE id=?", {game_id});
-        Telemetry::instance().add_tell(
-            game_id, 'A', "*** VICTORY! You have won the game! ***");
-        Telemetry::instance().add_tell(
-            game_id, 'B', "*** DEFEAT. Your opponent has won. ***");
+        Telemetry::instance().add_tell(game_id, 'A', LC_VP_SELF_WON_GAME);
+        Telemetry::instance().add_tell(game_id, 'B', LC_VP_SELF_LOST_GAME);
         Logger::instance().info("[VICTORY] Player A wins game " +
                                 std::to_string(game_id));
     }
     else if (vp_B >= 3)
     {
         db.Exec("UPDATE games SET winner='B' WHERE id=?", {game_id});
-        Telemetry::instance().add_tell(
-            game_id, 'B', "*** VICTORY! You have won the game! ***");
-        Telemetry::instance().add_tell(
-            game_id, 'A', "*** DEFEAT. Your opponent has won. ***");
+        Telemetry::instance().add_tell(game_id, 'B', LC_VP_SELF_WON_GAME);
+        Telemetry::instance().add_tell(game_id, 'A', LC_VP_SELF_LOST_GAME);
         Logger::instance().info("[VICTORY] Player B wins game " +
                                 std::to_string(game_id));
     }

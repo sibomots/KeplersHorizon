@@ -29,7 +29,7 @@ bool HexCommand::invoke(void)
     if (sys.empty())
     {
         Telemetry::instance().write(
-            std::format("HEX: No system found at '{}'", m_location));
+            std::format(LC_HEX_INFO_TARGET_NO_SYSTEM, m_location));
         return false;
     }
 
@@ -49,7 +49,7 @@ bool HexCommand::invoke(void)
     if (scanShips.empty())
     {
         Telemetry::instance().write(
-            "HEX: You have no ships at this location to perform a scan.");
+            std::format(LC_HEX_INFO_TARGET_NO_SHIP_AT, hexId));
         return false;
     }
 
@@ -62,7 +62,7 @@ bool HexCommand::invoke(void)
     if (!freeScan && (pdTotal - pdSpent) < 1)
     {
         Telemetry::instance().write(
-            "HEX: Insufficient PD to perform scan. Requires 1 PD.");
+            std::format(LC_HEX_INFO_TARGET_LACK_CR, 1));
         return false;
     }
 
@@ -111,11 +111,11 @@ bool HexCommand::invoke(void)
         db.Exec("UPDATE ships SET pd_spent=pd_spent+1 "
                 "WHERE game_id=? AND owner=? AND ship_code=?",
                 {game_id, me, scanShipCode});
-        out << std::format("(Scan cost: 1 PD from {})\n", scanShipCode);
+        out << std::format(LC_HEX_INFO_SCAN_COST_TARGET, 1, scanShipCode) << "\n";
     }
     else
     {
-        out << std::format("(LRS scan via {})\n", scanShipCode);
+        out << std::format(LC_HEX_INFO_SCAN_TARGET_VIA, scanShipCode) << "\n";
     }
 
     Telemetry::instance().write(out.str());

@@ -8,7 +8,7 @@
 #ifndef __KH_SHIP_MANAGER_H__
 #define __KH_SHIP_MANAGER_H__
 
-#include "localization.h"
+#include "telemetry.h"
 #include "shipdata.h"
 
 class ShipManager

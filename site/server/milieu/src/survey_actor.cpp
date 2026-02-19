@@ -30,7 +30,7 @@ bool SurveyActor::invoke(void)
     if (hexRows.empty())
     {
         Telemetry::instance().write(
-            std::format("SURVEY: Unknown system '{}'", m_system_name));
+            std::format(LC_MILIEU_SYSTEM_TARGET_SYSTEM_UNKNOWN, m_system_name));
         return false;
     }
 
@@ -46,8 +46,7 @@ bool SurveyActor::invoke(void)
 
     if (scanShips.empty())
     {
-        Telemetry::instance().write(
-            "SURVEY: You have no ships at this system to perform a survey.");
+        Telemetry::instance().write(LC_MILIEU_SYSTEM_NO_SHIPS_FOR_SURVEY); 
         return false;
     }
 
@@ -60,7 +59,7 @@ bool SurveyActor::invoke(void)
     if (!freeScan && (pdTotal - pdSpent) < 1)
     {
         Telemetry::instance().write(
-            "SURVEY: Insufficient PD to perform survey. Requires 1 PD.");
+            std::format(LC_MILIEU_SYSTEM_LACK_CR_FOR_SURVEY, 1));
         return false;
     }
 

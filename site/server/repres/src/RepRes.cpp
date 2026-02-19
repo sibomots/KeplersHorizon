@@ -5,8 +5,6 @@
 //                                       //
 // Copyright (c) 2025, sibomots          //
 ///////////////////////////////////////////
-#include <sstream>
-
 #include "db.h"
 #include "facilities.h"
 #include "repair_command.h"
@@ -14,6 +12,8 @@
 #include "star_system_constraints.h"
 #include "statemachine.h"
 #include "telemetry.h"
+
+#include <sstream>
 
 bool RepairCommand::invoke(void)
 {
@@ -41,18 +41,17 @@ bool RepairCommand::invoke(void)
 
         if (rows.empty())
         {
-            Telemetry::instance().write("No damaged ships at your base stars.");
+            Telemetry::instance().write(LC_REPRES_NO_DAMAGED_SHIPS_AT_BASES);
             return true;
         }
 
         std::ostringstream out;
-        out << "Repairable ships at your base stars:\n";
+        out << LC_REPRES_LIST_BANNER ":\n";
         for (const auto& r : rows)
         {
             out << "  " << r[0] << " (" << r[1] << ") at " << r[2] << "\n";
         }
-        out << "Use: repair <ship_code> <attribute>=<amount>\n";
-        out << "Example: repair W1 pd=2 (costs 2 BP)\n";
+        out << LC_REPRES_HINT << "\n" << LC_REPRES_EXAMPLE << "\n";
         Telemetry::instance().write(out.str());
         return true;
     }
@@ -61,7 +60,8 @@ bool RepairCommand::invoke(void)
     // facility
     auto shipRow = db.Query(
         "SELECT s.at_hex, s.pd, s.phasic, s.shield, s.launcher, s.torpedoes, "
-        "s.pd_max, s.phasic_max, s.shield_max, s.launcher_max, s.torpedoes_max, "
+        "s.pd_max, s.phasic_max, s.shield_max, s.launcher_max, "
+        "s.torpedoes_max, "
         "ss.name "
         "FROM ships s "
         "LEFT JOIN star_systems ss ON ss.hex_id = s.at_hex AND ss.module_id = "
@@ -72,7 +72,8 @@ bool RepairCommand::invoke(void)
 
     if (shipRow.empty())
     {
-        Telemetry::instance().write("Ship not found.");
+        Telemetry::instance().write(
+            std::format(LC_REPRES_TARGET_SHIP_NOT_FOUND, m_ship_code));
         return false;
     }
 
@@ -95,15 +96,14 @@ bool RepairCommand::invoke(void)
 
     if (!can_repair)
     {
-        Telemetry::instance().write(
-            "Ship must be at your base star or a controlled repair facility.");
+        Telemetry::instance().write(LC_REPRES_SHIP_MUST_BE_AT_FACILITY);
         return false;
     }
 
     if (m_attribute.empty() || m_amount <= 0)
     {
-        Telemetry::instance().write("Specify attribute and amount: repair " +
-                                    m_ship_code + " pd=N or b=N or s=N or t=N");
+        Telemetry::instance().write(
+            std::format(LC_REPRES_TARGET_SPECIFY, m_ship_code));
         return false;
     }
 
@@ -133,7 +133,7 @@ bool RepairCommand::invoke(void)
     }
     else
     {
-        Telemetry::instance().write("Invalid attribute. Use pd, b, s, or t.");
+        Telemetry::instance().write(LC_REPRES_INVALID_ATTR);
         return false;
     }
 
@@ -162,7 +162,7 @@ bool RepairCommand::invoke(void)
     int maxRepair = orig - current;
     if (maxRepair <= 0)
     {
-        Telemetry::instance().write("Attribute already at maximum.");
+        Telemetry::instance().write(LC_REPRES_AT_MAX);
         return false;
     }
 
@@ -176,12 +176,11 @@ bool RepairCommand::invoke(void)
     int cost = repairAmt * 20; // 20 CR per unit (inflated ×20)
 
     // Check BP
-    int availBP = (KH_EQU(owner,'A')) ? s.creditsA : s.creditsB;
+    int availBP = (KH_EQU(owner, 'A')) ? s.creditsA : s.creditsB;
     if (cost > availBP)
     {
-        Telemetry::instance().write("Insufficient CR. Need " +
-                                    std::to_string(cost) + ", have " +
-                                    std::to_string(availBP));
+        Telemetry::instance().write(
+            std::format(LC_REPRES_COST_LIMIT, cost, availBP));
         return false;
     }
 
@@ -201,9 +200,8 @@ bool RepairCommand::invoke(void)
     }
     StateMachine::instance().save_game(s);
 
-    Telemetry::instance().write("Repaired " + m_ship_code + " " + col + " by " +
-                                std::to_string(repairAmt) +
-                                " (cost: " + std::to_string(cost) + " BP)");
+    Telemetry::instance().write(std::format(LC_REPRES_TARGET_SUCCEEDED,
+                                            m_ship_code, col, repairAmt, cost));
     return true;
 }
 
@@ -229,13 +227,12 @@ bool ResupplyCommand::invoke(void)
 
         if (rows.empty())
         {
-            Telemetry::instance().write(
-                "No ships need torpedo resupply at your base stars.");
+            Telemetry::instance().write(LC_REPRES_NO_TORPEDO_NEEDED);
             return true;
         }
 
         std::ostringstream out;
-        out << "Ships that can be resupplied at your base stars:\n";
+        out << LC_REPRES_RESUP_LIST_BANNER << ":\n";
         for (const auto& r : rows)
         {
             int cur = std::atoi(r[3].c_str());
@@ -243,8 +240,8 @@ bool ResupplyCommand::invoke(void)
             out << "  " << r[0] << " (" << r[1] << ") - Torpedoes: " << cur
                 << "/" << max << "\n";
         }
-        out << "Use: resupply <ship_code> <quantity>\n";
-        out << "Example: resupply W1 6 (costs 2 BP for 6 torpedoes)\n";
+        out << LC_REPRES_RESUPPLY_HINT << "\n"
+            << LC_REPRES_RESUPPLY_EXAMPLE << "\n";
         Telemetry::instance().write(out.str());
         return true;
     }
@@ -260,7 +257,7 @@ bool ResupplyCommand::invoke(void)
 
     if (shipRow.empty())
     {
-        Telemetry::instance().write("Ship not found or not at your base star.");
+        Telemetry::instance().write(LC_REPRES_RESUPPLY_SHIP_NOT_AT_BASE);
         return false;
     }
 
@@ -271,15 +268,14 @@ bool ResupplyCommand::invoke(void)
 
     if (canAdd <= 0)
     {
-        Telemetry::instance().write(
-            "Ship already at maximum torpedo capacity.");
+        Telemetry::instance().write(LC_REPRES_REPAIR_TORPEDO_AT_MAX);
         return false;
     }
 
     if (m_torpedoes <= 0)
     {
-        Telemetry::instance().write("Specify quantity: resupply " +
-                                    m_ship_code + " <N>");
+        Telemetry::instance().write(std::format(
+            LC_REPRES_RESUPPLY_TARGET_SPECIFY_TORPEDO, m_ship_code));
         return false;
     }
 
@@ -297,9 +293,8 @@ bool ResupplyCommand::invoke(void)
     int availBP = (KH_EQU(owner, 'A')) ? s.creditsA : s.creditsB;
     if (cost > availBP)
     {
-        Telemetry::instance().write("Insufficient CR. Need " +
-                                    std::to_string(cost) + ", have " +
-                                    std::to_string(availBP));
+        Telemetry::instance().write(
+            std::format(LC_REPRES_TARGET_RESUPPLY_COST_LIMIT, cost, availBP));
         return false;
     }
 
@@ -319,8 +314,7 @@ bool ResupplyCommand::invoke(void)
     }
     StateMachine::instance().save_game(s);
 
-    Telemetry::instance().write(
-        "Resupplied " + m_ship_code + " with " + std::to_string(addAmt) +
-        " torpedoes (cost: " + std::to_string(cost) + " BP)");
+    Telemetry::instance().write(std::format(LC_REPRES_TARGET_RESUPPLY_SUCCEEDED,
+                                            m_ship_code, addAmt, cost));
     return true;
 }

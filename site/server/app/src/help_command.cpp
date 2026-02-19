@@ -13,47 +13,8 @@
 
 static const std::string topics_keyword("topics");
 
-static std::string help_page =
-    "TACTICAL COMMANDS\n"
-    "BUILD\n"
-    "  BN W/S {NAME}          Build New Warpship/Systemship NAME\n"
-    "  BS {SHIP} {SPECS}      Set ship attributes\n"
-    "  BC/BX                  Commit to Fleet / Cancel Draft Build\n"
-    "  BD                     Show Drafts\n"
-    "MOVE\n"
-    "  M {SHIP} {LIST}        Move ship to/through SYS(s) or HEX(s)\n"
-    "  DEPLOY {SHIP} {SYS}    Deploy SHIP to SYS\n"
-    "  PICK/DROP {SHIP}       Rack/Drop systemship between warpship\n"
-    "COMBAT\n"
-    "  C                      Show active combat\n"
-    "  CO {SHIP} A/D/E {TGT}  Your SHIP  Attack/Defend/Evade TGT\n"
-    "  CC/CX                  Execute/Cancel orders\n"
-    "  CD {SHIP} {SPECS}      Assign damage to ship\n"
-    "TURN\n"
-    "  N/FF                   Next Phase / Fast-Forward (ends turn)\n"
-    "INFO\n"
-    "  FLEET | SCORE | STATUS | SYSTEM {NAME} | SURVEY | CRT | DEMO\n";
-
-static const std::string demo_page =
-    "DEMONSTRATION\n"
-    "BUILD\n"
-    " > BN W IRONSTAR\n"
-    " > BS PD=8 P=4 S=1 L=1 T=3 H=1\n"
-    " > BC\n"
-    "MOVE\n"
-    "  A Waypoint can be a HEX or a named Star System\n"
-    "  If W4 desires movement from HAVOR to LYRIS to NOREX to H1613\n"
-    " > M W4 LYRIS NOREX H1613\n"
-    "COMBAT\n"
-    " > CO W2 A W9 PD=5 P=3\n"
-    "  W2 is using Attack tactic against W9.\n"
-    "  W2 is powering up to powerdrive level 5\n"
-    "  W2 is powering phasics to level 3\n"
-    " As the defender (owner of W9), set your orders:\n"
-    " > CO W9 D W2 PD=4 P=1\n"
-    "  W9 is using Dodge tactic against W2.\n"
-    "  W9 is powering up to powerdrive level 4\n"
-    "  W9 is powering phasics to level 1\n";
+static std::string help_page(LC_HELP_PAGE_INFO_BASIC);
+static const std::string demo_page(LC_DEMO_PAGE_INFO);
 
 bool HelpCommand::invoke(void)
 {
@@ -83,11 +44,11 @@ bool HelpCommand::invoke(void)
 
             if (rows.empty())
             {
-                Telemetry::instance().write("No topics available.\n");
+                Telemetry::instance().write(LC_HELP_NO_TOPICS);
                 return true;
             }
 
-            std::string out = "AVAILABLE HELP TOPICS:\n";
+            std::string out = LC_HELP_TOPICS_BANNER ":\n";
             int col = 0;
             for (const auto& row : rows)
             {
@@ -138,8 +99,9 @@ bool HelpCommand::invoke(void)
         }
         else
         {
-            Telemetry::instance().write("No help available for '" + m_topic +
-                                        "'. Try: help topics");
+            Telemetry::instance().write(
+                 std::format(LC_HELP_TARGET_NO_TOPIC,
+                          m_topic));
         }
     }
     return true;
