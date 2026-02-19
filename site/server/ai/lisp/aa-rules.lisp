@@ -483,6 +483,16 @@
             nil)
   :doc "Waiting for enemy/user action.")
 
+(define-strategy-rule combat-voluntary-evaluate
+  :phase :combat :priority 550
+  :when (and (not (slate-active-combats slate))
+             (getf strategy :voluntary-combat-hexes))
+  :action (or (evaluate-and-initiate-voluntary-combat slate strategy)
+              (progn
+                (format t "[LISP] -> NEXT (voluntary: no engagement)~%")
+                (list (cmd-next))))
+  :doc "No mandatory combats: evaluate contested hexes for voluntary engagement.")
+
 (define-strategy-rule combat-done
   :phase :combat :priority 600
   :when (not (slate-active-combats slate))
@@ -614,7 +624,7 @@
 (define-strategy-rule tactics-stalemate-must-damage
   :phase :tactics :priority 400
   :when (and (getf strategy :tactics-ai-attacker)
-             (>= (getf strategy :tactics-stalemate) 2))
+             (>= (getf strategy :tactics-stalemate) 1))
   :action (let* ((ship (getf strategy :tactics-ship))
                  (target (getf strategy :tactics-target))
                  (enemies (getf strategy :tactics-enemies)))

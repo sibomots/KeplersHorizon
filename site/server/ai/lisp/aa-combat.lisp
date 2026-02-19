@@ -92,6 +92,51 @@
     (if entry (cdr entry) :fight)))
 
 ;;; ----------------------------------------------------------------------------
+;;; Voluntary Combat Detection
+;;; ----------------------------------------------------------------------------
+
+(defun find-voluntary-combat-hexes (own-ships enemy-ships active-combats)
+  "Return list of hexes where both sides have ships but no combat_state record."
+  (let* ((own-occupied   (remove-duplicates
+                           (remove-if #'null (mapcar #'ship-hex own-ships))
+                           :test #'string=))
+         (enemy-occupied (remove-duplicates
+                           (remove-if #'null (mapcar #'ship-hex enemy-ships))
+                           :test #'string=))
+         (contested      (remove-if-not
+                           (lambda (h) (member h enemy-occupied :test #'string=))
+                           own-occupied))
+         (active-hexes   (mapcar #'combat-hex active-combats)))
+    (remove-if (lambda (h) (member h active-hexes :test #'string=))
+               contested)))
+
+(defun evaluate-and-initiate-voluntary-combat (slate strategy)
+  "For each voluntary-opportunity hex, run assess-theater.
+   On first :fight decision, issue a CO command via issue-combat-order-with-triage."
+  (let* ((voluntary-hexes (getf strategy :voluntary-combat-hexes))
+         (own-ships       (slate-own-ships slate))
+         (enemy-ships     (slate-enemy-ships slate))
+         (enemy-bases     (slate-enemy-bases slate))
+         (acceptable-loss (or (getf strategy :acceptable-loss-threshold) 0)))
+    (dolist (hex voluntary-hexes)
+      (let* ((our-ships-here   (ships-at-hex own-ships hex))
+             (their-ships-here (ships-at-hex enemy-ships hex))
+             (decision         (assess-theater hex our-ships-here their-ships-here
+                                              enemy-bases acceptable-loss)))
+        (format t "[LISP] Voluntary combat ~A: decision=~A~%" hex decision)
+        (when (eq decision :fight)
+          (return-from evaluate-and-initiate-voluntary-combat
+            (issue-combat-order-with-triage
+              (first our-ships-here)
+              (first their-ships-here)
+              their-ships-here
+              0
+              t
+              :fight
+              strategy)))))
+    nil))
+
+;;; ----------------------------------------------------------------------------
 ;;; Combat Phase Entry
 ;;; ----------------------------------------------------------------------------
 
@@ -114,15 +159,21 @@
          ;; Get triage decision for focus hex
          (theater-decision (when focus-hex
                              (get-theater-triage triage focus-hex)))
+         ;; Voluntary combat: contested hexes with no combat record
+         (enemy-ships (slate-enemy-ships slate))
+         (voluntary-hexes (when (null combats)
+                            (find-voluntary-combat-hexes own-ships enemy-ships combats)))
          ;; Augment strategy with combat context for rules
          (combat-strategy (append strategy
                                   (list :combat-triage triage
                                         :combat-focus focus-combat
                                         :combat-focus-hex focus-hex
                                         :combat-ships-in-focus ships-in-focus
-                                        :combat-theater-decision theater-decision))))
-    (format t "[LISP] decide-combat: combats=~A focus-hex=~A ships-in-focus=~A triage=~A~%"
-            (length combats) focus-hex (length ships-in-focus) theater-decision)
+                                        :combat-theater-decision theater-decision
+                                        :voluntary-combat-hexes voluntary-hexes))))
+    (format t "[LISP] decide-combat: combats=~A focus-hex=~A ships-in-focus=~A triage=~A voluntary=~A~%"
+            (length combats) focus-hex (length ships-in-focus) theater-decision
+            (length voluntary-hexes))
     (fire-first-matching-rule :combat slate combat-strategy)))
 
 ;;; ----------------------------------------------------------------------------
