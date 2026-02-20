@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.10)
 project(kh LANGUAGES CXX)
 
+# Localization: default en_US. Override with -DLOCALE=fr_FR etc.
+set(LOCALE "en_US" CACHE STRING "Localization locale (en_US, fr_FR, ...)")
+if(LOCALE STREQUAL "en_US")
+    add_compile_definitions(LOCALE_EN_US)
+elseif(LOCALE STREQUAL "de_DE")
+    add_compile_definitions(LOCALE_DE_DE)
+else()
+    message(FATAL_ERROR "Unsupported LOCALE: ${LOCALE}. Supported: en_US, de_DE")
+endif()
+
 # ---- Toolchain / flags ----
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -71,6 +81,11 @@ add_subdirectory(turn)
 # Top-level generic headers (non-interface)
 if(EXISTS "${CMAKE_SOURCE_DIR}/inc")
     set_property(GLOBAL APPEND PROPERTY KH_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/inc")
+endif()
+
+# Locale string files
+if(EXISTS "${CMAKE_SOURCE_DIR}/locale")
+    set_property(GLOBAL APPEND PROPERTY KH_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/locale")
 endif()
 
 # =============================================================================
