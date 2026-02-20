@@ -47,8 +47,8 @@
 #include "cargo_actor.h"
 #include "system_actor.h"
 #include "survey_actor.h"
-#include "repair_command.h"
-#include "resupply_command.h"
+#include "repair_actor.h"
+#include "resupply_actor.h"
 #include "recap_command.h"
 #include "score_command.h"
 #include "extract_actor.h"
@@ -82,9 +82,6 @@ void yyerror(const char* msg);
 // Our richer helper (used by actions) that can report source location.
 void yyerror(YYLTYPE* loc, const char* msg);
 
-// Global builder for repair command
-RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
-
 %}
 
 %define parse.error verbose
@@ -117,6 +114,7 @@ RepairCommand::Builder* g_repair_builder = new RepairCommand::Builder();
 %type <vec_sval> chain_resource_words
 %type <vec_attr> combat_apply_spec
 %type <vec_attr> build_attr_spec_nonempty
+%type <vec_attr> repair_attr_spec
 %type <combat_pair> new_combat_order_attr_spec
 
 
@@ -322,11 +320,11 @@ session_cmd:
         Telemetry::instance().write("\033[2J");
    }
    
-| TOK_SAVE error { yyerror(&@1, "save: usage: save <name>. Note: reserved words cannot be used as names."); YYABORT; }
-| TOK_LOAD error { yyerror(&@1, "load: usage: load <name>."); YYABORT; }
-| TOK_ACCEPT error { yyerror(&@1, "accept: usage: accept <name>."); YYABORT; }
-| TOK_REJECT error { yyerror(&@1, "reject: usage: reject <name>."); YYABORT; }
-| TOK_DELETE error { yyerror(&@1, "delete: usage: delete <name>."); YYABORT; }
+| TOK_SAVE error { yyerror(&@1, LC_PARSER_YY_SAVE_RESERVED_WORDS); YYABORT; }
+| TOK_LOAD error { yyerror(&@1, LC_PARSER_YY_LOAD); YYABORT; }
+| TOK_ACCEPT error { yyerror(&@1, LC_PARSER_YY_ACCEPT); YYABORT; }
+| TOK_REJECT error { yyerror(&@1, LC_PARSER_YY_REJECT); YYABORT; }
+| TOK_DELETE error { yyerror(&@1, LC_PARSER_YY_DELETE); YYABORT; }
 ;
 
 // Information
@@ -356,11 +354,11 @@ info_cmd:
 
 looking_cmd:
   TOK_FLEET TOK_STRING error {
-      yyerror(&@3, "Too many arguments. Usage: fleet > HELP FLEET");
+      yyerror(&@3, LC_PARSER_YY_FLEET_TOO_MANY_ARGS);
       SafeDelete($2);
   }
   | TOK_FLEET TOK_STRING {
-      yyerror(&@2, "fleet takes no arguments. Usage: fleet > HELP FLEET");
+      yyerror(&@2, LC_PARSER_YY_FLEET_NO_ARGS);
       SafeDelete($2);
       YYERROR;
   }
@@ -684,18 +682,18 @@ looking_cmd:
       SafeDelete(pCmd);
   }
   
-| TOK_HEX error { yyerror(&@1, "hex: usage: hex <hex_id>"); YYABORT; }
-| TOK_SYSTEM error { yyerror(&@1, "system: usage: system <name> [subcommand]"); YYABORT; }
-| TOK_SURVEY error { yyerror(&@1, "survey: usage: survey [system_name]"); YYABORT; }
-| TOK_EXTRACT error { yyerror(&@1, "extract: usage: extract scan | extract <ship> <resource> [resource_words...]"); YYABORT; }
-| TOK_MARKET error { yyerror(&@1, "market: usage: market [system_name]"); YYABORT; }
-| TOK_TRADE error { yyerror(&@1, "trade: usage: trade buy|sell|transfer ..."); YYABORT; }
-| TOK_FABRICATE error { yyerror(&@1, "fabricate: usage: fabricate <ship> <item>"); YYABORT; }
-| TOK_OUTFIT error { yyerror(&@1, "outfit: usage: outfit <ship> <spec>"); YYABORT; }
-| TOK_SALVAGE error { yyerror(&@1, "salvage: usage: salvage <ship> <target>"); YYABORT; }
-| TOK_CARGO error { yyerror(&@1, "cargo: usage: cargo <ship> [resource_words...]"); YYABORT; }
-| TOK_SCAN error { yyerror(&@1, "scan: usage depends on command (e.g., extract scan)"); YYABORT; }
-| TOK_LIST error { yyerror(&@1, "list: usage depends on context"); YYABORT; }
+| TOK_HEX error { yyerror(&@1, LC_PARSER_YY_HEX); YYABORT; }
+| TOK_SYSTEM error { yyerror(&@1, LC_PARSER_YY_SYSTEM); YYABORT; }
+| TOK_SURVEY error { yyerror(&@1, LC_PARSER_YY_SURVEY); YYABORT; }
+| TOK_EXTRACT error { yyerror(&@1, LC_PARSER_YY_EXTRACT); YYABORT; }
+| TOK_MARKET error { yyerror(&@1, LC_PARSER_YY_MARKET); YYABORT; }
+| TOK_TRADE error { yyerror(&@1, LC_PARSER_YY_TRADE); YYABORT; }
+| TOK_FABRICATE error { yyerror(&@1, LC_PARSER_YY_FABRICATE); YYABORT; }
+| TOK_OUTFIT error { yyerror(&@1, LC_PARSER_YY_OUTFIT); YYABORT; }
+| TOK_SALVAGE error { yyerror(&@1, LC_PARSER_YY_SALVAGE); YYABORT; }
+| TOK_CARGO error { yyerror(&@1, LC_PARSER_YY_CARGO); YYABORT; }
+| TOK_SCAN error { yyerror(&@1, LC_PARSER_YY_SCAN); YYABORT; }
+| TOK_LIST error { yyerror(&@1, LC_PARSER_YY_LIST); YYABORT; }
 ;
 
 turn_cmd:
@@ -712,8 +710,8 @@ turn_cmd:
       SafeDelete(pCmd);
   }
   
-| TOK_NEXT error { yyerror(&@1, "next: usage: next"); YYABORT; }
-| TOK_DONE error { yyerror(&@1, "done: usage: done"); YYABORT; }
+| TOK_NEXT error { yyerror(&@1, LC_PARSER_YY_NEXT); YYABORT; }
+| TOK_DONE error { yyerror(&@1, LC_PARSER_YY_DONE); YYABORT; }
 ;
 
 combat_cmd:
@@ -810,21 +808,21 @@ combat_cmd:
        SafeDelete(pCmd);
    }
    | TOK_COMBAT_DRAFTS error {
-          yyerror(&@1, "cd: usage: cd"); YYABORT;
+          yyerror(&@1, LC_PARSER_YY_CD); YYABORT;
    }
    | TOK_COMBAT_ORDER error {
-          yyerror(&@1, "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n P=n S=n L=n T=n H=n]");
+          yyerror(&@1, LC_PARSER_YY_CO);
           YYABORT;
    }
    | TOK_COMBAT_APPLY error {
-          yyerror(&@1, "ca: usage: ca <draft_id> <damage_spec...>");
+          yyerror(&@1, LC_PARSER_YY_CA);
           YYABORT;
    }
    | TOK_COMBAT_COMMIT error {
-          yyerror(&@1, "cc: usage: cc <draft_id>"); YYABORT;
+          yyerror(&@1, LC_PARSER_YY_CC); YYABORT;
    }
-   | TOK_COMBAT_CANCEL error { 
-          yyerror(&@1, "cx: usage: cx <draft_id>"); YYABORT;
+   | TOK_COMBAT_CANCEL error {
+          yyerror(&@1, LC_PARSER_YY_CX); YYABORT;
    }
    //  cd
    | TOK_COMBAT_DRAFTS {
@@ -909,7 +907,7 @@ new_combat_order_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->first->insert({AttributeID::POWER_DRIVE, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate POWER_DRIVE assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_POWER_DRIVE);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -917,7 +915,7 @@ new_combat_order_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->first->insert({AttributeID::PHASIC, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate PHASIC assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_PHASIC);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -925,7 +923,7 @@ new_combat_order_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->first->insert({AttributeID::SHIELD, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate SHIELD assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_SHIELD);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -933,7 +931,7 @@ new_combat_order_attr_spec: {
       $$ = $1;
       auto [it, inserted] = $$->first->insert({AttributeID::LAUNCHER, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate LAUNCHER assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_LAUNCHER);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -954,7 +952,7 @@ combat_apply_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::POWER_DRIVE, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate POWER_DRIVE assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_POWER_DRIVE);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -962,7 +960,7 @@ combat_apply_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::PHASIC, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate PHASIC assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_PHASIC);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -970,7 +968,7 @@ combat_apply_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::SHIELD, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate SHIELD assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_SHIELD);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -978,7 +976,7 @@ combat_apply_spec: {
       $$ = $1;
       auto [it, inserted] = $$->insert({AttributeID::LAUNCHER, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate LAUNCHER assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_LAUNCHER);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -990,7 +988,7 @@ combat_apply_spec: {
       // be somewhat more catastrophic than this.
       auto [it, inserted] = $$->insert({AttributeID::TORPEDO, $2});
       if (!inserted) {
-        yyerror(&@2, "duplicate LAUNCHER assignment");
+        yyerror(&@2, LC_PARSER_YY_DUPE_LAUNCHER);
         it->second = $2; // choose: overwrite, or keep old
       }
   }
@@ -998,15 +996,13 @@ combat_apply_spec: {
 
 ship_class: TOK_STRING {
     if (!$1 || $1->empty()) {
-        yyerror(&@1, "Invalid ship class: empty string > HELP BN");
+        yyerror(&@1, LC_PARSER_YY_SHIP_CLASS_EMPTY);
         SafeDelete($1);
         YYERROR;
     }
     char ship_type = std::toupper((*$1)[0]);
     if (ship_type != 'W' && ship_type != 'S') {
-        std::string err = "Invalid ship class: "
-                        + *$1
-                        + ". Must start with 'W' or 'S'.";
+        std::string err = std::format(LC_PARSER_YY_SHIP_CLASS_INVALID, *$1);
         yyerror(&@1, err.c_str());
         SafeDelete($1);
         YYERROR;
@@ -1016,9 +1012,7 @@ ship_class: TOK_STRING {
     if (!rest.empty()
         && (rest.length() > 3
         || !std::all_of(rest.begin(), rest.end(), ::isdigit))) {
-        std::string err = "Invalid custom ship class ID format: '"
-                        + *$1
-                        + "'. Number must be 1-3 digits.";
+        std::string err = std::format(LC_PARSER_YY_SHIP_CLASS_FORMAT, *$1);
         yyerror(&@1, err.c_str());
         SafeDelete($1);
         YYERROR;
@@ -1054,37 +1048,37 @@ build_attr_spec_nonempty:
   }
   
   | TOK_PD_ASSIGN_INVALID {
-      std::string err = "Invalid value for PD: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_PD, *$1);
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_P_ASSIGN_INVALID {
-      std::string err = "Invalid value for P: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_P, *$1);
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_S_ASSIGN_INVALID {
-      std::string err = "Invalid value for S: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_S, *$1);
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_L_ASSIGN_INVALID {
-      std::string err = "Invalid value for L: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_L, *$1);
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_T_ASSIGN_INVALID {
-      std::string err = "Invalid value for T: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_T, *$1);
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
   }
   | TOK_H_ASSIGN_INVALID {
-      std::string err = "Invalid value for H: '" + *$1 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_H, *$1);
       yyerror(&@1, err.c_str());
       SafeDelete($1);
       YYABORT;
@@ -1135,42 +1129,42 @@ build_attr_spec_nonempty:
   
   // ADD: Continuation rules - invalid (catch errors in middle/end of list)
   | build_attr_spec_nonempty TOK_PD_ASSIGN_INVALID {
-      std::string err = "Invalid value for PD: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_PD, *$2);
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_P_ASSIGN_INVALID {
-      std::string err = "Invalid value for P: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_P, *$2);
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_S_ASSIGN_INVALID {
-      std::string err = "Invalid value for S: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_S, *$2);
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_L_ASSIGN_INVALID {
-      std::string err = "Invalid value for L: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_L, *$2);
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_T_ASSIGN_INVALID {
-      std::string err = "Invalid value for T: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_T, *$2);
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
       YYABORT;
   }
   | build_attr_spec_nonempty TOK_H_ASSIGN_INVALID {
-      std::string err = "Invalid value for H: '" + *$2 + "'. Must be a positive integer. > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_ATTR_INVALID_H, *$2);
       yyerror(&@2, err.c_str());
       SafeDelete($1);
       SafeDelete($2);
@@ -1203,7 +1197,7 @@ build_cmd:
   }
   | TOK_BUILD_NEW ship_class TOK_STRING error {
       // BUGBUG OK
-      yyerror(&@4, "Too many arguments. Usage: bn {W|S} name > HELP BN");
+      yyerror(&@4, LC_PARSER_YY_BN_TOO_MANY_ARGS);
       SafeDelete($2);
       SafeDelete($3);
       YYABORT;
@@ -1211,14 +1205,14 @@ build_cmd:
   | TOK_BUILD_NEW ship_class error {
       // BUGBUG OK
       // ERROR: BN W (missing ship name)
-      yyerror(&@3, "Missing ship name. Usage: bn {W|S} name > HELP BN");
+      yyerror(&@3, LC_PARSER_YY_BN_MISSING_NAME);
       SafeDelete($2);
       YYABORT;
   }
   | TOK_BUILD_NEW error {
       // BUGBUG OK
       // ERROR: BN (no arguments at all)
-      yyerror(&@2, "Missing arguments. Usage: bn {W|S} name > HELP BN");
+      yyerror(&@2, LC_PARSER_YY_BN_MISSING_ARGS);
       YYABORT;
   }
 
@@ -1243,7 +1237,7 @@ build_cmd:
   }
   | TOK_BUILD TOK_NEW ship_class TOK_STRING error {
       // BUGBUG OK
-      yyerror(&@5, "Too many arguments. Usage: build new {W|S} name > HELP BUILD");
+      yyerror(&@5, LC_PARSER_YY_BUILD_NEW_TOO_MANY_ARGS);
       SafeDelete($3);
       SafeDelete($4);
       YYABORT;
@@ -1251,7 +1245,7 @@ build_cmd:
   | TOK_BUILD TOK_NEW ship_class error {
       // BUGBUG OK
       // ERROR: BUILD NEW W (missing name)
-      yyerror(&@4, "Missing ship name. Usage: build new {W|S} name > HELP BUILD");
+      yyerror(&@4, LC_PARSER_YY_BUILD_NEW_MISSING_NAME);
       SafeDelete($3);
       YYABORT;
   }
@@ -1259,7 +1253,7 @@ build_cmd:
   | TOK_BUILD TOK_NEW error {
       // BUGBUG OK
       // ERROR: BUILD NEW (missing ship class and name)
-      yyerror(&@3, "Missing arguments. Usage: build new {W|S} name > HELP BUILD");
+      yyerror(&@3, LC_PARSER_YY_BUILD_NEW_MISSING_ARGS);
       YYABORT;
   }
   // bd SHIP_ID
@@ -1298,7 +1292,7 @@ build_cmd:
   | TOK_BUILD TOK_SET_ATTR build_target {
       // BUGBUG OK
       // ERROR: BUILD SET target (missing attributes)
-      yyerror(&@3, "Missing attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
+      yyerror(&@3, LC_PARSER_YY_BUILD_SET_MISSING_ATTRS);
       SafeDelete($3);
       YYABORT;
   }
@@ -1306,8 +1300,7 @@ build_cmd:
   | TOK_BUILD TOK_SET_ATTR build_target TOK_STRING {
       // BUGBUG OK
       // ERROR: BUILD SET target X=1 (invalid attribute key)
-      std::string err = "Invalid attribute: " + *$4;
-      err += ". Valid attributes: PD, P, S, L, T, H > HELP ATTR";
+      std::string err = std::format(LC_PARSER_YY_BUILD_SET_INVALID_ATTR, *$4);
       yyerror(&@4, err.c_str());
       SafeDelete($3);
       SafeDelete($4);
@@ -1317,7 +1310,7 @@ build_cmd:
   | TOK_BUILD TOK_SET_ATTR build_target build_attr_spec_nonempty error {
       // BUGBUG OK
       // ERROR: BUILD SET target attr=# ... extra junk
-      yyerror(&@5, "Unexpected tokens after attributes. > HELP BS");
+      yyerror(&@5, LC_PARSER_YY_BUILD_UNEXPECTED_TOKENS);
       SafeDelete($3);
       SafeDelete($4);
       YYABORT;
@@ -1326,7 +1319,7 @@ build_cmd:
   | TOK_BUILD TOK_SET_ATTR error {
       // BUGBUG OK
       // ERROR: BUILD SET (missing target and attributes)
-      yyerror(&@3, "Missing ship name/hull and attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS");
+      yyerror(&@3, LC_PARSER_YY_BUILD_SET_MISSING_ALL);
       YYABORT;
   }
 
@@ -1350,7 +1343,7 @@ build_cmd:
   | TOK_BUILD_SET_ATTR build_target {
       // BUGBUG OK
       // ERROR: BS target (missing attributes)
-      yyerror(&@2, "Missing attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
+      yyerror(&@2, LC_PARSER_YY_BS_MISSING_ATTRS);
       SafeDelete($2);
       YYABORT;
   }
@@ -1358,8 +1351,7 @@ build_cmd:
   | TOK_BUILD_SET_ATTR build_target TOK_STRING {
       // BUGBUG OK
       // ERROR: BS target X=1 (invalid attribute - caught as TOK_STRING)
-      std::string err = "Invalid attribute: " + *$3;
-      err += ". Valid attributes: PD, P, S, L, T, H > HELP BS";
+      std::string err = std::format(LC_PARSER_YY_BS_INVALID_ATTR, *$3);
       yyerror(&@3, err.c_str());
       SafeDelete($2);
       SafeDelete($3);
@@ -1369,7 +1361,7 @@ build_cmd:
   | TOK_BUILD_SET_ATTR build_target build_attr_spec_nonempty error {
       // BUGBUG OK
       // ERROR: BS target attr=# ... extra junk
-      yyerror(&@4, "Unexpected tokens after attributes. > HELP BS");
+      yyerror(&@4, LC_PARSER_YY_BUILD_UNEXPECTED_TOKENS);
       SafeDelete($2);
       SafeDelete($3);
       YYABORT;
@@ -1378,7 +1370,7 @@ build_cmd:
   | TOK_BUILD_SET_ATTR error {
       // BUGBUG OK
       // ERROR: BS (missing everything)
-      yyerror(&@2, "Missing ship name/hull and attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS");
+      yyerror(&@2, LC_PARSER_YY_BS_MISSING_ALL);
       YYABORT;
   }
 
@@ -1436,10 +1428,10 @@ build_cmd:
       SafeDelete(pCmd);
   }
 
-| TOK_BUILD error { yyerror(&@1,          "build syntax               > HELP BUILD"); YYABORT; }
-| TOK_BUILD_DRAFTS error { yyerror(&@1,   "usage: bd {NAME|HULL}      > HELP BD"); YYABORT; }
-| TOK_BUILD_COMMIT error { yyerror(&@1,   "usage: bc {NAME|HULL}      > HELP BC"); YYABORT; }
-| TOK_BUILD_CANCEL error { yyerror(&@1,   "usage: bx {NAME|HULL}      > HELP BX"); YYABORT; }
+| TOK_BUILD error { yyerror(&@1,          LC_PARSER_YY_BUILD_SYNTAX); YYABORT; }
+| TOK_BUILD_DRAFTS error { yyerror(&@1,   LC_PARSER_YY_BD); YYABORT; }
+| TOK_BUILD_COMMIT error { yyerror(&@1,   LC_PARSER_YY_BC); YYABORT; }
+| TOK_BUILD_CANCEL error { yyerror(&@1,   LC_PARSER_YY_BX); YYABORT; }
 ;
 
 build_target:
@@ -1473,7 +1465,7 @@ deploy_cmd:
        delete $3;
    }
    | TOK_DEPLOY error {
-       yyerror(&@1, "deploy: usage: deploy <ship> <location>");
+       yyerror(&@1, LC_PARSER_YY_DEPLOY);
        YYABORT;
    }
    ;
@@ -1529,7 +1521,7 @@ move_cmd:
        delete waypoints;
   }
   | TOK_MOVE error {
-       yyerror(&@1, "move: usage: move <ship> <destination> [via ...]");
+       yyerror(&@1, LC_PARSER_YY_MOVE);
        YYABORT;
   }
   ;
@@ -1555,7 +1547,7 @@ chart_cmd:
        delete waypoints;
   }
   | TOK_CHART error {
-       yyerror(&@1, "chart: usage: chart <ship> <destination> [via ...]");
+       yyerror(&@1, LC_PARSER_YY_CHART);
        YYABORT;
   }
   ;
@@ -1589,11 +1581,11 @@ pickdrop_cmd:
      delete pCmd;
   }
   | TOK_PICK error {
-      yyerror(&@1, "pick: usage: pick <systemship> <warpship>");
+      yyerror(&@1, LC_PARSER_YY_PICK);
       YYABORT;
   }
   | TOK_DROP error {
-      yyerror(&@1, "drop: usage: drop <systemship> <warpship>");
+      yyerror(&@1, LC_PARSER_YY_DROP);
       YYABORT;
   }
   ;
@@ -1603,42 +1595,47 @@ rep_cmd:
   // repair
   // rp
   TOK_REPAIR {
-     // UNTESTED
-     ICmd* pCmd = RepairCommand::Builder().build();
-     if (pCmd && pCmd->invoke()) { /* success */ }
-     SafeDelete(pCmd);
+      ICmd* pCmd = RepairActor::Builder().set_list_mode().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
-  // repair ...
-  // rp ...
+  // repair <ship> PD=n|P=n|S=n|L=n
+  // rp <ship> PD=n|P=n|S=n|L=n
   | TOK_REPAIR TOK_STRING repair_attr_spec {
-     // UNTESTED
-     // g_repair_builder populated by repair_attr_spec
-     g_repair_builder->set_ship_code(*$2);
-     ICmd* pCmd = g_repair_builder->build();
-     if (pCmd && pCmd->invoke()) { /* success */ }
-     SafeDelete(pCmd);
-     delete g_repair_builder;
-     g_repair_builder = new RepairCommand::Builder();
+      std::string ship(*$2);
+      AttributeMap* pAttr = $3;
+      ICmd* pCmd = RepairActor::Builder()
+                       .set_ship_code(ship)
+                       .set_attributes(*pAttr)
+                       .build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pAttr);
+      SafeDelete($2);
+      SafeDelete(pCmd);
   }
   // resupply
   // rs
   | TOK_RESUPPLY {
-     ICmd* pCmd = ResupplyCommand::Builder().build();
-     if (pCmd && pCmd->invoke()) { /* success */ }
-     SafeDelete(pCmd);
+      ICmd* pCmd = ResupplyActor::Builder().set_list_mode().build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete(pCmd);
   }
-  // resupply ...
-  // rs ...
-  | TOK_RESUPPLY TOK_STRING TOK_INT {
-     std::string ship(*$2);
-     int qty = (int) $3;
-     ICmd* pCmd = ResupplyCommand::Builder().set_ship_code(ship).set_torpedoes(qty).build();
-     if (pCmd && pCmd->invoke()) { /* success */ }
-     SafeDelete(pCmd);
-   }
-   // retreat <ship> <hex>
-   // rt <ship> <hex>
-   | TOK_RETREAT TOK_STRING TOK_STRING {
+  // resupply <ship> T=n
+  // rs <ship> T=n
+  | TOK_RESUPPLY TOK_STRING TOK_T_ASSIGN {
+      std::string ship(*$2);
+      int qty = $3;
+      ICmd* pCmd = ResupplyActor::Builder()
+                       .set_ship_code(ship)
+                       .set_torpedoes(qty)
+                       .build();
+      if (pCmd && pCmd->invoke()) { /* success */ }
+      SafeDelete($2);
+      SafeDelete(pCmd);
+  }
+  // retreat <ship> <hex>
+  // rt <ship> <hex>
+  | TOK_RETREAT TOK_STRING TOK_STRING {
       std::string ship(*$2);
       std::string hex(*$3);
       ICmd* pCmd = new RetreatCommand(ship, hex);
@@ -1646,43 +1643,53 @@ rep_cmd:
       SafeDelete(pCmd);
       delete $2;
       delete $3;
-   }
-  
-| TOK_REPAIR error { yyerror(&@1, "repair: usage: repair <ship> PD=n|P=n|S=n|L=n (one attribute)"); YYABORT; }
-| TOK_RESUPPLY error { yyerror(&@1, "resupply: usage: resupply <ship> <amount>"); YYABORT; }
-| TOK_RETREAT error { yyerror(&@1, "retreat: usage: retreat <ship> <destination>"); YYABORT; }
+  }
+
+| TOK_REPAIR error  { yyerror(&@1, LC_PARSER_YY_REPAIR); YYABORT; }
+| TOK_RESUPPLY error { yyerror(&@1, LC_PARSER_YY_RESUPPLY); YYABORT; }
+| TOK_RETREAT error  { yyerror(&@1, LC_PARSER_YY_RETREAT); YYABORT; }
 ;
 
 repair_attr_spec:
   TOK_PD_ASSIGN {
-      g_repair_builder->set_attribute("pd");
-      g_repair_builder->set_amount($1);
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::POWER_DRIVE, $1});
   }
   | TOK_P_ASSIGN {
-      g_repair_builder->set_attribute("p");
-      g_repair_builder->set_amount($1);
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::PHASIC, $1});
   }
   | TOK_S_ASSIGN {
-      g_repair_builder->set_attribute("s");
-      g_repair_builder->set_amount($1);
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::SHIELD, $1});
   }
   | TOK_L_ASSIGN {
-      g_repair_builder->set_attribute("l");
-      g_repair_builder->set_amount($1);
+      $$ = new AttributeMap;
+      $$->insert({AttributeID::LAUNCHER, $1});
   }
-  ; 
+  | TOK_T_ASSIGN {
+      yyerror(&@1, LC_PARSER_YY_REPAIR_NO_TORPEDOES);
+      $$ = nullptr;
+      YYABORT;
+  }
+  | TOK_H_ASSIGN {
+      yyerror(&@1, LC_PARSER_YY_REPAIR_NO_HANGAR);
+      $$ = nullptr;
+      YYABORT;
+  }
+  ;
  
 configure_cmd:
   TOK_CONFIGURE TOK_RELOAD error {
-      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      yyerror(&@1, LC_PARSER_YY_CONFIGURE);
       YYABORT;
   }
   | TOK_CONFIGURE TOK_RELOAD TOK_CONF error {
-      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      yyerror(&@1, LC_PARSER_YY_CONFIGURE);
       YYABORT;
   }
   | TOK_CONFIGURE TOK_RELOAD TOK_AI error {
-      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      yyerror(&@1, LC_PARSER_YY_CONFIGURE);
       YYABORT;
   }
   | TOK_CONFIGURE TOK_RELOAD TOK_CONF {
@@ -1702,7 +1709,7 @@ configure_cmd:
       SafeDelete(pCmd);
   }
   | TOK_CONFIGURE error {
-      yyerror(&@1, "configure: usage: configure [reload conf|reload ai]");
+      yyerror(&@1, LC_PARSER_YY_CONFIGURE);
       YYABORT;
   }
   | TOK_CONFIGURE {
@@ -1736,7 +1743,7 @@ help_cmd:
        SafeDelete(pCmd);
   }
 
-| TOK_HELP error { yyerror(&@1, "help: usage: help [topic]."); YYABORT; }
+| TOK_HELP error { yyerror(&@1, LC_PARSER_YY_HELP); YYABORT; }
 ;
 
 %%

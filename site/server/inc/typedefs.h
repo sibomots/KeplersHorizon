@@ -95,6 +95,8 @@ enum class CommandID
     GALAXY,
     TRADE,
     FABRICATE,
+    REPAIR,
+    RESUPPLY,
     // Add more as needed
 };
 

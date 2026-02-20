@@ -637,4 +637,111 @@
 
 #define LC_HELP_TARGET_NO_TOPIC "No help available for '{}'. Use: help topics"
 
+// Parser
+
+#define LC_PARSER_YY_SAVE_RESERVED_WORDS "save: usage: save <name>. Note: reserved words cannot be used as names."
+
+// Session management
+#define LC_PARSER_YY_LOAD                    "load: usage: load <name>."
+#define LC_PARSER_YY_ACCEPT                  "accept: usage: accept <name>."
+#define LC_PARSER_YY_REJECT                  "reject: usage: reject <name>."
+#define LC_PARSER_YY_DELETE                  "delete: usage: delete <name>."
+
+// Fleet
+#define LC_PARSER_YY_FLEET_TOO_MANY_ARGS     "Too many arguments. Usage: fleet > HELP FLEET"
+#define LC_PARSER_YY_FLEET_NO_ARGS           "fleet takes no arguments. Usage: fleet > HELP FLEET"
+
+// Info commands
+#define LC_PARSER_YY_HEX                     "hex: usage: hex <hex_id>"
+#define LC_PARSER_YY_SYSTEM                  "system: usage: system <name> [subcommand]"
+#define LC_PARSER_YY_SURVEY                  "survey: usage: survey [system_name]"
+#define LC_PARSER_YY_EXTRACT                 "extract: usage: extract scan | extract <ship> <resource> [resource_words...]"
+#define LC_PARSER_YY_MARKET                  "market: usage: market [system_name]"
+#define LC_PARSER_YY_TRADE                   "trade: usage: trade buy|sell|transfer ..."
+#define LC_PARSER_YY_FABRICATE               "fabricate: usage: fabricate <ship> <item>"
+#define LC_PARSER_YY_OUTFIT                  "outfit: usage: outfit <ship> <spec>"
+#define LC_PARSER_YY_SALVAGE                 "salvage: usage: salvage <ship> <target>"
+#define LC_PARSER_YY_CARGO                   "cargo: usage: cargo <ship> [resource_words...]"
+#define LC_PARSER_YY_SCAN                    "scan: usage depends on command (e.g., extract scan)"
+#define LC_PARSER_YY_LIST                    "list: usage depends on context"
+
+// Turn management
+#define LC_PARSER_YY_NEXT                    "next: usage: next"
+#define LC_PARSER_YY_DONE                    "done: usage: done"
+
+// Combat commands
+#define LC_PARSER_YY_CD                      "cd: usage: cd"
+#define LC_PARSER_YY_CO                      "co: usage: co <attacker> <attack|dodge|escape> <target?> [PD=n P=n S=n L=n T=n H=n]"
+#define LC_PARSER_YY_CA                      "ca: usage: ca <draft_id> <damage_spec...>"
+#define LC_PARSER_YY_CC                      "cc: usage: cc <draft_id>"
+#define LC_PARSER_YY_CX                      "cx: usage: cx <draft_id>"
+
+// Duplicate attribute assignment errors (shared across new_combat_order_attr_spec and combat_apply_spec)
+#define LC_PARSER_YY_DUPE_POWER_DRIVE        "duplicate POWER_DRIVE assignment"
+#define LC_PARSER_YY_DUPE_PHASIC             "duplicate PHASIC assignment"
+#define LC_PARSER_YY_DUPE_SHIELD             "duplicate SHIELD assignment"
+#define LC_PARSER_YY_DUPE_LAUNCHER           "duplicate LAUNCHER assignment"
+
+// Ship class validation (format strings: {} = the invalid input token)
+#define LC_PARSER_YY_SHIP_CLASS_EMPTY        "Invalid ship class: empty string > HELP BN"
+#define LC_PARSER_YY_SHIP_CLASS_INVALID      "Invalid ship class: {}. Must start with 'W' or 'S'."
+#define LC_PARSER_YY_SHIP_CLASS_FORMAT       "Invalid custom ship class ID format: '{}'. Number must be 1-3 digits."
+
+// Attribute value validation (format strings: {} = the invalid value token)
+// Shared between first-assignment and continuation rules in build_attr_spec_nonempty
+#define LC_PARSER_YY_ATTR_INVALID_PD         "Invalid value for PD: '{}'. Must be a positive integer. > HELP ATTR"
+#define LC_PARSER_YY_ATTR_INVALID_P          "Invalid value for P: '{}'. Must be a positive integer. > HELP ATTR"
+#define LC_PARSER_YY_ATTR_INVALID_S          "Invalid value for S: '{}'. Must be a positive integer. > HELP ATTR"
+#define LC_PARSER_YY_ATTR_INVALID_L          "Invalid value for L: '{}'. Must be a positive integer. > HELP ATTR"
+#define LC_PARSER_YY_ATTR_INVALID_T          "Invalid value for T: '{}'. Must be a positive integer. > HELP ATTR"
+#define LC_PARSER_YY_ATTR_INVALID_H          "Invalid value for H: '{}'. Must be a positive integer. > HELP ATTR"
+
+// Build new (bn / build new)
+#define LC_PARSER_YY_BN_TOO_MANY_ARGS        "Too many arguments. Usage: bn {W|S} name > HELP BN"
+#define LC_PARSER_YY_BN_MISSING_NAME         "Missing ship name. Usage: bn {W|S} name > HELP BN"
+#define LC_PARSER_YY_BN_MISSING_ARGS         "Missing arguments. Usage: bn {W|S} name > HELP BN"
+#define LC_PARSER_YY_BUILD_NEW_TOO_MANY_ARGS "Too many arguments. Usage: build new {W|S} name > HELP BUILD"
+#define LC_PARSER_YY_BUILD_NEW_MISSING_NAME  "Missing ship name. Usage: build new {W|S} name > HELP BUILD"
+#define LC_PARSER_YY_BUILD_NEW_MISSING_ARGS  "Missing arguments. Usage: build new {W|S} name > HELP BUILD"
+
+// Build set (build set / bs) -- static errors
+#define LC_PARSER_YY_BUILD_SET_MISSING_ATTRS "Missing attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS"
+#define LC_PARSER_YY_BUILD_UNEXPECTED_TOKENS "Unexpected tokens after attributes. > HELP BS"
+#define LC_PARSER_YY_BUILD_SET_MISSING_ALL   "Missing ship name/hull and attributes. Usage: build set {NAME|HULL} attr=# ... > HELP BS"
+#define LC_PARSER_YY_BS_MISSING_ATTRS        "Missing attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS"
+#define LC_PARSER_YY_BS_MISSING_ALL          "Missing ship name/hull and attributes. Usage: bs {NAME|HULL} attr=# ... > HELP BS"
+
+// Build set (build set / bs) -- format strings: {} = the invalid attribute token
+#define LC_PARSER_YY_BUILD_SET_INVALID_ATTR  "Invalid attribute: {}. Valid attributes: PD, P, S, L, T, H > HELP ATTR"
+#define LC_PARSER_YY_BS_INVALID_ATTR         "Invalid attribute: {}. Valid attributes: PD, P, S, L, T, H > HELP BS"
+
+// Build misc (build, bd, bc, bx)
+#define LC_PARSER_YY_BUILD_SYNTAX            "build syntax               > HELP BUILD"
+#define LC_PARSER_YY_BD                      "usage: bd {NAME|HULL}      > HELP BD"
+#define LC_PARSER_YY_BC                      "usage: bc {NAME|HULL}      > HELP BC"
+#define LC_PARSER_YY_BX                      "usage: bx {NAME|HULL}      > HELP BX"
+
+// Deploy
+#define LC_PARSER_YY_DEPLOY                  "deploy: usage: deploy <ship> <location>"
+
+// Movement
+#define LC_PARSER_YY_MOVE                    "move: usage: move <ship> <destination> [via ...]"
+#define LC_PARSER_YY_CHART                   "chart: usage: chart <ship> <destination> [via ...]"
+#define LC_PARSER_YY_PICK                    "pick: usage: pick <systemship> <warpship>"
+#define LC_PARSER_YY_DROP                    "drop: usage: drop <systemship> <warpship>"
+
+// Repair / Resupply / Retreat
+#define LC_PARSER_YY_REPAIR                  "repair: usage: repair [<ship> PD=n|P=n|S=n|L=n]"
+#define LC_PARSER_YY_RESUPPLY                "resupply: usage: resupply <ship> T=n"
+#define LC_PARSER_YY_RETREAT                 "retreat: usage: retreat <ship> <destination>"
+#define LC_PARSER_YY_REPAIR_NO_TORPEDOES     "repair: torpedoes cannot be repaired. Use resupply."
+#define LC_PARSER_YY_REPAIR_NO_HANGAR        "repair: hangar is not a repairable attribute."
+
+// Configure
+#define LC_PARSER_YY_CONFIGURE               "configure: usage: configure [reload conf|reload ai]"
+
+// Help
+#define LC_PARSER_YY_HELP                    "help: usage: help [topic]."
+
+
 #endif
