@@ -8,6 +8,8 @@
 #ifndef __KH_LOCALISATION_H__
 #define __KH_LOCALISATION_H__
 
+
+#define LC_PARSER_ROOT_ERROR "Unrecognized command. Type 'help' for a list of commands."
 #define LC_CONFIGURE_PREFIX(x) "CONFIGURE: " x
 #define LC_CONFIGURE_ACCESS_DENIED                                             \
     LC_CONFIGURE_PREFIX("Access denied. Administrator privilege required.")

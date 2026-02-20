@@ -1789,7 +1789,7 @@ bool get_parser_error(std::string& err)
     if (!result)
     {
        Logger::instance().error("[PARSER] Indeterminate error cause");
-       err = std::string("Unrecognized command. Type 'help' for a list of commands.");
+       err = std::string(LC_PARSER_ROOT_ERROR);
     }
 
     // bump the counter
