@@ -492,7 +492,7 @@ void StateMachine::advance_next(GameState& s)
                                     << shipClass << " class " << ship[0] << " "
                                     << ship[1] << " (PD:" << ship[4]
                                     << " PHA:" << ship[5] << " SLD:" << ship[6]
-                                    << " LCH:" << ship[7] << " TOR" << ship[8]
+                                    << " LCH:" << ship[7] << " TOR:" << ship[8]
                                     << ")\n";
                             }
                         }
