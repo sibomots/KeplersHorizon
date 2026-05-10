@@ -20,6 +20,14 @@ what can be reached, when it can be reached, and how constraints shape power.
 
 This repository is under active development.
 
+* The state of the system is at Phase 1.  Phase 1 means that it runs with basic Minimal Viable Product level of code-completeness. (It's playable, but there are some
+edge cases to take care of. See ISSUES).
+
+* Plans are to develop further into Phase 2 which is enhanced AI Agent
+capabilities, and bug fixes as warranted.
+
+* Phase 3 is to harden the system for multi-game, multi-player use.
+
 - Rules are defined first and treated as canonical.
 - Code is an implementation of the rules, not the other way around.
 - Mechanics may be extended, but the foundational model is intentionally simple.
